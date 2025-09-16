@@ -1,0 +1,149 @@
+{
+  "6": {
+    "inputs": {
+      "text": "The image is a painting from Carl Spitzweg inbetween \nIn the style of chargen_concept_art image of\n\nmagnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background, professional, winning\n\nFantasy illustration of\n\na grotesque underground laboratory carved out of rough stone through magic. The room is lit entirely by torch light from an unknown source. The walls are uneven, but roughly forms the shape of a room. a large body sized alchemic style floor to ceiling glass incubator tube sits in the middle of the room, broken, splattered with purple slime like organic and inorganic matter on the glass pane, and a living slime trapped at the bottom. a pile of colorful but faded books sit nearby. A desk filled with notes sits next to the wall and a crude stone chair lay nearby. Various other indecipherable magical and alchemic implements are also in the room.",
+      "clip": [
+        "30",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "31",
+        0
+      ],
+      "vae": [
+        "30",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "path": "**replace before send**",
+      "overwrite": "true",
+      "image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "27": {
+    "inputs": {
+      "width": 1280,
+      "height": 768,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "30": {
+    "inputs": {
+      "ckpt_name": "flux1-dev-fp8.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "31": {
+    "inputs": {
+      "seed": 1081963246404881,
+      "steps": 20,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "39",
+        0
+      ],
+      "positive": [
+        "35",
+        0
+      ],
+      "negative": [
+        "33",
+        0
+      ],
+      "latent_image": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "33": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "30",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "35": {
+    "inputs": {
+      "guidance": 2.5,
+      "conditioning": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "FluxGuidance",
+    "_meta": {
+      "title": "FluxGuidance"
+    }
+  },
+  "39": {
+    "inputs": {
+      "lora_name": "Digital-Fantasy-Illustration.safetensors",
+      "strength_model": 0.5,
+      "model": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  },
+  "40": {
+    "inputs": {
+      "lora_name": "CarlSpitzweg-inbetween-step04300.safetensors",
+      "strength_model": 0.5,
+      "model": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  }
+}

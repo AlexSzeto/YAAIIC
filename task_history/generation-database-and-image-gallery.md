@@ -1,0 +1,33 @@
+[x] Generate `name` when it is not available:
+1. Create a new function, `sendTextPrompt`, in `llm.mjs`, using the `sendImagePrompt` function as a template and send a request to ollama without an image, and return the generated result.
+2. Before an image is generated, if `name` is blank or undefined, use `sendTextPrompt`, combining `namePromptPrefix` and the image `prompt` sent and set `name` to the result of this LLM query.
+
+[x] Store generated image data in a JSON file and make it searchable:
+1. Create an `imageData` object to store generated image data. On server init, load the existing data from `server/database/image-data.json` to initiate this object.
+2. After an image is generated, add an object with the following properties to `imageData`: `prompt`, `seed`, `imageUrl`, `name`, `description`, and `timestamp`, where `timestamp` just stores the time when the data object is created. Write this updated `imageData` back to `server/database/image-data.json`.
+3. Add a new `GET` endpoint, `/image-data`, that takes in two optional query parameters: `query`, `sort`, and `limit`. Default `query` to `''`, `sort` to `descending`, and `limit` to `10`. Return a JSON list of objects where either some part of the `name` or some part of `timestamp` (the number reformatted as `yyyy-mm-dd`) matches `query`. If implemented correctly, all entries would be included in the result set at this point. The result set would then be filtered by `timestamp` either in accending or descending order, depending on the `sort` query param (any `sort` value not equal to `accending` or `descending` would default to `descending`). Finally, return a slice of the first `limit` items out of the results.
+
+[x] Modify the existing generated image UI:
+1. move the creation of the HTML elements out of `generate-base-image.js` and build them statically in `index.html`. Give the container an id of `generatedImageDisplay`. Adjust the positioning of the elements to create a two column layout, where the generated image is on the left column and the rest of the information is vertically laid out in the order of label1,text1,label2,text2, etc. The right column contains the following information: name (single line), tags (multiple lines), description (multiple lines), and seed (single line). Move all style definitions into `css/style.css`.
+2. Create a new script file, `js/generated-image-display.js` with an exported `GeneratedImageDisplay` class that takes `baseElement` (an `HTMLElement`) in its constructor. The class should assume `baseElement` already contains all the required inner HTML elements to display the info correctly.
+3. The class has a `setData(data)` method that allows the image display to update all of the UI elements using an image data object. Setting the data to `null` should gracefully blank out the image area and remove all existing text.
+
+[x] Create a client side image carousel with the following design:
+1. Create a new script file, `js/carousel-setup.js` to manage carousel related functions.
+2. In the new script file, create a new `CarouselDisplay` exported class that takes also takes `baseElement` (an `HTMLElement`) and assigns `dataDisplay` in its constructor.
+3. The base element contains two icon buttons (using the already imported box icons) as well as an index display that shows the current index as well as the total number of objects currently in the carousel. All of these UIs should appear to the right edge of the container and are shown in this order: previous index button (with a caret left icon), index indicator, next index button (with a caret right icon). Place all HTML in `index.html` and styles in `css/style.css`. place this element below the generated image display.
+4. Internally, it tracks the currently selected object by `name` and `timestamp`. It has a `setData(dataList)` method that changes the list of objects being tracked. If the currently selected object is in the new list, move the index to the first instance that matches; otherwise, reset index to 0. A convenient helper function `addData(data)`, reuses `setData` and adds `data` to the end of the internal list.
+5. Whenever the left/right button is pressed, or the data index changed by some other means, call the `setData()` function of `dataDisplay` with the newly selected data object.
+6. Modify the existing handling once an image is created (in `generate-base-image.js`) to use `addData(data)`. update the function definition to generate images to pass in an instance of `CarouselDisplay` as necessary.
+7. Initiate an instance of `GeneratedImageDisplay` and `CarouselDisplay` on load in `main.js`.
+
+[x] Creae a client side gallery modal with the following design:
+1. Create a new script file, `js/gallery-setup.js` to manage gallery related functions.
+2. In the new script file, create a new `GalleryDisplay` exported class. The constructor should take a `queryPath` as well as a `previewFactory`.
+3. In its constructor, generate a modal that can show up to a 8x4 grid of images with a search box (an input with a search icon inside) at the bottom left, a "Load" button (with a disk icon) at the bottom right, and a "Cancel" button (with an X icon), also at the bottom right. Create `showModal()` and `hideModal()` to manage the visibility of the modal.
+4. Whenever the modal opens or when the user changes the search box text, fetch from `queryPath`, passing the search box input text as `query` and set `limit` to `32`.
+5. Whenever a fetch is complete, update `galleryData` with the loaded data (an array of objects that can be passed into `previewFactory`)and update the grid with a preview of the elements using a grid layout and the `previewFactory` method to create new instances of previews to add to the DOM.
+6. The `previewFactory` should create a square image cropping the image from `imageUrl` to fit in a square. Two rows of small text are shown beneath: `name` and `timestamp` in `yyyy-mm-dd` format. Create this method in `main.js`.
+7. When the Load button is pressed, trigger the callback function `onLoad(dataList)` with the current gallery data list.
+8. When the Cancel button is pressed, clear the search box and call `hideModal()`.
+9. Initiate a `GalleryDisplay` in `main.js` on load, passing in `/image-data` as the `queryPath`. Split the container for `CarouselDisplay` horizontally and place a "Gallery" (with a picture icon) button to the left of `CarouselDisplay`. Call `showModal()` when the Gallery button is pressed. Connect `onLoad()` and send the data to the carousel display via `setData()`.

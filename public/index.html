@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAAIIG</title>
+    <!-- Autocomplete.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.min.js"></script>
+    <!-- Boxicons for icons -->
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+    <!-- Textarea Caret Position library wrapper -->
+    <script src="/js/textarea-caret-position-wrapper.js"></script>
+    <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <h1>YAAIIG (Yet Another AI Image Generator)</h1>
+
+    <!-- Workflow Configuration Row -->
+    <div class="workflow-controls">
+      <div class="form-group">
+        <label for="workflow">Workflow:</label>
+        <select id="workflow" name="workflow">
+          <option value="">Loading workflows...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter name" />
+      </div>
+
+      <div class="form-group">
+        <label for="seed">Seed:</label>
+        <input type="number" id="seed" name="seed" min="0" max="4294967295" />
+      </div>
+
+      <div class="form-group">
+        <label for="lock-seed">
+          <input type="checkbox" id="lock-seed" name="lock-seed" />
+          Lock seed
+        </label>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Description:</label>
+        <textarea id="description" placeholder="Enter your text here..."></textarea>
+      </div>
+
+      <!-- Button Row Container -->
+      <div class="button-row">
+        <button id="generate-btn" class="generate-button btn-with-icon">
+          <box-icon name='play' color='#ffffff'></box-icon>
+          Generate
+        </button>
+        <button id="gallery-btn" class="gallery-btn btn-with-icon" title="Gallery">
+          <box-icon name='image' color='#ffffff'></box-icon>
+          Gallery
+        </button>
+      </div>
+    </div>
+
+    <!-- Generated Image Display Container -->
+    <div id="generatedImageDisplay" class="generated-image-display" style="display: none;">
+      <h3 class="generated-image-title">Generated Image</h3>
+      <div class="generated-image-content">
+        <div class="generated-image-left">
+          <img class="generated-image" src="" alt="Generated image" />
+        </div>
+        <div class="generated-image-right">
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Workflow:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="workflow">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="workflow">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-workflow" readonly />
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Name:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="name">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="name">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-name" readonly />
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Prompt:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="tags">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="tags">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-tags" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Description:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="description">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="description">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-description" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Seed:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="seed">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form and lock seed" data-field="seed">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-seed" readonly />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel Display Container -->
+    <div id="carouselDisplay" class="carousel-display" style="display: none;">
+      <div class="carousel-controls">
+        <div class="carousel-nav">
+          <button class="carousel-btn carousel-prev" title="Previous">
+            <box-icon name='caret-left' color='#ffffff'></box-icon>
+          </button>
+          <div class="carousel-index">
+            <span class="current-index">0</span> / <span class="total-count">0</span>
+          </div>
+          <button class="carousel-btn carousel-next" title="Next">
+            <box-icon name='caret-right' color='#ffffff'></box-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/js/autocomplete-setup.js"></script>
+    <script type="module" src="/js/custom-dialog.js"></script>
+    <script type="module" src="/js/custom-toast.js"></script>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>
