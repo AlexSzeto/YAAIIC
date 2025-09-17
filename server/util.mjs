@@ -35,7 +35,7 @@ export function getObjectPathValue(obj, paths) {
 export function findNextIndex(prefix, storageFolder) {
   let index = 1;
   const files = fs.readdirSync(storageFolder);
-  const regex = new RegExp(`^${prefix}_(\\d+)\\.png$`);
+  const regex = new RegExp(`^${prefix}_(\\d+)\\.[a-zA-Z0-9]+$`);
   const imageFiles = files.filter(file => file.match(regex));
   
   if (imageFiles.length === 0) {
