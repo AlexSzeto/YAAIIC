@@ -500,12 +500,15 @@ p {
   color: var(--dark-text-primary);
   font-size: 12px;
   resize: vertical;
-  min-height: 60px;
   width: 100%;
 }
 
-.info-description {
+.info-tags {
   min-height: 80px;
+}
+
+.info-description {
+  min-height: 160px;
 }
 
 /* Carousel Display Styling */

@@ -150,15 +150,15 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       throw new Error(`Generated image file not found at: ${savePath}`);
     }
 
-    console.log('Image generated successfully, analyzing with LLaVA...');
-    
-    // Analyze the generated image with LLaVA
+    console.log(`Image generated successfully, analyzing with ollama...`);
+
+    // Analyze the generated image with ollama
     let description = '';
     try {
       description = await sendImagePrompt(savePath, describePrompt);
       console.log('Image analysis completed:', description);
     } catch (error) {
-      console.warn('Failed to analyze image with LLaVA:', error.message);
+      console.warn('Failed to analyze image with ollama:', error.message);
       description = 'Image analysis unavailable';
     }
 

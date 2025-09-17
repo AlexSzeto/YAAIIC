@@ -18,10 +18,10 @@ export function encodeImageToBase64(imagePath) {
 /**
  * Send a text prompt to the language model via Ollama
  * @param {string} prompt - Text prompt to send to the model
- * @param {string} model - Model to use for generation (default: 'gemma3:latest')
+ * @param {string} model - Model to use for generation (default: 'gemma3:4b')
  * @returns {Promise<string>} Generated text response
  */
-export async function sendTextPrompt(prompt, model = 'gemma3:latest') {
+export async function sendTextPrompt(prompt, model = 'gemma3:4b') {
   try {
     // Validate prompt
     if (!prompt || typeof prompt !== 'string') {
@@ -73,10 +73,10 @@ export async function sendTextPrompt(prompt, model = 'gemma3:latest') {
  * Analyze an image using the LLaVA model via Ollama
  * @param {string} imagePath - Path to the image file to analyze
  * @param {string} prompt - Text prompt to guide the analysis
- * @param {string} model - Model to use for analysis (default: 'gemma3:latest')
+ * @param {string} model - Model to use for analysis (default: 'gemma3:4b')
  * @returns {Promise<string>} Description of what's in the image
  */
-export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:latest') {
+export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:4b') {
   try {
     // Validate image path
     if (!imagePath || typeof imagePath !== 'string') {
@@ -97,7 +97,7 @@ export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:latest'
 
     // TODO: move these constants into the config json file
     // const imageAnalysisModel = 'llava';
-    // const imageAnalysisModel = 'gemma3:latest';
+    // const imageAnalysisModel = 'gemma3:4b';
     // const imageAnalysisModel = 'hf.co/bartowski/SicariusSicariiStuff_X-Ray_Alpha-GGUF:Q4_K_M';
 
     // Prepare the request payload
@@ -108,7 +108,7 @@ export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:latest'
       stream: false
     };
 
-    console.log('Sending image analysis request to LLaVA...');
+    console.log(`Sending image analysis request to ${model}...`);
 
     // Make request to Ollama API
     const response = await fetch(`${ollamaAPIPath}/api/generate`, {
@@ -125,12 +125,14 @@ export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:latest'
 
     const result = await response.json();
     
+    console.log(result);
+
     // Extract the response text
     if (result.response) {
       console.log('Image analysis completed successfully');
       return result.response.trim();
     } else {
-      throw new Error('No response received from LLaVA model');
+      throw new Error(`No response received from ${model}`);
     }
 
   } catch (error) {

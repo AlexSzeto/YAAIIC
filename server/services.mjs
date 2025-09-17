@@ -71,7 +71,6 @@ export async function checkComfyUIHealth(baseUrl) {
     }
   } catch (error) {
     console.log(`✗ ComfyUI is not responding at ${baseUrl}/history`);
-    console.log(error);
     return false;
   }
 }

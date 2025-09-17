@@ -185,7 +185,7 @@ app.post('/generate/img2img', (req, res) => {
     }
     
     const nextIndex = findNextIndex('image', storageFolder);
-    const filename = `image_${nextIndex}.png`;
+    const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
     req.body.savePath = path.join(storageFolder, filename);
     
     // Call handleImageGeneration with workflow data and modifications
