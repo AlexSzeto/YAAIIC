@@ -66,6 +66,11 @@ function initAutoComplete() {
     selector: "#description",
     placeHolder: "Type to search for tags...",
     query: (input) => {
+      // Check if autocomplete is disabled for the current workflow
+      if (textarea.hasAttribute('data-autocomplete-disabled')) {
+        return null; // Return null to prevent autocomplete from showing
+      }
+      
       // Get current cursor position and text boundaries
       const [startPos, endPos] = getCurrentTextareaTagStartEnd(textarea);
       const text = textarea.value;
@@ -89,6 +94,11 @@ function initAutoComplete() {
       input: {
         // Override the default keydown handler to fix ESC key clearing input
         keydown: (event) => {
+            // Check if autocomplete is disabled for the current workflow
+            if (textarea.hasAttribute('data-autocomplete-disabled')) {
+              return; // Don't handle any autocomplete keys if disabled
+            }
+            
             if(autoCompleteJS && !autoCompleteJS.isOpen) return;            
           // Import navigate function behavior but fix ESC handling
           switch (event.keyCode) {
@@ -123,6 +133,13 @@ function initAutoComplete() {
           }
         },
         open: (event) => {
+          // Check if autocomplete is disabled for the current workflow
+          if (textarea.hasAttribute('data-autocomplete-disabled')) {
+            // Close the autocomplete immediately if it somehow opened when disabled
+            autoCompleteJS.close();
+            return;
+          }
+          
           // Position the results list at cursor position using textarea-caret-position library
           const caretPos = getCaretCoordinates(textarea, textarea.selectionStart);
           const list = autoCompleteJS.list;
@@ -134,6 +151,11 @@ function initAutoComplete() {
           list.style.zIndex = '1000';
         },
         selection: (event) => {
+          // Check if autocomplete is disabled for the current workflow
+          if (textarea.hasAttribute('data-autocomplete-disabled')) {
+            return; // Don't handle selection if disabled
+          }
+          
           const selection = event.detail.selection.value;
           const currentText = textarea.value;
           
