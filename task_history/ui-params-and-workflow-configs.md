@@ -1,5 +1,5 @@
 [x] initialze the server by loading `server/resource/comfyui-workflows.json` and storing its content in `comfyuiWorkflows`
-[x] modify the `generate/img2img` endpoint:
+[x] modify the `generate/txt2img` endpoint:
   1. check to see if the request contains `seed`. If it is not passed in, generate a random one and add it to the request. 
   2. Look at how `handleImageGeneration` creates the `fullPath` value, replicate that, and store it as `savePath` inside the request.
   3. Pull the full workflow JSON data based on the passed in `workflow` name and pass it into `handleImageGeneration`.

@@ -157,7 +157,7 @@ app.get('/tags', (req, res) => {
 });
 
 // POST endpoint for ComfyUI image generation
-app.post('/generate/img2img', (req, res) => {
+app.post('/generate/txt2img', (req, res) => {
   try {
     const { workflow } = req.body;
     
@@ -191,7 +191,7 @@ app.post('/generate/img2img', (req, res) => {
     // Call handleImageGeneration with workflow data and modifications
     handleImageGeneration(req, res, workflowData);
   } catch (error) {
-    console.error('Error in img2img endpoint:', error);
+    console.error('Error in txt2img endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
   }
 });

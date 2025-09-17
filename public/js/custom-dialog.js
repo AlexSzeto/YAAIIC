@@ -1,4 +1,28 @@
 // Custom Dialog Module
+
+/**
+ * Displays a custom modal dialog with the provided text and title.
+ * The dialog is automatically centered on screen with an overlay background.
+ * Users can close the dialog by clicking the close button, clicking outside 
+ * the dialog, or pressing the Escape key.
+ * 
+ * @param {string} text - The main content text to display in the dialog body.
+ *                       If empty or whitespace-only, shows "No description text provided."
+ * @param {string} [title='Generate Image'] - The title to display in the dialog header.
+ *                                           Defaults to 'Generate Image' if not provided.
+ * 
+ * @example
+ * // Basic usage with default title
+ * showDialog('This is the dialog content');
+ * 
+ * @example
+ * // Custom title and content
+ * showDialog('Image generation completed successfully!', 'Success');
+ * 
+ * @example
+ * // Empty content handling
+ * showDialog('', 'Warning'); // Shows "No description text provided."
+ */
 export function showDialog(text, title = 'Generate Image') {
   // Create modal overlay
   const overlay = document.createElement('div');

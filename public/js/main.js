@@ -1,7 +1,6 @@
 // Main application entry point
 import { loadTags } from './tags.js';
 import { getCurrentDescription } from './autocomplete-setup.js';
-import { showDialog } from './custom-dialog.js';
 import { showToast, showSuccessToast, showErrorToast } from './custom-toast.js';
 import { GeneratedImageDisplay } from './generated-image-display.js';
 import { CarouselDisplay } from './carousel-setup.js';
@@ -291,7 +290,7 @@ async function handleGenerate() {
       requestBody.name = nameInput.value.trim();
     }
     
-    const response = await fetch('/generate/img2img', {
+    const response = await fetch('/generate/txt2img', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
