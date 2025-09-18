@@ -1,9 +1,77 @@
+import { render, Component } from 'preact'
+import { html } from 'htm/preact'
+
 // Custom Toast Module - Class-based implementation
 let dismissedToastContainer = null;
-let toastContainer = null;
-let toastCounter = 0; // For unique IDs
+let toastContainerElement = null;
 let activeToasts = []; // Track all active toasts in order
 const maximumToastsVisible = 1; // Maximum number of toasts that can be visible at once
+
+// ToastContainer component to manage all toasts
+class ToastContainer extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      toasts: []
+    };
+  }
+
+  addToast = (toastProps) => {
+    const newToast = { ...toastProps, id: ++toastCounter };
+    
+    this.setState(prevState => {
+      let newToasts = [...prevState.toasts, newToast];
+      
+      // Remove excess toasts if we exceed maximum
+      while (newToasts.length > maximumToastsVisible) {
+        newToasts.shift();
+      }
+      
+      return { toasts: newToasts };
+    });
+
+    return newToast.id;
+  }
+
+  removeToast = (id) => {
+    this.setState(prevState => ({
+      toasts: prevState.toasts.filter(toast => toast.id !== id)
+    }));
+  }
+
+  render() {
+    return html`
+      <div class="toast-container">
+        ${this.state.toasts.map(toast => 
+          html`<${Toast} 
+            key=${toast.id}
+            text=${toast.text}
+            duration=${toast.duration}
+            backgroundColor=${toast.backgroundColor}
+            borderColor=${toast.borderColor}
+            onDismiss=${() => this.removeToast(toast.id)}
+          />`
+        )}
+      </div>
+    `;
+  }
+}
+
+// Helper function to ensure toast container exists
+function ensureToastContainer() {
+  if (!toastContainerElement) {
+    toastContainerElement = document.createElement('div');
+    document.body.appendChild(toastContainerElement);
+    
+    // Create the container instance
+    window.toastContainerInstance = render(
+      html`<${ToastContainer} ref=${(ref) => { window.toastContainerRef = ref; }} />`, 
+      toastContainerElement
+    );
+  }
+}
+
+let toastCounter = 0; // For unique IDs
 
 // Helper function to calculate toast duration based on message length
 function calculateToastDuration(text) {
@@ -12,70 +80,46 @@ function calculateToastDuration(text) {
 }
 
 // Toast class to manage individual toast instances
-class Toast {
-  constructor(text, options = {}) {
-    this.id = ++toastCounter;
-    this.text = text;
-    this.duration = options.duration || calculateToastDuration(text);
-    this.backgroundColor = options.backgroundColor || '#2a2a2a';
-    this.borderColor = options.borderColor || '#555';
-    this.element = null;
+class Toast extends Component {
+  constructor(props) {
+    super(props);
     this.hideTimeout = null;
-    this.isVisible = false;
     this.isDestroyed = false;
     
-    this.create();
-    this.show();
-    this.addToActiveList();
+    this.state = {
+      isVisible: false,
+      isHiding: false
+    };
   }
 
-  create() {
-    // Ensure container exists
-    this.ensureContainer();
-
-    // Create toast element
-    this.element = document.createElement('div');
-    this.element.className = 'toast';
-    this.element.style.backgroundColor = this.backgroundColor;
-    this.element.style.borderColor = this.borderColor;
-
-    const textElement = document.createElement('p');
-    textElement.className = 'toast-text';
-    textElement.textContent = this.text;
-
-    this.element.appendChild(textElement);
-    toastContainer.appendChild(this.element);
-
-    // Add click handler for manual dismissal
-    this.element.addEventListener('click', () => this.dismiss());
-  }
-
-  show() {
-    if (this.isDestroyed) return;
-
-    // Trigger show animation after element is in DOM
+  componentDidMount() {
+    // Trigger show animation after component is mounted
     requestAnimationFrame(() => {
-      if (this.element && !this.isDestroyed) {
-        this.element.classList.add('show');
-        this.isVisible = true;
+      if (!this.isDestroyed) {
+        this.setState({ isVisible: true });
       }
     });
 
     // Auto-dismiss after duration
-    if (this.duration > 0) {
+    if (this.props.duration > 0) {
       this.hideTimeout = setTimeout(() => {
         this.dismiss();
-      }, this.duration);
+      }, this.props.duration);
     }
   }
 
-  dismiss() {
-    if (this.isDestroyed || !this.isVisible) return;
+  componentWillUnmount() {
+    // Clean up timeout
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
+  }
+
+  dismiss = () => {
+    if (this.isDestroyed || this.state.isHiding) return;
 
     this.isDestroyed = true;
-
-    // Remove from active toasts list
-    this.removeFromActiveList();
 
     // Clear auto-dismiss timeout
     if (this.hideTimeout) {
@@ -83,88 +127,90 @@ class Toast {
       this.hideTimeout = null;
     }
 
-    if (this.element) {
-      // Immediately remove from layout to prevent spacing issues
-      dismissedToastContainer.appendChild(this.element);
-      
-      // Add hide class for animation
-      setTimeout(() => {this.element.classList.add('hide')}, 100);
+    // Start hide animation
+    this.setState({ isHiding: true });
 
-      // Remove from DOM after animation completes
-      setTimeout(() => {
-        if (this.element && this.element.parentNode) {
-          this.element.parentNode.removeChild(this.element);
-        }
-        this.element = null;
-      }, 300); // Match CSS transition duration
-    }
-  }
-
-  addToActiveList() {
-    // Add this toast to the active list
-    activeToasts.push(this);
-    
-    // Dismiss oldest toasts if we exceed the maximum
-    while (activeToasts.length > maximumToastsVisible) {
-      const oldestToast = activeToasts[0];
-      if (oldestToast && !oldestToast.isDestroyed) {
-        oldestToast.dismiss();
-      } else {
-        // Remove from list if already destroyed
-        activeToasts.shift();
+    // Call parent's onDismiss after animation
+    setTimeout(() => {
+      if (this.props.onDismiss) {
+        this.props.onDismiss();
       }
-    }
+    }, 300);
   }
 
-  removeFromActiveList() {
-    const index = activeToasts.indexOf(this);
-    if (index !== -1) {
-      activeToasts.splice(index, 1);
-    }
-  }
-
-  ensureContainer() {
-    if (!toastContainer) {
-      dismissedToastContainer = document.createElement('div');
-      dismissedToastContainer.className = 'toast-container dismissed';
-      document.body.appendChild(dismissedToastContainer);
-      toastContainer = document.createElement('div');
-      toastContainer.className = 'toast-container';
-      document.body.appendChild(toastContainer);
-    }
+  render() {
+    const toastClasses = `toast ${this.state.isVisible ? 'show' : ''} ${this.state.isHiding ? 'hide' : ''}`;
+    
+    return html`
+      <div 
+        class=${toastClasses}
+        style=${{
+          backgroundColor: this.props.backgroundColor || '#2a2a2a',
+          borderColor: this.props.borderColor || '#555'
+        }}
+        onClick=${this.dismiss}
+      >
+        <p class="toast-text">${this.props.text}</p>
+      </div>
+    `;
   }
 }
 
 // Public API functions that create Toast instances
 export function showToast(text, duration = 0) {
-  return new Toast(text, { duration });
-}
-
-export function dismissToast() {
-  // This is now a no-op since each toast manages itself
-  // Keeping for backward compatibility
+  ensureToastContainer();
+  const calculatedDuration = duration || calculateToastDuration(text);
+  
+  if (window.toastContainerRef) {
+    return window.toastContainerRef.addToast({
+      text,
+      duration: calculatedDuration
+    });
+  }
+  return null;
 }
 
 export function showSuccessToast(text, duration = 0) {
-  return new Toast(text, {
-    duration,
-    borderColor: '#28a745',
-    backgroundColor: '#1e3a2e'
-  });
+  ensureToastContainer();
+  const calculatedDuration = duration || calculateToastDuration(text);
+  
+  if (window.toastContainerRef) {
+    return window.toastContainerRef.addToast({
+      text,
+      duration: calculatedDuration,
+      borderColor: '#28a745',
+      backgroundColor: '#1e3a2e'
+    });
+  }
+  return null;
 }
 
 export function showErrorToast(text, duration = 0) {
-  return new Toast(text, {
-    duration,
-    borderColor: '#dc3545',
-    backgroundColor: '#3a1e1e'
-  });
+  ensureToastContainer();
+  const calculatedDuration = duration || calculateToastDuration(text);
+  
+  if (window.toastContainerRef) {
+    return window.toastContainerRef.addToast({
+      text,
+      duration: calculatedDuration,
+      borderColor: '#dc3545',
+      backgroundColor: '#3a1e1e'
+    });
+  }
+  return null;
 }
 
 export function showInfoToast(text, duration = 0) {
-  return new Toast(text, {
-    duration,
-    borderColor: '#17a2b8',
-    backgroundColor: '#1e2a3a'
-  });
+  ensureToastContainer();
+  const calculatedDuration = duration || calculateToastDuration(text);
+  
+  if (window.toastContainerRef) {
+    return window.toastContainerRef.addToast({
+      text,
+      duration: calculatedDuration,
+      borderColor: '#17a2b8',
+      backgroundColor: '#1e2a3a'
+    });
+  }
+  return null;
 }
