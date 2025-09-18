@@ -6,6 +6,7 @@ import { GeneratedImageDisplay } from './generated-image-display.js';
 import { CarouselDisplay } from './carousel-setup.js';
 import { createGallery } from './custom-ui/gallery.js';
 import { createImageModal } from './custom-ui/modal.js';
+import { createGalleryPreview } from './gallery-preview.js';
 
 let workflows = [];
 let autoCompleteInstance = null;
@@ -88,67 +89,6 @@ async function loadWorkflows() {
     console.error('Error loading workflows:', error);
     showErrorToast('Failed to load workflows');
   }
-}
-
-// Preview factory function for gallery items
-function createGalleryPreview(item) {
-  const preview = document.createElement('div');
-  preview.className = 'gallery-item';
-  
-  // Create image element
-  const img = document.createElement('img');
-  img.className = 'gallery-item-image';
-  img.src = item.imageUrl || '';
-  img.alt = item.name || 'Generated image';
-  
-  // Handle image load/error
-  img.onerror = function() {
-    this.style.backgroundColor = '#333333';
-    this.style.display = 'flex';
-    this.style.alignItems = 'center';
-    this.style.justifyContent = 'center';
-    this.style.color = '#999999';
-    this.style.fontSize = '10px';
-    this.textContent = 'No image';
-  };
-  
-  // Add click event to open image in modal (if image exists)
-  img.addEventListener('click', function() {
-    if (item.imageUrl && !this.textContent) { // Check if image loaded successfully
-      createImageModal(item.imageUrl); // Use default autoScale=true
-    }
-  });
-  
-  // Make image cursor pointer when hoverable
-  img.style.cursor = 'pointer';
-  
-  // Create info section
-  const info = document.createElement('div');
-  info.className = 'gallery-item-info';
-  
-  const nameDiv = document.createElement('div');
-  nameDiv.className = 'gallery-item-name';
-  nameDiv.textContent = item.name || 'Unnamed';
-  
-  const dateDiv = document.createElement('div');
-  dateDiv.className = 'gallery-item-date';
-  
-  // Format timestamp as yyyy-mm-dd
-  if (item.timestamp) {
-    const date = new Date(item.timestamp);
-    dateDiv.textContent = date.toISOString().split('T')[0];
-  } else {
-    dateDiv.textContent = 'No date';
-  }
-  
-  info.appendChild(nameDiv);
-  info.appendChild(dateDiv);
-  
-  // Assemble preview
-  preview.appendChild(img);
-  preview.appendChild(info);
-  
-  return preview;
 }
 
 // Function to handle field use from GeneratedImageDisplay
