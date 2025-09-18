@@ -106,7 +106,7 @@ export class GalleryDisplay extends Component {
       const query = this.state.searchQuery.trim();
       const url = new URL(this.queryPath, window.location.origin);
       url.searchParams.set('query', query);
-      url.searchParams.set('limit', '32');
+      url.searchParams.set('limit', '320');
       
       console.log('Fetching gallery data:', url.toString());
       
