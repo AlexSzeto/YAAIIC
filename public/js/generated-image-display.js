@@ -1,6 +1,6 @@
 // Generated Image Display Module
 import { sendToClipboard } from './util.js';
-import { createImageModal } from './custom-modal.js';
+import { createImageModal } from './custom-ui/modal.js';
 
 export class GeneratedImageDisplay {
   constructor(baseElement, onUseField = null) {
