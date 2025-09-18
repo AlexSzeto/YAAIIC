@@ -42,14 +42,12 @@ function handleWorkflowChange() {
   const descriptionTextarea = document.getElementById('description');
   
   if (selectedWorkflow.autocomplete) {
-    // Enable autocomplete if it's disabled
-    if (descriptionTextarea.hasAttribute('data-autocomplete-disabled')) {
-      descriptionTextarea.removeAttribute('data-autocomplete-disabled');
-      console.log('Autocomplete enabled for workflow:', selectedWorkflowName);
-    }
+    // Enable autocomplete by removing the autocomplete="off" attribute
+    descriptionTextarea.removeAttribute('autocomplete');
+    console.log('Autocomplete enabled for workflow:', selectedWorkflowName);
   } else {
-    // Disable autocomplete
-    descriptionTextarea.setAttribute('data-autocomplete-disabled', 'true');
+    // Disable autocomplete using the official autocomplete="off" attribute
+    descriptionTextarea.setAttribute('autocomplete', 'off');
     console.log('Autocomplete disabled for workflow:', selectedWorkflowName);
   }
 }
