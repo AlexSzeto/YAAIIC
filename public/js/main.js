@@ -4,7 +4,7 @@ import { getCurrentDescription } from './autocomplete-setup.js';
 import { showToast, showSuccessToast, showErrorToast } from './custom-toast.js';
 import { GeneratedImageDisplay } from './generated-image-display.js';
 import { CarouselDisplay } from './carousel-setup.js';
-import { GalleryDisplay } from './gallery-setup.js';
+import { createGallery } from './custom-gallery.js';
 import { createImageModal } from './custom-modal.js';
 
 let workflows = [];
@@ -351,21 +351,18 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.error('Carousel display element not found or GeneratedImageDisplay not initialized');
     }
     
-    // Initialize GalleryDisplay
-    galleryDisplay = new GalleryDisplay('/image-data', createGalleryPreview);
+    // Initialize GalleryDisplay with onLoad callback
+    galleryDisplay = createGallery('/image-data', createGalleryPreview, (dataList) => {
+      if (carouselDisplay) {
+        carouselDisplay.setData(dataList);
+      }
+    });
     
     // Set up gallery button
     const galleryButton = document.getElementById('gallery-btn');
     if (galleryButton && galleryDisplay) {
       galleryButton.addEventListener('click', () => {
         galleryDisplay.showModal();
-      });
-      
-      // Set up gallery onLoad callback
-      galleryDisplay.setOnLoad((dataList) => {
-        if (carouselDisplay) {
-          carouselDisplay.setData(dataList);
-        }
       });
     } else {
       console.error('Gallery button not found or GalleryDisplay not initialized');
