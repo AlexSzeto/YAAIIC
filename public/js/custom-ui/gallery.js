@@ -184,10 +184,12 @@ export class GalleryDisplay extends Component {
           // Create a wrapper div to hold the DOM element content
           items.push(
             html`<div 
-              key=${index} 
+              key=${`${item.imageUrl || item.name || 'item'}-${index}`} 
               class="gallery-item-wrapper"
               ref=${(ref) => {
-                if (ref && ref.children.length === 0) {
+                if (ref) {
+                  // Always clear and re-add the preview to ensure it updates
+                  ref.innerHTML = '';
                   ref.appendChild(preview);
                 }
               }}
