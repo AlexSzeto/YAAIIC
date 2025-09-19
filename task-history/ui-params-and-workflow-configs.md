@@ -1,3 +1,4 @@
+# Workflow Settings for Generation
 [x] initialze the server by loading `server/resource/comfyui-workflows.json` and storing its content in `comfyuiWorkflows`
 [x] modify the `generate/txt2img` endpoint:
   1. check to see if the request contains `seed`. If it is not passed in, generate a random one and add it to the request. 
