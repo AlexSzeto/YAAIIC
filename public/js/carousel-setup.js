@@ -135,7 +135,7 @@ export class CarouselDisplay {
     this.setData(newDataList);
     
     // Move to the newly added item (last item)
-    const lastPageIndex = this.dataList.length - 1;
+    const lastPageIndex = newDataList.length - 1;
     this.pagination.goToPage(lastPageIndex);
     
     console.log('CarouselDisplay data added, moved to index:', lastPageIndex);
