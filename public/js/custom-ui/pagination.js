@@ -1,117 +1,89 @@
+import { render, Component } from 'preact'
+import { html } from 'htm/preact'
+
 /**
- * Carousel-style Pagination Component
+ * Carousel-style Pagination Component using Preact
  * Provides carousel-style pagination with prev/next buttons and current/total index display
  */
-export class PaginationComponent {
-  constructor(dataList = [], itemsPerPage = 1, updateDisplay = null) {
+export class PaginationComponent extends Component {
+  constructor(props) {
+    super(props);
+    
     // Validate parameters
-    if (!Array.isArray(dataList)) {
+    if (!Array.isArray(props.dataList || [])) {
       throw new Error('dataList must be an array');
     }
     
-    if (typeof itemsPerPage !== 'number' || itemsPerPage < 1) {
+    if (typeof (props.itemsPerPage || 1) !== 'number' || (props.itemsPerPage || 1) < 1) {
       throw new Error('itemsPerPage must be a positive number');
     }
     
-    if (updateDisplay && typeof updateDisplay !== 'function') {
+    if (props.updateDisplay && typeof props.updateDisplay !== 'function') {
       throw new Error('updateDisplay must be a function or null');
     }
     
-    // Initialize properties
-    this.dataList = [...dataList];
-    this.itemsPerPage = itemsPerPage;
-    this.updateDisplay = updateDisplay;
+    // Initialize state
+    this.state = {
+      dataList: [...(props.dataList || [])],
+      itemsPerPage: props.itemsPerPage || 1,
+      currentPage: 0,
+      totalPages: Math.max(1, Math.ceil((props.dataList || []).length / (props.itemsPerPage || 1)))
+    };
     
-    // Internal state
-    this.currentPage = 0;
-    this.totalPages = Math.max(1, Math.ceil(this.dataList.length / this.itemsPerPage));
-    
-    // Create DOM elements
-    this.container = this.createContainer();
-    this.prevButton = this.container.querySelector('.pagination-prev');
-    this.nextButton = this.container.querySelector('.pagination-next');
-    this.currentPageElement = this.container.querySelector('.current-page');
-    this.totalPagesElement = this.container.querySelector('.total-pages');
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Initial update
-    this.updateUI();
-    this.triggerUpdateDisplay();
+    this.updateDisplay = props.updateDisplay;
     
     console.log('PaginationComponent initialized:', {
-      dataLength: this.dataList.length,
-      itemsPerPage: this.itemsPerPage,
-      totalPages: this.totalPages
+      dataLength: this.state.dataList.length,
+      itemsPerPage: this.state.itemsPerPage,
+      totalPages: this.state.totalPages
     });
   }
   
-  /**
-   * Create the pagination container DOM structure
-   * @returns {HTMLElement} The pagination container element
-   */
-  createContainer() {
-    const container = document.createElement('div');
-    container.className = 'pagination-container';
-    container.setAttribute('role', 'navigation');
-    container.setAttribute('aria-label', 'Pagination navigation');
+  componentDidMount() {
+    // Set up keyboard navigation on the container
+    if (this.containerRef) {
+      this.containerRef.addEventListener('keydown', this.handleKeyDown);
+      this.containerRef.setAttribute('tabindex', '0');
+    }
     
-    container.innerHTML = `
-      <div class="carousel-nav">
-        <button class="carousel-btn pagination-prev" title="Previous page" aria-label="Go to previous page">
-          <box-icon name='caret-left' color='#ffffff'></box-icon>
-        </button>
-        <div class="carousel-index pagination-index" aria-live="polite">
-          <span class="current-page">1</span> / <span class="total-pages">1</span>
-        </div>
-        <button class="carousel-btn pagination-next" title="Next page" aria-label="Go to next page">
-          <box-icon name='caret-right' color='#ffffff'></box-icon>
-        </button>
-      </div>
-    `;
-    
-    return container;
+    // Initial update display
+    this.triggerUpdateDisplay();
   }
-  
-  /**
-   * Set up event listeners for pagination controls
-   */
-  setupEventListeners() {
-    // Previous button click
-    this.prevButton.addEventListener('click', () => {
-      this.goToPreviousPage();
-    });
-    
-    // Next button click
-    this.nextButton.addEventListener('click', () => {
-      this.goToNextPage();
-    });
-    
-    // Keyboard navigation
-    this.container.addEventListener('keydown', (e) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          this.goToPreviousPage();
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          this.goToNextPage();
-          break;
-        case 'Home':
-          e.preventDefault();
-          this.goToFirstPage();
-          break;
-        case 'End':
-          e.preventDefault();
-          this.goToLastPage();
-          break;
-      }
-    });
-    
-    // Make container focusable for keyboard navigation
-    this.container.setAttribute('tabindex', '0');
+
+  componentWillUnmount() {
+    // Clean up event listener
+    if (this.containerRef) {
+      this.containerRef.removeEventListener('keydown', this.handleKeyDown);
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    // Trigger update display when current page changes
+    if (prevState.currentPage !== this.state.currentPage || 
+        prevState.dataList !== this.state.dataList) {
+      this.triggerUpdateDisplay();
+    }
+  }
+
+  handleKeyDown = (e) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        this.goToPreviousPage();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        this.goToNextPage();
+        break;
+      case 'Home':
+        e.preventDefault();
+        this.goToFirstPage();
+        break;
+      case 'End':
+        e.preventDefault();
+        this.goToLastPage();
+        break;
+    }
   }
   
   /**
@@ -123,21 +95,19 @@ export class PaginationComponent {
       throw new Error('newDataList must be an array');
     }
     
-    this.dataList = [...newDataList];
-    this.totalPages = Math.max(1, Math.ceil(this.dataList.length / this.itemsPerPage));
+    const totalPages = Math.max(1, Math.ceil(newDataList.length / this.state.itemsPerPage));
+    const currentPage = Math.min(this.state.currentPage, Math.max(0, totalPages - 1));
     
-    // Reset to first page if current page is beyond new total
-    if (this.currentPage >= this.totalPages) {
-      this.currentPage = Math.max(0, this.totalPages - 1);
-    }
-    
-    this.updateUI();
-    this.triggerUpdateDisplay();
+    this.setState({ 
+      dataList: [...newDataList], 
+      totalPages,
+      currentPage
+    });
     
     console.log('PaginationComponent data updated:', {
-      dataLength: this.dataList.length,
-      totalPages: this.totalPages,
-      currentPage: this.currentPage
+      dataLength: newDataList.length,
+      totalPages,
+      currentPage
     });
   }
   
@@ -150,16 +120,14 @@ export class PaginationComponent {
       throw new Error('newItemsPerPage must be a positive number');
     }
     
-    this.itemsPerPage = newItemsPerPage;
-    this.totalPages = Math.max(1, Math.ceil(this.dataList.length / this.itemsPerPage));
+    const totalPages = Math.max(1, Math.ceil(this.state.dataList.length / newItemsPerPage));
+    const currentPage = Math.min(this.state.currentPage, Math.max(0, totalPages - 1));
     
-    // Reset to first page if current page is beyond new total
-    if (this.currentPage >= this.totalPages) {
-      this.currentPage = Math.max(0, this.totalPages - 1);
-    }
-    
-    this.updateUI();
-    this.triggerUpdateDisplay();
+    this.setState({ 
+      itemsPerPage: newItemsPerPage, 
+      totalPages,
+      currentPage
+    });
   }
   
   /**
@@ -178,22 +146,18 @@ export class PaginationComponent {
   /**
    * Go to the previous page
    */
-  goToPreviousPage() {
-    if (this.currentPage > 0) {
-      this.currentPage--;
-      this.updateUI();
-      this.triggerUpdateDisplay();
+  goToPreviousPage = () => {
+    if (this.state.currentPage > 0) {
+      this.setState({ currentPage: this.state.currentPage - 1 });
     }
   }
   
   /**
    * Go to the next page
    */
-  goToNextPage() {
-    if (this.currentPage < this.totalPages - 1) {
-      this.currentPage++;
-      this.updateUI();
-      this.triggerUpdateDisplay();
+  goToNextPage = () => {
+    if (this.state.currentPage < this.state.totalPages - 1) {
+      this.setState({ currentPage: this.state.currentPage + 1 });
     }
   }
   
@@ -201,10 +165,8 @@ export class PaginationComponent {
    * Go to the first page
    */
   goToFirstPage() {
-    if (this.currentPage !== 0) {
-      this.currentPage = 0;
-      this.updateUI();
-      this.triggerUpdateDisplay();
+    if (this.state.currentPage !== 0) {
+      this.setState({ currentPage: 0 });
     }
   }
   
@@ -212,11 +174,9 @@ export class PaginationComponent {
    * Go to the last page
    */
   goToLastPage() {
-    const lastPage = this.totalPages - 1;
-    if (this.currentPage !== lastPage) {
-      this.currentPage = lastPage;
-      this.updateUI();
-      this.triggerUpdateDisplay();
+    const lastPage = this.state.totalPages - 1;
+    if (this.state.currentPage !== lastPage) {
+      this.setState({ currentPage: lastPage });
     }
   }
   
@@ -225,44 +185,13 @@ export class PaginationComponent {
    * @param {number} pageIndex - Zero-based page index
    */
   goToPage(pageIndex) {
-    if (typeof pageIndex !== 'number' || pageIndex < 0 || pageIndex >= this.totalPages) {
-      throw new Error(`pageIndex must be between 0 and ${this.totalPages - 1}`);
+    if (typeof pageIndex !== 'number' || pageIndex < 0 || pageIndex >= this.state.totalPages) {
+      throw new Error(`pageIndex must be between 0 and ${this.state.totalPages - 1}`);
     }
     
-    if (this.currentPage !== pageIndex) {
-      this.currentPage = pageIndex;
-      this.updateUI();
-      this.triggerUpdateDisplay();
+    if (this.state.currentPage !== pageIndex) {
+      this.setState({ currentPage: pageIndex });
     }
-  }
-  
-  /**
-   * Update the UI elements to reflect current state
-   */
-  updateUI() {
-    // Update page index display
-    if (this.dataList.length === 0) {
-      this.currentPageElement.textContent = '0';
-      this.totalPagesElement.textContent = '0';
-      this.container.style.display = 'none';
-    } else {
-      this.currentPageElement.textContent = (this.currentPage + 1).toString();
-      this.totalPagesElement.textContent = this.totalPages.toString();
-      this.container.style.display = 'block';
-    }
-    
-    // Update button states
-    const hasItems = this.dataList.length > 0;
-    const hasMultiplePages = this.totalPages > 1;
-    const isFirstPage = this.currentPage === 0;
-    const isLastPage = this.currentPage === this.totalPages - 1;
-    
-    this.prevButton.disabled = !hasMultiplePages || isFirstPage;
-    this.nextButton.disabled = !hasMultiplePages || isLastPage;
-    
-    // Update ARIA attributes
-    this.prevButton.setAttribute('aria-disabled', this.prevButton.disabled.toString());
-    this.nextButton.setAttribute('aria-disabled', this.nextButton.disabled.toString());
   }
   
   /**
@@ -270,13 +199,13 @@ export class PaginationComponent {
    * @returns {Array} Current page's data
    */
   getCurrentPageData() {
-    if (this.dataList.length === 0) {
+    if (this.state.dataList.length === 0) {
       return [];
     }
     
-    const startIndex = this.currentPage * this.itemsPerPage;
-    const endIndex = startIndex + this.itemsPerPage;
-    return this.dataList.slice(startIndex, endIndex);
+    const startIndex = this.state.currentPage * this.state.itemsPerPage;
+    const endIndex = startIndex + this.state.itemsPerPage;
+    return this.state.dataList.slice(startIndex, endIndex);
   }
   
   /**
@@ -290,47 +219,67 @@ export class PaginationComponent {
   }
   
   /**
-   * Get the pagination container element
-   * @returns {HTMLElement} The pagination container
-   */
-  getContainer() {
-    return this.container;
-  }
-  
-  /**
    * Get current pagination state
    * @returns {Object} Current state information
    */
   getState() {
     return {
-      currentPage: this.currentPage,
-      totalPages: this.totalPages,
-      itemsPerPage: this.itemsPerPage,
-      totalItems: this.dataList.length,
-      hasMultiplePages: this.totalPages > 1,
-      isFirstPage: this.currentPage === 0,
-      isLastPage: this.currentPage === this.totalPages - 1
+      currentPage: this.state.currentPage,
+      totalPages: this.state.totalPages,
+      itemsPerPage: this.state.itemsPerPage,
+      totalItems: this.state.dataList.length,
+      hasMultiplePages: this.state.totalPages > 1,
+      isFirstPage: this.state.currentPage === 0,
+      isLastPage: this.state.currentPage === this.state.totalPages - 1
     };
   }
-  
-  /**
-   * Destroy the pagination component and clean up
-   */
-  destroy() {
-    if (this.container && this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
+
+  render() {
+    const { currentPage, totalPages, dataList } = this.state;
+    const hasItems = dataList.length > 0;
+    const hasMultiplePages = totalPages > 1;
+    const isFirstPage = currentPage === 0;
+    const isLastPage = currentPage === totalPages - 1;
+    
+    // Hide component if no items
+    if (!hasItems) {
+      return html`<div class="pagination-container" style=${{ display: 'none' }}></div>`;
     }
-    
-    // Clear references
-    this.dataList = [];
-    this.updateDisplay = null;
-    this.container = null;
-    this.prevButton = null;
-    this.nextButton = null;
-    this.currentPageElement = null;
-    this.totalPagesElement = null;
-    
-    console.log('PaginationComponent destroyed');
+
+    return html`
+      <div 
+        class="pagination-container"
+        role="navigation"
+        aria-label="Pagination navigation"
+        ref=${(ref) => { this.containerRef = ref; }}
+      >
+        <div class="pagination-nav">
+          <button 
+            class="pagination-btn pagination-prev"
+            title="Previous page"
+            aria-label="Go to previous page"
+            disabled=${!hasMultiplePages || isFirstPage}
+            aria-disabled=${!hasMultiplePages || isFirstPage}
+            onClick=${this.goToPreviousPage}
+          >
+            <box-icon name='caret-left' color='#ffffff'></box-icon>
+          </button>
+          <div class="pagination-index" aria-live="polite">
+            <span class="pagination-current">${currentPage + 1}</span> / <span class="total-pages">${totalPages}</span>
+          </div>
+          <button 
+            class="pagination-btn pagination-next"
+            title="Next page"
+            aria-label="Go to next page"
+            disabled=${!hasMultiplePages || isLastPage}
+            aria-disabled=${!hasMultiplePages || isLastPage}
+            onClick=${this.goToNextPage}
+          >
+            <box-icon name='caret-right' color='#ffffff'></box-icon>
+          </button>
+        </div>
+      </div>
+    `;
   }
 }
 
@@ -340,18 +289,81 @@ export class PaginationComponent {
  * @param {Array} dataList - Array of data to paginate
  * @param {number} itemsPerPage - Number of items per page
  * @param {Function} updateDisplay - Callback function for data updates
- * @returns {PaginationComponent} Pagination component instance
+ * @returns {Object} Object with methods to control the pagination component
  */
 export function createPagination(container, dataList = [], itemsPerPage = 1, updateDisplay = null) {
   if (!container || !(container instanceof HTMLElement)) {
     throw new Error('container must be a valid HTML element');
   }
   
-  // Create pagination component
-  const pagination = new PaginationComponent(dataList, itemsPerPage, updateDisplay);
+  let paginationRef = null;
   
-  // Append to container
-  container.appendChild(pagination.getContainer());
+  // Render the Preact component
+  render(
+    html`<${PaginationComponent} 
+      dataList=${dataList}
+      itemsPerPage=${itemsPerPage}
+      updateDisplay=${updateDisplay}
+      ref=${(ref) => { paginationRef = ref; }}
+    />`, 
+    container
+  );
   
-  return pagination;
+  // Return an object that provides access to the component methods
+  return {
+    setDataList(newDataList) {
+      if (paginationRef) {
+        paginationRef.setDataList(newDataList);
+      }
+    },
+    setItemsPerPage(newItemsPerPage) {
+      if (paginationRef) {
+        paginationRef.setItemsPerPage(newItemsPerPage);
+      }
+    },
+    setUpdateDisplay(callback) {
+      if (paginationRef) {
+        paginationRef.setUpdateDisplay(callback);
+      }
+    },
+    goToPage(pageIndex) {
+      if (paginationRef) {
+        paginationRef.goToPage(pageIndex);
+      }
+    },
+    goToPreviousPage() {
+      if (paginationRef) {
+        paginationRef.goToPreviousPage();
+      }
+    },
+    goToNextPage() {
+      if (paginationRef) {
+        paginationRef.goToNextPage();
+      }
+    },
+    goToFirstPage() {
+      if (paginationRef) {
+        paginationRef.goToFirstPage();
+      }
+    },
+    goToLastPage() {
+      if (paginationRef) {
+        paginationRef.goToLastPage();
+      }
+    },
+    getCurrentPageData() {
+      return paginationRef ? paginationRef.getCurrentPageData() : [];
+    },
+    getState() {
+      return paginationRef ? paginationRef.getState() : null;
+    },
+    destroy() {
+      // Clean up by removing from DOM
+      if (container && container.firstChild) {
+        render(null, container);
+      }
+      paginationRef = null;
+      console.log('PaginationComponent destroyed');
+    }
+  };
 }

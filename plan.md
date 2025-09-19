@@ -1,4 +1,4 @@
-Perform all the tasks listed in `task.md`. At the completion of each task, check off the item, stop, and wait for me to say 'continue' before starting the next task.
+Perform all the unchecked tasks listed in `task.md`. At the completion of each task, check off the item, stop, and wait for me to say 'continue' before starting the next task.
 
 [x] fix autocomplete erasing entire textfield when ESC is pressed
 [x] remove no description panel popup in autocomplete
@@ -11,3 +11,6 @@ Perform all the tasks listed in `task.md`. At the completion of each task, check
 [x] js/css params for all colors
 [x] make autocomplete panel use the same dark gray border
 [x] full sized image preview
+[x] pagination for gallery
+[] delete entry
+[] inpaint

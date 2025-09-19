@@ -1,6 +1,7 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createPagination } from './pagination.js'
+import { fetchJson, FetchError } from '../util.js'
 
 // Gallery Setup Module
 export class GalleryDisplay extends Component {
@@ -125,7 +126,7 @@ export class GalleryDisplay extends Component {
   }
   
   /**
-   * Fetch gallery data from the server
+   * Fetch gallery data from the server with enhanced error handling and retry
    */
   async fetchGalleryData() {
     try {
@@ -137,12 +138,14 @@ export class GalleryDisplay extends Component {
       
       console.log('Fetching gallery data:', url.toString());
       
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch gallery data: ${response.status}`);
-      }
+      // Use enhanced fetch with retry mechanism
+      const galleryData = await fetchJson(url.toString(), {}, {
+        maxRetries: 2, // Fewer retries for gallery since it's user-initiated
+        retryDelay: 800,
+        showUserFeedback: true,
+        showSuccessFeedback: false // Don't show success toast for gallery loads
+      });
       
-      const galleryData = await response.json();
       this.setState({ galleryData });
       
       // Update pagination with new data
@@ -153,16 +156,18 @@ export class GalleryDisplay extends Component {
       console.log('Gallery data loaded:', galleryData.length, 'items');
     } catch (error) {
       console.error('Error fetching gallery data:', error);
+      
+      // Set empty state
       this.setState({ galleryData: [], currentPageData: [] });
       
       // Update pagination with empty data
       if (this.pagination) {
         this.pagination.setDataList([]);
       }
+      
+      // Error feedback is already handled by fetchJson utility
     }
-  }
-  
-  /**
+  }  /**
    * Render gallery items
    */
   renderGalleryItems() {

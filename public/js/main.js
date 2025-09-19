@@ -7,6 +7,7 @@ import { CarouselDisplay } from './carousel-setup.js';
 import { createGallery } from './custom-ui/gallery.js';
 import { createImageModal } from './custom-ui/modal.js';
 import { createGalleryPreview } from './gallery-preview.js';
+import { fetchJson, fetchWithRetry, FetchError } from './util.js';
 
 let workflows = [];
 let autoCompleteInstance = null;
@@ -56,12 +57,17 @@ function handleWorkflowChange() {
 // Function to populate workflow dropdown
 async function loadWorkflows() {
   try {
-    const response = await fetch('/generate/workflows');
-    if (!response.ok) {
-      throw new Error('Failed to fetch workflows');
-    }
+    console.log('Loading workflows...');
     
-    workflows = await response.json();
+    // Use enhanced fetch with retry mechanism
+    workflows = await fetchJson('/generate/workflows', {}, {
+      maxRetries: 3,
+      retryDelay: 1000,
+      showUserFeedback: true,
+      showSuccessFeedback: false, // Don't show success toast for workflow loading
+      successMessage: 'Workflows loaded successfully'
+    });
+    
     const workflowSelect = document.getElementById('workflow');
     
     // Clear loading option
@@ -87,7 +93,11 @@ async function loadWorkflows() {
     console.log('Workflows loaded:', workflows);
   } catch (error) {
     console.error('Error loading workflows:', error);
-    showErrorToast('Failed to load workflows');
+    // Error feedback is already handled by fetchJson utility
+    
+    // Set fallback state for workflow dropdown
+    const workflowSelect = document.getElementById('workflow');
+    workflowSelect.innerHTML = '<option value="">Failed to load workflows - please refresh</option>';
   }
 }
 
@@ -228,31 +238,59 @@ async function handleGenerate() {
       requestBody.name = nameInput.value.trim();
     }
     
-    const response = await fetch('/generate/txt2img', {
+    // Use enhanced fetch with retry for generation requests
+    const response = await fetchWithRetry('/generate/txt2img', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody)
+    }, {
+      maxRetries: 1, // Limited retries for generation (expensive operation)
+      retryDelay: 2000,
+      timeout: 120000, // 2 minutes timeout for image generation
+      showUserFeedback: false // We handle feedback manually for generation
     });
 
     const result = await response.json();
-
-    if (response.ok) {
-      showSuccessToast('Image generated successfully!');
-      console.log('Generation result:', result);
-      
-      // Create and display the generated image with analysis
-      if (result.data && result.data.imageUrl) {
-        carouselDisplay.addData(result.data);
-      }
-    } else {
-      throw new Error(result.error || 'Failed to generate image');
+    
+    showSuccessToast('Image generated successfully!');
+    console.log('Generation result:', result);
+    
+    // Create and display the generated image with analysis
+    if (result.data && result.data.imageUrl) {
+      carouselDisplay.addData(result.data);
     }
 
   } catch (error) {
     console.error('Error generating image:', error);
-    showErrorToast(`Generation failed: ${error.message}`);
+    
+    // Provide specific error messages for generation failures
+    let errorMessage = 'Generation failed';
+    
+    if (error instanceof FetchError) {
+      switch (error.status) {
+        case 400:
+          errorMessage = 'Invalid generation parameters. Please check your inputs.';
+          break;
+        case 408:
+        case 504:
+          errorMessage = 'Generation timed out. The request may be too complex - try simplifying or try again later.';
+          break;
+        case 429:
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+          break;
+        case 500:
+          errorMessage = 'Server error during generation. Please try again later.';
+          break;
+        default:
+          errorMessage = error.message || 'Generation failed unexpectedly.';
+      }
+    } else {
+      errorMessage = error.message || 'An unexpected error occurred during generation.';
+    }
+    
+    showErrorToast(errorMessage);
   } finally {
     // Re-enable UI
     generateButton.disabled = false;
