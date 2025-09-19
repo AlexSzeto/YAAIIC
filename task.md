@@ -1,187 +1,333 @@
-# Bug Fixes
+# PaginationComponent Refactor Implementation Plan
 
-## Fix Generated Image Display CSS Formatting
-[x] Investigate the CSS styling issues with `generated-image-display` component:
-1. Review the current CSS class structure in `public/css/style.css` and compare with the actual Preact component structure in `public/js/custom-ui/generated-image-display.js`.
-2. Check if the CSS classes `.generated-image-container`, `.image-column`, `.info-column` are missing or incorrectly named.
-3. The component should render with a proper two-column layout: image on the left, info fields vertically stacked on the right.
-4. Inspect the recently deleted `generated-image-container` references to understand the expected CSS structure.
-5. Add missing CSS classes or fix incorrect class names to restore the proper layout formatting.
+## Overview
+Refactor the `PaginationComponent` from an imperative factory-based approach to a pure, declarative Preact component. This will eliminate the `createPagination` factory function, remove imperative methods like `setDataList()`, and adopt proper Preact patterns using props and events.
 
-[x] Fix the CSS class mapping between Preact component and stylesheet:
-1. Ensure the `.generated-image-container` class exists and provides the proper flex layout for two columns.
-2. Add or correct `.image-column` and `.info-column` classes for proper column styling.
-3. Verify `.info-row`, `.info-input-container`, and `.info-buttons` classes are correctly styled for the field layout.
-4. Test the component layout to ensure image and info fields are properly positioned and sized.
+## Current Architecture Issues
+1. **Factory Function Pattern**: `createPagination()` creates component instances imperatively, which goes against Preact's declarative philosophy.
+2. **Imperative Methods**: Methods like `setDataList()`, `setItemsPerPage()`, `goToPage()` require direct component manipulation rather than prop updates.
+3. **Internal State Management**: Component manages its own `currentPage` state when it could be controlled externally for better flexibility.
+4. **DOM Manipulation**: Factory function renders component to arbitrary DOM containers instead of using standard Preact rendering.
 
-## Fix Generated Image Display CSS Formatting (Cont.)
-[x] Fix copy and use button styling and positioning issues:
-1. Examine the current button styling in the `GeneratedImageDisplayComponent` in `public/js/custom-ui/generated-image-display.js`.
-2. Check if the buttons are using the correct CSS classes (`.copy-btn`, `.use-btn`, `.btn-with-icon`) and if these classes are properly defined.
-3. Compare the button structure with gallery pagination buttons to identify the correct styling approach.
-4. Investigate if the buttons need proper box-icon integration and sizing to match the design system.
-5. Ensure buttons are properly positioned within the `.info-input-container` to the right of `.info-label` and above `.info-input-container`.
+## New Architecture Design
 
-[x] Create reusable CSS style for single-icon buttons:
-1. Extract common styling patterns from gallery pagination buttons and other single-icon buttons in the application.
-2. Create a new reusable CSS class (e.g., `.btn-icon-only`) in `public/css/style.css` similar to `.btn-with-icon`.
-3. Define consistent sizing, padding, border, background, and hover states for single-icon buttons.
-4. Include proper box-icon sizing and positioning within the button container.
-5. Apply the new class to copy/use buttons and any other single-icon buttons throughout the application.
+### Component Interface
+```javascript
+// Proposed new PaginationComponent props
+interface PaginationProps {
+  // Data and configuration
+  dataList: Array<any>
+  itemsPerPage?: number
+  currentPage?: number  // externally controlled
+  
+  // Event handlers
+  onPageChange: (pageIndex: number, pageData: Array<any>) => void
+  onNavigate?: (direction: 'prev' | 'next' | 'first' | 'last') => void
+  
+  // Display options
+  showNavigation?: boolean
+  showIndex?: boolean
+  disabled?: boolean
+  
+  // Accessibility
+  ariaLabel?: string
+}
+```
 
-[x] Update button styling to use the reusable icon button class:
-1. Update the copy and use buttons in `GeneratedImageDisplayComponent` to use the new `.btn-icon-only` class.
-2. Ensure proper button accessibility with appropriate ARIA labels and focus states.
-3. Test button functionality and appearance across different field types (input vs textarea).
-4. Verify button hover and active states work correctly and consistently with the design system.
+### State Management Options
+**Option 1: Controlled Component (Recommended)**
+- Parent manages `currentPage` state
+- Component receives `currentPage` as prop
+- Component calls `onPageChange` when user navigates
+- Maximum flexibility for parent components
 
-## Remove all factory functions
-[] Examine and catalog all existing factory functions in the codebase:
-1. **createPagination()** in `public/js/reusable-ui/pagination.js` (line 294)
-   - Used in: `public/js/custom-ui/carousel-display.js` (line 136) and `public/js/reusable-ui/gallery.js` (line 262)
-   - Purpose: Barebone skeleton connecting to PaginationComponent in same file - **TO BE REMOVED**
-2. **createImageModal()** in `public/js/reusable-ui/modal.js` (line 445)
-   - Used in: `public/js/custom-ui/generated-image-display.js` (line 73) and `public/js/gallery-preview.js` (line 22)
-   - Purpose: Fire-and-forget function for creating image modals - **KEEP AS-IS**
-3. **createDialogModal()** in `public/js/reusable-ui/modal.js` (line 394)
-   - Used in: `showDialog()` function (line 441) for backward compatibility
-   - Purpose: Fire-and-forget function for creating dialog modals - **KEEP AS-IS**
-4. **createGalleryPreview()** in `public/js/gallery-preview.js` (line 72)
-   - Used in: `public/js/main.js` as previewFactory prop (line 354) for GalleryDisplay
-   - Purpose: Barebone skeleton for creating gallery preview elements - **TO BE REMOVED**
+**Option 2: Uncontrolled Component**
+- Component manages internal `currentPage` state
+- Accepts optional `defaultPage` prop
+- Still calls `onPageChange` for parent notification
+- Simpler for basic use cases
 
-[] Remove createPagination() factory and connect usage directly to PaginationComponent:
-1. Update `public/js/custom-ui/carousel-display.js`:
-   - Remove `import { createPagination }` (line 3)
-   - Import `PaginationComponent` directly from `../reusable-ui/pagination.js`
-   - Remove `setupPagination()` function and `this.pagination` instance management
-   - Replace pagination container ref with direct PaginationComponent rendering in render method
-   - Add any missing methods to PaginationComponent if needed (like setDataList, goToPage, etc.)
-2. Update `public/js/reusable-ui/gallery.js`:
-   - Remove `import { createPagination }` (line 4)
-   - Import `PaginationComponent` directly from `./pagination.js`
-   - Replace pagination factory usage with direct PaginationComponent rendering
-   - Update pagination integration to use component props instead of factory methods
-3. Delete `createPagination()` function from `public/js/reusable-ui/pagination.js` (lines 294-369)
-4. Add any missing methods to `PaginationComponent` class that were provided by the factory wrapper
+**Option 3: Hybrid Approach**
+- Support both controlled and uncontrolled modes
+- If `currentPage` prop provided, use controlled mode
+- If not provided, use internal state (uncontrolled mode)
 
-[] Remove createGalleryPreview() factory and integrate logic directly into gallery:
-1. Update `public/js/reusable-ui/gallery.js`:
-   - Remove the `previewFactory` prop dependency
-   - Move the gallery preview creation logic directly into the gallery component's render method
-   - Use Preact/HTM to render preview items instead of DOM creation
-   - Handle click events directly within the gallery component using Preact patterns
-2. Update `public/js/main.js`:
-   - Remove `import { createGalleryPreview }` (line 10)
-   - Remove `previewFactory` prop passing (line 354) from GalleryDisplay
-3. Update `public/js/gallery-preview.js`:
-   - Delete `createGalleryPreview()` function (lines 72-end)
-   - Keep any utility functions or constants that might be used elsewhere
+## Implementation Tasks
 
-[] Verify and clean up any remaining factory function patterns:
-1. Examine `createCleanupFunction()`, `createRefCallback()`, `createSafeEventHandler()`, and `createValidatedSetState()` in `public/js/util.js`
-2. Determine if these are utility functions (keep) or factory functions (remove)
-3. If they create component instances or manage component lifecycle, refactor to direct component usage
+### 1. Analyze Current PaginationComponent Architecture
+[] Document all existing functionality and use cases:
+1. Review current `PaginationComponent` class and identify all public methods
+2. Document `createPagination` factory function and its return object interface
+3. Map imperative methods (`setDataList`, `setItemsPerPage`, `goToPage`, etc.) to declarative patterns
+4. Identify all current usage locations of `createPagination` in the codebase
+5. Document keyboard navigation features (arrow keys, home/end keys) to preserve
 
-[] Test and validate functionality after factory function removal:
-1. Verify pagination works correctly in both carousel and gallery contexts with direct component usage
-2. Confirm gallery preview rendering and click functionality works with integrated preview logic
-3. Ensure createImageModal() and createDialogModal() continue to work as fire-and-forget functions
-4. Check that no factory function references remain except for the preserved modal functions
-5. Verify all component interactions, state management, and data flow still function properly
+[] Identify imperative patterns to be replaced:
+1. Factory function instantiation pattern → Direct component rendering
+2. Method calls like `pagination.setDataList()` → Prop updates
+3. Method calls like `pagination.goToPage()` → Controlled `currentPage` prop
+4. Manual DOM container management → Standard Preact parent-child rendering
+5. Imperative event callback registration → Declarative event props
 
-## Fix pagination no longer available for Generated Image Display  
-[] Investigate missing pagination in Generated Image Display:
-1. Review the `CarouselDisplayComponent` in `public/js/custom-ui/carousel-display.js` to understand how pagination should be integrated.
-2. Check if the pagination component is being properly instantiated and rendered within the carousel display.
-3. Examine the relationship between `GeneratedImageDisplayComponent`, `CarouselDisplayComponent`, and the pagination system.
-4. Verify that multiple images loaded through the gallery are being passed to the carousel/pagination system correctly.
-5. Check if the pagination controls (prev/next buttons, current/total indicators) are being rendered in the DOM.
+### 2. Design Declarative PaginationComponent Interface
+[] Define comprehensive props interface:
+1. Core data props: `dataList`, `itemsPerPage`, `currentPage`, `defaultPage`
+2. Event handler props: `onPageChange`, `onNavigate`
+3. Display option props: `showNavigation`, `showIndex`, `disabled`
+4. Accessibility props: `ariaLabel`, custom ARIA attributes
+5. Add prop validation and default values for all optional props
 
-[] Debug carousel and pagination component integration:
-1. Trace the data flow from gallery load → carousel data update → pagination component creation.
-2. Verify that the `PaginationComponent` from `public/js/reusable-ui/pagination.js` is being properly imported and used.
-3. Check if the pagination container element exists in the DOM and is properly styled/visible.
-4. Ensure that `itemsPerPage` is set to 1 for single-item carousel navigation as specified in previous implementations.
-5. Test the `updateDisplay()` callback to ensure current item data is properly passed to `GeneratedImageDisplayComponent`.
+[] Design event system for page changes and navigation:
+1. `onPageChange(pageIndex, pageData)` - Called when page changes
+2. `onNavigate(direction, currentPage, totalPages)` - Called on navigation attempts
+3. Consider additional events for edge cases (e.g., navigation beyond bounds)
+4. Ensure events provide sufficient data for parent components to react appropriately
 
-[] Restore pagination functionality for multiple generated images:
-1. Fix any missing component instantiation or rendering issues in the carousel display.
-2. Ensure the pagination component receives the complete `carouselData` array when multiple images are loaded.
-3. Update the pagination controls to properly navigate between generated images.
-4. Verify that the current image data updates correctly in `GeneratedImageDisplayComponent` when pagination changes.
-5. Test the complete workflow: load multiple images from gallery → see pagination controls → navigate between images.
+[] Determine optimal state management approach:
+1. Implement hybrid controlled/uncontrolled pattern
+2. Use `currentPage` prop presence to determine mode
+3. Fall back to `defaultPage` prop for initial uncontrolled state
+4. Provide clear documentation on when to use each mode
 
-[] Verify pagination styling and positioning:
-1. Ensure pagination controls are properly positioned relative to the generated image display.
-2. Check that pagination styling matches the existing design system and carousel patterns.
-3. Verify proper responsive behavior for pagination on different screen sizes.
-4. Test accessibility features like keyboard navigation and ARIA labels for pagination controls.
+### 3. Implement Pure PaginationComponent
+[] Remove all imperative methods from component class:
+1. Delete methods: `setDataList`, `setItemsPerPage`, `goToPage`, `goToPreviousPage`, `goToNextPage`
+2. Delete methods: `goToFirstPage`, `goToLastPage`, `getCurrentPageData`, `getState`
+3. Remove internal method-based state management
+4. Convert all functionality to prop-driven computations
 
-## Fix Image Modal Display Issue
-[x] Debug the image modal creation issue where no modal appears on screen:
-1. Investigate the `createImageModal` function in `public/js/reusable-ui/modal.js` and verify proper modal instantiation.
-2. Check if the `CustomModal` component is being rendered to the correct portal container in the DOM.
-3. Verify that the modal's CSS styling is properly applied and the modal is not hidden by CSS properties.
-4. Ensure the modal visibility state management is working correctly between Preact components.
-5. Test the modal click handlers for both `GeneratedImageDisplayComponent` and gallery preview elements.
+[] Implement controlled component pattern:
+1. Add support for controlled `currentPage` prop
+2. Implement `onPageChange` event emission on navigation
+3. Handle prop updates in `componentDidUpdate` for controlled mode
+4. Maintain backward compatibility during transition period
 
-[x] Verify modal portal rendering and CSS application:
-1. Confirm the portal container is correctly created and attached to document.body.
-2. Check if modal CSS classes (`.image-modal-overlay`, `.image-modal-wrapper`, `.image-modal-container`) are properly applied.
-3. Ensure proper z-index and positioning for modal visibility.
-4. Test modal opening from both generated image display and gallery preview contexts.
+[] Replace internal state management with props-driven updates:
+1. Compute `totalPages` from `dataList.length / itemsPerPage`
+2. Compute `currentPageData` from `dataList` slice based on current page
+3. Handle page bounds validation using props instead of internal state
+4. Update all navigation handlers to use new prop-based logic
 
-## Fix Gallery Close Button Recursion Error
-[] Resolve the infinite recursion error in `closeModal()` method:
-1. Examine the `closeModal()` method in `public/js/reusable-ui/gallery.js` at lines 95-100.
-2. Identify the cause of the recursive call where `closeModal` calls itself instead of the external callback.
-3. Separate the internal modal close logic from the external `onClose` callback invocation.
-4. Ensure proper event handler binding to prevent the recursion loop.
-5. Test gallery close functionality through all close mechanisms (close button, overlay click, ESC key).
+[] Preserve all existing rendering logic and accessibility features:
+1. Maintain existing CSS classes and DOM structure
+2. Preserve keyboard navigation (arrow keys, home/end)
+3. Keep ARIA labels and accessibility attributes
+4. Ensure disabled states work correctly with new prop system
 
-[] Implement proper separation of concerns for modal closing:
-1. Create separate internal cleanup method for gallery state reset and component cleanup.
-2. Ensure the external `onClose` callback is only called once without triggering internal recursion.
-3. Update close button event handler to use the corrected close logic.
-4. Verify the CustomModal component's close handling doesn't conflict with gallery's close logic.
+### 4. Update CarouselDisplayComponent Integration
+[] Remove `createPagination` factory usage:
+1. Delete `setupPagination` method and ref callback pattern
+2. Remove `pagination` instance variable and related lifecycle management
+3. Delete `handlePaginationUpdate` callback method
+4. Clean up component unmount pagination cleanup logic
 
-## Remove Gallery Content Border
-[] Remove redundant border from gallery content area:
-1. Locate the `.gallery-content` CSS class in `public/css/style.css`.
-2. Remove or comment out the border property since the container modal already provides a border.
-3. Ensure the removal doesn't affect other styling aspects like padding or background.
-4. Test the gallery appearance to confirm single border without double-border effect.
+[] Add pagination state management to carousel component:
+1. Add `currentIndex` state to track current carousel position
+2. Implement `handlePageChange` method to update carousel state
+3. Sync carousel `currentIndex` with pagination page changes
+4. Handle prop updates to `dataList` and maintain current position when possible
 
-## Fix Gallery Preview Portrait Image Layout
-[] Fix gallery previews to maintain aspect ratio while keeping text visible:
-1. Examine the gallery preview CSS in `public/css/style.css` for `.gallery-preview` or similar classes.
-2. Identify how portrait-oriented images are pushing text content below the visible frame.
-3. Implement CSS solution to constrain image height while maintaining aspect ratio.
-4. Ensure name and timestamp text remains visible within the preview container bounds.
-5. Use CSS properties like `max-height`, `object-fit`, or flexbox to properly size image and text areas.
+[] Render `PaginationComponent` directly in JSX:
+1. Replace ref-based pagination container with direct component rendering
+2. Pass `dataList`, `itemsPerPage=1`, and `currentPage` props
+3. Connect `onPageChange` event to carousel state management
+4. Remove all factory function calls and imperative method usage
 
-[] Test and refine the gallery preview layout:
-1. Test with various image aspect ratios (portrait, landscape, square) to ensure consistent layout.
-2. Verify text content (name and timestamp) always remains visible regardless of image orientation.
-3. Maintain the square cropping behavior mentioned in previous task implementations while fixing text visibility.
-4. Ensure the preview factory function in `gallery-preview.js` works correctly with the updated CSS.
+[] Test carousel pagination functionality:
+1. Verify pagination appears when multiple images are loaded
+2. Test navigation between images using prev/next buttons
+3. Test keyboard navigation (arrow keys) still works
+4. Ensure carousel display updates correctly when page changes
 
-## Fix Autocomplete Interaction Bug  
-[] Research and resolve Preact/autocomplete.js interaction issue:
-1. Investigate the interaction between Preact controlled components and the external autocomplete.js library.
-2. Research solutions for integrating third-party DOM manipulation libraries with Preact controlled inputs.
-3. Look for common patterns or solutions in the Preact community for handling external DOM libraries.
-4. Consider using Preact refs to manage the textarea element that autocomplete.js modifies.
+### 5. Update Other Pagination Consumers
+[] Search codebase for all `createPagination` usages:
+1. Use grep/search to find all `createPagination` function calls
+2. Identify all files that import `createPagination` function
+3. Document the context and usage pattern for each consumer
+4. Plan migration approach for each specific use case
 
-[] Implement solution for autocomplete text persistence:
-1. Update the `WorkflowControlsComponent` in `public/js/custom-ui/workflow-controls.js` to properly handle autocomplete integration.
-2. Ensure the textarea value is properly synchronized between autocomplete.js modifications and Preact state.
-3. Use component lifecycle methods or refs to maintain autocomplete functionality without state conflicts.
-4. Test the fix by typing partial text, accepting autocomplete suggestions, and then clicking generate/gallery buttons.
+[] Update each consumer to use direct component rendering:
+1. Replace factory function calls with direct `<PaginationComponent>` usage
+2. Convert imperative method calls to prop updates where applicable
+3. Implement proper parent state management for controlled pagination
+4. Update imports to use component class instead of factory function
 
-[] Validate autocomplete functionality integration:
-1. Test the complete autocomplete workflow: type → autocomplete → accept → button click.
-2. Ensure accepted autocomplete text persists in the textarea after button interactions.
-3. Verify that Preact's controlled component pattern doesn't interfere with autocomplete.js DOM manipulation.
-4. Test edge cases like multiple autocomplete sessions, backspacing, and manual text editing.
+[] Implement proper state management in each parent component:
+1. Add pagination-related state (`currentPage`, etc.) to parent components
+2. Implement event handlers to respond to pagination changes
+3. Handle data updates and pagination state synchronization
+4. Test each updated consumer for proper functionality
+
+### 6. Remove Factory Function and Imperative APIs
+[] Delete `createPagination` function from pagination.js:
+1. Remove entire `createPagination` function and its documentation
+2. Remove factory function return object with imperative methods
+3. Update export statement to only export `PaginationComponent` class
+4. Clean up any helper functions only used by factory function
+
+[] Remove imperative methods from component class:
+1. Verify all imperative methods are no longer needed after consumer updates
+2. Delete method implementations: `setDataList`, `setItemsPerPage`, etc.
+3. Remove any internal state that was only used for imperative interface
+4. Simplify component to pure prop-driven behavior
+
+[] Clean up any unused imports or dependencies:
+1. Remove imports only used by factory function or imperative methods
+2. Update component dependencies to only include what's needed for new interface
+3. Verify all remaining imports are actually used
+4. Update file documentation to reflect new pure component approach
+
+### 7. Test Refactored Pagination Functionality
+[] Test basic pagination navigation:
+1. Verify prev/next buttons work correctly with multiple pages of data
+2. Test button disabled states on first/last pages
+3. Test page index display shows correct current/total pages
+4. Verify `onPageChange` event is called with correct parameters
+
+[] Test keyboard navigation:
+1. Verify arrow keys navigate between pages
+2. Test Home/End keys jump to first/last page
+3. Ensure keyboard navigation respects disabled states
+4. Test focus management and accessibility features
+
+[] Test edge cases:
+1. Test with empty data array (should show no pagination or handle gracefully)
+2. Test with single page of data (should disable navigation)
+3. Test with `currentPage` prop outside valid range
+4. Test rapid prop updates and state synchronization
+
+[] Test accessibility features:
+1. Verify ARIA labels are present and correct
+2. Test screen reader compatibility
+3. Check keyboard focus management
+4. Ensure proper disabled state communication to assistive technology
+
+[] Verify carousel pagination works with multiple images:
+1. Load multiple images from gallery into carousel
+2. Verify pagination controls appear and show correct page count
+3. Test navigation between images using pagination buttons
+4. Ensure image display updates correctly when pagination changes
+
+[] Test any other pagination consumers in the application:
+1. Identify and test any other components using pagination
+2. Verify all existing pagination functionality still works
+3. Test edge cases specific to each consumer
+4. Ensure no regressions in user experience
+
+## Detailed Implementation Steps
+
+### Step 1: New Component Structure
+```javascript
+export class PaginationComponent extends Component {
+  constructor(props) {
+    super(props);
+    
+    // Only manage currentPage if not controlled externally
+    this.state = {
+      currentPage: props.currentPage ?? props.defaultPage ?? 0
+    };
+  }
+  
+  // Compute derived values from props
+  get totalPages() {
+    const { dataList = [], itemsPerPage = 1 } = this.props;
+    return Math.max(1, Math.ceil(dataList.length / itemsPerPage));
+  }
+  
+  get currentPage() {
+    // Use controlled prop if available, otherwise internal state
+    return this.props.currentPage ?? this.state.currentPage;
+  }
+  
+  get currentPageData() {
+    const { dataList = [], itemsPerPage = 1 } = this.props;
+    const startIndex = this.currentPage * itemsPerPage;
+    return dataList.slice(startIndex, startIndex + itemsPerPage);
+  }
+  
+  handlePageChange = (newPage) => {
+    const { onPageChange, currentPage: controlledPage } = this.props;
+    
+    // Update internal state if uncontrolled
+    if (controlledPage === undefined) {
+      this.setState({ currentPage: newPage });
+    }
+    
+    // Always notify parent
+    if (onPageChange) {
+      onPageChange(newPage, this.getCurrentPageData(newPage));
+    }
+  }
+  
+  // ... navigation methods that call handlePageChange
+}
+```
+
+### Step 2: CarouselDisplayComponent Integration
+```javascript
+export class CarouselDisplayComponent extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      dataList: props.dataList || [],
+      currentIndex: 0,
+      // ... other state
+    };
+  }
+  
+  handlePaginationChange = (pageIndex, pageData) => {
+    this.setState({ currentIndex: pageIndex });
+    // Update display with current item
+    if (this.props.onSelectionChange && pageData.length > 0) {
+      this.props.onSelectionChange(pageData[0], pageIndex);
+    }
+  }
+  
+  render() {
+    const { dataDisplayComponent: DataDisplayComponent } = this.props;
+    const { dataList, currentIndex, isVisible } = this.state;
+    const currentItem = dataList[currentIndex];
+    
+    return html`
+      <div class="carousel-display" style=${{ display: isVisible ? 'block' : 'none' }}>
+        <div class="carousel-content">
+          <${DataDisplayComponent} 
+            imageData=${currentItem}
+            onUseField=${this.props.onUseField}
+          />
+        </div>
+        <div class="carousel-controls">
+          <${PaginationComponent}
+            dataList=${dataList}
+            itemsPerPage=${1}
+            currentPage=${currentIndex}
+            onPageChange=${this.handlePaginationChange}
+            ariaLabel="Navigate generated images"
+          />
+        </div>
+      </div>
+    `;
+  }
+}
+```
+
+## Benefits of Refactored Approach
+1. **Declarative**: Follows standard Preact patterns with props and events
+2. **Flexible**: Supports both controlled and uncontrolled usage patterns
+3. **Maintainable**: Eliminates complex factory function and imperative APIs
+4. **Testable**: Easier to unit test pure component with predictable props/events
+5. **Reusable**: Standard component can be used anywhere in Preact render tree
+6. **Type-safe**: Clear interface makes it easier to add TypeScript later if desired
+
+## Migration Strategy
+1. Implement new component alongside existing factory function
+2. Update consumers one by one to use new component
+3. Remove factory function once all consumers are updated
+4. This allows for incremental migration and easy rollback if needed
+
+## Considerations
+- Ensure no breaking changes to existing pagination behavior
+- Preserve all keyboard navigation and accessibility features
+- Maintain visual styling consistency
+- Test thoroughly with multiple data scenarios
+- Consider performance implications of prop updates vs imperative calls
