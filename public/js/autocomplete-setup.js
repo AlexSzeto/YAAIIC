@@ -39,11 +39,26 @@ function getCurrentTextareaTagStartEnd(textarea) {
 
 function initAutoComplete() {
   const textarea = document.getElementById('description');
+  
+  if (!textarea) {
+    console.log('Autocomplete: Description textarea not found, will retry later');
+    return false;
+  }
+  
   const tags = getTags();
   
   if (tags.length === 0) {
     console.warn('No tags available for autocomplete');
-    return;
+    return false;
+  }
+
+  // Clean up existing autocomplete instance if it exists
+  if (autoCompleteJS) {
+    try {
+      autoCompleteJS.unInit();
+    } catch (error) {
+      console.log('Autocomplete: Error cleaning up previous instance:', error);
+    }
   }
 
   // Add keydown event listener to handle tab key behavior (ESC is handled via events config)
@@ -171,15 +186,29 @@ function initAutoComplete() {
       }
     }
   });
+  
+  console.log('Autocomplete: Successfully initialized');
+  return true;
 }
 
-// Initialize autocomplete when DOM is ready
+// Expose initAutoComplete globally for Preact components to use
+window.initAutoComplete = initAutoComplete;
+
+// Initialize autocomplete when DOM is ready, with retry logic
 document.addEventListener('DOMContentLoaded', async function() {
   try {
     // Wait for tags to be loaded (they should auto-load, but ensure they're ready)
     await loadTags();
-    console.log('Autocomplete: Tags ready, initializing autocomplete');
-    initAutoComplete();
+    console.log('Autocomplete: Tags ready, attempting to initialize autocomplete');
+    
+    // Try to initialize immediately
+    if (!initAutoComplete()) {
+      // If failed, retry after a short delay (for dynamic content)
+      console.log('Autocomplete: Initial setup failed, retrying in 500ms...');
+      setTimeout(() => {
+        initAutoComplete();
+      }, 500);
+    }
   } catch (error) {
     console.error('Autocomplete: Error loading tags:', error);
   }

@@ -194,58 +194,6 @@ export class CustomModal extends Component {
 }
 
 /**
- * Factory function to create a modal instance using CustomModal
- * @param {Object} props - Modal props
- * @returns {Object} API object with methods to control the modal
- */
-export function createModal(props = {}) {
-  let modalRef = null;
-  let containerElement = null;
-  
-  const init = () => {
-    if (!containerElement) {
-      containerElement = document.createElement('div');
-      document.body.appendChild(containerElement);
-      
-      render(
-        html`<${CustomModal} 
-          ...${props}
-          ref=${(ref) => { modalRef = ref; }}
-        />`, 
-        containerElement
-      );
-    }
-  };
-  
-  return {
-    show() {
-      init();
-      if (modalRef) {
-        modalRef.setState({ isVisible: true });
-      }
-    },
-    hide() {
-      if (modalRef) {
-        modalRef.closeModal();
-      }
-    },
-    setLock(lock) {
-      if (modalRef) {
-        modalRef.setModalLock(lock);
-      }
-    },
-    destroy() {
-      if (containerElement && containerElement.parentNode) {
-        render(null, containerElement);
-        document.body.removeChild(containerElement);
-      }
-      modalRef = null;
-      containerElement = null;
-    }
-  };
-}
-
-/**
  * ImageModalComponent - Pure Preact component for displaying images in modals
  */
 export class ImageModalComponent extends Component {
