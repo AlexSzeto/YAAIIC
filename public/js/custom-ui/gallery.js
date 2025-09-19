@@ -1,5 +1,6 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
+import { createPagination } from './pagination.js'
 
 // Gallery Setup Module
 export class GalleryDisplay extends Component {
@@ -21,8 +22,12 @@ export class GalleryDisplay extends Component {
     this.state = {
       isVisible: false,
       galleryData: [],
-      searchQuery: ''
+      searchQuery: '',
+      currentPageData: [] // Store current page's items for display
     };
+    
+    // Pagination component will be created when modal is shown
+    this.pagination = null;
     
     console.log('GalleryDisplay initialized successfully');
   }
@@ -38,6 +43,11 @@ export class GalleryDisplay extends Component {
     // Clear search timeout
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout);
+    }
+    // Clean up pagination component
+    if (this.pagination) {
+      this.pagination.destroy();
+      this.pagination = null;
     }
   }
 
@@ -72,6 +82,15 @@ export class GalleryDisplay extends Component {
   }
   
   /**
+   * Handle pagination component updates
+   * @param {Array} currentPageData - Current page data from pagination component
+   */
+  handlePaginationUpdate = (currentPageData) => {
+    this.setState({ currentPageData });
+    console.log('Gallery pagination updated:', currentPageData.length, 'items on current page');
+  }
+  
+  /**
    * Debounce search input to avoid too many API calls
    */
   debounceSearch() {
@@ -94,7 +113,14 @@ export class GalleryDisplay extends Component {
    * Hide the modal
    */
   hideModal() {
-    this.setState({ isVisible: false });
+    this.setState({ isVisible: false, currentPageData: [] });
+    
+    // Clean up pagination component
+    if (this.pagination) {
+      this.pagination.destroy();
+      this.pagination = null;
+    }
+    
     console.log('Gallery modal closed');
   }
   
@@ -106,6 +132,7 @@ export class GalleryDisplay extends Component {
       const query = this.state.searchQuery.trim();
       const url = new URL(this.queryPath, window.location.origin);
       url.searchParams.set('query', query);
+      // Remove server-side limit - get all matching data for client-side pagination
       url.searchParams.set('limit', '320');
       
       console.log('Fetching gallery data:', url.toString());
@@ -118,10 +145,20 @@ export class GalleryDisplay extends Component {
       const galleryData = await response.json();
       this.setState({ galleryData });
       
+      // Update pagination with new data
+      if (this.pagination) {
+        this.pagination.setDataList(galleryData);
+      }
+      
       console.log('Gallery data loaded:', galleryData.length, 'items');
     } catch (error) {
       console.error('Error fetching gallery data:', error);
-      this.setState({ galleryData: [] });
+      this.setState({ galleryData: [], currentPageData: [] });
+      
+      // Update pagination with empty data
+      if (this.pagination) {
+        this.pagination.setDataList([]);
+      }
     }
   }
   
@@ -129,32 +166,34 @@ export class GalleryDisplay extends Component {
    * Render gallery items
    */
   renderGalleryItems() {
-    const maxItems = 32;
-    const itemsToShow = this.state.galleryData.slice(0, maxItems);
+    const maxItems = 32; // Still maintain grid layout with 32 slots
+    const itemsToShow = this.state.currentPageData; // Use pagination data instead of slicing
     
     // Create items using the previewFactory
     const items = [];
     
     itemsToShow.forEach((item, index) => {
-      const preview = this.previewFactory(item);
-      if (preview) {
-        // Create a wrapper div to hold the DOM element content
-        items.push(
-          html`<div 
-            key=${index} 
-            class="gallery-item-wrapper"
-            ref=${(ref) => {
-              if (ref && ref.children.length === 0) {
-                ref.appendChild(preview);
-              }
-            }}
-          ></div>`
-        );
+      if (index < maxItems) { // Ensure we don't exceed grid layout
+        const preview = this.previewFactory(item);
+        if (preview) {
+          // Create a wrapper div to hold the DOM element content
+          items.push(
+            html`<div 
+              key=${index} 
+              class="gallery-item-wrapper"
+              ref=${(ref) => {
+                if (ref && ref.children.length === 0) {
+                  ref.appendChild(preview);
+                }
+              }}
+            ></div>`
+          );
+        }
       }
     });
 
-    // Add empty placeholders
-    const emptySlots = maxItems - itemsToShow.length;
+    // Add empty placeholders to maintain grid layout
+    const emptySlots = maxItems - Math.min(itemsToShow.length, maxItems);
     for (let i = 0; i < emptySlots; i++) {
       items.push(
         html`<div key=${`empty-${i}`} class="gallery-item" style=${{ opacity: '0.3' }}></div>`
@@ -178,6 +217,7 @@ export class GalleryDisplay extends Component {
           <div class="gallery-grid">
             ${this.renderGalleryItems()}
           </div>
+          <div class="gallery-pagination-container" ref=${(ref) => this.setupPagination(ref)}></div>
           <div class="gallery-controls">
             <div class="gallery-search">
               <input
@@ -213,6 +253,24 @@ export class GalleryDisplay extends Component {
         </div>
       </div>
     `;
+  }
+  
+  /**
+   * Set up pagination component when container is available
+   * @param {HTMLElement} container - Pagination container element
+   */
+  setupPagination(container) {
+    if (container && !this.pagination) {
+      // Create pagination component with 32 items per page
+      this.pagination = createPagination(
+        container,
+        this.state.galleryData,
+        32, // itemsPerPage = 32 for gallery grid
+        this.handlePaginationUpdate
+      );
+      
+      console.log('Gallery pagination component initialized');
+    }
   }
   
   /**

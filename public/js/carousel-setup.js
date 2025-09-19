@@ -1,4 +1,6 @@
 // Carousel Setup Module
+import { createPagination } from './custom-ui/pagination.js';
+
 export class CarouselDisplay {
   constructor(baseElement, dataDisplay) {
     if (!baseElement) {
@@ -12,44 +14,75 @@ export class CarouselDisplay {
     this.baseElement = baseElement;
     this.dataDisplay = dataDisplay;
     
-    // Get references to the control elements
-    this.prevButton = baseElement.querySelector('.carousel-prev');
-    this.nextButton = baseElement.querySelector('.carousel-next');
-    this.currentIndexElement = baseElement.querySelector('.current-index');
-    this.totalCountElement = baseElement.querySelector('.total-count');
+    // Find the carousel controls container
+    const carouselControls = baseElement.querySelector('.carousel-controls');
+    if (!carouselControls) {
+      throw new Error('CarouselDisplay: .carousel-controls container not found in baseElement');
+    }
     
-    // Validate that all required elements exist
-    if (!this.prevButton || !this.nextButton || !this.currentIndexElement || !this.totalCountElement) {
-      throw new Error('CarouselDisplay: Required control elements not found in baseElement');
+    // Find or create pagination container
+    let paginationContainer = carouselControls.querySelector('#carouselPagination');
+    if (!paginationContainer) {
+      // Create pagination container if it doesn't exist
+      paginationContainer = document.createElement('div');
+      paginationContainer.id = 'carouselPagination';
+      carouselControls.appendChild(paginationContainer);
     }
     
     // Internal state
     this.dataList = [];
-    this.currentIndex = 0;
     this.selectedName = null;
     this.selectedTimestamp = null;
     
-    // Set up event listeners
-    this.setupEventListeners();
+    // Initialize pagination component
+    this.pagination = createPagination(
+      paginationContainer,
+      this.dataList,
+      1, // itemsPerPage = 1 for carousel behavior
+      (currentPageData) => this.handlePaginationUpdate(currentPageData)
+    );
     
-    // Initial update
-    this.updateDisplay();
+    // Initial state - hide container when no data
+    this.baseElement.style.display = 'none';
     
     console.log('CarouselDisplay initialized successfully');
   }
   
   /**
-   * Set up event listeners for carousel controls
+   * Handle pagination component updates
+   * @param {Array} currentPageData - Current page data from pagination component
    */
-  setupEventListeners() {
-    this.prevButton.addEventListener('click', () => {
-      this.moveToPrevious();
-    });
+  handlePaginationUpdate(currentPageData) {
+    // For carousel (itemsPerPage = 1), currentPageData will have 0 or 1 item
+    const currentItem = currentPageData.length > 0 ? currentPageData[0] : null;
     
-    this.nextButton.addEventListener('click', () => {
-      this.moveToNext();
+    // Update selected item tracking
+    if (currentItem) {
+      this.selectedName = currentItem.name;
+      this.selectedTimestamp = currentItem.timestamp;
+    } else {
+      this.selectedName = null;
+      this.selectedTimestamp = null;
+    }
+    
+    // Update data display
+    this.dataDisplay.setData(currentItem);
+    
+    // Update container visibility based on data availability
+    if (this.dataList.length === 0) {
+      this.baseElement.style.display = 'none';
+    } else {
+      this.baseElement.style.display = 'block';
+    }
+    
+    console.log('CarouselDisplay pagination updated:', {
+      currentItem: currentItem ? currentItem.name : 'none',
+      selectedName: this.selectedName,
+      selectedTimestamp: this.selectedTimestamp,
+      containerVisible: this.dataList.length > 0
     });
   }
+  
   
   /**
    * Set the data list for the carousel
@@ -59,31 +92,36 @@ export class CarouselDisplay {
     this.dataList = Array.isArray(dataList) ? dataList : [];
     
     // If we have a currently selected item, try to find it in the new list
+    let targetPageIndex = 0;
     if (this.selectedName && this.selectedTimestamp) {
       const foundIndex = this.dataList.findIndex(item => 
         item.name === this.selectedName && item.timestamp === this.selectedTimestamp
       );
       
       if (foundIndex !== -1) {
-        this.currentIndex = foundIndex;
+        targetPageIndex = foundIndex; // For carousel, page index = item index
       } else {
-        this.currentIndex = 0;
         this.selectedName = null;
         this.selectedTimestamp = null;
       }
+    }
+    
+    // Update pagination component with new data
+    this.pagination.setDataList(this.dataList);
+    
+    // Navigate to target page if needed
+    if (targetPageIndex > 0 && targetPageIndex < this.dataList.length) {
+      this.pagination.goToPage(targetPageIndex);
+    }
+    
+    // Update container visibility based on data availability
+    if (this.dataList.length === 0) {
+      this.baseElement.style.display = 'none';
     } else {
-      this.currentIndex = 0;
+      this.baseElement.style.display = 'block';
     }
     
-    // Ensure currentIndex is within bounds
-    if (this.currentIndex >= this.dataList.length) {
-      this.currentIndex = Math.max(0, this.dataList.length - 1);
-    }
-    
-    this.updateDisplay();
-    this.updateDataDisplay();
-    
-    console.log('CarouselDisplay data set:', this.dataList.length, 'items, currentIndex:', this.currentIndex);
+    console.log('CarouselDisplay data set:', this.dataList.length, 'items, targetPage:', targetPageIndex);
   }
   
   /**
@@ -96,83 +134,43 @@ export class CarouselDisplay {
     const newDataList = [...this.dataList, data];
     this.setData(newDataList);
     
-    // Move to the newly added item
-    this.currentIndex = this.dataList.length - 1;
-    this.updateDisplay();
-    this.updateDataDisplay();
+    // Move to the newly added item (last item)
+    const lastPageIndex = this.dataList.length - 1;
+    this.pagination.goToPage(lastPageIndex);
     
-    console.log('CarouselDisplay data added, moved to index:', this.currentIndex);
+    console.log('CarouselDisplay data added, moved to index:', lastPageIndex);
   }
   
   /**
    * Move to the previous item
    */
   moveToPrevious() {
-    if (this.dataList.length === 0) return;
-    
-    this.currentIndex = (this.currentIndex - 1 + this.dataList.length) % this.dataList.length;
-    this.updateDisplay();
-    this.updateDataDisplay();
-    
-    console.log('CarouselDisplay moved to previous, index:', this.currentIndex);
+    this.pagination.goToPreviousPage();
+    console.log('CarouselDisplay moved to previous');
   }
   
   /**
    * Move to the next item
    */
   moveToNext() {
-    if (this.dataList.length === 0) return;
-    
-    this.currentIndex = (this.currentIndex + 1) % this.dataList.length;
-    this.updateDisplay();
-    this.updateDataDisplay();
-    
-    console.log('CarouselDisplay moved to next, index:', this.currentIndex);
+    this.pagination.goToNextPage();
+    console.log('CarouselDisplay moved to next');
   }
   
   /**
-   * Update the carousel display (index, buttons)
-   */
-  updateDisplay() {
-    // Update index display
-    if (this.dataList.length === 0) {
-      this.currentIndexElement.textContent = '0';
-      this.totalCountElement.textContent = '0';
-      this.baseElement.style.display = 'none';
-    } else {
-      this.currentIndexElement.textContent = (this.currentIndex + 1).toString();
-      this.totalCountElement.textContent = this.dataList.length.toString();
-      this.baseElement.style.display = 'block';
-    }
-    
-    // Update button states
-    const hasItems = this.dataList.length > 0;
-    const hasMultipleItems = this.dataList.length > 1;
-    
-    this.prevButton.disabled = !hasMultipleItems;
-    this.nextButton.disabled = !hasMultipleItems;
-    
-    // Update selected item tracking
-    if (hasItems && this.currentIndex < this.dataList.length) {
-      const currentItem = this.dataList[this.currentIndex];
-      this.selectedName = currentItem.name;
-      this.selectedTimestamp = currentItem.timestamp;
-    } else {
-      this.selectedName = null;
-      this.selectedTimestamp = null;
-    }
-  }
-  
-  /**
-   * Update the data display with the current item
+   * Update the data display with the current item (for backward compatibility)
    */
   updateDataDisplay() {
-    if (this.dataList.length === 0 || this.currentIndex >= this.dataList.length) {
-      this.dataDisplay.setData(null);
-    } else {
-      const currentItem = this.dataList[this.currentIndex];
-      this.dataDisplay.setData(currentItem);
-    }
+    // The pagination component handles data display updates via handlePaginationUpdate
+    // This method is kept for backward compatibility but doesn't need to do anything
+  }
+  
+  /**
+   * Update the carousel display (for backward compatibility)
+   */
+  updateDisplay() {
+    // The pagination component handles display updates
+    // This method is kept for backward compatibility but doesn't need to do anything
   }
   
   /**
@@ -180,10 +178,8 @@ export class CarouselDisplay {
    * @returns {Object|null} Current data item or null if no items
    */
   getCurrentData() {
-    if (this.dataList.length === 0 || this.currentIndex >= this.dataList.length) {
-      return null;
-    }
-    return this.dataList[this.currentIndex];
+    const currentPageData = this.pagination.getCurrentPageData();
+    return currentPageData.length > 0 ? currentPageData[0] : null;
   }
   
   /**
@@ -191,7 +187,7 @@ export class CarouselDisplay {
    * @returns {number} Current index
    */
   getCurrentIndex() {
-    return this.currentIndex;
+    return this.pagination.getState().currentPage;
   }
   
   /**
