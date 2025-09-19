@@ -2,19 +2,17 @@
 import { render, Component } from 'preact';
 import { html } from 'htm/preact';
 import { loadTags } from './tags.js';
-import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.js';
+import { showToast, showSuccessToast, showErrorToast } from './reusable-ui/toast.js';
 import { GeneratedImageDisplayComponent } from './custom-ui/generated-image-display.js';
 import { CarouselDisplayComponent } from './custom-ui/carousel-display.js';
-import { GalleryDisplay } from './custom-ui/gallery.js';
-import { createImageModal } from './custom-ui/modal.js';
+import { GalleryDisplay } from './reusable-ui/gallery.js';
+import { createImageModal } from './reusable-ui/modal.js';
 import { createGalleryPreview } from './gallery-preview.js';
 import { fetchJson, fetchWithRetry, FetchError } from './util.js';
 
 // Import new UI components
 import { HeaderComponent } from './custom-ui/header.js';
 import { WorkflowControlsComponent } from './custom-ui/workflow-controls.js';
-import { GeneratedImageContainerComponent } from './custom-ui/generated-image-container.js';
-import { CarouselContainerComponent } from './custom-ui/carousel-container.js';
 
 // Helper function to generate random seed
 function generateRandomSeed() {
@@ -334,8 +332,7 @@ class AppComponent extends Component {
         
         <!-- Generated Image Display -->
         ${showGeneratedImage ? html`
-          <${GeneratedImageContainerComponent}
-            isVisible=${showGeneratedImage}
+          <${GeneratedImageDisplayComponent}
             imageData=${currentImageData}
             onUseField=${this.handleUseField}
           />
@@ -343,9 +340,8 @@ class AppComponent extends Component {
         
         <!-- Carousel Display -->
         ${showCarousel ? html`
-          <${CarouselContainerComponent}
-            isVisible=${showCarousel}
-            carouselData=${carouselData}
+          <${CarouselDisplayComponent}
+            dataList=${carouselData}
             dataDisplayComponent=${GeneratedImageDisplayComponent}
             onSelectionChange=${this.handleCarouselChange}
           />

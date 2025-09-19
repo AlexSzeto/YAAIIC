@@ -1,6 +1,6 @@
-import { render, Component } from 'preact'
-import { html } from 'htm/preact'
-import { createPagination } from './pagination.js'
+import { render, Component } from 'preact';
+import { html } from 'htm/preact';
+import { createPagination } from '../reusable-ui/pagination.js';
 
 /**
  * Pure Preact component for carousel display functionality
@@ -213,6 +213,7 @@ export class CarouselDisplayComponent extends Component {
     
     return html`
       <div 
+        id="carouselDisplay"
         class="carousel-display"
         style=${{ display: isVisible ? 'block' : 'none' }}
       >

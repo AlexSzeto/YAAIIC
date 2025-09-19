@@ -212,3 +212,4 @@ Refactor all existing components to remove factory functions, rely on Preact com
 - Component APIs are consistent and follow Preact best practices
 - Code is more maintainable and follows modern React/Preact patterns
 - All modal components (`ImageModalComponent`, `DialogComponent`, `GalleryComponent`) use the shared `CustomModal` container for consistency
+

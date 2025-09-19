@@ -1,7 +1,7 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { sendToClipboard } from '../util.js'
-import { createImageModal } from './modal.js'
+import { createImageModal } from '../reusable-ui/modal.js'
 
 /**
  * Pure Preact component for displaying generated image data
