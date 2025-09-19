@@ -141,6 +141,10 @@ export class CarouselDisplayComponent extends Component {
       );
       
       console.log('CarouselDisplay pagination component initialized');
+    } else if (container && this.pagination && this.state.dataList.length > 0) {
+      // Update existing pagination if data has changed
+      this.pagination.setDataList(this.state.dataList);
+      console.log('CarouselDisplay pagination updated with new data');
     }
   }
   

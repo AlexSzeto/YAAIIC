@@ -19,6 +19,46 @@
   flex: 0 0 auto;
 }
 
+/* Reusable single-icon button style - matches pagination buttons */
+.btn-icon-only {
+  background-color: var(--dark-background-card);
+  border: 1px solid var(--dark-border-focus);
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.btn-icon-only:hover {
+  background-color: var(--dark-background-hover);
+}
+
+.btn-icon-only:active {
+  background-color: var(--dark-background-tertiary);
+}
+
+.btn-icon-only:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
+}
+
+.btn-icon-only:disabled {
+  background-color: var(--dark-background-tertiary);
+  border-color: var(--dark-border-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-icon-only:disabled:hover {
+  background-color: var(--dark-background-tertiary);
+}
+
 /* Dark Mode Styling */
 * {
   box-sizing: border-box;
@@ -287,7 +327,15 @@ p {
   align-items: flex-start;
 }
 
-.generated-image-left {
+/* Add aliases for Preact component class names */
+.generated-image-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.generated-image-left,
+.image-column {
   flex: 0 0 auto;
   max-width: 50%;
 }
@@ -299,7 +347,8 @@ p {
   display: block;
 }
 
-.generated-image-right {
+.generated-image-right,
+.info-column {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -311,6 +360,12 @@ p {
   flex-direction: column;
 }
 
+.info-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
 .info-header {
   display: flex;
   justify-content: space-between;
@@ -318,14 +373,17 @@ p {
   margin-bottom: 5px;
 }
 
-.info-field-container {
+.info-field-container,
+.info-input-container {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
 .info-field-container input,
-.info-field-container textarea {
+.info-field-container textarea,
+.info-input-container input,
+.info-input-container textarea {
   flex: 1;
 }
 

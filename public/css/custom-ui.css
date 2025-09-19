@@ -98,40 +98,7 @@
   gap: 10px;
 }
 
-/* Reuse carousel button styles for pagination */
-.pagination-btn {
-  background-color: var(--dark-background-card);
-  border: 1px solid var(--dark-border-focus);
-  border-radius: 4px;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s ease;
-  width: 36px;
-  height: 36px;
-}
-
-.pagination-btn:hover {
-  background-color: var(--dark-background-hover);
-}
-
-.pagination-btn:disabled {
-  background-color: var(--dark-background-tertiary);
-  border-color: var(--dark-border-secondary);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.pagination-btn:disabled:hover {
-  background-color: var(--dark-background-tertiary);
-}
-
-.pagination-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
-}
+/* Pagination buttons now use the reusable .btn-icon-only class from style.css */
 
 .pagination-index {
   color: var(--dark-text-primary);
@@ -380,7 +347,8 @@
     gap: 8px;
   }
   
-  .pagination-btn {
+  .btn-icon-only.pagination-prev,
+  .btn-icon-only.pagination-next {
     width: 32px;
     height: 32px;
     padding: 6px;

@@ -22,8 +22,9 @@ export class CustomModal extends Component {
       isClosing: false
     };
     
-    // Create portal container
-    this.portalContainer = null;
+    // Create portal container immediately
+    this.portalContainer = document.createElement('div');
+    document.body.appendChild(this.portalContainer);
     
     console.log('CustomModal initialized:', { 
       isVisible: this.state.isVisible, 
@@ -32,10 +33,6 @@ export class CustomModal extends Component {
   }
   
   componentDidMount() {
-    // Create portal container
-    this.portalContainer = document.createElement('div');
-    document.body.appendChild(this.portalContainer);
-    
     // Set up keyboard listener
     document.addEventListener('keydown', this.handleKeyDown);
     
@@ -183,13 +180,22 @@ export class CustomModal extends Component {
   render() {
     const { isVisible } = this.state;
     
+    console.log('CustomModal render called:', { 
+      isVisible, 
+      hasPortalContainer: !!this.portalContainer 
+    });
+    
     // Don't render anything if not visible or portal container not ready
     if (!isVisible || !this.portalContainer) {
+      console.log('CustomModal not rendering:', { isVisible, portalContainer: !!this.portalContainer });
       return null;
     }
     
     // Use createPortal to render the modal content to document.body
-    return createPortal(this.renderModalContent(), this.portalContainer);
+    const modalContent = this.renderModalContent();
+    console.log('CustomModal rendering with portal:', modalContent);
+    
+    return createPortal(modalContent, this.portalContainer);
   }
 }
 

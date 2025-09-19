@@ -255,7 +255,7 @@ export class PaginationComponent extends Component {
       >
         <div class="pagination-nav">
           <button 
-            class="pagination-btn pagination-prev"
+            class="btn-icon-only pagination-prev"
             title="Previous page"
             aria-label="Go to previous page"
             disabled=${!hasMultiplePages || isFirstPage}
@@ -268,7 +268,7 @@ export class PaginationComponent extends Component {
             <span class="pagination-current">${currentPage + 1}</span> / <span class="total-pages">${totalPages}</span>
           </div>
           <button 
-            class="pagination-btn pagination-next"
+            class="btn-icon-only pagination-next"
             title="Next page"
             aria-label="Go to next page"
             disabled=${!hasMultiplePages || isLastPage}

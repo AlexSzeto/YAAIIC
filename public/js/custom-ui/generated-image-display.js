@@ -184,18 +184,20 @@ export class GeneratedImageDisplayComponent extends Component {
           }
           <div class="info-buttons">
             <button 
-              class="copy-btn btn-with-icon"
+              class="copy-btn btn-icon-only"
               data-field=${fieldName}
               onClick=${() => this.handleCopyField(fieldName)}
               title=${`Copy ${label}`}
+              aria-label=${`Copy ${label.toLowerCase()}`}
             >
               <box-icon name="copy" color="#ffffff"></box-icon>
             </button>
             <button 
-              class="use-btn btn-with-icon"
+              class="use-btn btn-icon-only"
               data-field=${fieldName}
               onClick=${() => this.handleUseField(fieldName)}
               title=${`Use ${label}`}
+              aria-label=${`Use ${label.toLowerCase()}`}
             >
               <box-icon name="upload" color="#ffffff"></box-icon>
             </button>
