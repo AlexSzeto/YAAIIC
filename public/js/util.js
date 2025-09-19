@@ -1,6 +1,140 @@
 // Utility functions for common operations
 
 /**
+ * Preact-specific helper functions
+ */
+
+/**
+ * Validate component props with error logging
+ * @param {Object} props - Component props to validate
+ * @param {Object} propTypes - Object describing required props and their types
+ * @param {string} componentName - Name of component for error messages
+ * @throws {Error} - Throws if required props are missing or wrong type
+ */
+export function validateProps(props, propTypes, componentName) {
+  for (const [propName, propType] of Object.entries(propTypes)) {
+    const { required = false, type = 'any', validator = null } = propType;
+    const propValue = props[propName];
+    
+    // Check required props
+    if (required && (propValue === undefined || propValue === null)) {
+      throw new Error(`${componentName}: Required prop '${propName}' is missing`);
+    }
+    
+    // Skip type checking for optional undefined props
+    if (propValue === undefined || propValue === null) {
+      continue;
+    }
+    
+    // Check prop types
+    if (type !== 'any' && typeof propValue !== type) {
+      throw new Error(`${componentName}: Prop '${propName}' should be of type '${type}', got '${typeof propValue}'`);
+    }
+    
+    // Run custom validator if provided
+    if (validator && !validator(propValue)) {
+      throw new Error(`${componentName}: Prop '${propName}' failed validation`);
+    }
+  }
+}
+
+/**
+ * Create a cleanup function that can be called during component unmounting
+ * @param {Array<Function>} cleanupTasks - Array of cleanup functions
+ * @returns {Function} - Single cleanup function that runs all tasks
+ */
+export function createCleanupFunction(cleanupTasks = []) {
+  return () => {
+    cleanupTasks.forEach((task, index) => {
+      try {
+        if (typeof task === 'function') {
+          task();
+        }
+      } catch (error) {
+        console.error(`Cleanup task ${index} failed:`, error);
+      }
+    });
+  };
+}
+
+/**
+ * Helper for managing component refs safely
+ * @param {Function} callback - Function to call when ref is available
+ * @returns {Function} - Ref callback function
+ */
+export function createRefCallback(callback) {
+  return (ref) => {
+    if (ref && typeof callback === 'function') {
+      try {
+        callback(ref);
+      } catch (error) {
+        console.error('Ref callback failed:', error);
+      }
+    }
+  };
+}
+
+/**
+ * Debounce function calls - useful for search inputs and other user interactions
+ * @param {Function} func - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @returns {Function} - Debounced function with cancel method
+ */
+export function debounce(func, delay) {
+  let timeoutId;
+  
+  const debouncedFunction = (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+  
+  // Add cancel method to clear pending executions
+  debouncedFunction.cancel = () => {
+    clearTimeout(timeoutId);
+  };
+  
+  return debouncedFunction;
+}
+
+/**
+ * Safe event handler wrapper that prevents errors from breaking components
+ * @param {Function} handler - Event handler function
+ * @param {string} [handlerName] - Optional name for debugging
+ * @returns {Function} - Wrapped event handler
+ */
+export function createSafeEventHandler(handler, handlerName = 'Unknown') {
+  return (...args) => {
+    try {
+      if (typeof handler === 'function') {
+        return handler(...args);
+      }
+    } catch (error) {
+      console.error(`Event handler '${handlerName}' failed:`, error);
+    }
+  };
+}
+
+/**
+ * Create a state update function with validation
+ * @param {Function} setState - Component's setState function
+ * @param {Function} validator - Optional validator function
+ * @returns {Function} - Validated setState function
+ */
+export function createValidatedSetState(setState, validator = null) {
+  return (newState) => {
+    try {
+      if (validator && !validator(newState)) {
+        console.warn('State update failed validation:', newState);
+        return;
+      }
+      setState(newState);
+    } catch (error) {
+      console.error('State update failed:', error);
+    }
+  };
+}
+
+/**
  * Configuration for fetch with retry functionality
  */
 const DEFAULT_FETCH_CONFIG = {

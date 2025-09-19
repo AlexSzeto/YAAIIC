@@ -1,5 +1,6 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
+import { CustomModal } from './modal.js'
 import { createPagination } from './pagination.js'
 import { fetchJson, FetchError } from '../util.js'
 
@@ -19,9 +20,9 @@ export class GalleryDisplay extends Component {
     this.queryPath = props.queryPath;
     this.previewFactory = props.previewFactory;
     this.onLoad = props.onLoad;
+    this.onClose = props.onClose;
     
     this.state = {
-      isVisible: false,
       galleryData: [],
       searchQuery: '',
       currentPageData: [] // Store current page's items for display
@@ -34,13 +35,34 @@ export class GalleryDisplay extends Component {
   }
   
   componentDidMount() {
-    // Set up escape key listener
-    document.addEventListener('keydown', this.handleKeyDown);
+    // Fetch data if visible on mount
+    if (this.props.isVisible) {
+      this.fetchGalleryData();
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    // Fetch data when modal becomes visible
+    if (!prevProps.isVisible && this.props.isVisible) {
+      this.fetchGalleryData();
+      console.log('Gallery modal opened');
+    }
+    
+    // Clean up when modal becomes hidden
+    if (prevProps.isVisible && !this.props.isVisible) {
+      this.setState({ currentPageData: [] });
+      
+      // Clean up pagination component
+      if (this.pagination) {
+        this.pagination.destroy();
+        this.pagination = null;
+      }
+      
+      console.log('Gallery modal closed');
+    }
   }
 
   componentWillUnmount() {
-    // Clean up event listener
-    document.removeEventListener('keydown', this.handleKeyDown);
     // Clear search timeout
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout);
@@ -49,12 +71,6 @@ export class GalleryDisplay extends Component {
     if (this.pagination) {
       this.pagination.destroy();
       this.pagination = null;
-    }
-  }
-
-  handleKeyDown = (e) => {
-    if (e.key === 'Escape' && this.state.isVisible) {
-      this.hideModal();
     }
   }
 
@@ -68,17 +84,20 @@ export class GalleryDisplay extends Component {
     if (this.onLoad && typeof this.onLoad === 'function') {
       this.onLoad(this.state.galleryData);
     }
-    this.hideModal();
+    this.closeModal();
   }
 
   handleCancelClick = () => {
     this.setState({ searchQuery: '' });
-    this.hideModal();
+    this.closeModal();
   }
-
-  handleModalClick = (e) => {
-    if (e.target.classList.contains('gallery-modal')) {
-      this.hideModal();
+  
+  /**
+   * Close the modal by calling the external onClose callback
+   */
+  closeModal() {
+    if (this.onClose && typeof this.onClose === 'function') {
+      this.onClose();
     }
   }
   
@@ -99,30 +118,6 @@ export class GalleryDisplay extends Component {
     this.searchTimeout = setTimeout(() => {
       this.fetchGalleryData();
     }, 300);
-  }
-  
-  /**
-   * Show the modal
-   */
-  showModal() {
-    this.setState({ isVisible: true });
-    this.fetchGalleryData();
-    console.log('Gallery modal opened');
-  }
-  
-  /**
-   * Hide the modal
-   */
-  hideModal() {
-    this.setState({ isVisible: false, currentPageData: [] });
-    
-    // Clean up pagination component
-    if (this.pagination) {
-      this.pagination.destroy();
-      this.pagination = null;
-    }
-    
-    console.log('Gallery modal closed');
   }
   
   /**
@@ -209,14 +204,11 @@ export class GalleryDisplay extends Component {
   }
 
   render() {
-    if (!this.state.isVisible) {
-      return null;
-    }
-
     return html`
-      <div 
-        class="gallery-modal"
-        onClick=${this.handleModalClick}
+      <${CustomModal}
+        isVisible=${this.props.isVisible}
+        onClose=${this.closeModal}
+        size="large"
       >
         <div class="gallery-content">
           <div class="gallery-grid">
@@ -256,7 +248,7 @@ export class GalleryDisplay extends Component {
             </div>
           </div>
         </div>
-      </div>
+      </${CustomModal}>
     `;
   }
   
@@ -278,55 +270,4 @@ export class GalleryDisplay extends Component {
     }
   }
   
-  /**
-   * Set the onLoad callback function (for backward compatibility)
-   * @param {Function} callback - Function to call when Load button is pressed
-   */
-  setOnLoad(callback) {
-    this.onLoad = callback;
-  }
-}
-
-// Factory function to create a gallery instance (for backward compatibility)
-export function createGallery(queryPath, previewFactory, onLoad) {
-  let galleryRef = null;
-  let containerElement = null;
-
-  // Create container and render gallery
-  const init = () => {
-    if (!containerElement) {
-      containerElement = document.createElement('div');
-      document.body.appendChild(containerElement);
-      
-      render(
-        html`<${GalleryDisplay} 
-          queryPath=${queryPath}
-          previewFactory=${previewFactory}
-          onLoad=${onLoad}
-          ref=${(ref) => { galleryRef = ref; }}
-        />`, 
-        containerElement
-      );
-    }
-  };
-
-  // Return an object that matches the original API
-  return {
-    showModal() {
-      init();
-      if (galleryRef) {
-        galleryRef.showModal();
-      }
-    },
-    hideModal() {
-      if (galleryRef) {
-        galleryRef.hideModal();
-      }
-    },
-    setOnLoad(callback) {
-      if (galleryRef) {
-        galleryRef.setOnLoad(callback);
-      }
-    }
-  };
 }
