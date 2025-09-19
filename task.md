@@ -1,114 +1,126 @@
-# Refactor Components to Preact with Signals Architecture
+# Refactor Components to Pure Preact
 
 ## Overview
-Refactor all existing components to remove factory functions, rely on Preact component properties (with callbacks) and state management, and introduce Preact signals for reactive DOM composition. This will modernize the component architecture and improve maintainability.
+Refactor all existing components to remove factory functions, rely on Preact component properties (with callbacks) and state management. This will modernize the component architecture and improve maintainability.
 
-## Tasks
+## Implementation Plan
 
-### Task 1: Install and Configure Preact Signals
-[ ] Install Preact Signals package in the project dependencies
-[ ] Update the HTML imports to include Preact Signals CDN or module imports
-[ ] Create a new signals utility module `public/js/signals.js` for managing global application signals
+### Phase 1: Audit and Analyze Current Components
+[ ] Review all existing JavaScript components and identify those using factory functions and imperative APIs:
+1. Survey all files in `public/js/` and `public/js/custom-ui/` to identify components that need refactoring.
+2. Analyze the current API patterns used by `CarouselDisplay`, `GeneratedImageDisplay`, and other components that still use factory functions.
+3. Document the props, callbacks, and state management requirements for each component.
+4. Identify shared patterns and create a consistent Preact component interface specification.
+5. Note any cross-component dependencies and communication patterns that need to be preserved.
 
-### Task 2: Create Preact Signal-Based State Management
-[ ] Create global signals for application state in `signals.js`:
-  - `currentImageData` - Signal for currently displayed generated image data
-  - `carouselDataList` - Signal for carousel data array
-  - `galleryDataList` - Signal for gallery data array  
-  - `searchQuery` - Signal for gallery search query
-  - `isGalleryVisible` - Signal for gallery modal visibility
-  - `workflows` - Signal for available workflows
-  - `currentWorkflow` - Signal for selected workflow
-[ ] Export signal utilities for components to use
-[ ] Create derived signals for computed values (e.g., `totalCarouselItems`, `filteredGalleryData`)
+### Phase 2: Refactor GeneratedImageDisplay to Pure Preact
+[ ] Convert `GeneratedImageDisplay` class to a pure Preact component in `public/js/custom-ui/generated-image-display.js`:
+1. Create a new `GeneratedImageDisplayComponent` class extending Preact's `Component`.
+2. Accept image data as props (`imageData`) and handle null/empty states gracefully.
+3. Implement proper state management for any internal UI state (loading, error states, etc.).
+4. Use Preact's lifecycle methods (`componentDidMount`, `componentDidUpdate`) to handle data changes.
+5. Render all UI elements using JSX-like `html` template literals, removing dependency on external HTML structure.
+6. Implement click handlers using Preact event handling patterns (e.g., for image modal opening).
+7. Add proper prop validation and error handling for invalid data formats.
+8. Maintain backward compatibility by creating a factory function `createGeneratedImageDisplay(container, initialData)`.
 
-### Task 3: Refactor Modal Component to Pure Preact
-[ ] Convert `createImageModal` factory function in `custom-ui/modal.js` to Preact component:
-  - Create `ImageModal` component class extending Preact Component
-  - Accept `url`, `autoScale`, and `isVisible` props
-  - Use component lifecycle methods instead of imperative DOM manipulation
-  - Implement proper cleanup in `componentWillUnmount`
-[ ] Update modal styling to work with Preact component rendering
-[ ] Replace all `createImageModal()` calls with Preact component usage
+### Phase 3: Refactor CarouselDisplay to Pure Preact  
+[ ] Convert `CarouselDisplay` class to a pure Preact component in `public/js/custom-ui/carousel-display.js`:
+1. Create a new `CarouselDisplayComponent` class extending Preact's `Component`.
+2. Accept props: `dataList` (array), `dataDisplayComponent` (Preact component), `onSelectionChange` (callback).
+3. Integrate the existing `PaginationComponent` as a child component, passing appropriate props.
+4. Manage internal state: `currentIndex`, `selectedItem`, handling the item tracking by `name` and `timestamp`.
+5. Use Preact's composition pattern to render the data display component with current item data.
+6. Handle data updates through props changes using `componentDidUpdate` lifecycle method.
+7. Implement `addData()` functionality through props updates and callback notifications.
+8. Maintain API compatibility by creating a factory function `createCarouselDisplay(container, dataDisplayComponent)`.
 
-### Task 4: Refactor Dialog Component to Pure Preact  
-[ ] Convert `showDialog` factory function in `custom-ui/dialog.js` to Preact component:
-  - Create `Dialog` component class extending Preact Component
-  - Accept `text`, `title`, and `isVisible` props
-  - Use Preact event handling instead of direct DOM event listeners
-  - Implement proper state management for visibility
-[ ] Create a global dialog signal for managing dialog state
-[ ] Replace all `showDialog()` calls with signal-based dialog management
+### Phase 4: Create Shared CustomModal Component Foundation
+[ ] Create a reusable `CustomModal` component in `public/js/custom-ui/modal.js`:
+1. Export a new `CustomModal` class using preact/htm with proper imports from 'preact' and 'htm/preact'.
+2. Accept props: `isVisible`, `lock` (boolean, default: false), `onClose`, `children`, and `size` configurations.
+3. Initialize state variables and create modal DOM structure (wrapper, container, close button) using preact/htm render patterns.
+4. Apply existing CSS classes from image-modal styles for consistency with current modal appearance.
+5. Use `props.children` to handle content that gets placed inside the modal container.
+6. Ensure proper DOM structure matches existing image-modal-overlay/wrapper/container hierarchy.
 
-### Task 5: Refactor Pagination Component Factory Function
-[ ] Remove `createPagination` factory function from `custom-ui/pagination.js`:
-  - Keep the existing `PaginationComponent` class but enhance it with signals
-  - Use signals for `dataList`, `currentPage`, and other reactive state
-  - Remove the factory function entirely
-[ ] Update all components using `createPagination()` to use the component directly
-[ ] Ensure proper cleanup of signal subscriptions in component lifecycle
+[ ] Implement modal interaction and lifecycle management:
+1. Create `closeModal()` method that handles proper cleanup and calls the `onClose` callback.
+2. Connect close button click, overlay click, and ESC key press listeners to `closeModal()` method.
+3. Implement `setModalLock(lock)` method that disables/enables all close mechanisms based on lock state.
+4. Use Preact lifecycle methods for proper event listener setup and cleanup.
+5. Implement proper portal rendering to attach modals to document body while maintaining Preact's component tree.
 
-### Task 6: Refactor Gallery Component Architecture
-[ ] Convert `createGallery` factory function in `custom-ui/gallery.js` to pure Preact:
-  - Remove the factory function
-  - Enhance the existing `GalleryDisplay` component to use signals
-  - Connect to global `galleryDataList`, `searchQuery`, and `isGalleryVisible` signals
-  - Use signal-based reactivity for search and data updates
-[ ] Remove the factory function and update `main.js` to instantiate component directly
-[ ] Implement proper signal-based communication between gallery and carousel
+### Phase 5: Refactor Modal-Based Components to Use CustomModal
+[ ] Refactor `createImageModal` function to use `CustomModal`:
+1. Rewrite `createImageModal` in `public/js/custom-ui/modal.js` to instantiate `CustomModal` component.
+2. Move image element creation and configuration logic to use the CustomModal container via children props.
+3. Preserve existing autoScale and original sizing functionality within the image content component.
+4. Maintain image loading, error handling, and scaling calculation logic.
+5. Create an `ImageModalComponent` that renders image content and passes it to `CustomModal` as children.
+6. Ensure backward compatibility with existing `createImageModal(url, autoScale)` function signature.
 
-### Task 7: Refactor Generated Image Display Component
-[ ] Update `GeneratedImageDisplay` class in `generated-image-display.js`:
-  - Connect to `currentImageData` signal instead of manual `setData()` calls
-  - Use signal-based reactivity for image and metadata updates
-  - Convert button event handlers to use Preact patterns
-  - Remove imperative DOM updates in favor of reactive rendering
-[ ] Implement signal-driven copy and use button functionality
-[ ] Connect to global workflow and form field signals for the "use" functionality
+[ ] Create and refactor dialog modal functionality:
+1. Create `createDialogModal(text, title)` function in `public/js/custom-ui/modal.js` using `CustomModal` class.
+2. Port dialog content creation logic from the existing `showDialog()` function in `custom-dialog.js`.
+3. Create `DialogModalComponent` that renders title, content, and handles empty text with "No description text provided." fallback.
+4. Apply consistent styling using existing modal CSS classes rather than dialog-specific classes.
+5. Update all references to `showDialog()` from `custom-dialog.js` to use the new `createDialogModal()` function.
+6. Test dialog functionality and delete `public/js/custom-ui/dialog.js` once all functionality is ported.
 
-### Task 8: Refactor Carousel Display Component  
-[ ] Update `CarouselDisplay` class in `carousel-setup.js`:
-  - Connect to `carouselDataList` and `currentImageData` signals
-  - Remove manual data list management in favor of signal reactivity
-  - Use signal subscriptions instead of callback-based updates
-  - Remove the factory function dependency for pagination
-[ ] Implement signal-based navigation that automatically updates `currentImageData`
-[ ] Connect carousel navigation to generated image display via shared signals
+[ ] Refactor `GalleryDisplay` to use `CustomModal`:
+1. Update the `GalleryDisplay` component in `public/js/custom-ui/gallery.js` to use `CustomModal` for modal structure.
+2. Replace the current modal DOM creation in render() method with `CustomModal` component integration.
+3. Move gallery content (grid, pagination, controls) into the CustomModal container using children composition.
+4. Maintain existing gallery functionality including search, pagination, and load/cancel actions.
+5. Ensure proper integration with existing preact/htm structure and preserve modal close behavior.
+6. Update the factory function to work with the new CustomModal-based implementation.
 
-### Task 9: Refactor Gallery Preview Component
-[ ] Convert `createGalleryPreview` factory function in `gallery-preview.js`:
-  - Create `GalleryPreviewItem` Preact component
-  - Accept item data as props instead of factory function parameters
-  - Use Preact event handling for click events
-  - Connect click events to global modal visibility signals
-[ ] Update gallery component to use array of preview components instead of factory function
-[ ] Implement proper key props for list rendering performance
+### Phase 6: Refactor Main Application Entry Points
+[ ] Update `main.js` to use Preact components instead of factory functions:
+1. Replace manual DOM manipulation and factory function calls with Preact component rendering.
+2. Create a main `AppComponent` that manages global application state and renders child components.
+3. Use Preact's component communication patterns (props, callbacks) instead of direct method calls.
+4. Implement proper component mounting to existing DOM elements using `render()`.
+5. Establish a centralized state management pattern for shared data (workflows, image data, etc.).
+6. Update event handlers to use Preact's event system and component callbacks.
 
-### Task 10: Update Main Application Bootstrap
-[ ] Refactor `main.js` to use signal-based architecture:
-  - Initialize all global signals on application start
-  - Remove manual component instantiation with factory functions
-  - Use Preact rendering for the main application components
-  - Set up signal watchers for cross-component communication
-[ ] Create a main App component that manages all sub-components
-[ ] Use signals to coordinate between form submission, image generation, and display updates
-[ ] Implement proper error handling with signal-based error state
+### Phase 7: Refactor Gallery Components
+[ ] Update `GalleryDisplay` to pure Preact patterns in `public/js/custom-ui/gallery.js`:
+1. Remove the factory function approach and rely purely on the existing `GalleryDisplay` Preact component.
+2. Simplify the component API to accept all configuration through props: `queryPath`, `previewFactory`, `onLoad`, `isVisible`.
+3. Remove the external factory wrapper and update consuming code to use direct Preact rendering.
+4. Ensure the `previewFactory` function works seamlessly with Preact's rendering system.
+5. Update the pagination integration to use pure prop-based communication.
 
-### Task 11: Update Toast Component Integration
-[ ] Ensure `toast.js` component integrates properly with the new signal-based architecture
-[ ] Connect toast notifications to error and success signals
-[ ] Remove any remaining factory function patterns in toast usage
+### Phase 8: Update Utility Functions and Integration Points
+[ ] Refactor utility functions in `public/js/util.js` to support Preact patterns:
+1. Update any DOM manipulation utilities to work with Preact refs and component patterns.
+2. Create helper functions for common Preact patterns used across components.
+3. Implement standardized prop validation and error handling utilities.
+4. Add utilities for managing component lifecycle and cleanup operations.
 
-### Task 12: Clean Up and Optimize
-[ ] Remove all unused factory functions and their exports
-[ ] Update imports across all files to use new component structure
-[ ] Optimize signal subscriptions to prevent memory leaks
-[ ] Add TypeScript-style JSDoc comments for better IDE support
-[ ] Test all component interactions work with new signal-based architecture
-[ ] Ensure proper component cleanup and signal unsubscription
+[ ] Update component integration in consuming files:
+1. Modify `carousel-setup.js`, `generated-image-display.js`, and other integration files to use Preact rendering.
+2. Replace class instantiation patterns with Preact component rendering using `render()`.
+3. Update cross-component communication to use props and callbacks instead of direct method calls.
+4. Ensure proper cleanup and unmounting of Preact components when needed.
 
-### Task 13: Update Documentation and Patterns
-[ ] Update `rules.md` to reflect the new Preact + Signals architecture guidelines
-[ ] Document the new component patterns and signal usage conventions
-[ ] Create examples of proper signal subscription and cleanup patterns
-[ ] Update any inline documentation referencing old factory function patterns
+### Phase 9: Cleanup and Optimization
+[ ] Remove factory functions and imperative APIs:
+1. Remove all factory function exports that are no longer needed after Preact conversion.
+2. Clean up any unused DOM manipulation code and event listeners.
+3. Consolidate common component patterns and reduce code duplication.
+4. Ensure consistent prop interfaces across all components.
+
+[ ] Update styling and CSS integration:
+1. Ensure all components work properly with existing CSS classes and styling.
+2. Update any CSS that relied on specific DOM structures created by factory functions.
+
+## Success Criteria
+- All components use pure Preact patterns with props and state management
+- No factory functions remain in the codebase (except for backward compatibility wrappers)
+- All existing functionality is preserved and works correctly
+- Component APIs are consistent and follow Preact best practices
+- Code is more maintainable and follows modern React/Preact patterns
+- All modal components (`ImageModalComponent`, `DialogComponent`, `GalleryComponent`) use the shared `CustomModal` container for consistency
