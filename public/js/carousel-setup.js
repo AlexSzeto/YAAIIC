@@ -111,7 +111,17 @@ export class CarouselDisplay {
     
     // Navigate to target page if needed
     if (targetPageIndex > 0 && targetPageIndex < this.dataList.length) {
-      this.pagination.goToPage(targetPageIndex);
+      // Use setTimeout to ensure pagination component has updated its state
+      setTimeout(() => {
+        try {
+          this.pagination.goToPage(targetPageIndex);
+        } catch (error) {
+          console.warn('Failed to navigate to target page:', targetPageIndex, error.message);
+          // Reset selected item tracking if navigation fails
+          this.selectedName = null;
+          this.selectedTimestamp = null;
+        }
+      }, 0);
     }
     
     // Update container visibility based on data availability
@@ -132,11 +142,36 @@ export class CarouselDisplay {
     if (!data) return;
     
     const newDataList = [...this.dataList, data];
-    this.setData(newDataList);
+    this.dataList = newDataList;
     
-    // Move to the newly added item (last item)
-    const lastPageIndex = newDataList.length - 1;
-    this.pagination.goToPage(lastPageIndex);
+    // Update pagination component with new data
+    this.pagination.setDataList(this.dataList);
+    
+    // Move to the newly added item (last item) with validation
+    const lastPageIndex = this.dataList.length - 1;
+    if (lastPageIndex >= 0 && this.dataList.length > 0) {
+      // Use setTimeout to ensure pagination component has updated its state
+      setTimeout(() => {
+        try {
+          this.pagination.goToPage(lastPageIndex);
+        } catch (error) {
+          console.warn('Failed to navigate to last page:', error.message);
+          // Fallback: try to go to last available page
+          try {
+            this.pagination.goToLastPage();
+          } catch (fallbackError) {
+            console.error('Failed to navigate to last page even with fallback:', fallbackError.message);
+          }
+        }
+      }, 0);
+    }
+    
+    // Update container visibility based on data availability
+    if (this.dataList.length === 0) {
+      this.baseElement.style.display = 'none';
+    } else {
+      this.baseElement.style.display = 'block';
+    }
     
     console.log('CarouselDisplay data added, moved to index:', lastPageIndex);
   }

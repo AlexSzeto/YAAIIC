@@ -185,8 +185,16 @@ export class PaginationComponent extends Component {
    * @param {number} pageIndex - Zero-based page index
    */
   goToPage(pageIndex) {
-    if (typeof pageIndex !== 'number' || pageIndex < 0 || pageIndex >= this.state.totalPages) {
-      throw new Error(`pageIndex must be between 0 and ${this.state.totalPages - 1}`);
+    if (typeof pageIndex !== 'number') {
+      throw new Error(`pageIndex must be a number, received: ${typeof pageIndex}`);
+    }
+    
+    if (pageIndex < 0) {
+      throw new Error(`pageIndex must be >= 0, received: ${pageIndex}`);
+    }
+    
+    if (pageIndex >= this.state.totalPages) {
+      throw new Error(`pageIndex must be < ${this.state.totalPages} (total pages), received: ${pageIndex}. Current data length: ${this.state.dataList.length}`);
     }
     
     if (this.state.currentPage !== pageIndex) {
