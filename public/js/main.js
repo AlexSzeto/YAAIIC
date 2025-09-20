@@ -248,7 +248,7 @@ async function handleGenerate() {
     }, {
       maxRetries: 1, // Limited retries for generation (expensive operation)
       retryDelay: 2000,
-      timeout: 120000, // 2 minutes timeout for image generation
+      timeout: 1800000, // 30 minutes timeout for image generation
       showUserFeedback: false // We handle feedback manually for generation
     });
 
