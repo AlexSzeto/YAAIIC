@@ -119,6 +119,74 @@ export class GalleryDisplay extends Component {
   }
   
   /**
+   * Delete all selected items with confirmation
+   */
+  deleteSelectedItems = async () => {
+    const { selectedItems } = this.state;
+    
+    if (selectedItems.length === 0) {
+      console.warn('No items selected for deletion');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const itemText = selectedItems.length === 1 ? 'item' : 'items';
+    const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} selected ${itemText}? This action cannot be undone.`);
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    try {
+      console.log('Deleting selected items:', selectedItems);
+      
+      // Show loading feedback
+      if (window.showToast) {
+        window.showToast(`Deleting ${selectedItems.length} ${itemText}...`);
+      }
+      
+      // Send DELETE request to the server
+      const response = await fetchJson('/image-data/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uids: selectedItems })
+      }, {
+        maxRetries: 1,
+        retryDelay: 1000,
+        showUserFeedback: true,
+        showSuccessFeedback: false // We'll show our own success message
+      });
+      
+      console.log('Delete response:', response);
+      
+      // Clear selections
+      this.setState({ selectedItems: [] });
+      
+      // Refresh gallery data
+      await this.fetchGalleryData();
+      
+      // Show success feedback
+      if (window.showToast) {
+        const deletedText = response.deletedCount === 1 ? 'item' : 'items';
+        window.showToast(`Successfully deleted ${response.deletedCount} ${deletedText}`);
+      }
+      
+    } catch (error) {
+      console.error('Error deleting selected items:', error);
+      
+      // Show error feedback
+      if (window.showToast) {
+        const errorMessage = error instanceof FetchError && error.data?.message 
+          ? error.data.message 
+          : `Failed to delete selected ${itemText}. Please try again.`;
+        window.showToast(errorMessage);
+      }
+    }
+  }
+  
+  /**
    * Handle pagination component updates
    * @param {Array} currentPageData - Current page data from pagination component
    */
@@ -253,6 +321,10 @@ export class GalleryDisplay extends Component {
       return null;
     }
 
+    const { selectedItems } = this.state;
+    const hasSelectedItems = selectedItems.length > 0;
+    const selectedText = selectedItems.length === 1 ? 'item' : 'items';
+
     return html`
       <div 
         class="gallery-modal"
@@ -262,7 +334,21 @@ export class GalleryDisplay extends Component {
           <div class="gallery-grid">
             ${this.renderGalleryItems()}
           </div>
-          <div class="gallery-pagination-container" ref=${(ref) => this.setupPagination(ref)}></div>
+          <div class="gallery-pagination-wrapper">
+            ${hasSelectedItems && html`
+              <div class="gallery-bulk-delete">
+                <button 
+                  class="gallery-bulk-delete-btn btn-with-icon"
+                  onClick=${this.deleteSelectedItems}
+                  title=${`Delete ${selectedItems.length} selected ${selectedText}`}
+                >
+                  <box-icon name="trash" color="#ffffff"></box-icon>
+                  Delete ${selectedItems.length} ${selectedText}
+                </button>
+              </div>
+            `}
+            <div class="gallery-pagination-container" ref=${(ref) => this.setupPagination(ref)}></div>
+          </div>
           <div class="gallery-controls">
             <div class="gallery-search">
               <input

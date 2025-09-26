@@ -41,7 +41,7 @@
    - Pass the `handleItemSelect` method to the `previewFactory` via props
    - Ensure the selected state persists when gallery data is refreshed or paginated
 
-[] Add a text with (trash) icon delete button to the left of the pagination component in the gallery, and send a request to delete all selected items when the delete button is pressed. If the request is successful, update the gallery data to reflect the change:
+[x] Add a text with (trash) icon delete button to the left of the pagination component in the gallery, and send a request to delete all selected items when the delete button is pressed. If the request is successful, update the gallery data to reflect the change:
 1. Add a bulk delete button container to the left of the pagination component in the gallery modal's HTML structure
 2. Include a text label showing the count of selected items and a trash icon, styled consistently with existing buttons
 3. Show/hide the delete button based on whether any items are selected (only show when `selectedItems` has elements)
