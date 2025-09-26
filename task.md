@@ -18,12 +18,12 @@
 5. Modify the button's `disabled` attribute and styling based on whether `selectedItems.length > 0`
 6. Ensure proper accessibility attributes (aria-disabled, title) are updated based on button state
 
-[] prevent the focus from moving to the delete button when a gallery preview item is checked:
+[x] prevent the focus from moving to the delete button when a gallery preview item is checked:
 1. Examine the current focus behavior in `public/js/gallery-preview.js` when checkboxes are interacted with
 2. Modify the checkbox event handlers to prevent focus changes that might trigger unwanted button focus
 3. Add `preventDefault()` or adjust tab index management to ensure focus remains on the checkbox after interaction
 
-[] update `showDialog()` in `dialog.js` to accept options by expanding its parameters to `showDialog(text, title, options)`. Accept an array of string for `options`, using the strings as labels for options in the dialog. The function should return a promise that resolves with the label of the chosen option:
+[x] update `showDialog()` in `dialog.js` to accept options by expanding its parameters to `showDialog(text, title, options)`. Accept an array of string for `options`, using the strings as labels for options in the dialog. The function should return a promise that resolves with the label of the chosen option:
 1. Modify the `showDialog` function signature in `public/js/custom-ui/dialog.js` to accept a third parameter `options`
 2. When `options` is provided (array of strings), replace the single "Close" button with multiple option buttons
 3. Create dynamic button elements for each option string, with appropriate styling using existing button classes

@@ -1,92 +1,175 @@
 // Custom Dialog Module
+import { render, Component } from 'preact'
+import { html } from 'htm/preact'
 
+// Dialog component
+class Dialog extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isVisible: true
+    };
+  }
+
+  componentDidMount() {
+    // Set up escape key listener
+    document.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  componentWillUnmount() {
+    // Clean up event listener
+    document.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      this.handleClose();
+    } else if (e.key === 'Enter' && this.props.options && this.props.options.length > 0) {
+      // Enter key selects the first option if options are available
+      this.handleOptionClick(this.props.options[0]);
+    }
+  }
+
+  handleOverlayClick = (e) => {
+    if (e.target.classList.contains('dialog-overlay')) {
+      this.handleClose();
+    }
+  }
+
+  handleClose = () => {
+    if (this.props.onClose) {
+      this.props.onClose(null);
+    }
+  }
+
+  handleOptionClick = (optionText) => {
+    if (this.props.onClose) {
+      this.props.onClose(optionText);
+    }
+  }
+
+  renderButtons() {
+    const { options } = this.props;
+    
+    if (options && Array.isArray(options) && options.length > 0) {
+      // Create option buttons
+      return options.map((optionText, index) => html`
+        <button
+          key=${optionText}
+          class="dialog-option-button"
+          onClick=${() => this.handleOptionClick(optionText)}
+          ref=${index === 0 ? (btn) => { if (btn) setTimeout(() => btn.focus(), 0); } : null}
+        >
+          ${optionText}
+        </button>
+      `);
+    } else {
+      // Create default close button for backward compatibility
+      return html`
+        <button
+          class="dialog-close-button"
+          onClick=${this.handleClose}
+          ref=${(btn) => { if (btn) setTimeout(() => btn.focus(), 0); }}
+        >
+          Close
+        </button>
+      `;
+    }
+  }
+
+  render() {
+    const { text, title } = this.props;
+    
+    // Process content text
+    const contentText = text.trim() 
+      ? `Description text: "${text}"` 
+      : 'No description text provided.';
+    const contentClass = text.trim() ? 'dialog-content' : 'dialog-content empty';
+
+    return html`
+      <div class="dialog-overlay" onClick=${this.handleOverlayClick}>
+        <div class="dialog-box">
+          <h3 class="dialog-title">${title}</h3>
+          <p class=${contentClass}>${contentText}</p>
+          <div class="dialog-buttons">
+            ${this.renderButtons()}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
 /**
  * Displays a custom modal dialog with the provided text and title.
  * The dialog is automatically centered on screen with an overlay background.
- * Users can close the dialog by clicking the close button, clicking outside 
+ * Users can close the dialog by clicking buttons, clicking outside 
  * the dialog, or pressing the Escape key.
  * 
  * @param {string} text - The main content text to display in the dialog body.
  *                       If empty or whitespace-only, shows "No description text provided."
  * @param {string} [title='Generate Image'] - The title to display in the dialog header.
  *                                           Defaults to 'Generate Image' if not provided.
+ * @param {Array<string>} [options] - Array of option labels to display as buttons.
+ *                                   If provided, returns a Promise that resolves with the selected option.
+ *                                   If not provided, shows default "Close" button and returns undefined.
+ * 
+ * @returns {Promise<string>|undefined} - If options provided, returns Promise that resolves with selected option label.
+ *                                       If no options, returns undefined for backward compatibility.
  * 
  * @example
- * // Basic usage with default title
+ * // Basic usage with default title (backward compatible)
  * showDialog('This is the dialog content');
  * 
  * @example
- * // Custom title and content
+ * // Custom title and content (backward compatible)
  * showDialog('Image generation completed successfully!', 'Success');
  * 
  * @example
- * // Empty content handling
- * showDialog('', 'Warning'); // Shows "No description text provided."
+ * // With custom options - returns a Promise
+ * const result = await showDialog('Delete this item?', 'Confirm', ['Delete', 'Cancel']);
+ * if (result === 'Delete') {
+ *   // User clicked Delete
+ * }
  */
-export function showDialog(text, title = 'Generate Image') {
-  // Create modal overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'dialog-overlay';
+export function showDialog(text, title = 'Generate Image', options = null) {
+  // Create container element
+  const container = document.createElement('div');
+  document.body.appendChild(container);
 
-  // Create dialog box
-  const dialog = document.createElement('div');
-  dialog.className = 'dialog-box';
-
-  // Create dialog content
-  const titleElement = document.createElement('h3');
-  titleElement.className = 'dialog-title';
-  titleElement.textContent = title;
-
-  const content = document.createElement('p');
-  content.className = 'dialog-content';
-  
-  if (text.trim()) {
-    content.textContent = `Description text: "${text}"`;
-  } else {
-    content.textContent = 'No description text provided.';
-    content.classList.add('empty');
-  }
-
-  // Create close button
-  const closeButton = document.createElement('button');
-  closeButton.className = 'dialog-close-button';
-  closeButton.textContent = 'Close';
-
-  closeButton.addEventListener('click', function() {
-    closeDialog(overlay);
-  });
-
-  // Close dialog when clicking outside
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) {
-      closeDialog(overlay);
-    }
-  });
-
-  // Close dialog with Escape key
-  const handleEscape = function(e) {
-    if (e.key === 'Escape') {
-      closeDialog(overlay);
-      document.removeEventListener('keydown', handleEscape);
+  // Function to clean up dialog
+  const cleanup = () => {
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
     }
   };
-  document.addEventListener('keydown', handleEscape);
 
-  // Assemble dialog
-  dialog.appendChild(titleElement);
-  dialog.appendChild(content);
-  dialog.appendChild(closeButton);
-  overlay.appendChild(dialog);
+  // If options are provided, return a Promise
+  if (options && Array.isArray(options) && options.length > 0) {
+    return new Promise((resolve) => {
+      const handleClose = (selectedOption) => {
+        cleanup();
+        resolve(selectedOption);
+      };
 
-  // Add to page
-  document.body.appendChild(overlay);
+      render(html`<${Dialog} 
+        text=${text} 
+        title=${title} 
+        options=${options} 
+        onClose=${handleClose} 
+      />`, container);
+    });
+  } else {
+    // Backward compatibility - no return value
+    const handleClose = () => {
+      cleanup();
+    };
 
-  // Focus the close button for accessibility
-  closeButton.focus();
-}
-
-function closeDialog(overlay) {
-  if (overlay && overlay.parentNode) {
-    document.body.removeChild(overlay);
+    render(html`<${Dialog} 
+      text=${text} 
+      title=${title} 
+      onClose=${handleClose} 
+    />`, container);
+    
+    return undefined;
   }
 }

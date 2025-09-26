@@ -83,6 +83,48 @@
   box-shadow: 0 0 0 2px var(--secondary-focus);
 }
 
+/* Dialog Buttons Container */
+.dialog-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* Dialog Option Buttons */
+.dialog-option-button {
+  padding: 8px 16px;
+  background-color: var(--primary-background);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+.dialog-option-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.dialog-option-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.dialog-option-button:first-child {
+  background-color: var(--danger-background);
+}
+
+.dialog-option-button:first-child:hover {
+  background-color: var(--danger-hover);
+}
+
+.dialog-option-button:first-child:focus {
+  box-shadow: 0 0 0 2px var(--danger-focus);
+}
+
 /* Pagination Component Styling */
 .pagination-container {
   display: flex;

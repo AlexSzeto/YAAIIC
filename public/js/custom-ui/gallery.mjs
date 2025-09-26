@@ -25,7 +25,8 @@ export class GalleryDisplay extends Component {
       galleryData: [],
       searchQuery: '',
       currentPageData: [], // Store current page's items for display
-      selectedItems: [] // Array of selected item UIDs
+      selectedItems: [], // Array of selected item UIDs
+      shouldFocusSearch: false // Flag to control when search input should be focused
     };
     
     // Pagination component will be created when modal is shown
@@ -209,7 +210,11 @@ export class GalleryDisplay extends Component {
    * Show the modal
    */
   showModal() {
-    this.setState({ isVisible: true, selectedItems: [] }); // Clear selections when modal opens
+    this.setState({ 
+      isVisible: true, 
+      selectedItems: [], // Clear selections when modal opens
+      shouldFocusSearch: true // Enable search focus for this render
+    });
     this.fetchGalleryData();
     console.log('Gallery modal opened');
   }
@@ -218,7 +223,12 @@ export class GalleryDisplay extends Component {
    * Hide the modal
    */
   hideModal() {
-    this.setState({ isVisible: false, currentPageData: [], selectedItems: [] }); // Clear selections when modal closes
+    this.setState({ 
+      isVisible: false, 
+      currentPageData: [], 
+      selectedItems: [], // Clear selections when modal closes
+      shouldFocusSearch: false // Reset focus flag
+    });
     
     // Clean up pagination component
     if (this.pagination) {
@@ -356,7 +366,13 @@ export class GalleryDisplay extends Component {
                 placeholder="Search images..."
                 value=${this.state.searchQuery}
                 onInput=${this.handleSearchInput}
-                ref=${(input) => { if (input) input.focus(); }}
+                ref=${(input) => { 
+                  if (input && this.state.shouldFocusSearch) {
+                    input.focus();
+                    // Clear the focus flag after focusing to prevent re-focus on subsequent renders
+                    this.setState({ shouldFocusSearch: false });
+                  }
+                }}
               />
               <box-icon
                 name="search"
