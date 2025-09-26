@@ -59,7 +59,7 @@ export class GalleryPreview extends Component {
           <div class="gallery-item-checkbox-container">
             <input
               type="checkbox"
-              class="gallery-item-checkbox"
+              class="gallery-item-checkbox shared-checkbox"
               checked=${isSelected || false}
               onChange=${this.handleCheckboxChange}
             />

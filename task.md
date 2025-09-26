@@ -1,16 +1,16 @@
 # UI Improvements and Enhanced Dialog System
 
-[] move the generated image display delete button to the left edge of its container:
+[x] move the generated image display delete button to the left edge of its container:
 1. Modify the CSS for `.image-delete-container` in `public/css/style.css` to position the delete button at the left edge of its container
 2. Adjust flexbox properties or positioning to ensure proper alignment with existing UI elements
 
-[] unify the gallery preview checkbox style to use the same style as the `.form-group` checkbox input. Create a new shared checkbox style and assign the style to both the form checkbox and galley preview checkboxes:
-1. Create a new shared CSS class `.shared-checkbox` in `public/css/style.css` that extracts the common checkbox styling from `.form-group input[type="checkbox"]`
-2. Update the `.form-group input[type="checkbox"]` rule to extend or use the shared checkbox style
+[x] unify the gallery preview checkbox style to use the same style as the `.form-group` checkbox input. Create a new shared checkbox style and assign the style to both the form checkbox and galley preview checkboxes:
+1. Create a new shared CSS class `.shared-checkbox` in `public/css/style.css` that extracts the common checkbox styling from `.form-group input, .form-group select`
+2. Update the form group input to extend or use the shared checkbox style
 3. Modify the gallery preview checkbox styling in `public/js/gallery-preview.js` and related CSS to use the new shared checkbox class
 4. Ensure consistent appearance and behavior across both form checkboxes and gallery preview checkboxes
 
-[] make the gallery delete button visible at all times and disable it when no image is selected. Change the button so it always shows the label "Delete" and a trash can icon, and reuse existing button styles:
+[x] make the gallery delete button visible at all times and disable it when no image is selected. Change the button so it always shows the label "Delete" and a trash can icon, and reuse existing button styles:
 1. Modify the `render()` method in `public/js/custom-ui/gallery.js` to always show the delete button instead of conditionally rendering it
 2. Update the delete button to use the `btn-with-icon` class for consistent styling with other buttons
 3. Add disabled state styling for the delete button when no items are selected

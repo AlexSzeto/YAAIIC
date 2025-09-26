@@ -335,18 +335,18 @@ export class GalleryDisplay extends Component {
             ${this.renderGalleryItems()}
           </div>
           <div class="gallery-pagination-wrapper">
-            ${hasSelectedItems && html`
-              <div class="gallery-bulk-delete">
-                <button 
-                  class="gallery-bulk-delete-btn btn-with-icon"
-                  onClick=${this.deleteSelectedItems}
-                  title=${`Delete ${selectedItems.length} selected ${selectedText}`}
-                >
-                  <box-icon name="trash" color="#ffffff"></box-icon>
-                  Delete ${selectedItems.length} ${selectedText}
-                </button>
-              </div>
-            `}
+            <div class="gallery-bulk-delete">
+              <button 
+                class="gallery-bulk-delete-btn btn-with-icon"
+                onClick=${this.deleteSelectedItems}
+                disabled=${!hasSelectedItems}
+                title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
+                aria-disabled=${!hasSelectedItems}
+              >
+                <box-icon name="trash" color="#ffffff"></box-icon>
+                Delete
+              </button>
+            </div>
             <div class="gallery-pagination-container" ref=${(ref) => this.setupPagination(ref)}></div>
           </div>
           <div class="gallery-controls">

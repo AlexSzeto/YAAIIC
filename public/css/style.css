@@ -93,10 +93,34 @@ p {
   box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
-.form-group input[type="checkbox"] {
+/* Shared Checkbox Styles */
+.shared-checkbox {
   width: auto;
   margin-right: 8px;
   transform: scale(1.2);
+  cursor: pointer;
+  accent-color: var(--primary-background);
+}
+
+.shared-checkbox:focus {
+  outline: 2px solid var(--primary-focus);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.form-group input[type="checkbox"] {
+  /* Apply shared checkbox styles */
+  width: auto;
+  margin-right: 8px;
+  transform: scale(1.2);
+  cursor: pointer;
+  accent-color: var(--primary-background);
+}
+
+.form-group input[type="checkbox"]:focus {
+  outline: 2px solid var(--primary-focus);
+  outline-offset: 1px;
+  border-radius: 2px;
 }
 
 .form-group label:has(input[type="checkbox"]) {
@@ -406,7 +430,7 @@ p {
 .image-delete-container {
   margin-top: 15px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
 }
 

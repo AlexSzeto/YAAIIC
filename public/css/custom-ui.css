@@ -295,22 +295,16 @@
   top: 4px;
   right: 4px;
   z-index: 10;
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 3px;
   padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
   cursor: pointer;
   pointer-events: auto;
 }
 
-.gallery-item-checkbox-container:hover {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
 .gallery-item-checkbox {
+  /* Use shared checkbox styling with gallery-specific overrides */
   width: 16px !important;
   height: 16px !important;
   margin: 0 !important;
@@ -334,10 +328,6 @@
   gap: 15px;
 }
 
-.gallery-pagination-container {
-  margin-bottom: 15px;
-}
-
 .gallery-pagination-wrapper {
   margin-bottom: 15px;
   display: flex;
@@ -345,9 +335,16 @@
   gap: 15px;
 }
 
+.gallery-pagination-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+}
+
 .gallery-bulk-delete {
   display: flex;
   align-items: center;
+  position: absolute;
 }
 
 .gallery-bulk-delete-btn {
@@ -376,6 +373,17 @@
 .gallery-bulk-delete-btn:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--danger-focus);
+}
+
+.gallery-bulk-delete-btn:disabled {
+  background-color: var(--secondary-background);
+  color: var(--dark-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.gallery-bulk-delete-btn:disabled:hover {
+  background-color: var(--secondary-background);
 }
 
 .gallery-search {
