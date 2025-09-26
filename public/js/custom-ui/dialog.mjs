@@ -82,8 +82,8 @@ class Dialog extends Component {
     
     // Process content text
     const contentText = text.trim() 
-      ? `Description text: "${text}"` 
-      : 'No description text provided.';
+      ? text
+      : '';
     const contentClass = text.trim() ? 'dialog-content' : 'dialog-content empty';
 
     return html`
@@ -132,6 +132,8 @@ class Dialog extends Component {
  * }
  */
 export function showDialog(text, title = 'Generate Image', options = null) {
+  console.log('showDialog called with:', { text, title, options });
+
   // Create container element
   const container = document.createElement('div');
   document.body.appendChild(container);

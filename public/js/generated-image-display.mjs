@@ -2,6 +2,7 @@
 import { sendToClipboard, fetchWithRetry, FetchError } from './util.mjs';
 import { createImageModal } from './custom-ui/modal.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
+import { showDialog } from './custom-ui/dialog.mjs';
 
 export class GeneratedImageDisplay {
   constructor(baseElement, onUseField = null, onImageDeleted = null) {
@@ -156,14 +157,18 @@ export class GeneratedImageDisplay {
     const imageName = this.currentImageData.name || 'Unnamed image';
     
     // Show confirmation
-    const confirmed = confirm(`Are you sure you want to delete "${imageName}"? This action cannot be undone.`);
-    if (!confirmed) {
+    const result = await showDialog(
+      `Are you sure you want to delete "${imageName}"? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
+    
+    if (result !== 'Delete') {
       return;
     }
     
     // Disable delete button during request
     this.deleteButton.disabled = true;
-    this.deleteButton.textContent = 'Deleting...';
     
     try {
       showToast('Deleting image...');
@@ -223,7 +228,6 @@ export class GeneratedImageDisplay {
     } finally {
       // Re-enable delete button
       this.deleteButton.disabled = false;
-      this.deleteButton.innerHTML = '<box-icon name="trash" color="#ffffff" size="16px"></box-icon> Delete Image';
     }
   }
   

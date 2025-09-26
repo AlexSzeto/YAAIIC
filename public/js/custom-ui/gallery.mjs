@@ -2,6 +2,7 @@ import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createPagination } from './pagination.mjs'
 import { fetchJson, FetchError } from '../util.mjs'
+import { showDialog } from './dialog.mjs'
 
 // Gallery Setup Module
 export class GalleryDisplay extends Component {
@@ -132,9 +133,13 @@ export class GalleryDisplay extends Component {
     
     // Show confirmation dialog
     const itemText = selectedItems.length === 1 ? 'item' : 'items';
-    const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} selected ${itemText}? This action cannot be undone.`);
+    const result = await showDialog(
+      `Are you sure you want to delete ${selectedItems.length} selected ${itemText}? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
     
-    if (!confirmed) {
+    if (result !== 'Delete') {
       return;
     }
     
