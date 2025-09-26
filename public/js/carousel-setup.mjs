@@ -1,5 +1,5 @@
 // Carousel Setup Module
-import { createPagination } from './custom-ui/pagination.js';
+import { createPagination } from './custom-ui/pagination.mjs';
 
 export class CarouselDisplay {
   constructor(baseElement, dataDisplay) {

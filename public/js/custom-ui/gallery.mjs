@@ -1,7 +1,7 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
-import { createPagination } from './pagination.js'
-import { fetchJson, FetchError } from '../util.js'
+import { createPagination } from './pagination.mjs'
+import { fetchJson, FetchError } from '../util.mjs'
 
 // Gallery Setup Module
 export class GalleryDisplay extends Component {

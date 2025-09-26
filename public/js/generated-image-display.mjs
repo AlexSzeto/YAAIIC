@@ -1,7 +1,7 @@
 // Generated Image Display Module
-import { sendToClipboard, fetchWithRetry, FetchError } from './util.js';
-import { createImageModal } from './custom-ui/modal.js';
-import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.js';
+import { sendToClipboard, fetchWithRetry, FetchError } from './util.mjs';
+import { createImageModal } from './custom-ui/modal.mjs';
+import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
 
 export class GeneratedImageDisplay {
   constructor(baseElement, onUseField = null, onImageDeleted = null) {

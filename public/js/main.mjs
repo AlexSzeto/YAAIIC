@@ -1,13 +1,13 @@
 // Main application entry point
-import { loadTags } from './tags.js';
-import { getCurrentDescription } from './autocomplete-setup.js';
-import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.js';
-import { GeneratedImageDisplay } from './generated-image-display.js';
-import { CarouselDisplay } from './carousel-setup.js';
-import { createGallery } from './custom-ui/gallery.js';
-import { createImageModal } from './custom-ui/modal.js';
-import { createGalleryPreview } from './gallery-preview.js';
-import { fetchJson, fetchWithRetry, FetchError } from './util.js';
+import { loadTags } from './tags.mjs';
+import { getCurrentDescription } from './autocomplete-setup.mjs';
+import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
+import { GeneratedImageDisplay } from './generated-image-display.mjs';
+import { CarouselDisplay } from './carousel-setup.mjs';
+import { createGallery } from './custom-ui/gallery.mjs';
+import { createImageModal } from './custom-ui/modal.mjs';
+import { createGalleryPreview } from './gallery-preview.mjs';
+import { fetchJson, fetchWithRetry, FetchError } from './util.mjs';
 
 let workflows = [];
 let autoCompleteInstance = null;

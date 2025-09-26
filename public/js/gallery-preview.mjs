@@ -1,6 +1,6 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
-import { createImageModal } from './custom-ui/modal.js'
+import { createImageModal } from './custom-ui/modal.mjs'
 
 // Gallery Preview Component
 export class GalleryPreview extends Component {
