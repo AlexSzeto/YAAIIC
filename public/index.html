@@ -19,8 +19,9 @@
     <!-- Boxicons for icons -->
     <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
     <!-- Textarea Caret Position library wrapper -->
-    <script src="/js/textarea-caret-position-wrapper.js"></script>
+    <script src="/js/textarea-caret-position-wrapper.mjs"></script>
     <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/custom-ui.css" />
     <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
@@ -150,28 +151,26 @@
           </div>
         </div>
       </div>
+      
+      <!-- Delete Button Container -->
+      <div class="image-delete-container">
+        <button class="image-delete-btn btn-with-icon" title="Delete this image">
+          <box-icon name='trash' color='#ffffff' size='16px'></box-icon>
+          Delete
+        </button>
+      </div>
     </div>
 
     <!-- Carousel Display Container -->
     <div id="carouselDisplay" class="carousel-display" style="display: none;">
       <div class="carousel-controls">
-        <div class="carousel-nav">
-          <button class="carousel-btn carousel-prev" title="Previous">
-            <box-icon name='caret-left' color='#ffffff'></box-icon>
-          </button>
-          <div class="carousel-index">
-            <span class="current-index">0</span> / <span class="total-count">0</span>
-          </div>
-          <button class="carousel-btn carousel-next" title="Next">
-            <box-icon name='caret-right' color='#ffffff'></box-icon>
-          </button>
-        </div>
+        <div id="carouselPagination"></div>
       </div>
     </div>
 
-    <script type="module" src="/js/autocomplete-setup.js"></script>
-    <script type="module" src="/js/custom-dialog.js"></script>
-    <script type="module" src="/js/custom-toast.js"></script>
-    <script type="module" src="/js/main.js"></script>
+    <script type="module" src="/js/autocomplete-setup.mjs"></script>
+    <script type="module" src="/js/custom-ui/dialog.mjs"></script>
+    <script type="module" src="/js/custom-ui/toast.mjs"></script>
+    <script type="module" src="/js/main.mjs"></script>
   </body>
 </html>

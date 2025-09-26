@@ -12,7 +12,7 @@ export function setAddImageDataEntry(func) {
 }
 
 // Reusable function to check ComfyUI prompt status
-export async function checkPromptStatus(promptId, maxAttempts = 60, intervalMs = 1000) {
+export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs = 1000) {
   const comfyuiAPIPath = getComfyUIAPIPath();
   
   for (let attempt = 0; attempt < maxAttempts; attempt++) {

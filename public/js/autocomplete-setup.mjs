@@ -1,5 +1,5 @@
 // Autocomplete Setup Module
-import { loadTags, getTags, isTagsLoaded } from './tags.js';
+import { loadTags, getTags, isTagsLoaded } from './tags.mjs';
 
 let autoCompleteJS = null;
 
@@ -66,10 +66,7 @@ function initAutoComplete() {
     selector: "#description",
     placeHolder: "Type to search for tags...",
     query: (input) => {
-      // Check if autocomplete is disabled for the current workflow
-      if (textarea.hasAttribute('data-autocomplete-disabled')) {
-        return null; // Return null to prevent autocomplete from showing
-      }
+
       
       // Get current cursor position and text boundaries
       const [startPos, endPos] = getCurrentTextareaTagStartEnd(textarea);
@@ -95,7 +92,7 @@ function initAutoComplete() {
         // Override the default keydown handler to fix ESC key clearing input
         keydown: (event) => {
             // Check if autocomplete is disabled for the current workflow
-            if (textarea.hasAttribute('data-autocomplete-disabled')) {
+            if (textarea.getAttribute('autocomplete') === 'off') {
               return; // Don't handle any autocomplete keys if disabled
             }
             
@@ -134,7 +131,7 @@ function initAutoComplete() {
         },
         open: (event) => {
           // Check if autocomplete is disabled for the current workflow
-          if (textarea.hasAttribute('data-autocomplete-disabled')) {
+          if (textarea.getAttribute('autocomplete') === 'off') {
             // Close the autocomplete immediately if it somehow opened when disabled
             autoCompleteJS.close();
             return;
@@ -152,7 +149,7 @@ function initAutoComplete() {
         },
         selection: (event) => {
           // Check if autocomplete is disabled for the current workflow
-          if (textarea.hasAttribute('data-autocomplete-disabled')) {
+          if (textarea.getAttribute('autocomplete') === 'off') {
             return; // Don't handle selection if disabled
           }
           

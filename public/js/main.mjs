@@ -1,11 +1,13 @@
 // Main application entry point
-import { loadTags } from './tags.js';
-import { getCurrentDescription } from './autocomplete-setup.js';
-import { showToast, showSuccessToast, showErrorToast } from './custom-toast.js';
-import { GeneratedImageDisplay } from './generated-image-display.js';
-import { CarouselDisplay } from './carousel-setup.js';
-import { createGallery } from './custom-gallery.js';
-import { createImageModal } from './custom-modal.js';
+import { loadTags } from './tags.mjs';
+import { getCurrentDescription } from './autocomplete-setup.mjs';
+import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
+import { GeneratedImageDisplay } from './generated-image-display.mjs';
+import { CarouselDisplay } from './carousel-setup.mjs';
+import { createGallery } from './custom-ui/gallery.mjs';
+import { createImageModal } from './custom-ui/modal.mjs';
+import { createGalleryPreview } from './gallery-preview.mjs';
+import { fetchJson, fetchWithRetry, FetchError } from './util.mjs';
 
 let workflows = [];
 let autoCompleteInstance = null;
@@ -42,14 +44,12 @@ function handleWorkflowChange() {
   const descriptionTextarea = document.getElementById('description');
   
   if (selectedWorkflow.autocomplete) {
-    // Enable autocomplete if it's disabled
-    if (descriptionTextarea.hasAttribute('data-autocomplete-disabled')) {
-      descriptionTextarea.removeAttribute('data-autocomplete-disabled');
-      console.log('Autocomplete enabled for workflow:', selectedWorkflowName);
-    }
+    // Enable autocomplete by removing the autocomplete="off" attribute
+    descriptionTextarea.removeAttribute('autocomplete');
+    console.log('Autocomplete enabled for workflow:', selectedWorkflowName);
   } else {
-    // Disable autocomplete
-    descriptionTextarea.setAttribute('data-autocomplete-disabled', 'true');
+    // Disable autocomplete using the official autocomplete="off" attribute
+    descriptionTextarea.setAttribute('autocomplete', 'off');
     console.log('Autocomplete disabled for workflow:', selectedWorkflowName);
   }
 }
@@ -57,12 +57,17 @@ function handleWorkflowChange() {
 // Function to populate workflow dropdown
 async function loadWorkflows() {
   try {
-    const response = await fetch('/generate/workflows');
-    if (!response.ok) {
-      throw new Error('Failed to fetch workflows');
-    }
+    console.log('Loading workflows...');
     
-    workflows = await response.json();
+    // Use enhanced fetch with retry mechanism
+    workflows = await fetchJson('/generate/workflows', {}, {
+      maxRetries: 3,
+      retryDelay: 1000,
+      showUserFeedback: true,
+      showSuccessFeedback: false, // Don't show success toast for workflow loading
+      successMessage: 'Workflows loaded successfully'
+    });
+    
     const workflowSelect = document.getElementById('workflow');
     
     // Clear loading option
@@ -88,69 +93,12 @@ async function loadWorkflows() {
     console.log('Workflows loaded:', workflows);
   } catch (error) {
     console.error('Error loading workflows:', error);
-    showErrorToast('Failed to load workflows');
+    // Error feedback is already handled by fetchJson utility
+    
+    // Set fallback state for workflow dropdown
+    const workflowSelect = document.getElementById('workflow');
+    workflowSelect.innerHTML = '<option value="">Failed to load workflows - please refresh</option>';
   }
-}
-
-// Preview factory function for gallery items
-function createGalleryPreview(item) {
-  const preview = document.createElement('div');
-  preview.className = 'gallery-item';
-  
-  // Create image element
-  const img = document.createElement('img');
-  img.className = 'gallery-item-image';
-  img.src = item.imageUrl || '';
-  img.alt = item.name || 'Generated image';
-  
-  // Handle image load/error
-  img.onerror = function() {
-    this.style.backgroundColor = '#333333';
-    this.style.display = 'flex';
-    this.style.alignItems = 'center';
-    this.style.justifyContent = 'center';
-    this.style.color = '#999999';
-    this.style.fontSize = '10px';
-    this.textContent = 'No image';
-  };
-  
-  // Add click event to open image in modal (if image exists)
-  img.addEventListener('click', function() {
-    if (item.imageUrl && !this.textContent) { // Check if image loaded successfully
-      createImageModal(item.imageUrl); // Use default autoScale=true
-    }
-  });
-  
-  // Make image cursor pointer when hoverable
-  img.style.cursor = 'pointer';
-  
-  // Create info section
-  const info = document.createElement('div');
-  info.className = 'gallery-item-info';
-  
-  const nameDiv = document.createElement('div');
-  nameDiv.className = 'gallery-item-name';
-  nameDiv.textContent = item.name || 'Unnamed';
-  
-  const dateDiv = document.createElement('div');
-  dateDiv.className = 'gallery-item-date';
-  
-  // Format timestamp as yyyy-mm-dd
-  if (item.timestamp) {
-    const date = new Date(item.timestamp);
-    dateDiv.textContent = date.toISOString().split('T')[0];
-  } else {
-    dateDiv.textContent = 'No date';
-  }
-  
-  info.appendChild(nameDiv);
-  info.appendChild(dateDiv);
-  
-  // Assemble preview
-  preview.appendChild(img);
-  preview.appendChild(info);
-  
-  return preview;
 }
 
 // Function to handle field use from GeneratedImageDisplay
@@ -290,31 +238,59 @@ async function handleGenerate() {
       requestBody.name = nameInput.value.trim();
     }
     
-    const response = await fetch('/generate/txt2img', {
+    // Use enhanced fetch with retry for generation requests
+    const response = await fetchWithRetry('/generate/txt2img', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody)
+    }, {
+      maxRetries: 1, // Limited retries for generation (expensive operation)
+      retryDelay: 2000,
+      timeout: 1800000, // 30 minutes timeout for image generation
+      showUserFeedback: false // We handle feedback manually for generation
     });
 
     const result = await response.json();
-
-    if (response.ok) {
-      showSuccessToast('Image generated successfully!');
-      console.log('Generation result:', result);
-      
-      // Create and display the generated image with analysis
-      if (result.data && result.data.imageUrl) {
-        carouselDisplay.addData(result.data);
-      }
-    } else {
-      throw new Error(result.error || 'Failed to generate image');
+    
+    showSuccessToast('Image generated successfully!');
+    console.log('Generation result:', result);
+    
+    // Create and display the generated image with analysis
+    if (result.data && result.data.imageUrl) {
+      carouselDisplay.addData(result.data);
     }
 
   } catch (error) {
     console.error('Error generating image:', error);
-    showErrorToast(`Generation failed: ${error.message}`);
+    
+    // Provide specific error messages for generation failures
+    let errorMessage = 'Generation failed';
+    
+    if (error instanceof FetchError) {
+      switch (error.status) {
+        case 400:
+          errorMessage = 'Invalid generation parameters. Please check your inputs.';
+          break;
+        case 408:
+        case 504:
+          errorMessage = 'Generation timed out. The request may be too complex - try simplifying or try again later.';
+          break;
+        case 429:
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+          break;
+        case 500:
+          errorMessage = 'Server error during generation. Please try again later.';
+          break;
+        default:
+          errorMessage = error.message || 'Generation failed unexpectedly.';
+      }
+    } else {
+      errorMessage = error.message || 'An unexpected error occurred during generation.';
+    }
+    
+    showErrorToast(errorMessage);
   } finally {
     // Re-enable UI
     generateButton.disabled = false;
@@ -335,10 +311,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Set initial random seed
     updateSeedIfNotLocked();
     
+    // Handler for when an image is deleted from GeneratedImageDisplay
+    const handleImageDeleted = (deletedUid) => {
+      console.log('Image deleted, refreshing carousel data:', deletedUid);
+      // Refresh carousel data to reflect deletion
+      if (carouselDisplay) {
+        carouselDisplay.removeItemByUid(deletedUid);
+      }
+      // Also refresh gallery data if it's open
+      if (galleryDisplay && galleryDisplay.isVisible && galleryDisplay.isVisible()) {
+        galleryDisplay.refreshData();
+      }
+    };
+    
     // Initialize GeneratedImageDisplay
     const generatedImageDisplayElement = document.getElementById('generatedImageDisplay');
     if (generatedImageDisplayElement) {
-      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField);
+      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField, handleImageDeleted);
     } else {
       console.error('Generated image display element not found');
     }

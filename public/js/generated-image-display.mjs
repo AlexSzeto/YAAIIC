@@ -1,15 +1,19 @@
 // Generated Image Display Module
-import { sendToClipboard } from './util.js';
-import { createImageModal } from './custom-modal.js';
+import { sendToClipboard, fetchWithRetry, FetchError } from './util.mjs';
+import { createImageModal } from './custom-ui/modal.mjs';
+import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
+import { showDialog } from './custom-ui/dialog.mjs';
 
 export class GeneratedImageDisplay {
-  constructor(baseElement, onUseField = null) {
+  constructor(baseElement, onUseField = null, onImageDeleted = null) {
     if (!baseElement) {
       throw new Error('BaseElement is required for GeneratedImageDisplay');
     }
     
     this.baseElement = baseElement;
     this.onUseField = onUseField;
+    this.onImageDeleted = onImageDeleted; // Callback for when image is deleted
+    this.currentImageData = null; // Store current image data including uid
     
     // Get references to the inner elements
     this.imageElement = baseElement.querySelector('.generated-image');
@@ -18,10 +22,11 @@ export class GeneratedImageDisplay {
     this.tagsTextarea = baseElement.querySelector('.info-tags');
     this.descriptionTextarea = baseElement.querySelector('.info-description');
     this.seedInput = baseElement.querySelector('.info-seed');
+    this.deleteButton = baseElement.querySelector('.image-delete-btn');
     
     // Validate that all required elements exist
     if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsTextarea || 
-        !this.descriptionTextarea || !this.seedInput) {
+        !this.descriptionTextarea || !this.seedInput || !this.deleteButton) {
       throw new Error('GeneratedImageDisplay: Required inner elements not found in baseElement');
     }
     
@@ -53,6 +58,11 @@ export class GeneratedImageDisplay {
         const field = e.target.closest('.use-btn').getAttribute('data-field');
         this.useFieldInForm(field);
       });
+    });
+    
+    // Set up delete button listener
+    this.deleteButton.addEventListener('click', () => {
+      this.deleteCurrentImage();
     });
   }
   
@@ -135,10 +145,100 @@ export class GeneratedImageDisplay {
   }
   
   /**
+   * Delete the currently displayed image
+   */
+  async deleteCurrentImage() {
+    if (!this.currentImageData || !this.currentImageData.uid) {
+      showErrorToast('No image selected for deletion');
+      return;
+    }
+    
+    const uid = this.currentImageData.uid;
+    const imageName = this.currentImageData.name || 'Unnamed image';
+    
+    // Show confirmation
+    const result = await showDialog(
+      `Are you sure you want to delete "${imageName}"? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
+    
+    if (result !== 'Delete') {
+      return;
+    }
+    
+    // Disable delete button during request
+    this.deleteButton.disabled = true;
+    
+    try {
+      showToast('Deleting image...');
+      
+      const response = await fetchWithRetry('/image-data/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uids: [uid] })
+      }, {
+        maxRetries: 2,
+        retryDelay: 1000,
+        showUserFeedback: false // We handle feedback manually
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.deletedCount > 0) {
+        showSuccessToast(`Image "${imageName}" deleted successfully`);
+        
+        // Clear the current display
+        this.blankDisplay();
+        this.currentImageData = null;
+        
+        // Notify the carousel component to refresh its data
+        if (this.onImageDeleted) {
+          this.onImageDeleted(uid);
+        }
+      } else {
+        throw new Error('Image deletion failed - no entries were removed');
+      }
+      
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      
+      let errorMessage = 'Failed to delete image';
+      if (error instanceof FetchError) {
+        switch (error.status) {
+          case 400:
+            errorMessage = 'Invalid deletion request';
+            break;
+          case 404:
+            errorMessage = 'Image not found';
+            break;
+          case 500:
+            errorMessage = 'Server error during deletion';
+            break;
+          default:
+            errorMessage = error.message || 'Failed to delete image';
+        }
+      } else {
+        errorMessage = error.message || 'An unexpected error occurred during deletion';
+      }
+      
+      showErrorToast(errorMessage);
+    } finally {
+      // Re-enable delete button
+      this.deleteButton.disabled = false;
+    }
+  }
+  
+  /**
    * Update the display with new image data
-   * @param {Object|null} data - Image data object with properties: imageUrl, workflow, name, tags, description, seed
+   * @param {Object|null} data - Image data object with properties: imageUrl, workflow, name, tags, description, seed, uid
    */
   setData(data) {
+    // Store the current image data including uid
+    this.currentImageData = data;
+    
     if (!data) {
       // Gracefully blank out the display
       this.blankDisplay();
@@ -188,6 +288,9 @@ export class GeneratedImageDisplay {
    * Blank out the display and hide it
    */
   blankDisplay() {
+    // Clear current image data
+    this.currentImageData = null;
+    
     // Clear image
     this.imageElement.src = '';
     this.imageElement.alt = '';

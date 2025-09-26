@@ -1,10 +1,12 @@
 // Tags Management Module
+import { fetchJson } from './util.mjs';
+
 let tags = [];
 let isLoaded = false;
 let loadPromise = null;
 
 /**
- * Load tags from the server
+ * Load tags from the server with enhanced error handling
  * @returns {Promise<Array>} Promise that resolves to the tags array
  */
 export async function loadTags() {
@@ -18,14 +20,13 @@ export async function loadTags() {
     return loadPromise;
   }
   
-  // Create new load promise
-  loadPromise = fetch('/tags')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    })
+  // Create new load promise with enhanced fetch
+  loadPromise = fetchJson('/tags', {}, {
+    maxRetries: 3,
+    retryDelay: 1000,
+    showUserFeedback: false, // Tags load in background, don't show feedback
+    showSuccessFeedback: false
+  })
     .then(data => {
       tags = data.tags || [];
       isLoaded = true;

@@ -48,7 +48,9 @@ function saveImageData() {
 
 // Add image data entry
 export function addImageDataEntry(entry) {
-  entry.timestamp = new Date().toISOString();
+  const now = new Date();
+  entry.timestamp = now.toISOString();
+  entry.uid = now.getTime(); // Generate UID using Date.getTime()
   imageData.imageData.push(entry);
   saveImageData();
 }
@@ -244,6 +246,60 @@ app.get('/image-data', (req, res) => {
   } catch (error) {
     console.error('Error in image-data endpoint:', error);
     res.status(500).json({ error: 'Failed to retrieve image data' });
+  }
+});
+
+// DELETE endpoint for image data deletion
+app.delete('/image-data/delete', (req, res) => {
+  try {
+    const { uids } = req.body;
+    
+    // Validate input
+    if (!Array.isArray(uids)) {
+      return res.status(400).json({ error: 'uids must be an array' });
+    }
+    
+    if (uids.length === 0) {
+      return res.status(400).json({ error: 'uids array cannot be empty' });
+    }
+    
+    // Validate that all UIDs are numbers
+    const invalidUids = uids.filter(uid => typeof uid !== 'number' || !Number.isInteger(uid));
+    if (invalidUids.length > 0) {
+      return res.status(400).json({ error: 'All UIDs must be integers', invalidUids });
+    }
+    
+    console.log(`Delete request for UIDs: ${uids.join(', ')}`);
+    
+    // Count entries before deletion
+    const originalCount = imageData.imageData.length;
+    
+    // Remove entries with matching UIDs
+    imageData.imageData = imageData.imageData.filter(item => !uids.includes(item.uid));
+    
+    // Count entries after deletion
+    const deletedCount = originalCount - imageData.imageData.length;
+    
+    // Save changes to file
+    try {
+      saveImageData();
+      console.log(`Successfully deleted ${deletedCount} entries`);
+      res.json({ 
+        success: true, 
+        deletedCount,
+        message: `Successfully deleted ${deletedCount} entries`
+      });
+    } catch (saveError) {
+      console.error('Failed to save after deletion:', saveError);
+      res.status(500).json({ 
+        error: 'Failed to save changes after deletion', 
+        details: saveError.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in image-data delete endpoint:', error);
+    res.status(500).json({ error: 'Failed to process deletion request', details: error.message });
   }
 });
 

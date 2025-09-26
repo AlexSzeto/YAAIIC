@@ -1,3 +1,4 @@
+# Generated Image Database
 [x] Generate `name` when it is not available:
 1. Create a new function, `sendTextPrompt`, in `llm.mjs`, using the `sendImagePrompt` function as a template and send a request to ollama without an image, and return the generated result.
 2. Before an image is generated, if `name` is blank or undefined, use `sendTextPrompt`, combining `namePromptPrefix` and the image `prompt` sent and set `name` to the result of this LLM query.
@@ -7,11 +8,13 @@
 2. After an image is generated, add an object with the following properties to `imageData`: `prompt`, `seed`, `imageUrl`, `name`, `description`, and `timestamp`, where `timestamp` just stores the time when the data object is created. Write this updated `imageData` back to `server/database/image-data.json`.
 3. Add a new `GET` endpoint, `/image-data`, that takes in two optional query parameters: `query`, `sort`, and `limit`. Default `query` to `''`, `sort` to `descending`, and `limit` to `10`. Return a JSON list of objects where either some part of the `name` or some part of `timestamp` (the number reformatted as `yyyy-mm-dd`) matches `query`. If implemented correctly, all entries would be included in the result set at this point. The result set would then be filtered by `timestamp` either in accending or descending order, depending on the `sort` query param (any `sort` value not equal to `accending` or `descending` would default to `descending`). Finally, return a slice of the first `limit` items out of the results.
 
+# Show Saved Generation Data
 [x] Modify the existing generated image UI:
 1. move the creation of the HTML elements out of `generate-base-image.js` and build them statically in `index.html`. Give the container an id of `generatedImageDisplay`. Adjust the positioning of the elements to create a two column layout, where the generated image is on the left column and the rest of the information is vertically laid out in the order of label1,text1,label2,text2, etc. The right column contains the following information: name (single line), tags (multiple lines), description (multiple lines), and seed (single line). Move all style definitions into `css/style.css`.
 2. Create a new script file, `js/generated-image-display.js` with an exported `GeneratedImageDisplay` class that takes `baseElement` (an `HTMLElement`) in its constructor. The class should assume `baseElement` already contains all the required inner HTML elements to display the info correctly.
 3. The class has a `setData(data)` method that allows the image display to update all of the UI elements using an image data object. Setting the data to `null` should gracefully blank out the image area and remove all existing text.
 
+# Create Carousel (meant to be reusable)
 [x] Create a client side image carousel with the following design:
 1. Create a new script file, `js/carousel-setup.js` to manage carousel related functions.
 2. In the new script file, create a new `CarouselDisplay` exported class that takes also takes `baseElement` (an `HTMLElement`) and assigns `dataDisplay` in its constructor.
@@ -21,6 +24,7 @@
 6. Modify the existing handling once an image is created (in `generate-base-image.js`) to use `addData(data)`. update the function definition to generate images to pass in an instance of `CarouselDisplay` as necessary.
 7. Initiate an instance of `GeneratedImageDisplay` and `CarouselDisplay` on load in `main.js`.
 
+# Create Gallery Component
 [x] Creae a client side gallery modal with the following design:
 1. Create a new script file, `js/gallery-setup.js` to manage gallery related functions.
 2. In the new script file, create a new `GalleryDisplay` exported class. The constructor should take a `queryPath` as well as a `previewFactory`.
