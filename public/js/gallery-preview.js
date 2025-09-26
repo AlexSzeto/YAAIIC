@@ -8,8 +8,7 @@ export class GalleryPreview extends Component {
     super(props);
     
     this.state = {
-      imageError: false,
-      isSelected: false
+      imageError: false
     };
   }
 
@@ -18,8 +17,9 @@ export class GalleryPreview extends Component {
   }
 
   handleImageClick = (e) => {
-    // Don't open modal if clicking on checkbox
-    if (e.target.type === 'checkbox') {
+    // Don't open modal if clicking on checkbox or checkbox container
+    if (e.target.type === 'checkbox' || 
+        e.target.closest('.gallery-item-checkbox-container')) {
       return;
     }
     
@@ -30,10 +30,10 @@ export class GalleryPreview extends Component {
   }
 
   handleCheckboxChange = (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up
+    
     const { item, onSelect } = this.props;
     const isSelected = e.target.checked;
-    
-    this.setState({ isSelected });
     
     // Call the onSelect callback if provided
     if (onSelect) {
@@ -50,8 +50,8 @@ export class GalleryPreview extends Component {
   }
 
   render() {
-    const { item, onSelect } = this.props;
-    const { imageError, isSelected } = this.state;
+    const { item, onSelect, isSelected } = this.props;
+    const { imageError } = this.state;
 
     return html`
       <div class="gallery-item" style=${{ position: 'relative' }}>
@@ -60,7 +60,7 @@ export class GalleryPreview extends Component {
             <input
               type="checkbox"
               class="gallery-item-checkbox"
-              checked=${isSelected}
+              checked=${isSelected || false}
               onChange=${this.handleCheckboxChange}
             />
           </div>
@@ -97,11 +97,11 @@ export class GalleryPreview extends Component {
 }
 
 // Factory function to create a gallery preview (for compatibility with existing code)
-export function createGalleryPreview(item, onSelect) {
+export function createGalleryPreview(item, onSelect, isSelected = false) {
   const container = document.createElement('div');
   
   // Render the Preact component into the container
-  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} />`, container);
+  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} isSelected=${isSelected} />`, container);
   
   // Return the first child element (the actual gallery item)
   return container.firstElementChild;

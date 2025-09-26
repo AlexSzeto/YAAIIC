@@ -215,7 +215,9 @@ export class GalleryDisplay extends Component {
     
     itemsToShow.forEach((item, index) => {
       if (index < maxItems) { // Ensure we don't exceed grid layout
-        const preview = this.previewFactory(item, this.handleItemSelect);
+        // Check if this item is selected
+        const isSelected = this.state.selectedItems.includes(item.uid);
+        const preview = this.previewFactory(item, this.handleItemSelect, isSelected);
         if (preview) {
           // Create a wrapper div to hold the DOM element content
           items.push(

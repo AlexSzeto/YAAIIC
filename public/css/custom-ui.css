@@ -302,6 +302,8 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .gallery-item-checkbox-container:hover {
@@ -317,17 +319,13 @@
   transform: none !important;
   position: relative;
   z-index: 11;
+  pointer-events: auto;
 }
 
 .gallery-item-checkbox:focus {
   outline: 2px solid var(--primary-focus);
   outline-offset: 1px;
   border-radius: 2px;
-}
-
-/* Prevent checkbox from affecting gallery item hover */
-.gallery-item-checkbox:hover {
-  cursor: pointer;
 }
 
 .gallery-controls {
