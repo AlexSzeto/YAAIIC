@@ -402,6 +402,37 @@ p {
   min-height: 160px;
 }
 
+/* Delete Button Container */
+.image-delete-container {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-delete-btn {
+  background-color: var(--danger-background);
+  color: white;
+  border: 1px solid var(--danger-border);
+}
+
+.image-delete-btn:hover {
+  background-color: var(--danger-hover);
+  border-color: var(--danger-border-hover);
+}
+
+.image-delete-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--danger-focus);
+}
+
+.image-delete-btn:disabled {
+  background-color: var(--secondary-background);
+  border-color: var(--dark-border-secondary);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Carousel Display Styling */
 .carousel-display {
   margin-top: 15px;

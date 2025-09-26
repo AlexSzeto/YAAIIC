@@ -11,6 +11,13 @@
   --secondary-hover: #545b62;
   --secondary-focus: rgba(108, 117, 125, 0.5);
   
+  /* Danger Color Theme */
+  --danger-background: #dc3545;
+  --danger-hover: #c82333;
+  --danger-border: #dc3545;
+  --danger-border-hover: #c82333;
+  --danger-focus: rgba(220, 53, 69, 0.5);
+  
   /* Dark Theme - Backgrounds */
   --dark-background-primary: #121212;
   --dark-background-secondary: #1e1e1e;

@@ -289,6 +289,47 @@
   white-space: nowrap;
 }
 
+/* Gallery Item Checkbox */
+.gallery-item-checkbox-container {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.gallery-item-checkbox-container:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.gallery-item-checkbox {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  accent-color: var(--primary-background);
+  transform: none !important;
+  position: relative;
+  z-index: 11;
+}
+
+.gallery-item-checkbox:focus {
+  outline: 2px solid var(--primary-focus);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+/* Prevent checkbox from affecting gallery item hover */
+.gallery-item-checkbox:hover {
+  cursor: pointer;
+}
+
 .gallery-controls {
   display: flex;
   align-items: center;

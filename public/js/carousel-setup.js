@@ -177,6 +177,70 @@ export class CarouselDisplay {
   }
   
   /**
+   * Remove an item from the list by its UID
+   * @param {number} uid - The UID of the item to remove
+   */
+  removeItemByUid(uid) {
+    if (!uid) return;
+    
+    // Find the item index by UID
+    const itemIndex = this.dataList.findIndex(item => item.uid === uid);
+    if (itemIndex === -1) {
+      console.warn('CarouselDisplay: Item with UID not found for removal:', uid);
+      return;
+    }
+    
+    // Get current page before removing item
+    const currentPageIndex = this.pagination.getState().currentPage;
+    const isCurrentItem = (itemIndex === currentPageIndex);
+    
+    // Remove the item from the data list
+    this.dataList = this.dataList.filter(item => item.uid !== uid);
+    
+    // Update pagination component with new data
+    this.pagination.setDataList(this.dataList);
+    
+    // Handle navigation after removal
+    if (this.dataList.length === 0) {
+      // No items left - clear display
+      this.selectedName = null;
+      this.selectedTimestamp = null;
+      this.dataDisplay.setData(null);
+      this.baseElement.style.display = 'none';
+    } else if (isCurrentItem) {
+      // The current item was removed, navigate to appropriate item
+      let targetPageIndex;
+      
+      if (itemIndex >= this.dataList.length) {
+        // Removed item was the last one, move to the new last item
+        targetPageIndex = this.dataList.length - 1;
+      } else {
+        // Move to the item that took the removed item's position
+        targetPageIndex = itemIndex;
+      }
+      
+      // Use setTimeout to ensure pagination component has updated its state
+      setTimeout(() => {
+        try {
+          this.pagination.goToPage(targetPageIndex);
+        } catch (error) {
+          console.warn('Failed to navigate after removal:', error.message);
+          // Fallback: go to first page
+          try {
+            this.pagination.goToPage(0);
+          } catch (fallbackError) {
+            console.error('Failed to navigate to first page after removal:', fallbackError.message);
+          }
+        }
+      }, 0);
+    }
+    // If the removed item wasn't the current one, stay on current page
+    // (pagination component will handle index adjustments automatically)
+    
+    console.log('CarouselDisplay item removed by UID:', uid, 'remaining items:', this.dataList.length);
+  }
+  
+  /**
    * Move to the previous item
    */
   moveToPrevious() {

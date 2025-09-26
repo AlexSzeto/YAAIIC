@@ -311,10 +311,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Set initial random seed
     updateSeedIfNotLocked();
     
+    // Handler for when an image is deleted from GeneratedImageDisplay
+    const handleImageDeleted = (deletedUid) => {
+      console.log('Image deleted, refreshing carousel data:', deletedUid);
+      // Refresh carousel data to reflect deletion
+      if (carouselDisplay) {
+        carouselDisplay.removeItemByUid(deletedUid);
+      }
+      // Also refresh gallery data if it's open
+      if (galleryDisplay && galleryDisplay.isVisible && galleryDisplay.isVisible()) {
+        galleryDisplay.refreshData();
+      }
+    };
+    
     // Initialize GeneratedImageDisplay
     const generatedImageDisplayElement = document.getElementById('generatedImageDisplay');
     if (generatedImageDisplayElement) {
-      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField);
+      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField, handleImageDeleted);
     } else {
       console.error('Generated image display element not found');
     }

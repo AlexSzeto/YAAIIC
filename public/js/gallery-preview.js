@@ -8,7 +8,8 @@ export class GalleryPreview extends Component {
     super(props);
     
     this.state = {
-      imageError: false
+      imageError: false,
+      isSelected: false
     };
   }
 
@@ -16,10 +17,27 @@ export class GalleryPreview extends Component {
     this.setState({ imageError: true });
   }
 
-  handleImageClick = () => {
+  handleImageClick = (e) => {
+    // Don't open modal if clicking on checkbox
+    if (e.target.type === 'checkbox') {
+      return;
+    }
+    
     const { item } = this.props;
     if (item.imageUrl && !this.state.imageError) {
       createImageModal(item.imageUrl); // Use default autoScale=true
+    }
+  }
+
+  handleCheckboxChange = (e) => {
+    const { item, onSelect } = this.props;
+    const isSelected = e.target.checked;
+    
+    this.setState({ isSelected });
+    
+    // Call the onSelect callback if provided
+    if (onSelect) {
+      onSelect(item, isSelected);
     }
   }
 
@@ -32,11 +50,21 @@ export class GalleryPreview extends Component {
   }
 
   render() {
-    const { item } = this.props;
-    const { imageError } = this.state;
+    const { item, onSelect } = this.props;
+    const { imageError, isSelected } = this.state;
 
     return html`
-      <div class="gallery-item">
+      <div class="gallery-item" style=${{ position: 'relative' }}>
+        ${onSelect && html`
+          <div class="gallery-item-checkbox-container">
+            <input
+              type="checkbox"
+              class="gallery-item-checkbox"
+              checked=${isSelected}
+              onChange=${this.handleCheckboxChange}
+            />
+          </div>
+        `}
         <img
           class="gallery-item-image"
           src=${item.imageUrl || ''}
@@ -69,11 +97,11 @@ export class GalleryPreview extends Component {
 }
 
 // Factory function to create a gallery preview (for compatibility with existing code)
-export function createGalleryPreview(item) {
+export function createGalleryPreview(item, onSelect) {
   const container = document.createElement('div');
   
   // Render the Preact component into the container
-  render(html`<${GalleryPreview} item=${item} />`, container);
+  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} />`, container);
   
   // Return the first child element (the actual gallery item)
   return container.firstElementChild;

@@ -24,7 +24,8 @@ export class GalleryDisplay extends Component {
       isVisible: false,
       galleryData: [],
       searchQuery: '',
-      currentPageData: [] // Store current page's items for display
+      currentPageData: [], // Store current page's items for display
+      selectedItems: [] // Array of selected item UIDs
     };
     
     // Pagination component will be created when modal is shown
@@ -83,6 +84,41 @@ export class GalleryDisplay extends Component {
   }
   
   /**
+   * Handle item selection/deselection
+   * @param {Object} data - The item data object
+   * @param {boolean} isSelected - Whether the item is selected
+   */
+  handleItemSelect = (data, isSelected) => {
+    if (!data || !data.uid) {
+      console.warn('Cannot select item without UID:', data);
+      return;
+    }
+    
+    const { selectedItems } = this.state;
+    let newSelectedItems;
+    
+    if (isSelected) {
+      // Add UID to selected items if not already present
+      if (!selectedItems.includes(data.uid)) {
+        newSelectedItems = [...selectedItems, data.uid];
+      } else {
+        newSelectedItems = selectedItems; // No change needed
+      }
+    } else {
+      // Remove UID from selected items
+      newSelectedItems = selectedItems.filter(uid => uid !== data.uid);
+    }
+    
+    this.setState({ selectedItems: newSelectedItems });
+    console.log('Gallery item selection changed:', {
+      itemName: data.name,
+      uid: data.uid,
+      isSelected,
+      totalSelected: newSelectedItems.length
+    });
+  }
+  
+  /**
    * Handle pagination component updates
    * @param {Array} currentPageData - Current page data from pagination component
    */
@@ -105,7 +141,7 @@ export class GalleryDisplay extends Component {
    * Show the modal
    */
   showModal() {
-    this.setState({ isVisible: true });
+    this.setState({ isVisible: true, selectedItems: [] }); // Clear selections when modal opens
     this.fetchGalleryData();
     console.log('Gallery modal opened');
   }
@@ -114,7 +150,7 @@ export class GalleryDisplay extends Component {
    * Hide the modal
    */
   hideModal() {
-    this.setState({ isVisible: false, currentPageData: [] });
+    this.setState({ isVisible: false, currentPageData: [], selectedItems: [] }); // Clear selections when modal closes
     
     // Clean up pagination component
     if (this.pagination) {
@@ -179,7 +215,7 @@ export class GalleryDisplay extends Component {
     
     itemsToShow.forEach((item, index) => {
       if (index < maxItems) { // Ensure we don't exceed grid layout
-        const preview = this.previewFactory(item);
+        const preview = this.previewFactory(item, this.handleItemSelect);
         if (preview) {
           // Create a wrapper div to hold the DOM element content
           items.push(
