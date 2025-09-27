@@ -1,0 +1,137 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 240267179148763,
+      "steps": 8,
+      "cfg": 4,
+      "sampler_name": "dpmpp_sde_gpu",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "29",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "a painterly digital art style illustration\n\n",
+      "clip": [
+        "29",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "watermark, text, realistic, low quality",
+      "clip": [
+        "29",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "29",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "path": "**replace before send**",
+      "overwrite": "true",
+      "image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "20": {
+    "inputs": {
+      "image": "**replace with image**"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "26": {
+    "inputs": {
+      "grow_mask_by": 6,
+      "pixels": [
+        "20",
+        0
+      ],
+      "vae": [
+        "29",
+        2
+      ],
+      "mask": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeForInpaint",
+    "_meta": {
+      "title": "VAE Encode (for Inpainting)"
+    }
+  },
+  "29": {
+    "inputs": {
+      "ckpt_name": "realisticVisionV60B1_v51VAE-inpainting.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "36": {
+    "inputs": {
+      "image": "**replace with mask**",
+      "channel": "red"
+    },
+    "class_type": "LoadImageMask",
+    "_meta": {
+      "title": "Load Image (as Mask)"
+    }
+  }
+}

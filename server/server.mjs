@@ -308,7 +308,8 @@ app.get('/generate/workflows', (req, res) => {
   try {
     const workflows = comfyuiWorkflows.workflows.map(workflow => ({
       name: workflow.name,
-      autocomplete: workflow.autocomplete
+      type: workflow.type,
+      autocomplete: workflow.autocomplete,
     }));
     res.json(workflows);
   } catch (error) {
