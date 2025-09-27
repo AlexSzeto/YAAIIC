@@ -1,4 +1,4 @@
-# Create Inpaint Modal
+# Create Inpaint Page
 
 [] On the client side, separate workflows by type and only supply `txt2img` workflows into the current index page.
 [] On the server side, create a new endpoint, `/image-data/uid`, that accepts a single query param (`uid`) and only returns one object in the `imageData` that matches `uid`.
@@ -9,3 +9,4 @@
 4. Create a new inpaint UI preact component, `InpaintComponent`, stored in `js/inpaint-canvas.mjs`, with a canvas element with the id `inpaint` that automatically resize to the image loaded within it, via the `imageUrl` property.
 5. Place the inpaint UI beneath the inpaint form.
 6. Use `js/inpaint.mjs` to host the scripts used for `inpaint.html`. On page load, parse the query param `uid` and use `/image-data/uid` to load the `name` and send the `imageUrl` to the `InpaintComponent`.
+[] In the generated image display from `index.html`, add a button to the right of the delete button, add an `Inpaint` button with a paintbrush icon that links to the `inpaint` page with the `uid` of the current image as query parameter.
