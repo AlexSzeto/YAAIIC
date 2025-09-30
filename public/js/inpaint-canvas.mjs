@@ -31,6 +31,12 @@ export class InpaintComponent extends Component {
     console.log('InpaintComponent mounted, imageUrl:', this.props.imageUrl);
     this.loadImage();
     
+    // Apply initial inpaintArea if provided
+    if (this.props.initialInpaintArea) {
+      console.log('Applying initial inpaintArea:', this.props.initialInpaintArea);
+      this.inpaintArea.value = this.props.initialInpaintArea;
+    }
+    
     // Add global mouse event handlers for dragging outside canvas
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseup', this.handleMouseUp);
@@ -40,6 +46,13 @@ export class InpaintComponent extends Component {
     // Load image when imageUrl prop changes
     if (prevProps.imageUrl !== this.props.imageUrl) {
       this.loadImage();
+    }
+    
+    // Apply new initialInpaintArea when it changes
+    if (prevProps.initialInpaintArea !== this.props.initialInpaintArea && this.props.initialInpaintArea) {
+      console.log('Applying updated initialInpaintArea:', this.props.initialInpaintArea);
+      this.inpaintArea.value = this.props.initialInpaintArea;
+      this.redrawCanvas();
     }
   }
   

@@ -129,7 +129,7 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 export async function handleImageGeneration(req, res, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint } = req.body;
+    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
     let { name } = req.body;
     
     if (!prompt || typeof prompt !== 'string') {
@@ -147,6 +147,9 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       console.log('Inpaint operation detected');
       console.log('Using imagePath:', imagePath);
       console.log('Using maskPath:', maskPath);
+      if (inpaintArea) {
+        console.log('Using inpaintArea:', inpaintArea);
+      }
     }
 
     // Generate name if not provided and namePromptPrefix is available
@@ -258,7 +261,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         name: name,
         description: description,
         workflow: workflow,
-        inpaint: inpaint || false
+        inpaint: inpaint || false,
+        inpaintArea: inpaintArea || null
       };
       addImageDataEntry(imageDataEntry);
       uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
@@ -276,6 +280,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         name: name,
         workflow: workflow,
         inpaint: inpaint || false,
+        inpaintArea: inpaintArea || null,
         uid: uid
       }
     });

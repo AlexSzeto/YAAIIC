@@ -375,12 +375,13 @@ app.post('/generate/inpaint', upload.fields([
     console.log('=== Inpaint endpoint called ===');
     
     // Log form data fields
-    const { workflow, name, seed, prompt } = req.body;
+    const { workflow, name, seed, prompt, inpaintArea } = req.body;
     console.log('Form data received:');
     console.log('- workflow:', workflow);
     console.log('- name:', name);
     console.log('- seed:', seed);
     console.log('- prompt:', prompt);
+    console.log('- inpaintArea:', inpaintArea);
     
     // Validate required fields
     if (!workflow) {
@@ -391,6 +392,25 @@ app.post('/generate/inpaint', upload.fields([
     }
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt parameter is required' });
+    }
+    
+    // Validate and parse inpaintArea if provided
+    let parsedInpaintArea = null;
+    if (inpaintArea) {
+      try {
+        parsedInpaintArea = JSON.parse(inpaintArea);
+        if (parsedInpaintArea && typeof parsedInpaintArea === 'object' && 
+            typeof parsedInpaintArea.x1 === 'number' && 
+            typeof parsedInpaintArea.y1 === 'number' && 
+            typeof parsedInpaintArea.x2 === 'number' && 
+            typeof parsedInpaintArea.y2 === 'number') {
+          console.log('Valid inpaintArea parsed:', parsedInpaintArea);
+        } else {
+          return res.status(400).json({ error: 'Invalid inpaintArea format - must contain x1, y1, x2, y2 coordinates' });
+        }
+      } catch (parseError) {
+        return res.status(400).json({ error: 'Invalid inpaintArea JSON format' });
+      }
     }
     
     // Validate uploaded files
@@ -447,6 +467,11 @@ app.post('/generate/inpaint', upload.fields([
       req.body.imagePath = imageUploadResult.filename;
       req.body.maskPath = maskUploadResult.filename;
       req.body.inpaint = true;
+      
+      // Include parsed inpaintArea if provided
+      if (parsedInpaintArea) {
+        req.body.inpaintArea = parsedInpaintArea;
+      }
       
       // Remove uploads data from request body before calling handleImageGeneration
       delete req.body.uploads;

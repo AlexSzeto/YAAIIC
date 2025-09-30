@@ -166,6 +166,7 @@ async function handleInpaint() {
     formData.append('name', nameInput.value.trim());
     formData.append('seed', seedInput.value);
     formData.append('prompt', descriptionTextarea.value.trim());
+    formData.append('inpaintArea', JSON.stringify(inpaintArea.value));
     formData.append('image', imageBlob, 'image.png');
     formData.append('mask', maskBlob, 'mask.png');
     
@@ -200,8 +201,13 @@ async function handleInpaint() {
       // Refresh the interface by loading the new image data
       await loadImageDataByUID(newUID);
       
-      // Reset the inpaint area since we have a new image
-      inpaintArea.value = null;
+      // Reset the inpaint area since we have a new image, unless we have inpaintArea in response
+      if (result.data.inpaintArea) {
+        console.log('Preserving inpaintArea from result:', result.data.inpaintArea);
+        inpaintArea.value = result.data.inpaintArea;
+      } else {
+        inpaintArea.value = null;
+      }
       
       // Update the seed if not locked for potential future inpaints
       updateSeedIfNotLocked();
@@ -210,8 +216,12 @@ async function handleInpaint() {
     } else {
       console.warn('No UID found in inpaint response, interface not refreshed');
       // Reset form or redirect as needed
-      // For now, just reset the inpaint area
-      inpaintArea.value = null;
+      // For now, just reset the inpaint area unless preserved in response
+      if (result.data && result.data.inpaintArea) {
+        inpaintArea.value = result.data.inpaintArea;
+      } else {
+        inpaintArea.value = null;
+      }
     }
     
   } catch (error) {
@@ -251,6 +261,7 @@ class InpaintApp extends Component {
           <${InpaintComponent} 
             imageUrl=${state.imageData.imageUrl} 
             inpaintArea=${inpaintArea} 
+            initialInpaintArea=${state.imageData.inpaintArea}
           />
         `}
         
@@ -399,6 +410,12 @@ async function loadImageDataByUID(uid) {
     // Update app state with loaded image data
     appState.value = { loading: false, error: null, imageData: currentImageData };
     renderInpaintApp();
+    
+    // Set inpaintArea from loaded data if available
+    if (currentImageData.inpaintArea) {
+      console.log('Restoring inpaintArea from loaded data:', currentImageData.inpaintArea);
+      inpaintArea.value = currentImageData.inpaintArea;
+    }
     
     showSuccessToast('Image loaded for inpainting');
     

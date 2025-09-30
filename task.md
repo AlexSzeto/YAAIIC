@@ -21,3 +21,13 @@
 [x] Modify `inpaint.mjs` to process the inpaint result.
    1. On the server side, add `uid` to the returned data on a successful image generation.
    2. On the client side, on a successful inpaint, refresh the interface by updating the `uid` from the return data to change the query parameter in the URL. internally refresh the rest of the page by repopulating the form with the new image data.
+
+[x] Send `inpaintArea` to the `inpaint` endpoint as a JSON object, and pass it to the image generation workflow. Store the result in `image-data.json`, pass the result back to the client, and update the client code to update the inpaint area prop in the inpaint canvas on page load or page data refresh.
+   1. Modify the client-side inpaint form submission in `inpaint.mjs` to include the `inpaintArea` data from the canvas component
+   2. Update the `/generate/inpaint` endpoint in `server.mjs` to accept and validate the `inpaintArea` parameter from the request body
+   3. Pass the `inpaintArea` data to `handleImageGeneration` function along with other workflow parameters
+   4. Update the `imageDataEntry` object creation to store the `inpaintArea` data in the database record
+   5. Include `inpaintArea` in the JSON response data returned to the client
+   6. Modify the inpaint canvas component to accept and apply `inpaintArea` data as a prop during initialization
+   7. Update the page data refresh logic in `inpaint.mjs` to pass the returned `inpaintArea` to the canvas component
+   8. Ensure the inpaint area is properly restored when loading existing inpaint results or refreshing the page
