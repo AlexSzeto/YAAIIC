@@ -231,8 +231,14 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     // Analyze the generated image with ollama
     let description = '';
     try {
-      description = await sendImagePrompt(savePath, describePrompt);
-      console.log('Image analysis completed:', description);
+      // Only analyze if describePrompt is provided in workflow config
+      if (describePrompt) {
+        description = await sendImagePrompt(savePath, describePrompt);
+        console.log('Image analysis completed:', description);
+      } else {
+        console.log('No describePrompt provided in workflow config, skipping image analysis');
+        description = 'Image analysis not configured for this workflow';
+      }
     } catch (error) {
       console.warn('Failed to analyze image with ollama:', error.message);
       description = 'Image analysis unavailable';
@@ -243,6 +249,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     const imageUrl = `/image/${filename}`;
 
     // Save image data to database
+    let uid = null;
     if (addImageDataEntry) {
       const imageDataEntry = {
         prompt: prompt,
@@ -254,7 +261,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         inpaint: inpaint || false
       };
       addImageDataEntry(imageDataEntry);
-      console.log('Image data entry saved to database');
+      uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
+      console.log('Image data entry saved to database with UID:', uid);
     }
 
     res.json({ 
@@ -267,7 +275,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         seed: seed,
         name: name,
         workflow: workflow,
-        inpaint: inpaint || false
+        inpaint: inpaint || false,
+        uid: uid
       }
     });
 

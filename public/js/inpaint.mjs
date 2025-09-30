@@ -187,9 +187,32 @@ async function handleInpaint() {
     showSuccessToast('Inpaint request completed successfully!');
     console.log('Inpaint result:', result);
     
-    // Reset form or redirect as needed
-    // For now, just reset the inpaint area
-    inpaintArea.value = null;
+    // Check if we have a uid in the response data for refreshing the interface
+    if (result.data && result.data.uid) {
+      const newUID = result.data.uid;
+      console.log('Updating interface with new UID:', newUID);
+      
+      // Update the URL with the new UID to change the query parameter
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.set('uid', newUID);
+      window.history.pushState({}, '', newUrl);
+      
+      // Refresh the interface by loading the new image data
+      await loadImageDataByUID(newUID);
+      
+      // Reset the inpaint area since we have a new image
+      inpaintArea.value = null;
+      
+      // Update the seed if not locked for potential future inpaints
+      updateSeedIfNotLocked();
+      
+      showSuccessToast('Interface refreshed with inpaint result');
+    } else {
+      console.warn('No UID found in inpaint response, interface not refreshed');
+      // Reset form or redirect as needed
+      // For now, just reset the inpaint area
+      inpaintArea.value = null;
+    }
     
   } catch (error) {
     console.error('Error during inpaint:', error);

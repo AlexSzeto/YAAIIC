@@ -78,6 +78,7 @@
       "base": "realvis-fantasy-inpaint.json",
       "format": "jpg",
       "type": "inpaint",
+      "describePrompt": "Write a paragraph description of the fantasy character or scene in this inpainted image. Include visual details such as appearance, clothing, setting, and atmosphere. Be concise and focus only on what can be seen in the image. Only include the description, do not include any other text. The description is:",
       "upload": [
         {
           "from": "image",

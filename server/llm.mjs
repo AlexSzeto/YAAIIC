@@ -73,10 +73,10 @@ export async function sendTextPrompt(prompt, model = 'gemma3:4b') {
  * Analyze an image using the LLaVA model via Ollama
  * @param {string} imagePath - Path to the image file to analyze
  * @param {string} prompt - Text prompt to guide the analysis
- * @param {string} model - Model to use for analysis (default: 'gemma3:4b')
+ * @param {string} model - Model to use for analysis (default: 'llava')
  * @returns {Promise<string>} Description of what's in the image
  */
-export async function sendImagePrompt(imagePath, prompt, model = 'gemma3:4b') {
+export async function sendImagePrompt(imagePath, prompt, model = 'llava') {
   try {
     // Validate image path
     if (!imagePath || typeof imagePath !== 'string') {
