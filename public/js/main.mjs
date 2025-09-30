@@ -68,6 +68,9 @@ async function loadWorkflows() {
       successMessage: 'Workflows loaded successfully'
     });
     
+    // Filter workflows to only include txt2img type for index page
+    const txt2imgWorkflows = workflows.filter(workflow => workflow.type === 'txt2img');
+    
     const workflowSelect = document.getElementById('workflow');
     
     // Clear loading option
@@ -79,8 +82,8 @@ async function loadWorkflows() {
     defaultOption.textContent = 'Select a workflow...';
     workflowSelect.appendChild(defaultOption);
     
-    // Add workflow options
-    workflows.forEach(workflow => {
+    // Add workflow options (only txt2img workflows)
+    txt2imgWorkflows.forEach(workflow => {
       const option = document.createElement('option');
       option.value = workflow.name;
       option.textContent = workflow.name;
@@ -91,6 +94,7 @@ async function loadWorkflows() {
     workflowSelect.addEventListener('change', handleWorkflowChange);
     
     console.log('Workflows loaded:', workflows);
+    console.log('Filtered txt2img workflows:', txt2imgWorkflows);
   } catch (error) {
     console.error('Error loading workflows:', error);
     // Error feedback is already handled by fetchJson utility

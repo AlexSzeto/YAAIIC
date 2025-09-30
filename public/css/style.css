@@ -1,6 +1,22 @@
 /* Import shared CSS variables */
 @import 'variables.css';
 
+/* ===== SHARED CONTAINER STYLES ===== */
+.content-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: var(--dark-background-secondary);
+  border: 1px solid var(--dark-border-secondary);
+  border-radius: 8px;
+}
+
+.content-container h3 {
+  color: var(--dark-text-primary);
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
 /* ===== SHARED BUTTON STYLES ===== */
 .btn-with-icon {
   width: 120px;
@@ -290,12 +306,70 @@ p {
 
 
 /* Generated Image Display Styling */
-.generated-image-display {
-  margin-top: 20px;
-  padding: 20px;
-  background-color: var(--dark-background-secondary);
+/* Uses content-container base styling */
+
+/* Inpaint Canvas Container Styling */
+/* Uses content-container base styling */
+
+.inpaint-canvas {
+  border: 1px solid var(--dark-border-focus);
+  border-radius: 4px;
+  background-color: var(--dark-background-card);
+  display: block;
+  margin: 10px 0;
+}
+
+.inpaint-canvas.loaded {
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.inpaint-placeholder,
+.inpaint-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--dark-text-secondary);
+  background-color: var(--dark-background-card);
   border: 1px solid var(--dark-border-secondary);
-  border-radius: 8px;
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.inpaint-info {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: var(--dark-background-card);
+  border: 1px solid var(--dark-border-secondary);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--dark-text-secondary);
+}
+
+.inpaint-info p {
+  margin: 5px 0;
+}
+
+.inpaint-error {
+  text-align: center;
+  padding: 40px;
+  color: var(--danger-background);
+  background-color: var(--dark-background-card);
+  border: 1px solid var(--danger-border);
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.inpaint-error h3 {
+  color: var(--danger-background);
+  margin-top: 0;
+}
+
+.inpaint-error a {
+  color: var(--primary-background);
+  text-decoration: none;
+}
+
+.inpaint-error a:hover {
+  text-decoration: underline;
 }
 
 .generated-image-title {
@@ -426,7 +500,39 @@ p {
   min-height: 160px;
 }
 
-/* Delete Button Container */
+/* Image Action Buttons Container */
+.image-action-container {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.image-inpaint-btn {
+  background-color: var(--primary-background);
+  color: white;
+  border: 1px solid var(--primary-border, var(--primary-background));
+}
+
+.image-inpaint-btn:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-border-hover, var(--primary-hover));
+}
+
+.image-inpaint-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.image-inpaint-btn:disabled {
+  background-color: var(--secondary-background);
+  border-color: var(--dark-border-secondary);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Delete Button Container - Legacy support */
 .image-delete-container {
   margin-top: 15px;
   display: flex;

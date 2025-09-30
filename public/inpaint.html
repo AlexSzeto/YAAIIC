@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAAIIG - Inpaint</title>
+    <!-- Preact and HTM via CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://esm.sh/preact@10.19.2",
+          "preact/": "https://esm.sh/preact@10.19.2/",
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+        }
+      }
+    </script>
+    <!-- Autocomplete.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.min.js"></script>
+    <!-- Boxicons for icons -->
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+    <!-- Textarea Caret Position library wrapper -->
+    <script src="/js/textarea-caret-position-wrapper.mjs"></script>
+    <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/custom-ui.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <h1>YAAIIG (Yet Another AI Image Generator) - Inpaint</h1>
+
+    <!-- Workflow Configuration Row -->
+    <div class="workflow-controls">
+      <div class="form-group">
+        <label for="workflow">Workflow:</label>
+        <select id="workflow" name="workflow">
+          <option value="">Loading workflows...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter name" />
+      </div>
+
+      <div class="form-group">
+        <label for="seed">Seed:</label>
+        <input type="number" id="seed" name="seed" min="0" max="4294967295" />
+      </div>
+
+      <div class="form-group">
+        <label for="lock-seed">
+          <input type="checkbox" id="lock-seed" name="lock-seed" />
+          Lock seed
+        </label>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Description:</label>
+        <textarea id="description" placeholder="Enter your text here..."></textarea>
+      </div>
+
+      <!-- Button Row Container -->
+      <div class="button-row">
+        <button id="generate-btn" class="generate-button btn-with-icon">
+          <box-icon name='play' color='#ffffff'></box-icon>
+          Inpaint
+        </button>
+      </div>
+    </div>
+
+    <!-- Inpaint UI Container -->
+    <div id="inpaintContainer">
+      <!-- InpaintComponent will be rendered here -->
+    </div>
+
+    <script type="module" src="/js/autocomplete-setup.mjs"></script>
+    <script type="module" src="/js/custom-ui/dialog.mjs"></script>
+    <script type="module" src="/js/custom-ui/toast.mjs"></script>
+    <script type="module" src="/js/inpaint.mjs"></script>
+  </body>
+</html>

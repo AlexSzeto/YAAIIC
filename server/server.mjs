@@ -249,6 +249,36 @@ app.get('/image-data', (req, res) => {
   }
 });
 
+// GET endpoint for single image data by UID
+app.get('/image-data/:uid', (req, res) => {
+  try {
+    const uid = parseInt(req.params.uid);
+    
+    // Validate UID parameter
+    if (isNaN(uid)) {
+      console.log(`Invalid UID parameter: ${req.params.uid}`);
+      return res.status(400).json({ error: 'UID must be a valid number' });
+    }
+    
+    console.log(`Image data by UID endpoint called with uid=${uid}`);
+    
+    // Search through imageData array to find matching UID
+    const matchingImage = imageData.imageData.find(item => item.uid === uid);
+    
+    if (!matchingImage) {
+      console.log(`No image found with UID: ${uid}`);
+      return res.status(404).json({ error: `Image with UID ${uid} not found` });
+    }
+    
+    console.log(`Found image with UID ${uid}: ${matchingImage.name || 'unnamed'}`);
+    res.json(matchingImage);
+    
+  } catch (error) {
+    console.error('Error in image-data/:uid endpoint:', error);
+    res.status(500).json({ error: 'Failed to retrieve image data' });
+  }
+});
+
 // DELETE endpoint for image data deletion
 app.delete('/image-data/delete', (req, res) => {
   try {
