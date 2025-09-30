@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry } from './generate.mjs';
+import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI } from './generate.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 
@@ -366,11 +366,11 @@ app.get('/generate/workflows', (req, res) => {
   }
 });
 
-// POST endpoint for inpaint processing (temporary test implementation)
+// POST endpoint for inpaint processing
 app.post('/generate/inpaint', upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'mask', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   try {
     console.log('=== Inpaint endpoint called ===');
     
@@ -408,46 +408,47 @@ app.post('/generate/inpaint', upload.fields([
     console.log('- image:', imageFile.originalname, 'size:', imageFile.size, 'type:', imageFile.mimetype);
     console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
     
-    // Create storage directory if it doesn't exist
-    const storageFolder = path.join(actualDirname, 'storage');
-    if (!fs.existsSync(storageFolder)) {
-      fs.mkdirSync(storageFolder, { recursive: true });
-      console.log('Created storage directory:', storageFolder);
+    // Generate unique filenames for ComfyUI upload
+    const timestamp = Date.now();
+    const imageFilename = `inpaint_image_${timestamp}.png`;
+    const maskFilename = `inpaint_mask_${timestamp}.png`;
+    
+    try {
+      // Upload both images to ComfyUI
+      console.log('Uploading images to ComfyUI...');
+      
+      const [imageUploadResult, maskUploadResult] = await Promise.all([
+        uploadImageToComfyUI(imageFile.buffer, imageFilename, "input", true),
+        uploadImageToComfyUI(maskFile.buffer, maskFilename, "input", true)
+      ]);
+      
+      console.log('Both images uploaded successfully to ComfyUI');
+      
+      // Return success response
+      res.json({
+        success: true,
+        message: 'Inpaint images uploaded to ComfyUI successfully',
+        data: {
+          workflow,
+          name,
+          seed: parseInt(seed),
+          prompt,
+          imageFilename: imageUploadResult.filename,
+          maskFilename: maskUploadResult.filename,
+          uploads: {
+            image: imageUploadResult,
+            mask: maskUploadResult
+          }
+        }
+      });
+      
+    } catch (uploadError) {
+      console.error('Failed to upload images to ComfyUI:', uploadError);
+      return res.status(500).json({
+        error: 'Failed to upload images to ComfyUI',
+        details: uploadError.message
+      });
     }
-    
-    // Determine file extension from original image
-    let imageExtension = 'png'; // default
-    if (imageFile.mimetype === 'image/jpeg') {
-      imageExtension = 'jpg';
-    } else if (imageFile.mimetype === 'image/png') {
-      imageExtension = 'png';
-    } else if (imageFile.mimetype === 'image/webp') {
-      imageExtension = 'webp';
-    }
-    
-    // Save image file with original extension
-    const imagePath = path.join(storageFolder, `image.${imageExtension}`);
-    fs.writeFileSync(imagePath, imageFile.buffer);
-    console.log('Image saved to:', imagePath);
-    
-    // Save mask file as PNG
-    const maskPath = path.join(storageFolder, 'mask.png');
-    fs.writeFileSync(maskPath, maskFile.buffer);
-    console.log('Mask saved to:', maskPath);
-    
-    // Return success response
-    res.json({
-      success: true,
-      message: 'Inpaint request processed successfully (test mode)',
-      data: {
-        workflow,
-        name,
-        seed: parseInt(seed),
-        prompt,
-        imagePath: `/image/image.${imageExtension}`,
-        maskPath: '/image/mask.png'
-      }
-    });
     
     console.log('=== Inpaint processing completed ===');
     

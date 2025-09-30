@@ -1,5 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import FormData from 'form-data';
+import https from 'https';
+import http from 'http';
 import { getComfyUIAPIPath } from './services.mjs';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
 import { setObjectPathValue } from './util.mjs';
@@ -9,6 +12,72 @@ let addImageDataEntry = null;
 
 export function setAddImageDataEntry(func) {
   addImageDataEntry = func;
+}
+
+// Function to upload image to ComfyUI
+export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
+  const comfyuiAPIPath = getComfyUIAPIPath();
+  
+  return new Promise((resolve, reject) => {
+    try {
+      // Create FormData using the form-data package
+      const formData = new FormData();
+      
+      // Append the image buffer as a stream
+      formData.append('image', imageBuffer, {
+        filename: filename,
+        contentType: 'image/png'
+      });
+      formData.append('type', imageType);
+      formData.append('overwrite', overwrite.toString().toLowerCase());
+      
+      console.log(`Uploading image to ComfyUI: ${filename} (type: ${imageType})`);
+      
+      // Parse the URL to determine if it's HTTP or HTTPS
+      const url = new URL(`${comfyuiAPIPath}/upload/image`);
+      const httpModule = url.protocol === 'https:' ? https : http;
+      
+      // Create the request
+      const req = httpModule.request({
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'POST',
+        headers: formData.getHeaders()
+      }, (res) => {
+        let responseData = '';
+        
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log(`Successfully uploaded ${filename} to ComfyUI:`, responseData);
+            resolve({
+              success: true,
+              filename: filename,
+              type: imageType,
+              response: responseData
+            });
+          } else {
+            reject(new Error(`ComfyUI upload failed: ${res.statusCode} ${res.statusMessage} - ${responseData}`));
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        reject(new Error(`Request failed for ${filename}: ${error.message}`));
+      });
+      
+      // Pipe the form data to the request
+      formData.pipe(req);
+      
+    } catch (error) {
+      console.error(`Failed to upload ${filename} to ComfyUI:`, error);
+      reject(new Error(`Upload failed for ${filename}: ${error.message}`));
+    }
+  });
 }
 
 // Reusable function to check ComfyUI prompt status
