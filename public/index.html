@@ -72,7 +72,7 @@
     </div>
 
     <!-- Generated Image Display Container -->
-    <div id="generatedImageDisplay" class="generated-image-display" style="display: none;">
+    <div id="generatedImageDisplay" class="generated-image-display content-container" style="display: none;">
       <h3 class="generated-image-title">Generated Image</h3>
       <div class="generated-image-content">
         <div class="generated-image-left">
@@ -152,8 +152,12 @@
         </div>
       </div>
       
-      <!-- Delete Button Container -->
-      <div class="image-delete-container">
+      <!-- Image Action Buttons Container -->
+      <div class="image-action-container">
+        <button class="image-inpaint-btn btn-with-icon" title="Inpaint this image">
+          <box-icon name='brush' color='#ffffff' size='16px'></box-icon>
+          Inpaint
+        </button>
         <button class="image-delete-btn btn-with-icon" title="Delete this image">
           <box-icon name='trash' color='#ffffff' size='16px'></box-icon>
           Delete

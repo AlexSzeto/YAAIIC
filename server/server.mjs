@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
-import { handleImageGeneration, setAddImageDataEntry } from './generate.mjs';
+import multer from 'multer';
+import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI } from './generate.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 
@@ -79,6 +80,23 @@ try {
 // Middleware
 app.use(express.static(path.join(actualDirname, '../public')));
 app.use(express.json());
+
+// Configure multer for file uploads (in-memory storage for processing)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+    files: 2 // Allow up to 2 files (image + mask)
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept image files only
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // Serve textarea-caret-position library from node_modules
 app.get('/lib/textarea-caret-position.js', (req, res) => {
@@ -249,6 +267,36 @@ app.get('/image-data', (req, res) => {
   }
 });
 
+// GET endpoint for single image data by UID
+app.get('/image-data/:uid', (req, res) => {
+  try {
+    const uid = parseInt(req.params.uid);
+    
+    // Validate UID parameter
+    if (isNaN(uid)) {
+      console.log(`Invalid UID parameter: ${req.params.uid}`);
+      return res.status(400).json({ error: 'UID must be a valid number' });
+    }
+    
+    console.log(`Image data by UID endpoint called with uid=${uid}`);
+    
+    // Search through imageData array to find matching UID
+    const matchingImage = imageData.imageData.find(item => item.uid === uid);
+    
+    if (!matchingImage) {
+      console.log(`No image found with UID: ${uid}`);
+      return res.status(404).json({ error: `Image with UID ${uid} not found` });
+    }
+    
+    console.log(`Found image with UID ${uid}: ${matchingImage.name || 'unnamed'}`);
+    res.json(matchingImage);
+    
+  } catch (error) {
+    console.error('Error in image-data/:uid endpoint:', error);
+    res.status(500).json({ error: 'Failed to retrieve image data' });
+  }
+});
+
 // DELETE endpoint for image data deletion
 app.delete('/image-data/delete', (req, res) => {
   try {
@@ -308,12 +356,143 @@ app.get('/generate/workflows', (req, res) => {
   try {
     const workflows = comfyuiWorkflows.workflows.map(workflow => ({
       name: workflow.name,
-      autocomplete: workflow.autocomplete
+      type: workflow.type,
+      autocomplete: workflow.autocomplete,
     }));
     res.json(workflows);
   } catch (error) {
     console.error('Error getting workflows:', error);
     res.status(500).json({ error: 'Failed to load workflows' });
+  }
+});
+
+// POST endpoint for inpaint processing
+app.post('/generate/inpaint', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'mask', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    console.log('=== Inpaint endpoint called ===');
+    
+    // Log form data fields
+    const { workflow, name, seed, prompt, inpaintArea } = req.body;
+    console.log('Form data received:');
+    console.log('- workflow:', workflow);
+    console.log('- name:', name);
+    console.log('- seed:', seed);
+    console.log('- prompt:', prompt);
+    console.log('- inpaintArea:', inpaintArea);
+    
+    // Validate required fields
+    if (!workflow) {
+      return res.status(400).json({ error: 'Workflow parameter is required' });
+    }
+    if (!name) {
+      return res.status(400).json({ error: 'Name parameter is required' });
+    }
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt parameter is required' });
+    }
+    
+    // Validate and parse inpaintArea if provided
+    let parsedInpaintArea = null;
+    if (inpaintArea) {
+      try {
+        parsedInpaintArea = JSON.parse(inpaintArea);
+        if (parsedInpaintArea && typeof parsedInpaintArea === 'object' && 
+            typeof parsedInpaintArea.x1 === 'number' && 
+            typeof parsedInpaintArea.y1 === 'number' && 
+            typeof parsedInpaintArea.x2 === 'number' && 
+            typeof parsedInpaintArea.y2 === 'number') {
+          console.log('Valid inpaintArea parsed:', parsedInpaintArea);
+        } else {
+          return res.status(400).json({ error: 'Invalid inpaintArea format - must contain x1, y1, x2, y2 coordinates' });
+        }
+      } catch (parseError) {
+        return res.status(400).json({ error: 'Invalid inpaintArea JSON format' });
+      }
+    }
+    
+    // Validate uploaded files
+    if (!req.files || !req.files.image || !req.files.mask) {
+      return res.status(400).json({ error: 'Both image and mask files are required' });
+    }
+    
+    const imageFile = req.files.image[0];
+    const maskFile = req.files.mask[0];
+    
+    console.log('Files received:');
+    console.log('- image:', imageFile.originalname, 'size:', imageFile.size, 'type:', imageFile.mimetype);
+    console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
+    
+    // Generate unique filenames for ComfyUI upload
+    const timestamp = Date.now();
+    const imageFilename = `inpaint_image_${timestamp}.png`;
+    const maskFilename = `inpaint_mask_${timestamp}.png`;
+    
+    try {
+      // Upload both images to ComfyUI
+      console.log('Uploading images to ComfyUI...');
+      
+      const [imageUploadResult, maskUploadResult] = await Promise.all([
+        uploadImageToComfyUI(imageFile.buffer, imageFilename, "input", true),
+        uploadImageToComfyUI(maskFile.buffer, maskFilename, "input", true)
+      ]);
+      
+      console.log('Both images uploaded successfully to ComfyUI');
+      
+      // Find the workflow in comfyuiWorkflows
+      const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
+      if (!workflowData) {
+        return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+      }
+      
+      // Generate random seed if not provided
+      if (!req.body.seed) {
+        req.body.seed = Math.floor(Math.random() * 4294967295);
+        console.log('Generated random seed:', req.body.seed);
+      }
+      
+      // Create storage path for the generated inpaint result image
+      const storageFolder = path.join(actualDirname, 'storage');
+      if (!fs.existsSync(storageFolder)) {
+        fs.mkdirSync(storageFolder, { recursive: true });
+      }
+      
+      const nextIndex = findNextIndex('image', storageFolder);
+      const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
+      req.body.savePath = path.join(storageFolder, filename);
+      
+      // Prepare request body with imagePath and maskPath from uploaded filenames
+      req.body.imagePath = imageUploadResult.filename;
+      req.body.maskPath = maskUploadResult.filename;
+      req.body.inpaint = true;
+      
+      // Include parsed inpaintArea if provided
+      if (parsedInpaintArea) {
+        req.body.inpaintArea = parsedInpaintArea;
+      }
+      
+      // Remove uploads data from request body before calling handleImageGeneration
+      delete req.body.uploads;
+      
+      // Call handleImageGeneration with workflow data and modifications
+      handleImageGeneration(req, res, workflowData);
+      
+    } catch (uploadError) {
+      console.error('Failed to upload images to ComfyUI:', uploadError);
+      return res.status(500).json({
+        error: 'Failed to upload images to ComfyUI',
+        details: uploadError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in inpaint endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to process inpaint request', 
+      details: error.message 
+    });
   }
 });
 

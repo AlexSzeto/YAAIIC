@@ -1,5 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import FormData from 'form-data';
+import https from 'https';
+import http from 'http';
 import { getComfyUIAPIPath } from './services.mjs';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
 import { setObjectPathValue } from './util.mjs';
@@ -9,6 +12,72 @@ let addImageDataEntry = null;
 
 export function setAddImageDataEntry(func) {
   addImageDataEntry = func;
+}
+
+// Function to upload image to ComfyUI
+export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
+  const comfyuiAPIPath = getComfyUIAPIPath();
+  
+  return new Promise((resolve, reject) => {
+    try {
+      // Create FormData using the form-data package
+      const formData = new FormData();
+      
+      // Append the image buffer as a stream
+      formData.append('image', imageBuffer, {
+        filename: filename,
+        contentType: 'image/png'
+      });
+      formData.append('type', imageType);
+      formData.append('overwrite', overwrite.toString().toLowerCase());
+      
+      console.log(`Uploading image to ComfyUI: ${filename} (type: ${imageType})`);
+      
+      // Parse the URL to determine if it's HTTP or HTTPS
+      const url = new URL(`${comfyuiAPIPath}/upload/image`);
+      const httpModule = url.protocol === 'https:' ? https : http;
+      
+      // Create the request
+      const req = httpModule.request({
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'POST',
+        headers: formData.getHeaders()
+      }, (res) => {
+        let responseData = '';
+        
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log(`Successfully uploaded ${filename} to ComfyUI:`, responseData);
+            resolve({
+              success: true,
+              filename: filename,
+              type: imageType,
+              response: responseData
+            });
+          } else {
+            reject(new Error(`ComfyUI upload failed: ${res.statusCode} ${res.statusMessage} - ${responseData}`));
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        reject(new Error(`Request failed for ${filename}: ${error.message}`));
+      });
+      
+      // Pipe the form data to the request
+      formData.pipe(req);
+      
+    } catch (error) {
+      console.error(`Failed to upload ${filename} to ComfyUI:`, error);
+      reject(new Error(`Upload failed for ${filename}: ${error.message}`));
+    }
+  });
 }
 
 // Reusable function to check ComfyUI prompt status
@@ -60,7 +129,7 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 export async function handleImageGeneration(req, res, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-    const { prompt, seed, savePath, workflow } = req.body;
+    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
     let { name } = req.body;
     
     if (!prompt || typeof prompt !== 'string') {
@@ -72,6 +141,16 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
     console.log('Received name:', name);
+    
+    // Log inpaint-specific parameters for debugging purposes
+    if (inpaint) {
+      console.log('Inpaint operation detected');
+      console.log('Using imagePath:', imagePath);
+      console.log('Using maskPath:', maskPath);
+      if (inpaintArea) {
+        console.log('Using inpaintArea:', inpaintArea);
+      }
+    }
 
     // Generate name if not provided and namePromptPrefix is available
     if ((!name || name.trim() === '') && namePromptPrefix) {
@@ -97,10 +176,11 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
         const { from, to, prefix, postfix } = mod;
-        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
         let value = req.body[from];
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
+        console.log(` - New value: ${value}`);
 
         if(value && to && Array.isArray(to)) {
           workflowData = setObjectPathValue(workflowData, to, value);
@@ -155,8 +235,14 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     // Analyze the generated image with ollama
     let description = '';
     try {
-      description = await sendImagePrompt(savePath, describePrompt);
-      console.log('Image analysis completed:', description);
+      // Only analyze if describePrompt is provided in workflow config
+      if (describePrompt) {
+        description = await sendImagePrompt(savePath, describePrompt);
+        console.log('Image analysis completed:', description);
+      } else {
+        console.log('No describePrompt provided in workflow config, skipping image analysis');
+        description = 'Image analysis not configured for this workflow';
+      }
     } catch (error) {
       console.warn('Failed to analyze image with ollama:', error.message);
       description = 'Image analysis unavailable';
@@ -167,6 +253,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     const imageUrl = `/image/${filename}`;
 
     // Save image data to database
+    let uid = null;
     if (addImageDataEntry) {
       const imageDataEntry = {
         prompt: prompt,
@@ -174,10 +261,13 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         imageUrl: imageUrl,
         name: name,
         description: description,
-        workflow: workflow
+        workflow: workflow,
+        inpaint: inpaint || false,
+        inpaintArea: inpaintArea || null
       };
       addImageDataEntry(imageDataEntry);
-      console.log('Image data entry saved to database');
+      uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
+      console.log('Image data entry saved to database with UID:', uid);
     }
 
     res.json({ 
@@ -189,7 +279,10 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         prompt: prompt,
         seed: seed,
         name: name,
-        workflow: workflow
+        workflow: workflow,
+        inpaint: inpaint || false,
+        inpaintArea: inpaintArea || null,
+        uid: uid
       }
     });
 

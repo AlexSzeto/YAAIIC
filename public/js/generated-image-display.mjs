@@ -22,11 +22,12 @@ export class GeneratedImageDisplay {
     this.tagsTextarea = baseElement.querySelector('.info-tags');
     this.descriptionTextarea = baseElement.querySelector('.info-description');
     this.seedInput = baseElement.querySelector('.info-seed');
+    this.inpaintButton = baseElement.querySelector('.image-inpaint-btn');
     this.deleteButton = baseElement.querySelector('.image-delete-btn');
     
     // Validate that all required elements exist
     if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsTextarea || 
-        !this.descriptionTextarea || !this.seedInput || !this.deleteButton) {
+        !this.descriptionTextarea || !this.seedInput || !this.inpaintButton || !this.deleteButton) {
       throw new Error('GeneratedImageDisplay: Required inner elements not found in baseElement');
     }
     
@@ -63,6 +64,11 @@ export class GeneratedImageDisplay {
     // Set up delete button listener
     this.deleteButton.addEventListener('click', () => {
       this.deleteCurrentImage();
+    });
+    
+    // Set up inpaint button listener
+    this.inpaintButton.addEventListener('click', () => {
+      this.openInpaintPage();
     });
   }
   
@@ -142,6 +148,24 @@ export class GeneratedImageDisplay {
     } else {
       console.warn('No onUseField callback provided');
     }
+  }
+  
+  /**
+   * Open the inpaint page with the current image's UID
+   */
+  openInpaintPage() {
+    if (!this.currentImageData || !this.currentImageData.uid) {
+      showErrorToast('No image selected for inpainting');
+      return;
+    }
+    
+    const uid = this.currentImageData.uid;
+    const inpaintUrl = `inpaint.html?uid=${uid}`;
+    
+    console.log('Opening inpaint page for UID:', uid);
+    
+    // Navigate to the inpaint page
+    window.location.href = inpaintUrl;
   }
   
   /**
@@ -281,6 +305,10 @@ export class GeneratedImageDisplay {
     // Show the display
     this.baseElement.style.display = 'block';
     
+    // Enable action buttons when valid image data is present
+    this.inpaintButton.disabled = !data.uid;
+    this.deleteButton.disabled = !data.uid;
+    
     console.log('GeneratedImageDisplay data updated:', data);
   }
   
@@ -307,6 +335,10 @@ export class GeneratedImageDisplay {
     this.tagsTextarea.value = '';
     this.descriptionTextarea.value = '';
     this.seedInput.value = '';
+    
+    // Disable action buttons
+    this.inpaintButton.disabled = true;
+    this.deleteButton.disabled = true;
     
     // Hide the display
     this.baseElement.style.display = 'none';
