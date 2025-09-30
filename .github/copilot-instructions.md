@@ -1,6 +1,7 @@
 # Task planning Rules of Thumb
-1. The goal of a task should be preceeded by a checkbox (i.e. [] Create a new paintable canvas)
-2. Underneath each task are a numbered list of subtasks. Each line should contain one subtask (i.e. 1. create `<canvas>` element)
+1. The task file should start with a title in the format `# Task Title`.
+2. The goal of a task should be preceeded by a checkbox (i.e. [] Create a new paintable canvas)
+3. Underneath each task are a numbered list of subtasks. Each line should contain one subtask (i.e. 1. create `<canvas>` element)
 
 # Implementation Rules of Thumb
 1. Always use preact/htm when dynamic components are being created using javascript.
