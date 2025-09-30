@@ -129,7 +129,7 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 export async function handleImageGeneration(req, res, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-    const { prompt, seed, savePath, workflow } = req.body;
+    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint } = req.body;
     let { name } = req.body;
     
     if (!prompt || typeof prompt !== 'string') {
@@ -141,6 +141,13 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
     console.log('Received name:', name);
+    
+    // Log inpaint-specific parameters for debugging purposes
+    if (inpaint) {
+      console.log('Inpaint operation detected');
+      console.log('Using imagePath:', imagePath);
+      console.log('Using maskPath:', maskPath);
+    }
 
     // Generate name if not provided and namePromptPrefix is available
     if ((!name || name.trim() === '') && namePromptPrefix) {
@@ -243,7 +250,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         imageUrl: imageUrl,
         name: name,
         description: description,
-        workflow: workflow
+        workflow: workflow,
+        inpaint: inpaint || false
       };
       addImageDataEntry(imageDataEntry);
       console.log('Image data entry saved to database');
@@ -258,7 +266,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
         prompt: prompt,
         seed: seed,
         name: name,
-        workflow: workflow
+        workflow: workflow,
+        inpaint: inpaint || false
       }
     });
 

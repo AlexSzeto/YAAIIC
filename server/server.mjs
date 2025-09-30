@@ -389,9 +389,6 @@ app.post('/generate/inpaint', upload.fields([
     if (!name) {
       return res.status(400).json({ error: 'Name parameter is required' });
     }
-    if (!seed) {
-      return res.status(400).json({ error: 'Seed parameter is required' });
-    }
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt parameter is required' });
     }
@@ -424,23 +421,38 @@ app.post('/generate/inpaint', upload.fields([
       
       console.log('Both images uploaded successfully to ComfyUI');
       
-      // Return success response
-      res.json({
-        success: true,
-        message: 'Inpaint images uploaded to ComfyUI successfully',
-        data: {
-          workflow,
-          name,
-          seed: parseInt(seed),
-          prompt,
-          imageFilename: imageUploadResult.filename,
-          maskFilename: maskUploadResult.filename,
-          uploads: {
-            image: imageUploadResult,
-            mask: maskUploadResult
-          }
-        }
-      });
+      // Find the workflow in comfyuiWorkflows
+      const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
+      if (!workflowData) {
+        return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+      }
+      
+      // Generate random seed if not provided
+      if (!req.body.seed) {
+        req.body.seed = Math.floor(Math.random() * 4294967295);
+        console.log('Generated random seed:', req.body.seed);
+      }
+      
+      // Create storage path for the generated inpaint result image
+      const storageFolder = path.join(actualDirname, 'storage');
+      if (!fs.existsSync(storageFolder)) {
+        fs.mkdirSync(storageFolder, { recursive: true });
+      }
+      
+      const nextIndex = findNextIndex('image', storageFolder);
+      const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
+      req.body.savePath = path.join(storageFolder, filename);
+      
+      // Prepare request body with imagePath and maskPath from uploaded filenames
+      req.body.imagePath = imageUploadResult.filename;
+      req.body.maskPath = maskUploadResult.filename;
+      req.body.inpaint = true;
+      
+      // Remove uploads data from request body before calling handleImageGeneration
+      delete req.body.uploads;
+      
+      // Call handleImageGeneration with workflow data and modifications
+      handleImageGeneration(req, res, workflowData);
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);
@@ -449,8 +461,6 @@ app.post('/generate/inpaint', upload.fields([
         details: uploadError.message
       });
     }
-    
-    console.log('=== Inpaint processing completed ===');
     
   } catch (error) {
     console.error('Error in inpaint endpoint:', error);
