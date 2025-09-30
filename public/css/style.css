@@ -348,30 +348,6 @@ p {
   margin: 5px 0;
 }
 
-.inpaint-error {
-  text-align: center;
-  padding: 40px;
-  color: var(--danger-background);
-  background-color: var(--dark-background-card);
-  border: 1px solid var(--danger-border);
-  border-radius: 4px;
-  margin: 10px 0;
-}
-
-.inpaint-error h3 {
-  color: var(--danger-background);
-  margin-top: 0;
-}
-
-.inpaint-error a {
-  color: var(--primary-background);
-  text-decoration: none;
-}
-
-.inpaint-error a:hover {
-  text-decoration: underline;
-}
-
 .generated-image-title {
   color: var(--dark-text-primary);
   margin-top: 0;

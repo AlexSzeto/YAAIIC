@@ -12,6 +12,30 @@ function getQueryParam(param) {
   return urlParams.get(param);
 }
 
+// Function to handle workflow selection change
+function handleWorkflowChange() {
+  const workflowSelect = document.getElementById('workflow');
+  const selectedWorkflowName = workflowSelect.value;
+  
+  if (!selectedWorkflowName) return;
+  
+  const selectedWorkflow = workflows.find(w => w.name === selectedWorkflowName);
+  if (!selectedWorkflow) return;
+  
+  // Enable or disable autocomplete based on workflow setting
+  const descriptionTextarea = document.getElementById('description');
+  
+  if (selectedWorkflow.autocomplete) {
+    // Enable autocomplete by removing the autocomplete="off" attribute
+    descriptionTextarea.removeAttribute('autocomplete');
+    console.log('Autocomplete enabled for workflow:', selectedWorkflowName);
+  } else {
+    // Disable autocomplete using the official autocomplete="off" attribute
+    descriptionTextarea.setAttribute('autocomplete', 'off');
+    console.log('Autocomplete disabled for workflow:', selectedWorkflowName);
+  }
+}
+
 // Function to load workflows and filter for inpaint type
 async function loadInpaintWorkflows() {
   try {
@@ -62,10 +86,15 @@ async function loadInpaintWorkflows() {
       if (inpaintWorkflows.length > 0) {
         workflowSelect.value = inpaintWorkflows[0].name;
         console.log('Default inpaint workflow set to:', inpaintWorkflows[0].name);
+        // Trigger workflow change handler to update autocomplete settings
+        handleWorkflowChange();
       }
       
       workflowSelect.disabled = false;
     }
+    
+    // Add change event listener
+    workflowSelect.addEventListener('change', handleWorkflowChange);
     
     console.log('All workflows loaded:', workflows);
     console.log('Filtered inpaint workflows:', inpaintWorkflows);
@@ -124,11 +153,7 @@ async function loadImageDataByUID(uid) {
     if (inpaintContainer) {
       inpaintContainer.innerHTML = `
         <div class="content-container">
-          <div class="inpaint-error">
-            <h3>Error Loading Image</h3>
-            <p>${errorMessage}</p>
-            <p><a href="/">Return to main page</a></p>
-          </div>
+          <p>${errorMessage}</p>
         </div>
       `;
     }
@@ -167,11 +192,7 @@ async function initializeInpaintPage() {
       if (inpaintContainer) {
         inpaintContainer.innerHTML = `
           <div class="content-container">
-            <div class="inpaint-error">
-              <h3>No Image Selected</h3>
-              <p>Please select an image to inpaint from the main page.</p>
-              <p><a href="/">Return to main page</a></p>
-            </div>
+            <p>No image UID provided</p>
           </div>
         `;
       }
