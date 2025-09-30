@@ -1,6 +1,6 @@
 # Inpaint server side upload support
 
-[] Convert the `inpaintArea` inside `inpaint-canvas.mjs` into a preact-signal:
+[x] Convert the `inpaintArea` inside `inpaint-canvas.mjs` into a preact-signal:
 1. Import `signal` from preact/signals in `inpaint-canvas.mjs`.
 2. Replace the `inpaintArea` state property with a preact signal initialized to `null`.
 3. Update all references to `this.state.inpaintArea` to use the signal's `.value` property.

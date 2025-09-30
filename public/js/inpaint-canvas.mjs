@@ -9,9 +9,11 @@ export class InpaintComponent extends Component {
     this.state = {
       imageLoaded: false,
       canvasSize: { width: 0, height: 0 },
-      inpaintArea: null,
       isDrawing: false
     };
+    
+    // Use the inpaintArea signal passed as a prop
+    this.inpaintArea = props.inpaintArea;
     
     // Bind methods
     this.handleMouseDown = this.handleMouseDown.bind(this);
@@ -158,8 +160,8 @@ export class InpaintComponent extends Component {
     ctx.drawImage(this.currentImage, 0, 0);
     
     // Apply overlay if inpaint area is active
-    if (this.state.inpaintArea) {
-      const { x1, y1, x2, y2 } = this.state.inpaintArea;
+    if (this.inpaintArea.value) {
+      const { x1, y1, x2, y2 } = this.inpaintArea.value;
       
       // Calculate rectangle bounds
       const left = Math.min(x1, x2);
@@ -215,13 +217,14 @@ export class InpaintComponent extends Component {
     
     // Start area selection or restart if area already exists
     // Round coordinates to nearest pixel
+    this.inpaintArea.value = { 
+      x1: Math.round(coords.x), 
+      y1: Math.round(coords.y), 
+      x2: Math.round(coords.x), 
+      y2: Math.round(coords.y) 
+    };
+    
     this.setState({
-      inpaintArea: { 
-        x1: Math.round(coords.x), 
-        y1: Math.round(coords.y), 
-        x2: Math.round(coords.x), 
-        y2: Math.round(coords.y) 
-      },
       isDrawing: true
     });
     
@@ -234,23 +237,21 @@ export class InpaintComponent extends Component {
    */
   handleMouseMove(e) {
     // Only continue if we're actively drawing
-    if (!this.state.isDrawing || !this.state.inpaintArea) return;
+    if (!this.state.isDrawing || !this.inpaintArea.value) return;
     
     const coords = this.getCanvasCoordinates(e);
     
     // Update the second point of the inpaint area regardless of canvas bounds
     // This allows for selection extending outside canvas (coordinates will be clamped)
     // Round coordinates to nearest pixel
-    this.setState(prevState => ({
-      inpaintArea: {
-        ...prevState.inpaintArea,
-        x2: Math.round(coords.x),
-        y2: Math.round(coords.y)
-      }
-    }), () => {
-      // Redraw canvas with updated selection
-      this.redrawCanvas();
-    });
+    this.inpaintArea.value = {
+      ...this.inpaintArea.value,
+      x2: Math.round(coords.x),
+      y2: Math.round(coords.y)
+    };
+    
+    // Redraw canvas with updated selection
+    this.redrawCanvas();
   }
   
   /**
@@ -279,12 +280,12 @@ export class InpaintComponent extends Component {
     console.log('Canvas right click - clearing inpaint area');
     
     // Reset inpaint area and redraw canvas
+    this.inpaintArea.value = null;
     this.setState({
-      inpaintArea: null,
       isDrawing: false
-    }, () => {
-      this.redrawCanvas();
     });
+    
+    this.redrawCanvas();
   }
   
   /**
@@ -302,12 +303,13 @@ export class InpaintComponent extends Component {
 
   render() {
     const { imageUrl } = this.props;
-    const { imageLoaded, canvasSize, inpaintArea } = this.state;
+    const { imageLoaded, canvasSize } = this.state;
+    const inpaintArea = this.inpaintArea.value;
     
     console.log('InpaintComponent render - imageUrl:', imageUrl, 'imageLoaded:', imageLoaded);
     
     return html`
-      <div class="inpaint-canvas-container content-container">
+      <div class="inpaint-canvas-container">
         <h3>Inpaint Canvas</h3>
         ${!imageUrl && html`
           <div class="inpaint-placeholder">
@@ -347,6 +349,6 @@ export class InpaintComponent extends Component {
 }
 
 // Helper function to render the component to a container
-export function renderInpaintComponent(container, imageUrl) {
-  render(html`<${InpaintComponent} imageUrl=${imageUrl} />`, container);
+export function renderInpaintComponent(container, imageUrl, inpaintArea) {
+  render(html`<${InpaintComponent} imageUrl=${imageUrl} inpaintArea=${inpaintArea} />`, container);
 }

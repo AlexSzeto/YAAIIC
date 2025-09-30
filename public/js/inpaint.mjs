@@ -1,10 +1,64 @@
 // Inpaint page script module
-import { renderInpaintComponent } from './inpaint-canvas.mjs';
+import { render, Component } from 'preact';
+import { html } from 'htm/preact';
+import { signal } from '@preact/signals';
+import { InpaintComponent } from './inpaint-canvas.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
 import { fetchJson } from './util.mjs';
 
 let workflows = [];
 let currentImageData = null;
+
+// Initialize inpaintArea as a preact signal
+const inpaintArea = signal(null);
+
+// Export inpaintArea for use in other modules
+export { inpaintArea };
+
+// Create signals for app state
+const appState = signal({
+  loading: true,
+  error: null,
+  imageData: null
+});
+
+// InpaintApp component to handle the inpaint container rendering
+class InpaintApp extends Component {
+  render() {
+    const state = appState.value;
+    
+    return html`
+      <div class="content-container">
+        ${state.loading && html`
+          <p>Loading image for inpainting...</p>
+        `}
+        
+        ${state.error && html`
+          <p>${state.error}</p>
+        `}
+        
+        ${!state.loading && !state.error && state.imageData?.imageUrl && html`
+          <${InpaintComponent} 
+            imageUrl=${state.imageData.imageUrl} 
+            inpaintArea=${inpaintArea} 
+          />
+        `}
+        
+        ${!state.loading && !state.error && !state.imageData?.imageUrl && html`
+          <p>No image loaded for inpainting</p>
+        `}
+      </div>
+    `;
+  }
+}
+
+// Function to render the InpaintApp
+function renderInpaintApp() {
+  const inpaintContainer = document.getElementById('inpaintContainer');
+  if (inpaintContainer) {
+    render(html`<${InpaintApp} />`, inpaintContainer);
+  }
+}
 
 // Function to parse URL query parameters
 function getQueryParam(param) {
@@ -113,6 +167,10 @@ async function loadImageDataByUID(uid) {
   try {
     console.log('Loading image data for UID:', uid);
     
+    // Set loading state
+    appState.value = { loading: true, error: null, imageData: null };
+    renderInpaintApp();
+    
     currentImageData = await fetchJson(`/image-data/${uid}`, {}, {
       maxRetries: 2,
       retryDelay: 1000,
@@ -128,11 +186,9 @@ async function loadImageDataByUID(uid) {
       nameInput.value = currentImageData.name;
     }
     
-    // Initialize the InpaintComponent with the image URL
-    const inpaintContainer = document.getElementById('inpaintContainer');
-    if (inpaintContainer && currentImageData.imageUrl) {
-      renderInpaintComponent(inpaintContainer, currentImageData.imageUrl);
-    }
+    // Update app state with loaded image data
+    appState.value = { loading: false, error: null, imageData: currentImageData };
+    renderInpaintApp();
     
     showSuccessToast('Image loaded for inpainting');
     
@@ -148,15 +204,9 @@ async function loadImageDataByUID(uid) {
     
     showErrorToast(errorMessage);
     
-    // Show error state in inpaint container
-    const inpaintContainer = document.getElementById('inpaintContainer');
-    if (inpaintContainer) {
-      inpaintContainer.innerHTML = `
-        <div class="content-container">
-          <p>${errorMessage}</p>
-        </div>
-      `;
-    }
+    // Update app state with error
+    appState.value = { loading: false, error: errorMessage, imageData: null };
+    renderInpaintApp();
   }
 }
 
@@ -180,6 +230,9 @@ async function initializeInpaintPage() {
   try {
     console.log('Initializing inpaint page...');
     
+    // Initialize the InpaintApp with loading state
+    renderInpaintApp();
+    
     // Parse UID from query parameters
     const uid = getQueryParam('uid');
     
@@ -187,15 +240,9 @@ async function initializeInpaintPage() {
       console.error('No UID provided in query parameters');
       showErrorToast('No image UID provided');
       
-      // Show error state
-      const inpaintContainer = document.getElementById('inpaintContainer');
-      if (inpaintContainer) {
-        inpaintContainer.innerHTML = `
-          <div class="content-container">
-            <p>No image UID provided</p>
-          </div>
-        `;
-      }
+      // Update app state with error
+      appState.value = { loading: false, error: 'No image UID provided', imageData: null };
+      renderInpaintApp();
       return;
     }
     
@@ -204,6 +251,10 @@ async function initializeInpaintPage() {
     if (isNaN(numericUID)) {
       console.error('Invalid UID format:', uid);
       showErrorToast('Invalid image UID format');
+      
+      // Update app state with error
+      appState.value = { loading: false, error: 'Invalid image UID format', imageData: null };
+      renderInpaintApp();
       return;
     }
     
@@ -221,6 +272,10 @@ async function initializeInpaintPage() {
   } catch (error) {
     console.error('Failed to initialize inpaint page:', error);
     showErrorToast('Failed to initialize inpaint page');
+    
+    // Update app state with error
+    appState.value = { loading: false, error: 'Failed to initialize inpaint page', imageData: null };
+    renderInpaintApp();
   }
 }
 
