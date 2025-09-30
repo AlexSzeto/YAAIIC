@@ -176,10 +176,11 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
         const { from, to, prefix, postfix } = mod;
-        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
         let value = req.body[from];
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
+        console.log(` - New value: ${value}`);
 
         if(value && to && Array.isArray(to)) {
           workflowData = setObjectPathValue(workflowData, to, value);

@@ -261,7 +261,6 @@ class InpaintApp extends Component {
           <${InpaintComponent} 
             imageUrl=${state.imageData.imageUrl} 
             inpaintArea=${inpaintArea} 
-            initialInpaintArea=${state.imageData.inpaintArea}
           />
         `}
         
@@ -405,6 +404,27 @@ async function loadImageDataByUID(uid) {
     const nameInput = document.getElementById('name');
     if (nameInput && currentImageData.name) {
       nameInput.value = currentImageData.name;
+    }
+    
+    // Populate the description field with prompt if available
+    const descriptionTextarea = document.getElementById('description');
+    if (descriptionTextarea && currentImageData.prompt) {
+      descriptionTextarea.value = currentImageData.prompt;
+    }
+    
+    // Populate the seed field if available and not locked
+    const seedInput = document.getElementById('seed');
+    const lockSeedCheckbox = document.getElementById('lock-seed');
+    if (seedInput && currentImageData.seed && !lockSeedCheckbox.checked) {
+      seedInput.value = currentImageData.seed;
+    }
+    
+    // Populate the workflow field if available
+    const workflowSelect = document.getElementById('workflow');
+    if (workflowSelect && currentImageData.workflow) {
+      workflowSelect.value = currentImageData.workflow;
+      // Trigger workflow change handler to update autocomplete settings
+      handleWorkflowChange();
     }
     
     // Update app state with loaded image data
