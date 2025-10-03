@@ -369,6 +369,7 @@ p {
 .generated-image {
   max-width: 100%;
   height: auto;
+  max-height: 40vh;
   border-radius: 4px;
   display: block;
 }

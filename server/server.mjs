@@ -225,11 +225,13 @@ app.get('/image-data', (req, res) => {
     
     console.log(`Image data endpoint called with query="${query}", sort="${sort}", limit=${limit}`);
     
-    // Filter by query (search in name and timestamp formatted as yyyy-mm-dd)
+    // Filter by query (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
     let filteredData = imageData.imageData.filter(item => {
       if (!query) return true; // No query means include all
       
       const nameMatch = item.name && item.name.toLowerCase().includes(query.toLowerCase());
+      const descriptionMatch = item.description && item.description.toLowerCase().includes(query.toLowerCase());
+      const promptMatch = item.prompt && item.prompt.toLowerCase().includes(query.toLowerCase());
       
       // Format timestamp as yyyy-mm-dd for searching
       let timestampMatch = false;
@@ -239,7 +241,7 @@ app.get('/image-data', (req, res) => {
         timestampMatch = formattedDate.includes(query);
       }
       
-      return nameMatch || timestampMatch;
+      return nameMatch || descriptionMatch || promptMatch || timestampMatch;
     });
     
     // Sort by timestamp
