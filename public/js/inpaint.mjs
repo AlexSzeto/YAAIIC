@@ -535,16 +535,18 @@ function updateInpaintHistoryPagination() {
   try {
     if (paginationInstance) {
       console.log('Updating pagination with history:', inpaintHistory.length, 'items');
-      paginationInstance.setDataList([...inpaintHistory]); // Create a copy to avoid reference issues
       
-      // Navigate to the most recent item (last in array)
-      if (inpaintHistory.length > 0) {
-        const lastPageIndex = inpaintHistory.length - 1;
-        paginationInstance.goToPage(lastPageIndex);
-        console.log('Navigated to most recent history item at index:', lastPageIndex);
-      } else {
-        console.log('No history items available for pagination');
-      }
+      // Use callback to ensure goToPage() executes after setDataList() state update is complete
+      paginationInstance.setDataList([...inpaintHistory], () => {
+        // Navigate to the most recent item (last in array) after data list has been updated
+        if (inpaintHistory.length > 0) {
+          const lastPageIndex = inpaintHistory.length - 1;
+          paginationInstance.goToPage(lastPageIndex);
+          console.log('Navigated to most recent history item at index:', lastPageIndex);
+        } else {
+          console.log('No history items available for pagination');
+        }
+      });
     } else {
       console.warn('Pagination instance not available for history update');
     }

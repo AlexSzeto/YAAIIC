@@ -26,4 +26,10 @@
    3. Ensure `updateInpaintHistoryPagination` automatically navigates to the most recent item (already implemented)
    4. Update success message to indicate automatic navigation to latest generation
    5. Maintain inpaint area preservation and seed update functionality without URL updates
+
+[x] Fix pagination display index not updating after inpaint generation completion
+   1. Investigate the asynchronous nature of `setState()` in the pagination component's `setDataList()` method
+   2. Modify `updateInpaintHistoryPagination()` to use a callback-based approach when calling `goToPage()` after `setDataList()`
+   3. Add a callback parameter to the pagination component's `setDataList()` method that executes after state update is complete
+   4. Update the `updateInpaintHistoryPagination()` function to use the callback to ensure `goToPage()` executes only after the data list state has been fully updated
    
