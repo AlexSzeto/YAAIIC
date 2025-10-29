@@ -14,3 +14,4 @@
    4. Create a `handleDoneClick` function that constructs the return URL to the index page with the current UID as a query parameter
    5. Use `window.location.href` to navigate back to the index page with the UID parameter
    6. Ensure the "Done" button is only enabled when valid image data is loaded (similar to existing inpaint/delete button logic)
+   7. **BUGFIX**: Fixed Done button not working on newly loaded inpaint page with UID - changed initialization logic to only disable button if no valid image data is present, preventing override of enablement from `loadImageDataByUID`

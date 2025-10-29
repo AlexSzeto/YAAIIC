@@ -546,8 +546,10 @@ async function initializeInpaintPage() {
     const doneButton = document.getElementById('done-btn');
     if (doneButton) {
       doneButton.addEventListener('click', handleDoneClick);
-      // Initially disable Done button until valid image data is loaded
-      doneButton.disabled = true;
+      // Only disable Done button if we don't have valid image data loaded
+      if (!currentImageData || !currentImageData.uid) {
+        doneButton.disabled = true;
+      }
     } else {
       console.error('Done button not found');
     }
