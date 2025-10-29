@@ -604,9 +604,21 @@ p {
   font-weight: bold;
 }
 
+/* ===== INPAINT PAGE PAGINATION WRAPPER ===== */
+.pagination-wrapper {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--dark-background-secondary);
+  border: 1px solid var(--dark-border-secondary);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-
-
+.pagination-wrapper .pagination-container {
+  margin: 0;
+}
 
 /* Responsive design for smaller screens */
 @media (max-width: 768px) {

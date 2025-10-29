@@ -4,10 +4,13 @@ import { html } from 'htm/preact';
 import { signal } from '@preact/signals';
 import { InpaintComponent } from './inpaint-canvas.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
+import { PaginationComponent, createPagination } from './custom-ui/pagination.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 
 let workflows = [];
 let currentImageData = null;
+let paginationInstance = null;
+let inpaintHistory = []; // Global array to store image data objects for all inpaint generations in the current session
 
 // Initialize inpaintArea as a preact signal
 const inpaintArea = signal(null);
@@ -193,13 +196,11 @@ async function handleInpaint() {
       const newUID = result.data.uid;
       console.log('Updating interface with new UID:', newUID);
       
-      // Update the URL with the new UID to change the query parameter
-      const newUrl = new URL(window.location);
-      newUrl.searchParams.set('uid', newUID);
-      window.history.pushState({}, '', newUrl);
-      
       // Refresh the interface by loading the new image data
       await loadImageDataByUID(newUID);
+      
+      // The loadImageDataByUID function will automatically add to history and update pagination
+      // The updateInpaintHistoryPagination function automatically navigates to the latest item
       
       // Reset the inpaint area since we have a new image, unless we have inpaintArea in response
       if (result.data.inpaintArea) {
@@ -212,7 +213,7 @@ async function handleInpaint() {
       // Update the seed if not locked for potential future inpaints
       updateSeedIfNotLocked();
       
-      showSuccessToast('Interface refreshed with inpaint result');
+      showSuccessToast('Interface refreshed with inpaint result - now showing latest generation');
     } else {
       console.warn('No UID found in inpaint response, interface not refreshed');
       // Reset form or redirect as needed
@@ -394,36 +395,33 @@ async function loadImageDataByUID(uid) {
     
     console.log('Image data loaded:', currentImageData);
     
-    // Populate the name field if available
-    const nameInput = document.getElementById('name');
-    if (nameInput && currentImageData.name) {
-      nameInput.value = currentImageData.name;
-    }
-    
-    // Populate the description field with prompt if available
-    const descriptionTextarea = document.getElementById('description');
-    if (descriptionTextarea && currentImageData.prompt) {
-      descriptionTextarea.value = currentImageData.prompt;
-    }
-    
-    // Populate the seed field if available and not locked
-    const seedInput = document.getElementById('seed');
-    const lockSeedCheckbox = document.getElementById('lock-seed');
-    if (seedInput && currentImageData.seed && !lockSeedCheckbox.checked) {
-      seedInput.value = currentImageData.seed;
-    }
-    
-    // Populate the workflow field if available
-    const workflowSelect = document.getElementById('workflow');
-    if (workflowSelect && currentImageData.workflow) {
-      workflowSelect.value = currentImageData.workflow;
-      // Trigger workflow change handler to update autocomplete settings
-      handleWorkflowChange();
-    }
+    // Populate form fields with the loaded image data
+    populateFormWithImageData(currentImageData);
     
     // Update app state with loaded image data
     appState.value = { loading: false, error: null, imageData: currentImageData };
     renderInpaintApp();
+    
+    // Add to history array if not already present
+    try {
+      const existingIndex = inpaintHistory.findIndex(item => item.uid === currentImageData.uid);
+      if (existingIndex === -1) {
+        inpaintHistory.push(currentImageData);
+        console.log('Added image data to history. Total items:', inpaintHistory.length);
+        
+        // Update pagination with new history
+        updateInpaintHistoryPagination();
+      } else {
+        console.log('Image data already exists in history at index:', existingIndex);
+        // Update existing entry with latest data
+        inpaintHistory[existingIndex] = currentImageData;
+        updateInpaintHistoryPagination();
+      }
+    } catch (error) {
+      console.error('Error managing inpaint history:', error);
+      // Don't show error toast here as this is not critical to the user experience
+      // The image will still load and work, just without history navigation
+    }
     
     // Set inpaintArea from loaded data if available
     if (currentImageData.inpaintArea) {
@@ -454,12 +452,143 @@ async function loadImageDataByUID(uid) {
     // Update app state with error
     appState.value = { loading: false, error: errorMessage, imageData: null };
     renderInpaintApp();
+    
+    // Clear current data and history reference for this failed load
+    currentImageData = null;
+    inpaintArea.value = null;
   }
 }
 
 // Function to generate random seed
 function generateRandomSeed() {
   return Math.floor(Math.random() * 4294967295); // Max 32-bit unsigned integer
+}
+
+// Function to handle pagination data updates and load the selected image data
+function updateInpaintDisplay(pageData) {
+  console.log('updateInpaintDisplay called with pageData:', pageData);
+  
+  if (pageData && pageData.length > 0) {
+    const selectedImageData = pageData[0]; // Get the first (and only) item for this page
+    console.log('Loading image data from history:', selectedImageData);
+    
+    try {
+      // Validate that the selected image data has required properties
+      if (!selectedImageData || !selectedImageData.uid) {
+        throw new Error('Invalid image data: missing UID');
+      }
+      
+      if (!selectedImageData.imageUrl) {
+        throw new Error('Invalid image data: missing image URL');
+      }
+      
+      // Update the current image data and app state
+      currentImageData = selectedImageData;
+      appState.value = { loading: false, error: null, imageData: selectedImageData };
+      renderInpaintApp();
+      
+      // Populate form fields with the selected image data
+      populateFormWithImageData(selectedImageData);
+      
+      // Set inpaintArea from loaded data if available
+      if (selectedImageData.inpaintArea) {
+        console.log('Restoring inpaintArea from history:', selectedImageData.inpaintArea);
+        inpaintArea.value = selectedImageData.inpaintArea;
+      } else {
+        inpaintArea.value = null;
+      }
+      
+      console.log('Successfully loaded image data from history');
+      
+    } catch (error) {
+      console.error('Error loading image data from history:', error);
+      showErrorToast(`Failed to load image from history: ${error.message}`);
+      
+      // Set error state for the app
+      appState.value = { 
+        loading: false, 
+        error: `History navigation failed: ${error.message}`, 
+        imageData: null 
+      };
+      renderInpaintApp();
+    }
+    
+  } else {
+    console.log('No pagination data available - hiding interface');
+    
+    // Clear current state when no data is available
+    currentImageData = null;
+    inpaintArea.value = null;
+    
+    // Set appropriate app state
+    appState.value = { 
+      loading: false, 
+      error: 'No image data available in history', 
+      imageData: null 
+    };
+    renderInpaintApp();
+  }
+}
+
+// Function to refresh the pagination component with the current history
+function updateInpaintHistoryPagination() {
+  try {
+    if (paginationInstance) {
+      console.log('Updating pagination with history:', inpaintHistory.length, 'items');
+      paginationInstance.setDataList([...inpaintHistory]); // Create a copy to avoid reference issues
+      
+      // Navigate to the most recent item (last in array)
+      if (inpaintHistory.length > 0) {
+        const lastPageIndex = inpaintHistory.length - 1;
+        paginationInstance.goToPage(lastPageIndex);
+        console.log('Navigated to most recent history item at index:', lastPageIndex);
+      } else {
+        console.log('No history items available for pagination');
+      }
+    } else {
+      console.warn('Pagination instance not available for history update');
+    }
+  } catch (error) {
+    console.error('Error updating pagination with history:', error);
+    showErrorToast(`Failed to update pagination: ${error.message}`);
+  }
+}
+
+// Function to populate form fields with image data
+function populateFormWithImageData(imageData) {
+  try {
+    // Populate the name field if available
+    const nameInput = document.getElementById('name');
+    if (nameInput && imageData.name) {
+      nameInput.value = imageData.name;
+    }
+    
+    // Populate the description field with prompt if available
+    const descriptionTextarea = document.getElementById('description');
+    if (descriptionTextarea && imageData.prompt) {
+      descriptionTextarea.value = imageData.prompt;
+    }
+    
+    // Populate the seed field if available and not locked
+    const seedInput = document.getElementById('seed');
+    const lockSeedCheckbox = document.getElementById('lock-seed');
+    if (seedInput && imageData.seed && !lockSeedCheckbox.checked) {
+      seedInput.value = imageData.seed;
+    }
+    
+    // Populate the workflow field if available
+    const workflowSelect = document.getElementById('workflow');
+    if (workflowSelect && imageData.workflow) {
+      workflowSelect.value = imageData.workflow;
+      // Trigger workflow change handler to update autocomplete settings
+      handleWorkflowChange();
+    }
+    
+    console.log('Form fields populated with image data');
+    
+  } catch (error) {
+    console.error('Error populating form fields:', error);
+  }
 }
 
 // Function to set initial random seed
@@ -527,11 +656,40 @@ async function initializeInpaintPage() {
       return;
     }
     
+    // Initialize pagination component before loading data
+    const paginationContainer = document.getElementById('paginationContainer');
+    if (paginationContainer) {
+      paginationInstance = createPagination(
+        paginationContainer,
+        [], // Start with empty data - will be populated after image loads
+        1,  // 1 item per page for individual image navigation
+        updateInpaintDisplay // Callback function for data updates
+      );
+      console.log('Pagination component initialized');
+    } else {
+      console.error('Pagination container not found');
+    }
+    
     // Load workflows and image data in parallel
     await Promise.all([
       loadInpaintWorkflows(),
       loadImageDataByUID(numericUID)
     ]);
+    
+    // Verify that the initial image was properly added to history and pagination is updated
+    if (inpaintHistory.length > 0 && currentImageData) {
+      console.log('Inpaint history successfully initialized with initial UID:', numericUID);
+      console.log('History contains:', inpaintHistory.length, 'item(s)');
+      console.log('Current image UID:', currentImageData.uid);
+      
+      // Ensure pagination is showing the correct state
+      if (paginationInstance) {
+        const paginationState = paginationInstance.getState();
+        console.log('Pagination state after initialization:', paginationState);
+      }
+    } else {
+      console.warn('History initialization may have failed - no items in history or no current image data');
+    }
     
     // Set initial random seed
     updateSeedIfNotLocked();
