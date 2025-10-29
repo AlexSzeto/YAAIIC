@@ -4,7 +4,7 @@ import { html } from 'htm/preact';
 import { signal } from '@preact/signals';
 import { InpaintComponent } from './inpaint-canvas.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
-import { fetchJson, fetchWithRetry } from './util.mjs';
+import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 
 let workflows = [];
 let currentImageData = null;
@@ -280,12 +280,6 @@ function renderInpaintApp() {
   }
 }
 
-// Function to parse URL query parameters
-function getQueryParam(param) {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get(param);
-}
-
 // Function to handle workflow selection change
 function handleWorkflowChange() {
   const workflowSelect = document.getElementById('workflow');
@@ -437,6 +431,12 @@ async function loadImageDataByUID(uid) {
       inpaintArea.value = currentImageData.inpaintArea;
     }
     
+    // Enable Done button since we have valid image data
+    const doneButton = document.getElementById('done-btn');
+    if (doneButton) {
+      doneButton.disabled = false;
+    }
+    
     showSuccessToast('Image loaded for inpainting');
     
   } catch (error) {
@@ -470,6 +470,28 @@ function updateSeedIfNotLocked() {
   if (!lockSeedCheckbox.checked) {
     seedInput.value = generateRandomSeed();
   }
+}
+
+// Function to handle Done button click
+function handleDoneClick() {
+  // Get current UID from the URL or current image data
+  let currentUID = getQueryParam('uid');
+  
+  // If we have current image data with a UID, use that (in case it was updated by inpaint)
+  if (currentImageData && currentImageData.uid) {
+    currentUID = currentImageData.uid;
+  }
+  
+  // Construct return URL to index page
+  let returnUrl = '/';
+  if (currentUID) {
+    returnUrl = `/?uid=${currentUID}`;
+  }
+  
+  console.log('Navigating back to main page with URL:', returnUrl);
+  
+  // Navigate back to the index page
+  window.location.href = returnUrl;
 }
 
 // Initialize the inpaint page
@@ -518,6 +540,16 @@ async function initializeInpaintPage() {
     const generateButton = document.getElementById('generate-btn');
     if (generateButton) {
       generateButton.addEventListener('click', handleInpaint);
+    }
+    
+    // Add event listener for done button
+    const doneButton = document.getElementById('done-btn');
+    if (doneButton) {
+      doneButton.addEventListener('click', handleDoneClick);
+      // Initially disable Done button until valid image data is loaded
+      doneButton.disabled = true;
+    } else {
+      console.error('Done button not found');
     }
     
     console.log('Inpaint page initialized successfully');
