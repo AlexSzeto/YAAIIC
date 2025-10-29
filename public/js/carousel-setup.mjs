@@ -1,3 +1,6 @@
+/**
+ * 
+ */
 // Carousel Setup Module
 import { createPagination } from './custom-ui/pagination.mjs';
 
