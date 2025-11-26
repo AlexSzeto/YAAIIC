@@ -11,26 +11,56 @@ Let the server create its internal task tracking system. When the client makes a
 
 [] Parse ComfyUI WebSocket messages to extract progress data
 1. Add WebSocket message listener in `server/generate.mjs`
-2. Parse incoming messages to identify message types: `executing`, `progress`, `execution_cached`, `execution_error`
-3. Extract relevant data from progress messages (current node, max nodes, value, max value)
-4. Calculate completion percentage based on progress data
-5. Extract prompt_id from execution messages to track specific generations
+2. Parse incoming messages to identify message types: `execution_start`, `executing`, `progress`, `execution_cached`, `execution_error`, `execution_success`, `executed`, `status`
+3. Extract relevant data from progress messages (node, prompt_id, value, max)
+4. Extract node and prompt_id from executing messages
+5. Calculate completion percentage based on progress data (value / max * 100)
+6. Track execution state using execution_start and execution_success messages
 ```javascript
-// Example ComfyUI WebSocket message format
+// ComfyUI WebSocket message format (based on official docs)
+// Progress message
 {
   type: "progress",
   data: {
+    node: "node_id",
+    prompt_id: "abc123",
     value: 5,
-    max: 20,
+    max: 20
+  }
+}
+
+// Executing message
+{
+  type: "executing",
+  data: {
+    node: "node_id",  // or null when execution completes
     prompt_id: "abc123"
   }
 }
 
+// Execution start message
 {
-  type: "executing",
+  type: "execution_start",
   data: {
-    node: "node_id",
     prompt_id: "abc123"
+  }
+}
+
+// Execution cached message
+{
+  type: "execution_cached",
+  data: {
+    prompt_id: "abc123",
+    nodes: ["node_id1", "node_id2"]  // nodes being skipped
+  }
+}
+
+// Execution success message
+{
+  type: "execution_success",
+  data: {
+    prompt_id: "abc123",
+    timestamp: 1234567890
   }
 }
 ```
