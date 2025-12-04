@@ -1,10 +1,10 @@
 /**
- * WebhookManager - Manages Server-Sent Events (SSE) connections for task progress tracking
+ * SSEManager - Manages Server-Sent Events (SSE) connections for task progress tracking
  * 
  * This class provides a centralized way to subscribe to task progress updates from the server
  * using EventSource (SSE). It handles connection management, message routing, and automatic cleanup.
  */
-class WebhookManager {
+class SSEManager {
   constructor() {
     // Map of taskId -> { eventSource, callbacks }
     this.activeConnections = new Map();
@@ -196,4 +196,4 @@ class WebhookManager {
 }
 
 // Export a singleton instance
-export const webhookManager = new WebhookManager();
+export const sseManager = new SSEManager();

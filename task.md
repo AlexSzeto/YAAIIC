@@ -1,7 +1,7 @@
 # ComfyUI Task Progress Support
 
 ## Goals
-Let the server create its internal task tracking system. When the client makes a generation request, immediately create and send the `taskId` and the client would track the progress through the completion of the task using webhooks. The websocket connection should only be used between the server and ComfyUI's API, and the client should only receive progress through the webhooks.
+Let the server create its internal task tracking system. When the client makes a generation request, immediately create and send the `taskId` and the client would track the progress through the completion of the task using SSE (Server-Sent Events). The websocket connection should only be used between the server and ComfyUI's API, and the client should only receive progress through SSE.
 
 [x] Connect to ComfyUI's WebSocket API for progress tracking
 1. Install `ws` package for WebSocket support on server
@@ -65,10 +65,10 @@ Let the server create its internal task tracking system. When the client makes a
 }
 ```
 
-[x] Create webhook response format for generation in progress
-1. Define progress webhook response format in `server/generate.mjs`
+[x] Create SSE response format for generation in progress
+1. Define progress SSE response format in `server/generate.mjs`
 ```javascript
-// Progress webhook response format
+// Progress SSE response format
 {
   taskId: "unique-task-id",
   status: "in-progress",
@@ -82,10 +82,10 @@ Let the server create its internal task tracking system. When the client makes a
 }
 ```
 
-[x] Create webhook response format for completed tasks
-1. Define completion webhook response format in `server/generate.mjs`
+[x] Create SSE response format for completed tasks
+1. Define completion SSE response format in `server/generate.mjs`
 ```javascript
-// Completion webhook response format
+// Completion SSE response format
 {
   taskId: "unique-task-id",
   status: "completed",
@@ -109,9 +109,9 @@ Let the server create its internal task tracking system. When the client makes a
   timestamp: "2025-11-25T12:35:30.123Z"
 }
 ```
-2. Define error webhook response format
+2. Define error SSE response format
 ```javascript
-// Error webhook response format
+// Error SSE response format
 {
   taskId: "unique-task-id",
   status: "error",
@@ -152,9 +152,9 @@ const activeTasks = new Map();
 // });
 ```
 
-[x] Create client-side webhook management library
-1. Create `public/js/webhook-manager.mjs` file
-2. Implement WebhookManager class with EventSource for SSE
+[x] Create client-side SSE management library
+1. Create `public/js/sse-manager.mjs` file
+2. Implement SSEManager class with EventSource for SSE
 3. Add public methods: `subscribe(taskId, onProgress, onComplete, onError)`, `unsubscribe(taskId)`
 4. Add private methods: `_handleMessage(event)`, `_cleanup(taskId)`
 5. Manage EventSource connections per taskId
@@ -162,8 +162,8 @@ const activeTasks = new Map();
 7. Handle reconnection logic with exponential backoff
 8. Clean up EventSource when task completes or errors
 ```javascript
-// public/js/webhook-manager.mjs
-class WebhookManager {
+// public/js/sse-manager.mjs
+class SSEManager {
   constructor() // Initialize connections map
   // Private: activeConnections Map<taskId, {eventSource, callbacks}>
   
@@ -175,27 +175,27 @@ class WebhookManager {
   _cleanup(taskId) // Remove from activeConnections
 }
 
-export const webhookManager = new WebhookManager(); // Singleton instance
+export const sseManager = new SSEManager(); // Singleton instance
 ```
 
 [x] Render progress banner at the top of the page
 1. Create `public/js/custom-ui/progress-banner.mjs` file
 2. Implement ProgressBanner as Preact Component class
-3. Add props: `taskId`, `webhookManager`
+3. Add props: `taskId`, `sseManager`
 4. Add state: `isVisible`, `progress`, `message`, `status`, `percentage`
 5. Render fixed position banner at top of page with inline progress bar display
 6. Render progress bar with percentage fill, message text, and smooth CSS transitions
 7. Add dismiss button to hide banner
-8. Subscribe to webhook updates in `componentDidMount`
+8. Subscribe to SSE updates in `componentDidMount`
 9. Unsubscribe in `componentWillUnmount`
 ```javascript
 // public/js/custom-ui/progress-banner.mjs
 class ProgressBanner extends Component {
-  constructor(props) // props: taskId, webhookManager, onComplete
+  constructor(props) // props: taskId, sseManager, onComplete
   // State: isVisible, progress, message, status, percentage
   
-  componentDidMount() // Subscribe to webhook
-  componentWillUnmount() // Unsubscribe from webhook
+  componentDidMount() // Subscribe to SSE
+  componentWillUnmount() // Unsubscribe from SSE
   
   handleDismiss() // Hide banner
   handleProgressUpdate(data) // Update state with progress data
@@ -223,35 +223,84 @@ const NODE_STEP_NAMES = {
 };
 ```
 
-[x] Handle webhook completion event to trigger existing response handling code
+[x] Handle SSE completion event to trigger existing response handling code
 1. In progress-banner.mjs, call `onComplete` callback with result data when status is "completed"
 2. Pass result data to existing image display handlers (CarouselDisplay.addData)
 3. Hide banner after completion
 4. Show success toast notification
 
-[x] Integrate webhook library into index page
-1. Import WebhookManager and ProgressBanner in `public/js/main.mjs`
+[x] Integrate SSE library into index page
+1. Import SSEManager and ProgressBanner in `public/js/main.mjs`
 2. Modify `handleGenerate` to parse taskId from immediate server response
 3. Create and mount ProgressBanner component with taskId
 4. Pass onComplete callback to ProgressBanner to handle result data
-5. Update existing generation flow to work with async webhook pattern
+5. Update existing generation flow to work with async SSE pattern
 6. Remove synchronous waiting logic from generate button handler
 
-[] Integrate webhook library into inpaint page
-1. Import WebhookManager and ProgressBanner in `public/js/inpaint.mjs`
-2. Modify inpaint generation handler to parse taskId from server response
-3. Create and mount ProgressBanner component with taskId for inpaint operations
-4. Pass onComplete callback to handle inpaint result
-5. Ensure progress tracking works for both regular and inpaint workflows
+[] Fix SSE event emission to include event type headers
+1. Modify `emitSSEToTask` function in `server/generate.mjs` to include event type based on message status
+2. Update SSE message format to include `event:` header before `data:` header
+3. Map message status to event types: `in-progress` → `progress`, `completed` → `complete`, `error` → `error-event`
+4. Update initial SSE message in `handleSSEConnection` to use `progress` event type
+5. Add keep-alive heartbeat mechanism (send comment every 30 seconds: `: heartbeat\n\n`)
+6. Create interval timer for each SSE connection to send periodic heartbeats
+7. Clear heartbeat interval when client disconnects
+8. Store heartbeat interval ID in task object for cleanup
+```javascript
+// Correct SSE message format with event type
+function emitSSEToTask(taskId, message) {
+  const task = activeTasks.get(taskId);
+  if (!task || !task.sseClients) return;
+  
+  // Determine event type based on message status
+  let eventType = 'progress';
+  if (message.status === 'completed') eventType = 'complete';
+  if (message.status === 'error') eventType = 'error-event';
+  
+  const data = JSON.stringify(message);
+  
+  task.sseClients.forEach(client => {
+    try {
+      client.write(`event: ${eventType}\ndata: ${data}\n\n`);
+    } catch (error) {
+      console.error(`Failed to send SSE to client for task ${taskId}:`, error);
+      disconnectedClients.add(client);
+    }
+  });
+}
+
+// In handleSSEConnection, set up heartbeat
+const heartbeatInterval = setInterval(() => {
+  try {
+    res.write(': heartbeat\n\n');
+  } catch (error) {
+    clearInterval(heartbeatInterval);
+  }
+}, 30000);
+
+// Store interval for cleanup
+if (!task.heartbeatIntervals) {
+  task.heartbeatIntervals = new Map();
+}
+task.heartbeatIntervals.set(res, heartbeatInterval);
+
+// On disconnect, clear interval
+req.on('close', () => {
+  const interval = task.heartbeatIntervals?.get(res);
+  if (interval) {
+    clearInterval(interval);
+    task.heartbeatIntervals.delete(res);
+  }
+});
+```
 
 [] Add support for `progress_state` message type in ComfyUI WebSocket handler
 1. Add `progress_state` case to the message switch statement in `handleComfyUIMessage` in `server/comfyui-websocket.mjs`
 2. Create `handleProgressState(data)` function to process progress_state messages
 3. Extract per-node state information from the `nodes` object (state: "running" | "finished", value, max, node_id)
 4. Update `promptExecutionState` map to track individual node states and overall workflow progress
-5. Use node state information to provide more detailed progress updates (e.g., "Node 3 running (10/20), Node 6 finished (1/1)")
-6. Consider using `progress_state` as the primary progress tracking mechanism instead of `progress` messages
-7. Emit more detailed progress updates via SSE based on per-node state information
+5. Optionally use `progress_state` as supplementary tracking alongside `progress` messages (keep both handlers active)
+6. Consider logging `progress_state` data for debugging but rely primarily on `progress` messages for SSE emission since they're simpler
 ```javascript
 // progress_state message format (observed from ComfyUI)
 {
@@ -283,3 +332,10 @@ const NODE_STEP_NAMES = {
   }
 }
 ```
+
+[] Integrate SSE library into inpaint page
+1. Import SSEManager and ProgressBanner in `public/js/inpaint.mjs`
+2. Modify inpaint generation handler to parse taskId from server response
+3. Create and mount ProgressBanner component with taskId for inpaint operations
+4. Pass onComplete callback to handle inpaint result
+5. Ensure progress tracking works for both regular and inpaint workflows

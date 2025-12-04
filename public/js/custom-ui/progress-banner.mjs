@@ -32,7 +32,7 @@ function getStepName(nodeType) {
 /**
  * ProgressBanner - Displays real-time progress updates for image generation tasks
  * 
- * This component subscribes to webhook progress updates and displays a fixed banner
+ * This component subscribes to SSE progress updates and displays a fixed banner
  * at the top of the page showing the current progress, percentage, and step name.
  */
 class ProgressBanner extends Component {
@@ -51,15 +51,15 @@ class ProgressBanner extends Component {
   }
 
   componentDidMount() {
-    // Subscribe to webhook updates when component mounts
-    const { taskId, webhookManager } = this.props;
+    // Subscribe to SSE updates when component mounts
+    const { taskId, sseManager } = this.props;
     
-    if (!webhookManager || !taskId) {
-      console.error('ProgressBanner requires webhookManager and taskId props');
+    if (!sseManager || !taskId) {
+      console.error('ProgressBanner requires sseManager and taskId props');
       return;
     }
 
-    webhookManager.subscribe(taskId, {
+    sseManager.subscribe(taskId, {
       onProgress: this.handleProgressUpdate.bind(this),
       onComplete: this.handleComplete.bind(this),
       onError: this.handleError.bind(this)
@@ -67,16 +67,16 @@ class ProgressBanner extends Component {
   }
 
   componentWillUnmount() {
-    // Unsubscribe from webhook when component unmounts
-    const { taskId, webhookManager } = this.props;
+    // Unsubscribe from SSE when component unmounts
+    const { taskId, sseManager } = this.props;
     
-    if (webhookManager && taskId) {
-      webhookManager.unsubscribe(taskId);
+    if (sseManager && taskId) {
+      sseManager.unsubscribe(taskId);
     }
   }
 
   /**
-   * Handle progress update from webhook
+   * Handle progress update from SSE
    * @param {Object} data - Progress data from server
    */
   handleProgressUpdate(data) {
@@ -100,7 +100,7 @@ class ProgressBanner extends Component {
   }
 
   /**
-   * Handle completion event from webhook
+   * Handle completion event from SSE
    * @param {Object} data - Completion data from server
    */
   handleComplete(data) {
@@ -124,7 +124,7 @@ class ProgressBanner extends Component {
   }
 
   /**
-   * Handle error event from webhook
+   * Handle error event from SSE
    * @param {Object} data - Error data from server
    */
   handleError(data) {
@@ -200,11 +200,11 @@ class ProgressBanner extends Component {
 /**
  * Create and mount a progress banner for a task
  * @param {string} taskId - Task identifier
- * @param {Object} webhookManager - WebhookManager instance
+ * @param {Object} sseManager - SSEManager instance
  * @param {Function} onComplete - Callback when generation completes
  * @returns {Object} - Object with unmount function
  */
-export function createProgressBanner(taskId, webhookManager, onComplete) {
+export function createProgressBanner(taskId, sseManager, onComplete) {
   // Create container element if it doesn't exist
   let container = document.getElementById('progress-banner-container');
   
@@ -218,7 +218,7 @@ export function createProgressBanner(taskId, webhookManager, onComplete) {
   render(
     html`<${ProgressBanner} 
       taskId=${taskId} 
-      webhookManager=${webhookManager} 
+      sseManager=${sseManager} 
       onComplete=${onComplete}
     />`,
     container

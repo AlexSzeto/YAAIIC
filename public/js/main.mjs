@@ -8,7 +8,7 @@ import { createGallery } from './custom-ui/gallery.mjs';
 import { createImageModal } from './custom-ui/modal.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
 import { fetchJson, fetchWithRetry, FetchError } from './util.mjs';
-import { webhookManager } from './webhook-manager.mjs';
+import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 
 let workflows = [];
@@ -266,7 +266,7 @@ async function handleGenerate() {
     // Create progress banner with completion callback
     createProgressBanner(
       result.taskId,
-      webhookManager,
+      sseManager,
       (completionData) => {
         // Handle completion - add image to carousel
         if (completionData.result && completionData.result.imageUrl) {
