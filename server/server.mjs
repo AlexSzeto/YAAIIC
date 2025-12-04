@@ -40,7 +40,15 @@ function loadImageData() {
 // Save image data to JSON file
 function saveImageData() {
   try {
-    const imageDataPath = path.join(actualDirname, 'database', 'image-data.json');
+    const databaseDir = path.join(actualDirname, 'database');
+    const imageDataPath = path.join(databaseDir, 'image-data.json');
+    
+    // Create database directory if it doesn't exist
+    if (!fs.existsSync(databaseDir)) {
+      fs.mkdirSync(databaseDir, { recursive: true });
+      console.log('Created database directory');
+    }
+    
     fs.writeFileSync(imageDataPath, JSON.stringify(imageData, null, 2));
     console.log('Image data saved successfully');
   } catch (error) {

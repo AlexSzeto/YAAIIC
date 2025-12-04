@@ -102,12 +102,17 @@ function emitSSEToTask(taskId, message) {
   const task = activeTasks.get(taskId);
   if (!task || !task.sseClients) return;
   
+  // Determine event type based on message status
+  let eventType = 'progress';
+  if (message.status === 'completed') eventType = 'complete';
+  if (message.status === 'error') eventType = 'error-event';
+  
   const data = JSON.stringify(message);
   const disconnectedClients = new Set();
   
   task.sseClients.forEach(client => {
     try {
-      client.write(`data: ${data}\n\n`);
+      client.write(`event: ${eventType}\ndata: ${data}\n\n`);
     } catch (error) {
       console.error(`Failed to send SSE to client for task ${taskId}:`, error);
       disconnectedClients.add(client);
@@ -217,11 +222,31 @@ export function handleSSEConnection(req, res) {
     task.progress || { percentage: 0, value: 0, max: 0 },
     task.progress?.currentStep || 'Starting...'
   );
-  res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
+  res.write(`event: progress\ndata: ${JSON.stringify(initialMessage)}\n\n`);
+  
+  // Set up heartbeat to keep connection alive (every 30 seconds)
+  const heartbeatInterval = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch (error) {
+      clearInterval(heartbeatInterval);
+    }
+  }, 30000);
+  
+  // Store heartbeat interval for cleanup
+  if (!task.heartbeatIntervals) {
+    task.heartbeatIntervals = new Map();
+  }
+  task.heartbeatIntervals.set(res, heartbeatInterval);
   
   // Handle client disconnect
   req.on('close', () => {
     task.sseClients.delete(res);
+    const interval = task.heartbeatIntervals?.get(res);
+    if (interval) {
+      clearInterval(interval);
+      task.heartbeatIntervals.delete(res);
+    }
     console.log(`SSE client disconnected for task ${taskId}`);
   });
 }
