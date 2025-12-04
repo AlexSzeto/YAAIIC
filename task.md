@@ -3,7 +3,7 @@
 ## Goals
 Fix remaining outstanding bugs, clean up exception handling, and modify the progress UI to take up less space.
 
-[] Gracefully fail out using SSE when the generation process fails
+[x] Gracefully fail out using SSE when the generation process fails
 >>NOTE: Failures like the exception below needs to send a SSE to the client indicating the generation process had failed, and the client should gracefully close up the progress bar
 ```
 Error in task task_1764871312524_04n4ns0xg: Error: ComfyUI request failed: 400 Bad Request
@@ -17,8 +17,9 @@ SSE client connected for task task_1764871312524_04n4ns0xg
 4. Ensure `emitTaskError()` sends an SSE 'error-event' to all connected clients with proper error response format
 5. Test that errors during workflow loading, ComfyUI request, and file generation all trigger SSE error events
 6. Verify that the client's `ProgressBanner` component receives the error event and displays it properly
+>>ADDITIONAL IMPLEMENTATION: Created `emitTaskErrorByTaskId()` to handle errors before promptId is available; implemented message buffering system to store SSE messages sent before client connects; added `onError` callback support to ProgressBanner component to re-enable UI on errors in both main and inpaint pages
 
-[] Gracefully time out if there's no incoming response from the server.
+[x] Gracefully time out if there's no incoming response from the server.
 1. In `public/js/sse-manager.mjs`, add a timeout tracking mechanism to the `subscribe()` method
 2. Create a `_startTimeout()` private method that sets a timer (e.g., 5 minutes) for task completion
 3. Create a `_clearTimeout()` private method to clear the timeout when messages are received

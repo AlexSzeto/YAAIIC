@@ -17,9 +17,10 @@ class SSEManager {
    * @param {Function} callbacks.onProgress - Called with progress data
    * @param {Function} callbacks.onComplete - Called with completion data
    * @param {Function} callbacks.onError - Called with error data
+   * @param {number} timeoutMs - Optional timeout in milliseconds (default: 2 minutes, 4x server's heartbeat response time)
    * @returns {boolean} - True if subscription was successful, false if already subscribed
    */
-  subscribe(taskId, callbacks) {
+  subscribe(taskId, callbacks, timeoutMs = 2 * 60 * 1000) {
     // Don't create duplicate subscriptions
     if (this.activeConnections.has(taskId)) {
       console.warn(`Already subscribed to task ${taskId}`);
@@ -42,7 +43,9 @@ class SSEManager {
         onProgress: callbacks.onProgress || (() => {}),
         onComplete: callbacks.onComplete || (() => {}),
         onError: callbacks.onError || (() => {})
-      }
+      },
+      timeoutTimer: null,
+      timeoutMs
     });
 
     // Set up event listeners
@@ -62,6 +65,9 @@ class SSEManager {
     eventSource.onerror = (error) => {
       this._handleError(taskId, error);
     };
+
+    // Start timeout timer
+    this._startTimeout(taskId);
 
     console.log(`Subscribed to task ${taskId}`);
     return true;
@@ -99,6 +105,12 @@ class SSEManager {
     if (!connection) {
       console.warn(`Received message for unknown task ${taskId}`);
       return;
+    }
+
+    // Clear and restart timeout on each message
+    this._clearTimeout(taskId);
+    if (type !== 'complete' && type !== 'error') {
+      this._startTimeout(taskId);
     }
 
     try {
@@ -170,11 +182,52 @@ class SSEManager {
   }
 
   /**
+   * Start timeout timer for a task
+   * @private
+   * @param {string} taskId - Task identifier
+   */
+  _startTimeout(taskId) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection) {
+      return;
+    }
+
+    connection.timeoutTimer = setTimeout(() => {
+      console.warn(`Timeout reached for task ${taskId}`);
+      connection.callbacks.onError({
+        taskId,
+        status: 'error',
+        error: {
+          message: 'Request timeout',
+          details: 'No response from server within the expected time'
+        }
+      });
+      this.unsubscribe(taskId);
+    }, connection.timeoutMs);
+  }
+
+  /**
+   * Clear timeout timer for a task
+   * @private
+   * @param {string} taskId - Task identifier
+   */
+  _clearTimeout(taskId) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection || !connection.timeoutTimer) {
+      return;
+    }
+
+    clearTimeout(connection.timeoutTimer);
+    connection.timeoutTimer = null;
+  }
+
+  /**
    * Clean up connection data for a task
    * @private
    * @param {string} taskId - Task identifier
    */
   _cleanup(taskId) {
+    this._clearTimeout(taskId);
     this.activeConnections.delete(taskId);
   }
 

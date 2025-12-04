@@ -134,6 +134,11 @@ class ProgressBanner extends Component {
       message: data.error?.message || 'Generation failed'
     });
 
+    // Call the onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(data);
+    }
+
     // Auto-hide after showing error
     setTimeout(() => {
       this.setState({ isVisible: false });
@@ -202,9 +207,10 @@ class ProgressBanner extends Component {
  * @param {string} taskId - Task identifier
  * @param {Object} sseManager - SSEManager instance
  * @param {Function} onComplete - Callback when generation completes
+ * @param {Function} onError - Callback when generation fails (optional)
  * @returns {Object} - Object with unmount function
  */
-export function createProgressBanner(taskId, sseManager, onComplete) {
+export function createProgressBanner(taskId, sseManager, onComplete, onError) {
   // Create container element if it doesn't exist
   let container = document.getElementById('progress-banner-container');
   
@@ -220,6 +226,7 @@ export function createProgressBanner(taskId, sseManager, onComplete) {
       taskId=${taskId} 
       sseManager=${sseManager} 
       onComplete=${onComplete}
+      onError=${onError}
     />`,
     container
   );

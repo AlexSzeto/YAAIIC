@@ -291,6 +291,22 @@ async function handleGenerate() {
         generateButton.disabled = false;
         generateButton.textContent = 'Generate';
         descriptionTextarea.disabled = false;
+      },
+      (errorData) => {
+        // Handle error - re-enable UI
+        console.error('Image generation failed:', errorData);
+        showErrorToast(errorData.error?.message || 'Image generation failed');
+        
+        // Unmount the progress banner
+        if (currentProgressBanner) {
+          currentProgressBanner.unmount();
+          currentProgressBanner = null;
+        }
+        
+        // Re-enable UI
+        generateButton.disabled = false;
+        generateButton.textContent = 'Generate';
+        descriptionTextarea.disabled = false;
       }
     );
     

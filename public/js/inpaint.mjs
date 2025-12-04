@@ -247,6 +247,21 @@ async function handleInpaint() {
         // Re-enable UI
         generateButton.disabled = false;
         generateButton.innerHTML = '<box-icon name="play" color="#ffffff"></box-icon> Inpaint';
+      },
+      (errorData) => {
+        // Handle error - re-enable UI
+        console.error('Inpaint generation failed:', errorData);
+        showErrorToast(errorData.error?.message || 'Inpaint generation failed');
+        
+        // Unmount the progress banner
+        if (currentProgressBanner) {
+          currentProgressBanner.unmount();
+          currentProgressBanner = null;
+        }
+        
+        // Re-enable UI
+        generateButton.disabled = false;
+        generateButton.innerHTML = '<box-icon name="play" color="#ffffff"></box-icon> Inpaint';
       }
     );
     

@@ -6,6 +6,18 @@ import http from 'http';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
 import { setObjectPathValue } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
+import {
+  generateTaskId,
+  createTask,
+  getTask,
+  updateTask,
+  setTaskPromptId,
+  emitProgressUpdate,
+  emitTaskCompletion,
+  emitTaskError,
+  emitTaskErrorByTaskId,
+  handleSSEConnection
+} from './sse.mjs';
 
 // Store ComfyUI API path locally
 let comfyUIAPIPath = null;
@@ -19,237 +31,18 @@ export function initializeGenerateModule(apiPath) {
   console.log('Generate module initialized with ComfyUI API path:', apiPath);
 }
 
-// Task tracking system
-const activeTasks = new Map();
-// activeTasks.set(taskId, {
-//   prompt: "...",
-//   workflow: "...",
-//   startTime: Date.now(),
-//   progress: { percentage: 0, currentStep: "Starting..." },
-//   sseClients: Set of response objects,
-//   promptId: "comfyui-prompt-id",
-//   requestData: { ... original request data ... },
-//   workflowConfig: { ... workflow configuration ... }
-// });
-
-// Map promptId to taskId for reverse lookup
-const promptIdToTaskId = new Map();
-
 export function setAddImageDataEntry(func) {
   addImageDataEntry = func;
 }
 
-// Webhook response format builders
-function createProgressResponse(taskId, progress, currentStep) {
-  return {
-    taskId: taskId,
-    status: 'in-progress',
-    progress: {
-      percentage: progress.percentage || 0,
-      currentStep: currentStep || 'Processing...',
-      currentValue: progress.value || 0,
-      maxValue: progress.max || 0
-    },
-    timestamp: new Date().toISOString()
-  };
-}
-
-function createCompletionResponse(taskId, result) {
-  return {
-    taskId: taskId,
-    status: 'completed',
-    progress: {
-      percentage: 100,
-      currentStep: 'Complete',
-      currentValue: result.maxValue || 1,
-      maxValue: result.maxValue || 1
-    },
-    result: {
-      imageUrl: result.imageUrl,
-      description: result.description,
-      prompt: result.prompt,
-      seed: result.seed,
-      name: result.name,
-      workflow: result.workflow,
-      inpaint: result.inpaint || false,
-      inpaintArea: result.inpaintArea || null,
-      uid: result.uid
-    },
-    timestamp: new Date().toISOString()
-  };
-}
-
-function createErrorResponse(taskId, errorMessage, errorDetails) {
-  return {
-    taskId: taskId,
-    status: 'error',
-    progress: {
-      percentage: 0,
-      currentStep: 'Failed',
-      currentValue: 0,
-      maxValue: 0
-    },
-    error: {
-      message: errorMessage || 'Generation failed',
-      details: errorDetails || 'Unknown error'
-    },
-    timestamp: new Date().toISOString()
-  };
-}
-
-// Function to emit SSE message to all subscribed clients for a task
-function emitSSEToTask(taskId, message) {
-  const task = activeTasks.get(taskId);
-  if (!task || !task.sseClients) return;
-  
-  // Determine event type based on message status
-  let eventType = 'progress';
-  if (message.status === 'completed') eventType = 'complete';
-  if (message.status === 'error') eventType = 'error-event';
-  
-  const data = JSON.stringify(message);
-  const disconnectedClients = new Set();
-  
-  task.sseClients.forEach(client => {
-    try {
-      client.write(`event: ${eventType}\ndata: ${data}\n\n`);
-    } catch (error) {
-      console.error(`Failed to send SSE to client for task ${taskId}:`, error);
-      disconnectedClients.add(client);
-    }
-  });
-  
-  // Remove disconnected clients
-  disconnectedClients.forEach(client => task.sseClients.delete(client));
-}
-
-// Function to generate unique task ID
-function generateTaskId() {
-  return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Clean up completed tasks after delay
-function scheduleTaskCleanup(taskId) {
-  setTimeout(() => {
-    const task = activeTasks.get(taskId);
-    if (task) {
-      // Close all SSE connections
-      if (task.sseClients) {
-        task.sseClients.forEach(client => {
-          try {
-            client.end();
-          } catch (error) {
-            // Ignore errors when closing
-          }
-        });
-      }
-      // Remove from maps
-      if (task.promptId) {
-        promptIdToTaskId.delete(task.promptId);
-      }
-      activeTasks.delete(taskId);
-      console.log(`Cleaned up task ${taskId}`);
-    }
-  }, 5 * 60 * 1000); // 5 minutes
-}
-
-// Export functions for use in WebSocket handlers
-export function emitProgressUpdate(promptId, progress, currentStep) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
-  
-  const task = activeTasks.get(taskId);
-  if (!task) return;
-  
-  task.progress = { percentage: progress.percentage, currentStep };
-  
-  const message = createProgressResponse(taskId, progress, currentStep);
-  emitSSEToTask(taskId, message);
-}
-
-export function emitTaskCompletion(promptId, result) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
-  
-  const task = activeTasks.get(taskId);
-  if (!task) return;
-  
-  const message = createCompletionResponse(taskId, result);
-  emitSSEToTask(taskId, message);
-  
-  scheduleTaskCleanup(taskId);
-}
-
-export function emitTaskError(promptId, errorMessage, errorDetails) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
-  
-  const task = activeTasks.get(taskId);
-  if (!task) return;
-  
-  const message = createErrorResponse(taskId, errorMessage, errorDetails);
-  emitSSEToTask(taskId, message);
-  
-  scheduleTaskCleanup(taskId);
-}
-
-// SSE endpoint handler
-export function handleSSEConnection(req, res) {
-  const { taskId } = req.params;
-  
-  const task = activeTasks.get(taskId);
-  if (!task) {
-    return res.status(404).json({ error: `Task ${taskId} not found` });
-  }
-  
-  // Set up SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  
-  // Add client to task's SSE clients
-  if (!task.sseClients) {
-    task.sseClients = new Set();
-  }
-  task.sseClients.add(res);
-  
-  console.log(`SSE client connected for task ${taskId}`);
-  
-  // Send initial progress state
-  const initialMessage = createProgressResponse(
-    taskId,
-    task.progress || { percentage: 0, value: 0, max: 0 },
-    task.progress?.currentStep || 'Starting...'
-  );
-  res.write(`event: progress\ndata: ${JSON.stringify(initialMessage)}\n\n`);
-  
-  // Set up heartbeat to keep connection alive (every 30 seconds)
-  const heartbeatInterval = setInterval(() => {
-    try {
-      res.write(': heartbeat\n\n');
-    } catch (error) {
-      clearInterval(heartbeatInterval);
-    }
-  }, 30000);
-  
-  // Store heartbeat interval for cleanup
-  if (!task.heartbeatIntervals) {
-    task.heartbeatIntervals = new Map();
-  }
-  task.heartbeatIntervals.set(res, heartbeatInterval);
-  
-  // Handle client disconnect
-  req.on('close', () => {
-    task.sseClients.delete(res);
-    const interval = task.heartbeatIntervals?.get(res);
-    if (interval) {
-      clearInterval(interval);
-      task.heartbeatIntervals.delete(res);
-    }
-    console.log(`SSE client disconnected for task ${taskId}`);
-  });
-}
+// Re-export SSE functions for backwards compatibility
+export {
+  emitProgressUpdate,
+  emitTaskCompletion,
+  emitTaskError,
+  emitTaskErrorByTaskId,
+  handleSSEConnection
+};
 
 // Function to upload image to ComfyUI
 export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
@@ -384,12 +177,9 @@ export async function handleImageGeneration(req, res, workflowConfig) {
   const taskId = generateTaskId();
   
   // Create task entry
-  activeTasks.set(taskId, {
+  createTask(taskId, {
     prompt,
     workflow,
-    startTime: Date.now(),
-    progress: { percentage: 0, currentStep: 'Starting...' },
-    sseClients: new Set(),
     promptId: null,
     requestData: { ...req.body },
     workflowConfig
@@ -407,7 +197,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
   // Process generation in background
   processGenerationTask(taskId, req.body, workflowConfig).catch(error => {
     console.error(`Error in background task ${taskId}:`, error);
-    emitTaskError(taskId, 'Generation failed', error.message);
+    emitTaskErrorByTaskId(taskId, 'Generation failed', error.message);
   });
 }
 
@@ -418,7 +208,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     let { name } = requestData;
     
-    const task = activeTasks.get(taskId);
+    const task = getTask(taskId);
     if (!task) {
       console.error(`Task ${taskId} not found during processing`);
       return;
@@ -500,8 +290,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     }
 
     // Link promptId to taskId
-    task.promptId = promptId;
-    promptIdToTaskId.set(promptId, taskId);
+    setTaskPromptId(taskId, promptId);
 
     console.log(`Task ${taskId} linked to prompt ${promptId}, waiting for completion...`);
     
@@ -576,18 +365,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
   } catch (error) {
     console.error(`Error in task ${taskId}:`, error);
     
-    // Find taskId if we only have promptId
-    let finalTaskId = taskId;
-    if (!activeTasks.has(taskId)) {
-      // This shouldn't happen, but handle it just in case
-      for (const [tid, task] of activeTasks.entries()) {
-        if (task.requestData === requestData) {
-          finalTaskId = tid;
-          break;
-        }
-      }
-    }
-    
-    emitTaskError(finalTaskId, 'Failed to process generation request', error.message);
+    // Emit error using taskId directly
+    emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
   }
 }
