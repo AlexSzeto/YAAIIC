@@ -27,7 +27,7 @@ SSE client connected for task task_1764871312524_04n4ns0xg
 5. When timeout expires, call the onError callback with a timeout error message and unsubscribe
 6. Add timeout configuration as an optional parameter to `subscribe()` with a sensible default
 
-[] In `createProgressResponse()` in `generate.mjs`, cross reference `currentStep` with the step Id in the task's associated workflow JSON and extract its `_meta.title` to send to the client
+[x] In `createProgressResponse()` in `generate.mjs`, cross reference `currentStep` with the step Id in the task's associated workflow JSON and extract its `_meta.title` to send to the client
 1. Modify `emitProgressUpdate()` to accept the taskId in addition to promptId
 2. In `emitProgressUpdate()`, retrieve the task object to access the stored workflow JSON
 3. Parse the currentStep parameter to extract the node ID (if it contains node information)
@@ -37,7 +37,7 @@ SSE client connected for task task_1764871312524_04n4ns0xg
 7. Add a fallback to use a generic phrase, `Processing...` if the node lookup fails
 8. Update the WebSocket handler in `comfyui-websocket.mjs` to pass taskId to `emitProgressUpdate()`
 
-[] Adjust the layout of the progress indicator as follows:
+[x] Adjust the layout of the progress indicator as follows:
 - Move the indicator to the bottom right of the viewport, and use a toast-like floating window.
 - Fix the progress bar so it actually colors in the current progress as the task is being completed.
 1. In `public/css/custom-ui.css`, modify `#progress-banner-container` to use fixed positioning at bottom-right
@@ -47,3 +47,5 @@ SSE client connected for task task_1764871312524_04n4ns0xg
 5. Remove top positioning styles that make it a banner across the top
 6. In `.progress-banner-bar`, ensure the background color is set to a visible color (check CSS variables)
 7. Verify the `.progress-banner-bar` has a transition effect: `transition: width 0.3s ease-in-out;`
+
+[] Fix gallery load by selection not working as expected. It is currently adding all matching search items to the gallery and not just the selected items from the search.

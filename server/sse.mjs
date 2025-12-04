@@ -148,17 +148,43 @@ function scheduleTaskCleanup(taskId) {
   }, 5 * 60 * 1000); // 5 minutes
 }
 
+// Helper function to extract step title from workflow JSON
+function getStepTitleFromWorkflow(workflowData, nodeId) {
+  if (!workflowData || !nodeId) return null;
+  
+  // Look up the node in the workflow JSON
+  const node = workflowData[nodeId];
+  if (!node) return null;
+  
+  // Extract the _meta.title field
+  return node._meta?.title || null;
+}
+
 // Export functions for use in WebSocket handlers
-export function emitProgressUpdate(promptId, progress, currentStep) {
+export function emitProgressUpdate(promptId, progress, currentStep, nodeId = null) {
   const taskId = promptIdToTaskId.get(promptId);
   if (!taskId) return;
   
   const task = activeTasks.get(taskId);
   if (!task) return;
   
-  task.progress = { percentage: progress.percentage, currentStep };
+  // Try to get step title from workflow JSON if nodeId is provided
+  let stepTitle = currentStep;
+  if (nodeId && task.workflowData) {
+    const workflowTitle = getStepTitleFromWorkflow(task.workflowData, nodeId);
+    if (workflowTitle) {
+      stepTitle = workflowTitle;
+    }
+  }
   
-  const message = createProgressResponse(taskId, progress, currentStep);
+  // Fall back to 'Processing...' if no title found
+  if (!stepTitle) {
+    stepTitle = 'Processing...';
+  }
+  
+  task.progress = { percentage: progress.percentage, currentStep: stepTitle };
+  
+  const message = createProgressResponse(taskId, progress, stepTitle);
   emitSSEToTask(taskId, message);
 }
 

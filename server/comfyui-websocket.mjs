@@ -211,7 +211,7 @@ function handleExecuting(data) {
     // Emit progress update
     if (emitProgressUpdate) {
       const stepName = getNodeStepName(node);
-      emitProgressUpdate(prompt_id, state.progress, stepName);
+      emitProgressUpdate(prompt_id, state.progress, stepName, node);
     }
   }
 }
@@ -238,7 +238,7 @@ function handleProgress(data) {
   // Emit progress update via SSE
   if (emitProgressUpdate) {
     const stepName = getNodeStepName(node);
-    emitProgressUpdate(prompt_id, state.progress, stepName);
+    emitProgressUpdate(prompt_id, state.progress, stepName, node);
   }
 }
 

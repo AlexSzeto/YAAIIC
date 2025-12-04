@@ -248,6 +248,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
     
+    // Store the workflow JSON in the task for node title lookups
+    updateTask(taskId, { workflowData });
+    
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {

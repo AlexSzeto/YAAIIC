@@ -664,29 +664,30 @@
 /* ===== PROGRESS BANNER ===== */
 #progress-banner-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  bottom: 1rem;
+  right: 1rem;
   z-index: 9999;
 }
 
 .progress-banner {
   position: relative;
-  width: 100%;
+  max-width: 400px;
+  min-width: 320px;
   background-color: var(--dark-background-card);
-  border-bottom: 1px solid var(--dark-border-secondary);
-  box-shadow: 0 2px 8px var(--shadow-color);
-  padding: 12px 20px;
+  border: 1px solid var(--dark-border-secondary);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+  padding: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  animation: slideDown 0.3s ease-out;
+  animation: slideUp 0.3s ease-out;
 }
 
-@keyframes slideDown {
+@keyframes slideUp {
   from {
-    transform: translateY(-100%);
+    transform: translateY(100%);
     opacity: 0;
   }
   to {
@@ -736,9 +737,10 @@
 
 .progress-banner-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--primary-focus));
+  background: linear-gradient(90deg, var(--primary-background), var(--primary-hover));
   border-radius: 3px;
-  transition: width 0.3s ease-out;
+  transition: width 0.3s ease-in-out;
+  width: 0%;
 }
 
 .progress-banner-dismiss {
@@ -767,12 +769,12 @@
 
 /* Status-specific styles */
 .progress-banner-active .progress-banner-bar {
-  background: linear-gradient(90deg, var(--primary-color), var(--primary-focus));
+  background: linear-gradient(90deg, var(--primary-background), var(--primary-hover));
 }
 
 .progress-banner-success {
   background-color: rgba(34, 197, 94, 0.1);
-  border-bottom-color: rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 .progress-banner-success .progress-banner-bar {
@@ -785,7 +787,7 @@
 
 .progress-banner-error {
   background-color: rgba(239, 68, 68, 0.1);
-  border-bottom-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .progress-banner-error .progress-banner-bar {
