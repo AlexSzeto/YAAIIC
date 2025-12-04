@@ -1,0 +1,235 @@
+import { render, Component } from 'preact';
+import { html } from 'htm/preact';
+
+/**
+ * Map ComfyUI node types to human-readable step names
+ */
+const NODE_STEP_NAMES = {
+  'CheckpointLoaderSimple': 'Loading model...',
+  'LoraLoaderModelOnly': 'Loading LoRA...',
+  'CLIPTextEncode': 'Encoding prompt...',
+  'EmptyLatentImage': 'Preparing canvas...',
+  'EmptySD3LatentImage': 'Preparing canvas...',
+  'FluxGuidance': 'Configuring guidance...',
+  'KSampler': 'Sampling image...',
+  'VAEDecode': 'Decoding image...',
+  'VAEEncodeForInpaint': 'Encoding for inpaint...',
+  'LoadImage': 'Loading image...',
+  'LoadImageMask': 'Loading mask...',
+  'JWImageSaveToPath': 'Saving image...',
+  'SaveImage': 'Saving image...'
+};
+
+/**
+ * Get human-readable step name from node class type
+ * @param {string} nodeType - ComfyUI node class type
+ * @returns {string} - Human-readable step name
+ */
+function getStepName(nodeType) {
+  return NODE_STEP_NAMES[nodeType] || 'Processing...';
+}
+
+/**
+ * ProgressBanner - Displays real-time progress updates for image generation tasks
+ * 
+ * This component subscribes to webhook progress updates and displays a fixed banner
+ * at the top of the page showing the current progress, percentage, and step name.
+ */
+class ProgressBanner extends Component {
+  constructor(props) {
+    super(props);
+    
+    // Initial state
+    this.state = {
+      isVisible: true,
+      status: 'starting',  // starting, in-progress, completed, error
+      percentage: 0,
+      message: 'Starting generation...',
+      currentValue: 0,
+      maxValue: 0
+    };
+  }
+
+  componentDidMount() {
+    // Subscribe to webhook updates when component mounts
+    const { taskId, webhookManager } = this.props;
+    
+    if (!webhookManager || !taskId) {
+      console.error('ProgressBanner requires webhookManager and taskId props');
+      return;
+    }
+
+    webhookManager.subscribe(taskId, {
+      onProgress: this.handleProgressUpdate.bind(this),
+      onComplete: this.handleComplete.bind(this),
+      onError: this.handleError.bind(this)
+    });
+  }
+
+  componentWillUnmount() {
+    // Unsubscribe from webhook when component unmounts
+    const { taskId, webhookManager } = this.props;
+    
+    if (webhookManager && taskId) {
+      webhookManager.unsubscribe(taskId);
+    }
+  }
+
+  /**
+   * Handle progress update from webhook
+   * @param {Object} data - Progress data from server
+   */
+  handleProgressUpdate(data) {
+    if (!data.progress) return;
+
+    // Use currentStep if provided, otherwise derive from node type
+    let message = data.progress.currentStep || 'Processing...';
+    
+    // If we have node information, use the mapped step name
+    if (data.progress.node) {
+      message = getStepName(data.progress.node);
+    }
+
+    this.setState({
+      status: 'in-progress',
+      percentage: data.progress.percentage || 0,
+      message: message,
+      currentValue: data.progress.currentValue || 0,
+      maxValue: data.progress.maxValue || 0
+    });
+  }
+
+  /**
+   * Handle completion event from webhook
+   * @param {Object} data - Completion data from server
+   */
+  handleComplete(data) {
+    this.setState({
+      status: 'completed',
+      percentage: 100,
+      message: 'Complete!',
+      currentValue: data.progress?.maxValue || 0,
+      maxValue: data.progress?.maxValue || 0
+    });
+
+    // Call the onComplete callback if provided
+    if (this.props.onComplete) {
+      this.props.onComplete(data);
+    }
+
+    // Auto-hide the banner after a short delay
+    setTimeout(() => {
+      this.setState({ isVisible: false });
+    }, 2000);
+  }
+
+  /**
+   * Handle error event from webhook
+   * @param {Object} data - Error data from server
+   */
+  handleError(data) {
+    this.setState({
+      status: 'error',
+      percentage: 0,
+      message: data.error?.message || 'Generation failed'
+    });
+
+    // Auto-hide after showing error
+    setTimeout(() => {
+      this.setState({ isVisible: false });
+    }, 5000);
+  }
+
+  /**
+   * Handle manual dismiss of the banner
+   */
+  handleDismiss() {
+    this.setState({ isVisible: false });
+  }
+
+  /**
+   * Get the appropriate CSS class for the current status
+   */
+  getStatusClass() {
+    const { status } = this.state;
+    switch (status) {
+      case 'completed':
+        return 'progress-banner-success';
+      case 'error':
+        return 'progress-banner-error';
+      case 'in-progress':
+      case 'starting':
+      default:
+        return 'progress-banner-active';
+    }
+  }
+
+  render() {
+    const { isVisible, percentage, message } = this.state;
+
+    if (!isVisible) {
+      return null;
+    }
+
+    return html`
+      <div class="progress-banner ${this.getStatusClass()}">
+        <div class="progress-banner-content">
+          <div class="progress-banner-info">
+            <span class="progress-banner-message">${message}</span>
+            <span class="progress-banner-percentage">${Math.round(percentage)}%</span>
+          </div>
+          <div class="progress-banner-bar-container">
+            <div 
+              class="progress-banner-bar" 
+              style="width: ${percentage}%"
+            ></div>
+          </div>
+        </div>
+        <button 
+          class="progress-banner-dismiss" 
+          onClick=${() => this.handleDismiss()}
+          aria-label="Dismiss"
+        >
+          <box-icon name='x' color='currentColor'></box-icon>
+        </button>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Create and mount a progress banner for a task
+ * @param {string} taskId - Task identifier
+ * @param {Object} webhookManager - WebhookManager instance
+ * @param {Function} onComplete - Callback when generation completes
+ * @returns {Object} - Object with unmount function
+ */
+export function createProgressBanner(taskId, webhookManager, onComplete) {
+  // Create container element if it doesn't exist
+  let container = document.getElementById('progress-banner-container');
+  
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'progress-banner-container';
+    document.body.insertBefore(container, document.body.firstChild);
+  }
+
+  // Render the component
+  render(
+    html`<${ProgressBanner} 
+      taskId=${taskId} 
+      webhookManager=${webhookManager} 
+      onComplete=${onComplete}
+    />`,
+    container
+  );
+
+  // Return unmount function
+  return {
+    unmount: () => {
+      render(null, container);
+    }
+  };
+}
+
+export default ProgressBanner;

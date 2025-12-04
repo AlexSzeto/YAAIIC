@@ -8,6 +8,8 @@ import { createGallery } from './custom-ui/gallery.mjs';
 import { createImageModal } from './custom-ui/modal.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
 import { fetchJson, fetchWithRetry, FetchError } from './util.mjs';
+import { webhookManager } from './webhook-manager.mjs';
+import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 
 let workflows = [];
 let autoCompleteInstance = null;
@@ -224,9 +226,6 @@ async function handleGenerate() {
   generateButton.textContent = 'Generating...';
   descriptionTextarea.disabled = true;
   
-  // Show processing toast
-  showToast('Sending generation request to ComfyUI...');
-
   try {
     // Update seed for next generation unless locked
     updateSeedIfNotLocked();
@@ -242,7 +241,7 @@ async function handleGenerate() {
       requestBody.name = nameInput.value.trim();
     }
     
-    // Use enhanced fetch with retry for generation requests
+    // Send generation request and get immediate taskId response
     const response = await fetchWithRetry('/generate/txt2img', {
       method: 'POST',
       headers: {
@@ -250,21 +249,40 @@ async function handleGenerate() {
       },
       body: JSON.stringify(requestBody)
     }, {
-      maxRetries: 1, // Limited retries for generation (expensive operation)
+      maxRetries: 1,
       retryDelay: 2000,
-      timeout: 1800000, // 30 minutes timeout for image generation
-      showUserFeedback: false // We handle feedback manually for generation
+      timeout: 10000, // 10 seconds for initial request (just gets taskId)
+      showUserFeedback: false
     });
 
     const result = await response.json();
     
-    showSuccessToast('Image generated successfully!');
-    console.log('Generation result:', result);
-    
-    // Create and display the generated image with analysis
-    if (result.data && result.data.imageUrl) {
-      carouselDisplay.addData(result.data);
+    if (!result.taskId) {
+      throw new Error('Server did not return a taskId');
     }
+    
+    console.log('Generation started with taskId:', result.taskId);
+    
+    // Create progress banner with completion callback
+    createProgressBanner(
+      result.taskId,
+      webhookManager,
+      (completionData) => {
+        // Handle completion - add image to carousel
+        if (completionData.result && completionData.result.imageUrl) {
+          carouselDisplay.addData(completionData.result);
+          showSuccessToast('Image generated successfully!');
+        }
+        
+        // Re-enable UI
+        generateButton.disabled = false;
+        generateButton.textContent = 'Generate';
+        descriptionTextarea.disabled = false;
+      }
+    );
+    
+    // Update button text to show progress is being tracked
+    generateButton.textContent = 'Generating...';
 
   } catch (error) {
     console.error('Error generating image:', error);
@@ -295,8 +313,8 @@ async function handleGenerate() {
     }
     
     showErrorToast(errorMessage);
-  } finally {
-    // Re-enable UI
+    
+    // Re-enable UI on error (success case handled in completion callback)
     generateButton.disabled = false;
     generateButton.textContent = 'Generate';
     descriptionTextarea.disabled = false;

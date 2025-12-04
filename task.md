@@ -3,13 +3,13 @@
 ## Goals
 Let the server create its internal task tracking system. When the client makes a generation request, immediately create and send the `taskId` and the client would track the progress through the completion of the task using webhooks. The websocket connection should only be used between the server and ComfyUI's API, and the client should only receive progress through the webhooks.
 
-[] Connect to ComfyUI's WebSocket API for progress tracking
+[x] Connect to ComfyUI's WebSocket API for progress tracking
 1. Install `ws` package for WebSocket support on server
 2. Create WebSocket connection to ComfyUI in `server/generate.mjs`
 3. Listen for ComfyUI WebSocket connection open/close/error events
 4. Subscribe to prompt execution using client_id when sending prompt to ComfyUI
 
-[] Parse ComfyUI WebSocket messages to extract progress data
+[x] Parse ComfyUI WebSocket messages to extract progress data
 1. Add WebSocket message listener in `server/generate.mjs`
 2. Parse incoming messages to identify message types: `execution_start`, `executing`, `progress`, `execution_cached`, `execution_error`, `execution_success`, `executed`, `status`
 3. Extract relevant data from progress messages (node, prompt_id, value, max)
@@ -65,7 +65,7 @@ Let the server create its internal task tracking system. When the client makes a
 }
 ```
 
-[] Create webhook response format for generation in progress
+[x] Create webhook response format for generation in progress
 1. Define progress webhook response format in `server/generate.mjs`
 ```javascript
 // Progress webhook response format
@@ -82,7 +82,7 @@ Let the server create its internal task tracking system. When the client makes a
 }
 ```
 
-[] Create webhook response format for completed tasks
+[x] Create webhook response format for completed tasks
 1. Define completion webhook response format in `server/generate.mjs`
 ```javascript
 // Completion webhook response format
@@ -129,7 +129,7 @@ Let the server create its internal task tracking system. When the client makes a
 }
 ```
 
-[] Modify server-side prompt execution flow to emit progress updates
+[x] Modify server-side prompt execution flow to emit progress updates
 1. Create in-memory task tracking map in `server/generate.mjs` to store active tasks by taskId
 2. Generate unique taskId using timestamp + random string in `handleImageGeneration`
 3. Store task metadata (prompt, workflow, clientId, startTime) in task tracking map
@@ -152,7 +152,7 @@ const activeTasks = new Map();
 // });
 ```
 
-[] Create client-side webhook management library
+[x] Create client-side webhook management library
 1. Create `public/js/webhook-manager.mjs` file
 2. Implement WebhookManager class with EventSource for SSE
 3. Add public methods: `subscribe(taskId, onProgress, onComplete, onError)`, `unsubscribe(taskId)`
@@ -178,7 +178,7 @@ class WebhookManager {
 export const webhookManager = new WebhookManager(); // Singleton instance
 ```
 
-[] Render progress banner at the top of the page
+[x] Render progress banner at the top of the page
 1. Create `public/js/custom-ui/progress-banner.mjs` file
 2. Implement ProgressBanner as Preact Component class
 3. Add props: `taskId`, `webhookManager`
@@ -206,7 +206,7 @@ class ProgressBanner extends Component {
 }
 ```
 
-[] Update banner with task name and completion percentage
+[x] Update banner with task name and completion percentage
 1. Map ComfyUI node types to human-readable step names in progress-banner.mjs
 2. Update message text based on current node being executed
 3. Update percentage based on (currentValue / maxValue * 100)
@@ -223,13 +223,13 @@ const NODE_STEP_NAMES = {
 };
 ```
 
-[] Handle webhook completion event to trigger existing response handling code
+[x] Handle webhook completion event to trigger existing response handling code
 1. In progress-banner.mjs, call `onComplete` callback with result data when status is "completed"
 2. Pass result data to existing image display handlers (CarouselDisplay.addData)
 3. Hide banner after completion
 4. Show success toast notification
 
-[] Integrate webhook library into index page
+[x] Integrate webhook library into index page
 1. Import WebhookManager and ProgressBanner in `public/js/main.mjs`
 2. Modify `handleGenerate` to parse taskId from immediate server response
 3. Create and mount ProgressBanner component with taskId
@@ -243,3 +243,43 @@ const NODE_STEP_NAMES = {
 3. Create and mount ProgressBanner component with taskId for inpaint operations
 4. Pass onComplete callback to handle inpaint result
 5. Ensure progress tracking works for both regular and inpaint workflows
+
+[] Add support for `progress_state` message type in ComfyUI WebSocket handler
+1. Add `progress_state` case to the message switch statement in `handleComfyUIMessage` in `server/comfyui-websocket.mjs`
+2. Create `handleProgressState(data)` function to process progress_state messages
+3. Extract per-node state information from the `nodes` object (state: "running" | "finished", value, max, node_id)
+4. Update `promptExecutionState` map to track individual node states and overall workflow progress
+5. Use node state information to provide more detailed progress updates (e.g., "Node 3 running (10/20), Node 6 finished (1/1)")
+6. Consider using `progress_state` as the primary progress tracking mechanism instead of `progress` messages
+7. Emit more detailed progress updates via SSE based on per-node state information
+```javascript
+// progress_state message format (observed from ComfyUI)
+{
+  type: "progress_state",
+  data: {
+    prompt_id: "abc123",
+    nodes: {
+      "3": {
+        value: 10,
+        max: 20,
+        state: "running",
+        node_id: "3",
+        prompt_id: "abc123",
+        display_node_id: "3",
+        parent_node_id: null,
+        real_node_id: "3"
+      },
+      "6": {
+        value: 1,
+        max: 1,
+        state: "finished",
+        node_id: "6",
+        prompt_id: "abc123",
+        display_node_id: "6",
+        parent_node_id: null,
+        real_node_id: "6"
+      }
+    }
+  }
+}
+```

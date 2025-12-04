@@ -3,20 +3,234 @@ import path from 'path';
 import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
-import { getComfyUIAPIPath } from './services.mjs';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
 import { setObjectPathValue } from './util.mjs';
+import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
+
+// Store ComfyUI API path locally
+let comfyUIAPIPath = null;
 
 // Function to add image data entry (will be set by server.mjs)
 let addImageDataEntry = null;
+
+// Initialize generate module with ComfyUI API path
+export function initializeGenerateModule(apiPath) {
+  comfyUIAPIPath = apiPath;
+  console.log('Generate module initialized with ComfyUI API path:', apiPath);
+}
+
+// Task tracking system
+const activeTasks = new Map();
+// activeTasks.set(taskId, {
+//   prompt: "...",
+//   workflow: "...",
+//   startTime: Date.now(),
+//   progress: { percentage: 0, currentStep: "Starting..." },
+//   sseClients: Set of response objects,
+//   promptId: "comfyui-prompt-id",
+//   requestData: { ... original request data ... },
+//   workflowConfig: { ... workflow configuration ... }
+// });
+
+// Map promptId to taskId for reverse lookup
+const promptIdToTaskId = new Map();
 
 export function setAddImageDataEntry(func) {
   addImageDataEntry = func;
 }
 
+// Webhook response format builders
+function createProgressResponse(taskId, progress, currentStep) {
+  return {
+    taskId: taskId,
+    status: 'in-progress',
+    progress: {
+      percentage: progress.percentage || 0,
+      currentStep: currentStep || 'Processing...',
+      currentValue: progress.value || 0,
+      maxValue: progress.max || 0
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+function createCompletionResponse(taskId, result) {
+  return {
+    taskId: taskId,
+    status: 'completed',
+    progress: {
+      percentage: 100,
+      currentStep: 'Complete',
+      currentValue: result.maxValue || 1,
+      maxValue: result.maxValue || 1
+    },
+    result: {
+      imageUrl: result.imageUrl,
+      description: result.description,
+      prompt: result.prompt,
+      seed: result.seed,
+      name: result.name,
+      workflow: result.workflow,
+      inpaint: result.inpaint || false,
+      inpaintArea: result.inpaintArea || null,
+      uid: result.uid
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+function createErrorResponse(taskId, errorMessage, errorDetails) {
+  return {
+    taskId: taskId,
+    status: 'error',
+    progress: {
+      percentage: 0,
+      currentStep: 'Failed',
+      currentValue: 0,
+      maxValue: 0
+    },
+    error: {
+      message: errorMessage || 'Generation failed',
+      details: errorDetails || 'Unknown error'
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Function to emit SSE message to all subscribed clients for a task
+function emitSSEToTask(taskId, message) {
+  const task = activeTasks.get(taskId);
+  if (!task || !task.sseClients) return;
+  
+  const data = JSON.stringify(message);
+  const disconnectedClients = new Set();
+  
+  task.sseClients.forEach(client => {
+    try {
+      client.write(`data: ${data}\n\n`);
+    } catch (error) {
+      console.error(`Failed to send SSE to client for task ${taskId}:`, error);
+      disconnectedClients.add(client);
+    }
+  });
+  
+  // Remove disconnected clients
+  disconnectedClients.forEach(client => task.sseClients.delete(client));
+}
+
+// Function to generate unique task ID
+function generateTaskId() {
+  return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Clean up completed tasks after delay
+function scheduleTaskCleanup(taskId) {
+  setTimeout(() => {
+    const task = activeTasks.get(taskId);
+    if (task) {
+      // Close all SSE connections
+      if (task.sseClients) {
+        task.sseClients.forEach(client => {
+          try {
+            client.end();
+          } catch (error) {
+            // Ignore errors when closing
+          }
+        });
+      }
+      // Remove from maps
+      if (task.promptId) {
+        promptIdToTaskId.delete(task.promptId);
+      }
+      activeTasks.delete(taskId);
+      console.log(`Cleaned up task ${taskId}`);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+// Export functions for use in WebSocket handlers
+export function emitProgressUpdate(promptId, progress, currentStep) {
+  const taskId = promptIdToTaskId.get(promptId);
+  if (!taskId) return;
+  
+  const task = activeTasks.get(taskId);
+  if (!task) return;
+  
+  task.progress = { percentage: progress.percentage, currentStep };
+  
+  const message = createProgressResponse(taskId, progress, currentStep);
+  emitSSEToTask(taskId, message);
+}
+
+export function emitTaskCompletion(promptId, result) {
+  const taskId = promptIdToTaskId.get(promptId);
+  if (!taskId) return;
+  
+  const task = activeTasks.get(taskId);
+  if (!task) return;
+  
+  const message = createCompletionResponse(taskId, result);
+  emitSSEToTask(taskId, message);
+  
+  scheduleTaskCleanup(taskId);
+}
+
+export function emitTaskError(promptId, errorMessage, errorDetails) {
+  const taskId = promptIdToTaskId.get(promptId);
+  if (!taskId) return;
+  
+  const task = activeTasks.get(taskId);
+  if (!task) return;
+  
+  const message = createErrorResponse(taskId, errorMessage, errorDetails);
+  emitSSEToTask(taskId, message);
+  
+  scheduleTaskCleanup(taskId);
+}
+
+// SSE endpoint handler
+export function handleSSEConnection(req, res) {
+  const { taskId } = req.params;
+  
+  const task = activeTasks.get(taskId);
+  if (!task) {
+    return res.status(404).json({ error: `Task ${taskId} not found` });
+  }
+  
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  // Add client to task's SSE clients
+  if (!task.sseClients) {
+    task.sseClients = new Set();
+  }
+  task.sseClients.add(res);
+  
+  console.log(`SSE client connected for task ${taskId}`);
+  
+  // Send initial progress state
+  const initialMessage = createProgressResponse(
+    taskId,
+    task.progress || { percentage: 0, value: 0, max: 0 },
+    task.progress?.currentStep || 'Starting...'
+  );
+  res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
+  
+  // Handle client disconnect
+  req.on('close', () => {
+    task.sseClients.delete(res);
+    console.log(`SSE client disconnected for task ${taskId}`);
+  });
+}
+
 // Function to upload image to ComfyUI
 export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
-  const comfyuiAPIPath = getComfyUIAPIPath();
+  if (!comfyUIAPIPath) {
+    throw new Error('Generate module not initialized - ComfyUI API path not available');
+  }
   
   return new Promise((resolve, reject) => {
     try {
@@ -34,7 +248,7 @@ export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "i
       console.log(`Uploading image to ComfyUI: ${filename} (type: ${imageType})`);
       
       // Parse the URL to determine if it's HTTP or HTTPS
-      const url = new URL(`${comfyuiAPIPath}/upload/image`);
+      const url = new URL(`${comfyUIAPIPath}/upload/image`);
       const httpModule = url.protocol === 'https:' ? https : http;
       
       // Create the request
@@ -82,11 +296,13 @@ export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "i
 
 // Reusable function to check ComfyUI prompt status
 export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs = 1000) {
-  const comfyuiAPIPath = getComfyUIAPIPath();
+  if (!comfyUIAPIPath) {
+    throw new Error('Generate module not initialized - ComfyUI API path not available');
+  }
   
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const response = await fetch(`${comfyuiAPIPath}/history/${promptId}`);
+      const response = await fetch(`${comfyUIAPIPath}/history/${promptId}`);
       
       if (!response.ok) {
         throw new Error(`History request failed: ${response.status}`);
@@ -127,17 +343,62 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 
 // Main image generation handler
 export async function handleImageGeneration(req, res, workflowConfig) {
+  const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
+  const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
+  let { name } = req.body;
+  
+  // Validate required parameters
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
+  }
+
+  console.log('Received generation request with prompt:', prompt);
+  console.log('Using workflow:', workflowBasePath);
+  
+  // Generate unique task ID
+  const taskId = generateTaskId();
+  
+  // Create task entry
+  activeTasks.set(taskId, {
+    prompt,
+    workflow,
+    startTime: Date.now(),
+    progress: { percentage: 0, currentStep: 'Starting...' },
+    sseClients: new Set(),
+    promptId: null,
+    requestData: { ...req.body },
+    workflowConfig
+  });
+  
+  console.log(`Created task ${taskId}`);
+  
+  // Return taskId immediately
+  res.json({
+    success: true,
+    taskId: taskId,
+    message: 'Generation task created'
+  });
+  
+  // Process generation in background
+  processGenerationTask(taskId, req.body, workflowConfig).catch(error => {
+    console.error(`Error in background task ${taskId}:`, error);
+    emitTaskError(taskId, 'Generation failed', error.message);
+  });
+}
+
+// Background processing function
+async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
-    let { name } = req.body;
+    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    let { name } = requestData;
     
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
+    const task = activeTasks.get(taskId);
+    if (!task) {
+      console.error(`Task ${taskId} not found during processing`);
+      return;
     }
-
-    console.log('Received generation request with prompt:', prompt);
-    console.log('Using workflow:', workflowBasePath);
+    
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
     console.log('Received name:', name);
@@ -177,7 +438,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       modifications.forEach(mod => {
         const { from, to, prefix, postfix } = mod;
         console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
-        let value = req.body[from];
+        let value = requestData[from];
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
@@ -188,18 +449,15 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       });
     }
 
-    // Get ComfyUI API path from services
-    const comfyuiAPIPath = getComfyUIAPIPath();
-
     // Send request to ComfyUI
-    const comfyResponse = await fetch(`${comfyuiAPIPath}/prompt`, {
+    const comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         prompt: workflowData,
-        client_id: 'imagen-server'
+        client_id: CLIENT_ID
       })
     });
 
@@ -216,7 +474,11 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       throw new Error('No prompt_id received from ComfyUI');
     }
 
-    console.log(`Waiting for prompt ${promptId} to complete...`);
+    // Link promptId to taskId
+    task.promptId = promptId;
+    promptIdToTaskId.set(promptId, taskId);
+
+    console.log(`Task ${taskId} linked to prompt ${promptId}, waiting for completion...`);
     
     // Wait for the prompt to complete
     const statusResult = await checkPromptStatus(promptId);
@@ -270,27 +532,37 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       console.log('Image data entry saved to database with UID:', uid);
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Image generated and analyzed successfully',
-      data: {
-        imageUrl: imageUrl,
-        description: description,
-        prompt: prompt,
-        seed: seed,
-        name: name,
-        workflow: workflow,
-        inpaint: inpaint || false,
-        inpaintArea: inpaintArea || null,
-        uid: uid
-      }
+    // Emit completion event
+    emitTaskCompletion(promptId, {
+      imageUrl: imageUrl,
+      description: description,
+      prompt: prompt,
+      seed: seed,
+      name: name,
+      workflow: workflow,
+      inpaint: inpaint || false,
+      inpaintArea: inpaintArea || null,
+      uid: uid,
+      maxValue: task.progress?.max || 1
     });
 
+    console.log(`Task ${taskId} completed successfully`);
+
   } catch (error) {
-    console.error('Error in image generation:', error);
-    res.status(500).json({ 
-      error: 'Failed to process generation request',
-      details: error.message 
-    });
+    console.error(`Error in task ${taskId}:`, error);
+    
+    // Find taskId if we only have promptId
+    let finalTaskId = taskId;
+    if (!activeTasks.has(taskId)) {
+      // This shouldn't happen, but handle it just in case
+      for (const [tid, task] of activeTasks.entries()) {
+        if (task.requestData === requestData) {
+          finalTaskId = tid;
+          break;
+        }
+      }
+    }
+    
+    emitTaskError(finalTaskId, 'Failed to process generation request', error.message);
   }
 }

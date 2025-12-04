@@ -3,9 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI } from './generate.mjs';
+import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule } from './generate.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
+import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,7 +61,20 @@ export function addImageDataEntry(entry) {
 let config;
 let comfyuiWorkflows;
 try {
-  config = JSON.parse(fs.readFileSync(path.join(actualDirname, 'config.json'), 'utf8'));
+  const configPath = path.join(actualDirname, 'config.json');
+  const defaultConfigPath = path.join(actualDirname, 'config.default.json');
+  
+  // If config.json doesn't exist, copy from config.default.json
+  if (!fs.existsSync(configPath)) {
+    if (fs.existsSync(defaultConfigPath)) {
+      fs.copyFileSync(defaultConfigPath, configPath);
+      console.log('Created config.json from config.default.json');
+    } else {
+      throw new Error('Neither config.json nor config.default.json found');
+    }
+  }
+  
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   console.log('Configuration loaded:', config);
   
   // Load ComfyUI workflows
@@ -72,6 +86,15 @@ try {
   
   // Set up the image data entry function for generate.mjs
   setAddImageDataEntry(addImageDataEntry);
+  
+  // Set up emit functions for WebSocket handlers
+  setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError });
+  
+  // Initialize generate module with ComfyUI API path
+  initializeGenerateModule(config.comfyuiAPIPath);
+  
+  // Initialize ComfyUI WebSocket with API path from config
+  initComfyUIWebSocket(config.comfyuiAPIPath);
 } catch (error) {
   console.error('Failed to load configuration files:', error);
   process.exit(1);
@@ -106,6 +129,9 @@ app.get('/lib/textarea-caret-position.js', (req, res) => {
 app.get('/', (req, res) => {
   res.sendFile(path.join(actualDirname, '../public/index.html'));
 });
+
+// SSE endpoint for task progress
+app.get('/progress/:taskId', handleSSEConnection);
 
 // Serve images from storage folder
 app.use('/image', express.static(path.join(actualDirname, 'storage')));
