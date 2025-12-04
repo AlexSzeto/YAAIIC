@@ -16,6 +16,7 @@ let autoCompleteInstance = null;
 let generatedImageDisplay = null;
 let carouselDisplay = null;
 let galleryDisplay = null;
+let currentProgressBanner = null;
 
 // Helper function to generate random seed
 function generateRandomSeed() {
@@ -263,8 +264,14 @@ async function handleGenerate() {
     
     console.log('Generation started with taskId:', result.taskId);
     
+    // Unmount previous progress banner if it exists
+    if (currentProgressBanner) {
+      currentProgressBanner.unmount();
+      currentProgressBanner = null;
+    }
+    
     // Create progress banner with completion callback
-    createProgressBanner(
+    currentProgressBanner = createProgressBanner(
       result.taskId,
       sseManager,
       (completionData) => {
@@ -272,6 +279,12 @@ async function handleGenerate() {
         if (completionData.result && completionData.result.imageUrl) {
           carouselDisplay.addData(completionData.result);
           showSuccessToast('Image generated successfully!');
+        }
+        
+        // Unmount the progress banner
+        if (currentProgressBanner) {
+          currentProgressBanner.unmount();
+          currentProgressBanner = null;
         }
         
         // Re-enable UI

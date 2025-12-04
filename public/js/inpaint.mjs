@@ -5,9 +5,12 @@ import { signal } from '@preact/signals';
 import { InpaintComponent } from './inpaint-canvas.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
 import { fetchJson, fetchWithRetry } from './util.mjs';
+import { sseManager } from './sse-manager.mjs';
+import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 
 let workflows = [];
 let currentImageData = null;
+let currentProgressBanner = null;
 
 // Initialize inpaintArea as a preact signal
 const inpaintArea = signal(null);
@@ -172,63 +175,89 @@ async function handleInpaint() {
     
     showToast('Sending inpaint request...');
     
-    // Send request to server using fetchWithRetry
+    // Send request to server using fetchWithRetry to get taskId
     const response = await fetchWithRetry('/generate/inpaint', {
       method: 'POST',
       body: formData
     }, {
       maxRetries: 1, // Limited retries for file uploads
       retryDelay: 2000,
-      timeout: 300000, // 5 minutes timeout for inpaint processing
+      timeout: 10000, // 10 seconds for initial request (just gets taskId)
       showUserFeedback: false // We handle feedback manually
     });
     
     const result = await response.json();
     
-    showSuccessToast('Inpaint request completed successfully!');
-    console.log('Inpaint result:', result);
-    
-    // Check if we have a uid in the response data for refreshing the interface
-    if (result.data && result.data.uid) {
-      const newUID = result.data.uid;
-      console.log('Updating interface with new UID:', newUID);
-      
-      // Update the URL with the new UID to change the query parameter
-      const newUrl = new URL(window.location);
-      newUrl.searchParams.set('uid', newUID);
-      window.history.pushState({}, '', newUrl);
-      
-      // Refresh the interface by loading the new image data
-      await loadImageDataByUID(newUID);
-      
-      // Reset the inpaint area since we have a new image, unless we have inpaintArea in response
-      if (result.data.inpaintArea) {
-        console.log('Preserving inpaintArea from result:', result.data.inpaintArea);
-        inpaintArea.value = result.data.inpaintArea;
-      } else {
-        inpaintArea.value = null;
-      }
-      
-      // Update the seed if not locked for potential future inpaints
-      updateSeedIfNotLocked();
-      
-      showSuccessToast('Interface refreshed with inpaint result');
-    } else {
-      console.warn('No UID found in inpaint response, interface not refreshed');
-      // Reset form or redirect as needed
-      // For now, just reset the inpaint area unless preserved in response
-      if (result.data && result.data.inpaintArea) {
-        inpaintArea.value = result.data.inpaintArea;
-      } else {
-        inpaintArea.value = null;
-      }
+    if (!result.taskId) {
+      throw new Error('Server did not return a taskId');
     }
+    
+    console.log('Inpaint generation started with taskId:', result.taskId);
+    
+    // Unmount previous progress banner if it exists
+    if (currentProgressBanner) {
+      currentProgressBanner.unmount();
+      currentProgressBanner = null;
+    }
+    
+    // Create progress banner with completion callback
+    currentProgressBanner = createProgressBanner(
+      result.taskId,
+      sseManager,
+      (completionData) => {
+        // Handle completion - refresh interface with new image
+        if (completionData.result && completionData.result.uid) {
+          const newUID = completionData.result.uid;
+          console.log('Updating interface with new UID:', newUID);
+          
+          // Update the URL with the new UID to change the query parameter
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.set('uid', newUID);
+          window.history.pushState({}, '', newUrl);
+          
+          // Refresh the interface by loading the new image data
+          loadImageDataByUID(newUID).then(() => {
+            // Reset the inpaint area since we have a new image, unless we have inpaintArea in response
+            if (completionData.result.inpaintArea) {
+              console.log('Preserving inpaintArea from result:', completionData.result.inpaintArea);
+              inpaintArea.value = completionData.result.inpaintArea;
+            } else {
+              inpaintArea.value = null;
+            }
+            
+            // Update the seed if not locked for potential future inpaints
+            updateSeedIfNotLocked();
+            
+            showSuccessToast('Inpaint completed successfully!');
+          }).catch(error => {
+            console.error('Error loading new image data:', error);
+            showErrorToast('Failed to load inpaint result');
+          });
+        } else {
+          console.warn('No UID found in inpaint completion data');
+          showSuccessToast('Inpaint completed');
+        }
+        
+        // Unmount the progress banner
+        if (currentProgressBanner) {
+          currentProgressBanner.unmount();
+          currentProgressBanner = null;
+        }
+        
+        // Re-enable UI
+        generateButton.disabled = false;
+        generateButton.innerHTML = '<box-icon name="play" color="#ffffff"></box-icon> Inpaint';
+      }
+    );
+    
+    // Update button text to show progress is being tracked
+    generateButton.textContent = 'Inpainting...';
     
   } catch (error) {
     console.error('Error during inpaint:', error);
     showErrorToast(`Inpaint failed: ${error.message}`);
-  } finally {
-    // Re-enable UI
+    
+    // Re-enable UI on error
     const generateButton = document.getElementById('generate-btn');
     generateButton.disabled = false;
     generateButton.innerHTML = '<box-icon name="play" color="#ffffff"></box-icon> Inpaint';
