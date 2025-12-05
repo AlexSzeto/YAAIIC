@@ -1,5 +1,6 @@
 import { Component } from 'preact';
 import { html } from 'htm/preact';
+import { createImageModal } from './modal.mjs';
 
 /**
  * ImageUpload Component
@@ -102,6 +103,17 @@ export class ImageUpload extends Component {
   }
 
   /**
+   * Handle click on image preview to open modal
+   */
+  handlePreviewClick = (e) => {
+    e.stopPropagation();
+    const { imagePreview } = this.state;
+    if (imagePreview) {
+      createImageModal(imagePreview, true);
+    }
+  }
+
+  /**
    * Handle gallery button click
    */
   handleGalleryClick = (e) => {
@@ -149,7 +161,7 @@ export class ImageUpload extends Component {
         
         <div 
           class="image-upload-area ${hasImage ? 'has-image' : ''}"
-          onClick=${hasImage ? this.handleGalleryClick : this.handleGalleryClick}
+          onClick=${hasImage ? this.handlePreviewClick : this.handleGalleryClick}
         >
           ${hasImage ? html`
             <!-- Image Preview -->
@@ -167,13 +179,6 @@ export class ImageUpload extends Component {
                 title="Clear image"
               >
                 <box-icon name='x' color='#ffffff' size='20px'></box-icon>
-              </button>
-              <button 
-                class="image-upload-btn image-upload-gallery-btn"
-                onClick=${this.handleUploadClick}
-                title="Upload from device"
-              >
-                <box-icon name='upload' color='#ffffff' size='20px'></box-icon>
               </button>
             </div>
           ` : html`
