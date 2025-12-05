@@ -148,7 +148,7 @@ export class ImageUpload extends Component {
         
         <div 
           class="image-upload-area ${hasImage ? 'has-image' : ''}"
-          onClick=${this.handleUploadClick}
+          onClick=${hasImage ? this.handleUploadClick : this.handleGalleryClick}
         >
           ${hasImage ? html`
             <!-- Image Preview -->
@@ -178,15 +178,15 @@ export class ImageUpload extends Component {
           ` : html`
             <!-- Empty State -->
             <div class="image-upload-empty">
-              <box-icon name='plus' color='#888888' size='48px'></box-icon>
-              <div class="image-upload-text">Upload Image</div>
+              <box-icon name='image' color='#888888' size='48px'></box-icon>
+              <div class="image-upload-text">Select Image</div>
               <button 
                 class="image-upload-btn image-upload-gallery-btn-empty"
-                onClick=${this.handleGalleryClick}
-                title="Select from gallery"
+                onClick=${this.handleUploadClick}
+                title="Upload from device"
               >
-                <box-icon name='image' color='#ffffff' size='16px'></box-icon>
-                Gallery
+                <box-icon name='upload' color='#ffffff' size='16px'></box-icon>
+                Upload
               </button>
             </div>
           `}

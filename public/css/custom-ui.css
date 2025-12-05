@@ -5,7 +5,7 @@
 
 .image-modal-title {
   position: absolute;
-  right: 24px;
+  left: 24px;
   bottom: 24px;
   background: var(--dark-background-secondary);
   color: #fff;
@@ -685,6 +685,40 @@
 .image-modal-close:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.image-modal-select {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  transform: none;
+  padding: 10px 16px;
+  background-color: var(--secondary-background);
+  color: var(--dark-text-primary);
+  border: 1px solid var(--dark-border-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  z-index: 10001;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.image-modal-select:hover {
+  background-color: var(--secondary-hover);
+  border-color: var(--dark-border-focus);
+  transform: translateY(-1px);
+}
+
+.image-modal-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.image-modal-select:active {
+  transform: translateY(0);
 }
 
 .image-modal-error {

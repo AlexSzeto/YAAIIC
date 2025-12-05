@@ -55,8 +55,25 @@ function renderImageUploadComponents(count) {
   
   // Create handler for gallery requests
   const handleGalleryRequest = (componentIndex) => {
-    console.log('Gallery request for component:', componentIndex);
-    // TODO: Implement gallery selection mode
+    if (!galleryDisplay) {
+      console.error('GalleryDisplay is not initialized');
+      return;
+    }
+
+    // Enable selection mode; when an item is selected, fetch the image and set it on the upload component
+    galleryDisplay.showModal(true, async (selectedItem) => {
+      try {
+        const response = await fetch(selectedItem.imageUrl);
+        const blob = await response.blob();
+        const componentRef = uploadComponentRefs[componentIndex];
+        if (componentRef && typeof componentRef.setImage === 'function') {
+          componentRef.setImage(blob, selectedItem.imageUrl);
+        }
+      } catch (err) {
+        console.error('Failed to load selected image from gallery:', err);
+        showErrorToast('Failed to load selected image');
+      }
+    });
   };
   
   // Create components
@@ -334,30 +351,59 @@ async function handleGenerate() {
     // Update seed for next generation unless locked
     updateSeedIfNotLocked();
 
-    const requestBody = {
-      prompt: descriptionText,
-      workflow: workflowSelect.value,
-      seed: parseInt(seedInput.value)
-    };
-    
-    // Add name if provided
-    if (nameInput.value.trim()) {
-      requestBody.name = nameInput.value.trim();
+    // Determine if we need to send images (img2img workflows)
+    const hasUploads = uploadComponentRefs.some((component) => component && typeof component.hasImage === 'function' && component.hasImage());
+
+    let response;
+    if (hasUploads) {
+      // Build multipart form data with uploaded images
+      const formData = new FormData();
+      formData.append('prompt', descriptionText);
+      formData.append('workflow', workflowSelect.value);
+      formData.append('seed', seedInput.value);
+      if (nameInput.value.trim()) {
+        formData.append('name', nameInput.value.trim());
+      }
+      uploadComponentRefs.forEach((component, index) => {
+        if (component && typeof component.hasImage === 'function' && component.hasImage()) {
+          const blob = component.getImageBlob();
+          if (blob) {
+            formData.append(`image_${index}`, blob, `image_${index}.png`);
+          }
+        }
+      });
+      response = await fetchWithRetry('/generate/txt2img', {
+        method: 'POST',
+        body: formData
+      }, {
+        maxRetries: 1,
+        retryDelay: 2000,
+        timeout: 10000, // 10 seconds for initial request (just gets taskId)
+        showUserFeedback: false
+      });
+    } else {
+      const requestBody = {
+        prompt: descriptionText,
+        workflow: workflowSelect.value,
+        seed: parseInt(seedInput.value)
+      };
+      if (nameInput.value.trim()) {
+        requestBody.name = nameInput.value.trim();
+      }
+      // Send generation request and get immediate taskId response
+      response = await fetchWithRetry('/generate/txt2img', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      }, {
+        maxRetries: 1,
+        retryDelay: 2000,
+        timeout: 10000, // 10 seconds for initial request (just gets taskId)
+        showUserFeedback: false
+      });
     }
-    
-    // Send generation request and get immediate taskId response
-    const response = await fetchWithRetry('/generate/txt2img', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    }, {
-      maxRetries: 1,
-      retryDelay: 2000,
-      timeout: 10000, // 10 seconds for initial request (just gets taskId)
-      showUserFeedback: false
-    });
 
     const result = await response.json();
     

@@ -1,5 +1,5 @@
 // Custom Image Modal Module
-export function createImageModal(url, autoScale = true, title = null) {
+export function createImageModal(url, autoScale = true, title = null, onSelect = null) {
   // Create modal overlay
   const overlay = document.createElement('div');
   overlay.className = 'image-modal-overlay';
@@ -102,6 +102,23 @@ export function createImageModal(url, autoScale = true, title = null) {
     modalWrapper.appendChild(titleDiv);
     modalWrapper.classList.add('image-modal-title-wrapper');
   }
+  
+  // If onSelect is provided, create a select button
+  if (onSelect) {
+    const selectButton = document.createElement('button');
+    selectButton.className = 'image-modal-select btn-with-icon gallery-load-btn';
+    selectButton.textContent = 'Select';
+    selectButton.setAttribute('aria-label', 'Select this image');
+    
+    // Handle select button click
+    selectButton.addEventListener('click', function() {
+      onSelect(url);
+      closeModal();
+    });
+    
+    modalWrapper.appendChild(selectButton);
+  }
+  
   modalWrapper.appendChild(modalContainer);
   modalWrapper.appendChild(closeButton);
   overlay.appendChild(modalWrapper);

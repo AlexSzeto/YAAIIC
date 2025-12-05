@@ -73,7 +73,7 @@ if (selectedWorkflow.inputImages > 0) {
 
 [x] (Server) Add `inputImages` to the list of parameters returned by the workflow list endpoint so the client is aware of the number of image uploads associated with the workflow, then modify the client to use the data point to modify the number of upload slots displayed.
 
-[] (Client) Modify the image preview modal function to accept a new parameter, onSelect, that, when present, modifies the modal to add a select button that calls `onSelect` when clicked.
+[x] (Client) Modify the image preview modal function to accept a new parameter, onSelect, that, when present, modifies the modal to add a select button that calls `onSelect` when clicked.
 - Update `createImageModal` in `public/js/custom-ui/modal.mjs`.
 ```javascript
 export function createImageModal(url, autoScale = true, title = null, onSelect = null) {
@@ -85,7 +85,7 @@ export function createImageModal(url, autoScale = true, title = null, onSelect =
 }
 ```
 
-[] (Client) Modify the gallery interface and create a mode for image selection:
+[x] (Client) Modify the gallery interface and create a mode for image selection:
 - remove the multi-select checkboxes and the load button.
 - Modify `public/js/custom-ui/gallery.mjs` to accept a `selectionMode` prop.
 ```javascript
@@ -99,7 +99,7 @@ render() {
 }
 ```
 
-[] (Client) Complete the gallery selection mode by using the select button of the image preview modal to select an image from the gallery. This updates the selected data to an array of one single selected image.
+[x] (Client) Complete the gallery selection mode by using the select button of the image preview modal to select an image from the gallery. This updates the selected data to an array of one single selected image.
 - Update `GalleryDisplay` to handle item clicks in selection mode.
 ```javascript
 // In GalleryDisplay
@@ -114,7 +114,7 @@ handleItemClick(item) {
 }
 ```
 
-[] (Client) Connect the image upload components to the image selection mode of the gallery.
+[x] (Client) Connect the image upload components to the image selection mode of the gallery.
 - Update `public/js/main.mjs` to pass a `onGalleryRequest` handler to `ImageUpload`.
 ```javascript
 const handleGalleryRequest = (uploadComponentIndex) => {
@@ -126,7 +126,7 @@ const handleGalleryRequest = (uploadComponentIndex) => {
 };
 ```
 
-[] (Client) Reuse or duplicate the image upload code from the inpaint UI to add uploaded images to the image generation requests.
+[x] (Client) Reuse or duplicate the image upload code from the inpaint UI to add uploaded images to the image generation requests.
 - Update `handleGenerate` in `public/js/main.mjs`.
 ```javascript
 // Convert images to blobs and append to FormData

@@ -3,6 +3,7 @@ import { html } from 'htm/preact'
 import { createPagination } from './pagination.mjs'
 import { fetchJson, FetchError } from '../util.mjs'
 import { showDialog } from './dialog.mjs'
+import { createImageModal } from './modal.mjs'
 
 // Gallery Setup Module
 export class GalleryDisplay extends Component {
@@ -27,7 +28,9 @@ export class GalleryDisplay extends Component {
       searchQuery: '',
       currentPageData: [], // Store current page's items for display
       selectedItems: [], // Array of selected item UIDs
-      shouldFocusSearch: false // Flag to control when search input should be focused
+      shouldFocusSearch: false, // Flag to control when search input should be focused
+      selectionMode: false, // Whether gallery is in selection mode
+      onSelect: null // Callback for selection mode
     };
     
     // Pagination component will be created when modal is shown
@@ -65,6 +68,22 @@ export class GalleryDisplay extends Component {
     const searchQuery = e.target.value;
     this.setState({ searchQuery });
     this.debounceSearch();
+  }
+
+  /**
+   * Handle item click in selection mode by opening modal with select button
+   */
+  handleItemClick = (item) => {
+    const { selectionMode, onSelect } = this.state;
+    if (!selectionMode || !item || !item.imageUrl) {
+      return;
+    }
+    createImageModal(item.imageUrl, true, item.name || null, () => {
+      if (onSelect) {
+        onSelect(item);
+      }
+      this.hideModal();
+    });
   }
 
   /**
@@ -253,15 +272,19 @@ export class GalleryDisplay extends Component {
   
   /**
    * Show the modal
+   * @param {boolean} selectionMode - Whether to show in selection mode
+   * @param {Function} onSelect - Callback when an item is selected (for selection mode)
    */
-  showModal() {
+  showModal(selectionMode = false, onSelect = null) {
     this.setState({ 
       isVisible: true, 
       selectedItems: [], // Clear selections when modal opens
-      shouldFocusSearch: true // Enable search focus for this render
+      shouldFocusSearch: true, // Enable search focus for this render
+      selectionMode,
+      onSelect
     });
     this.fetchGalleryData();
-    console.log('Gallery modal opened');
+    console.log('Gallery modal opened', selectionMode ? 'in selection mode' : '');
   }
   
   /**
@@ -272,7 +295,9 @@ export class GalleryDisplay extends Component {
       isVisible: false, 
       currentPageData: [], 
       selectedItems: [], // Clear selections when modal closes
-      shouldFocusSearch: false // Reset focus flag
+      shouldFocusSearch: false, // Reset focus flag
+      selectionMode: false, // Reset selection mode
+      onSelect: null // Clear onSelect callback
     });
     
     // Clean up pagination component
@@ -332,6 +357,7 @@ export class GalleryDisplay extends Component {
   renderGalleryItems() {
     const maxItems = 32; // Still maintain grid layout with 32 slots
     const itemsToShow = this.state.currentPageData; // Use pagination data instead of slicing
+    const { selectionMode } = this.state;
     
     // Create items using the previewFactory
     const items = [];
@@ -340,7 +366,11 @@ export class GalleryDisplay extends Component {
       if (index < maxItems) { // Ensure we don't exceed grid layout
         // Check if this item is selected
         const isSelected = this.state.selectedItems.includes(item.uid);
-        const preview = this.previewFactory(item, this.handleItemSelect, isSelected);
+        // Pass null for onSelect in selection mode to hide checkboxes
+        const onSelectCallback = selectionMode ? null : this.handleItemSelect;
+        const disableCheckbox = selectionMode;
+        const onImageClick = selectionMode ? this.handleItemClick : null;
+        const preview = this.previewFactory(item, onSelectCallback, isSelected, disableCheckbox, onImageClick);
         if (preview) {
           // Create a wrapper div to hold the DOM element content
           items.push(
@@ -376,7 +406,7 @@ export class GalleryDisplay extends Component {
       return null;
     }
 
-    const { selectedItems } = this.state;
+    const { selectedItems, selectionMode } = this.state;
     const hasSelectedItems = selectedItems.length > 0;
     const selectedText = selectedItems.length === 1 ? 'item' : 'items';
 
@@ -390,18 +420,20 @@ export class GalleryDisplay extends Component {
             ${this.renderGalleryItems()}
           </div>
           <div class="gallery-pagination-wrapper">
-            <div class="gallery-bulk-delete">
-              <button 
-                class="gallery-bulk-delete-btn btn-with-icon"
-                onClick=${this.deleteSelectedItems}
-                disabled=${!hasSelectedItems}
-                title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
-                aria-disabled=${!hasSelectedItems}
-              >
-                <box-icon name="trash" color="#ffffff"></box-icon>
-                Delete
-              </button>
-            </div>
+            ${!selectionMode && html`
+              <div class="gallery-bulk-delete">
+                <button 
+                  class="gallery-bulk-delete-btn btn-with-icon"
+                  onClick=${this.deleteSelectedItems}
+                  disabled=${!hasSelectedItems}
+                  title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
+                  aria-disabled=${!hasSelectedItems}
+                >
+                  <box-icon name="trash" color="#ffffff"></box-icon>
+                  Delete
+                </button>
+              </div>
+            `}
             <div class="gallery-pagination-container" ref=${(ref) => this.setupPagination(ref)}></div>
           </div>
           <div class="gallery-controls">
@@ -426,13 +458,15 @@ export class GalleryDisplay extends Component {
               ></box-icon>
             </div>
             <div class="gallery-btn-group">
-              <button 
-                class="gallery-load-btn btn-with-icon"
-                onClick=${this.handleLoadClick}
-              >
-                <box-icon name="save" color="#ffffff"></box-icon>
-                Load
-              </button>
+              ${!selectionMode && html`
+                <button 
+                  class="gallery-load-btn btn-with-icon"
+                  onClick=${this.handleLoadClick}
+                >
+                  <box-icon name="save" color="#ffffff"></box-icon>
+                  Load
+                </button>
+              `}
               <button 
                 class="gallery-cancel-btn btn-with-icon"
                 onClick=${this.handleCancelClick}
@@ -499,10 +533,10 @@ export function createGallery(queryPath, previewFactory, onLoad) {
 
   // Return an object that matches the original API
   return {
-    showModal() {
+    showModal(selectionMode = false, onSelect = null) {
       init();
       if (galleryRef) {
-        galleryRef.showModal();
+        galleryRef.showModal(selectionMode, onSelect);
       }
     },
     hideModal() {
@@ -513,6 +547,12 @@ export function createGallery(queryPath, previewFactory, onLoad) {
     setOnLoad(callback) {
       if (galleryRef) {
         galleryRef.setOnLoad(callback);
+      }
+    },
+    setSelectionMode(selectionMode, onSelect) {
+      init();
+      if (galleryRef) {
+        galleryRef.setState({ selectionMode, onSelect });
       }
     }
   };
