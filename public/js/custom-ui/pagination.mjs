@@ -89,10 +89,15 @@ export class PaginationComponent extends Component {
   /**
    * Update the data list and recalculate pagination
    * @param {Array} newDataList - New array of data
+   * @param {Function} callback - Optional callback function to execute after state update is complete
    */
-  setDataList(newDataList) {
+  setDataList(newDataList, callback) {
     if (!Array.isArray(newDataList)) {
       throw new Error('newDataList must be an array');
+    }
+    
+    if (callback && typeof callback !== 'function') {
+      throw new Error('callback must be a function');
     }
     
     const totalPages = Math.max(1, Math.ceil(newDataList.length / this.state.itemsPerPage));
@@ -102,12 +107,17 @@ export class PaginationComponent extends Component {
       dataList: [...newDataList], 
       totalPages,
       currentPage
-    });
-    
-    console.log('PaginationComponent data updated:', {
-      dataLength: newDataList.length,
-      totalPages,
-      currentPage
+    }, () => {
+      console.log('PaginationComponent data updated:', {
+        dataLength: newDataList.length,
+        totalPages,
+        currentPage
+      });
+      
+      // Execute callback after state update is complete
+      if (callback) {
+        callback();
+      }
     });
   }
   
@@ -319,9 +329,9 @@ export function createPagination(container, dataList = [], itemsPerPage = 1, upd
   
   // Return an object that provides access to the component methods
   return {
-    setDataList(newDataList) {
+    setDataList(newDataList, callback) {
       if (paginationRef) {
-        paginationRef.setDataList(newDataList);
+        paginationRef.setDataList(newDataList, callback);
       }
     },
     setItemsPerPage(newItemsPerPage) {

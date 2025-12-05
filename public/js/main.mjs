@@ -7,7 +7,7 @@ import { CarouselDisplay } from './carousel-setup.mjs';
 import { createGallery } from './custom-ui/gallery.mjs';
 import { createImageModal } from './custom-ui/modal.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
-import { fetchJson, fetchWithRetry, FetchError } from './util.mjs';
+import { fetchJson, fetchWithRetry, FetchError, getQueryParam } from './util.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 
@@ -193,6 +193,36 @@ function handleUseField(fieldName, value) {
         showErrorToast(`Unknown field: ${fieldName}`);
       }
       return;
+  }
+}
+
+// Function to load image data by UID from server
+async function loadImageDataByUID(uid) {
+  try {
+    console.log('Loading image data for UID:', uid);
+    
+    const imageData = await fetchJson(`/image-data/${uid}`, {}, {
+      maxRetries: 2,
+      retryDelay: 1000,
+      showUserFeedback: true,
+      showSuccessFeedback: false
+    });
+    
+    console.log('Image data loaded:', imageData);
+    return imageData;
+    
+  } catch (error) {
+    console.error('Error loading image data for UID:', uid, error);
+    
+    let errorMessage = 'Failed to load image data';
+    if (error.status === 404) {
+      errorMessage = `Image with UID ${uid} not found`;
+    } else if (error.status === 400) {
+      errorMessage = 'Invalid UID provided';
+    }
+    
+    showErrorToast(errorMessage);
+    throw new Error(errorMessage);
   }
 }
 
@@ -412,6 +442,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     const generateButton = document.getElementById('generate-btn');
     if (generateButton) {
       generateButton.addEventListener('click', handleGenerate);
+    }
+    
+    // Check for UID query parameter and load specific image
+    const uid = getQueryParam('uid');
+    if (uid) {
+      console.log('UID found in query parameters:', uid);
+      
+      // Validate UID is a number
+      const numericUID = parseInt(uid);
+      if (isNaN(numericUID)) {
+        console.error('Invalid UID format:', uid);
+        showErrorToast('Invalid image UID format');
+      } else {
+        try {
+          // Load the specific image data
+          const imageData = await loadImageDataByUID(numericUID);
+          
+          // Populate carousel with single item
+          if (carouselDisplay) {
+            carouselDisplay.setData([imageData]);
+          }
+          
+          // Display the image in the generated image display
+          if (generatedImageDisplay) {
+            generatedImageDisplay.setData(imageData);
+          }
+          
+          console.log('Successfully loaded image for UID:', uid);
+          showSuccessToast(`Loaded image: ${imageData.name || 'Unnamed'}`);
+          
+        } catch (error) {
+          console.error('Failed to load image for UID:', uid, error);
+          // Error message already shown by loadImageDataByUID
+        }
+      }
     }
     
     console.log('Main: Application initialized successfully');

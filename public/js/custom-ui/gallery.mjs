@@ -67,8 +67,35 @@ export class GalleryDisplay extends Component {
     this.debounceSearch();
   }
 
+  /**
+   * Get the full data objects for selected UIDs from the current gallery data
+   * @returns {Array} Array of selected item data objects
+   */
+  getSelectedItemsData = () => {
+    const { selectedItems, galleryData } = this.state;
+    
+    if (selectedItems.length === 0) {
+      return galleryData; // Return all items if none selected (maintains previous behavior)
+    }
+    
+    // Filter gallery data to only include selected items
+    const selectedItemsData = galleryData.filter(item => 
+      selectedItems.includes(item.uid)
+    );
+    
+    console.log('Selected items data:', {
+      selectedUIDs: selectedItems,
+      foundItems: selectedItemsData.length,
+      totalGalleryItems: galleryData.length
+    });
+    
+    return selectedItemsData;
+  }
+
   handleLoadClick = () => {
     if (this.onLoad && typeof this.onLoad === 'function') {
+      const dataToLoad = this.getSelectedItemsData();
+      this.onLoad(dataToLoad);
       const { selectedItems, galleryData } = this.state;
       
       // If items are selected, pass only those selected item objects

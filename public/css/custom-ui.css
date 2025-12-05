@@ -334,7 +334,6 @@
 .gallery-item-wrapper img,
 .gallery-item-wrapper canvas {
   width: 100% !important;
-  height: 100% !important;
   object-fit: cover;
   border-radius: 3px;
 }

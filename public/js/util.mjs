@@ -257,3 +257,13 @@ function fallbackCopyToClipboard(text, successMessage = null) {
     document.body.removeChild(textArea);
   }
 }
+
+/**
+ * Parse URL query parameters
+ * @param {string} param - The parameter name to retrieve
+ * @returns {string|null} - The parameter value or null if not found
+ */
+export function getQueryParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
