@@ -394,6 +394,7 @@ app.get('/generate/workflows', (req, res) => {
       name: workflow.name,
       type: workflow.type,
       autocomplete: workflow.autocomplete,
+      inputImages: workflow.inputImages || 0,
     }));
     res.json(workflows);
   } catch (error) {

@@ -3,7 +3,7 @@
 ## Goals
 Prepare the main interface for image to image generation as well as image to video generation by adding image upload related features to main UI.
 
-[] (Server) Modify the image upload parameter to of the workflow data to include an image index so multiple images can be uploaded:
+[x] (Server) Modify the image upload parameter to of the workflow data to include an image index so multiple images can be uploaded:
 - Add an `inputImages` number parameter to the workflow data to specify the number of images to upload.
 - Update `server/resource/comfyui-workflows.json` to include `inputImages` for workflows that require it.
 ```json
@@ -15,7 +15,7 @@ Prepare the main interface for image to image generation as well as image to vid
 }
 ```
 
-[] (Client) In the main UI, between the description text input and the generate button, add a section for uploading images that only appears when the selected workflow expects image inputs.
+[x] (Client) In the main UI, between the description text input and the generate button, add a section for uploading images that only appears when the selected workflow expects image inputs.
 - Add a container element in `public/index.html` for the image upload section.
 ```html
 <!-- In public/index.html -->
@@ -26,7 +26,7 @@ Prepare the main interface for image to image generation as well as image to vid
 ```
 - Update `public/js/main.mjs` to show/hide this container based on `selectedWorkflow.inputImages`.
 
-[] (Client) Create a reusable image upload component.Use a blank square with a plus icon to represent the image upload area. When an image is selected, Replace the blank square with the selected image.
+[x] (Client) Create a reusable image upload component.Use a blank square with a plus icon to represent the image upload area. When an image is selected, Replace the blank square with the selected image.
 - Create `public/js/custom-ui/image-upload.mjs` defining the `ImageUpload` component.
 ```javascript
 import { Component } from 'preact';
@@ -61,7 +61,7 @@ export class ImageUpload extends Component {
 }
 ```
 
-[] (Client) Connect the image upload component to the main UI by displaying image upload components for each image input expected by the selected workflow. Whenever the workflow changes, wipe the image upload components and display new ones if needed.
+[x] (Client) Connect the image upload component to the main UI by displaying image upload components for each image input expected by the selected workflow. Whenever the workflow changes, wipe the image upload components and display new ones if needed.
 - Update `public/js/main.mjs` to instantiate `ImageUpload` components.
 ```javascript
 // In handleWorkflowChange
@@ -70,6 +70,8 @@ if (selectedWorkflow.inputImages > 0) {
   // Store references to retrieve data later
 }
 ```
+
+[x] (Server) Add `inputImages` to the list of parameters returned by the workflow list endpoint so the client is aware of the number of image uploads associated with the workflow, then modify the client to use the data point to modify the number of upload slots displayed.
 
 [] (Client) Modify the image preview modal function to accept a new parameter, onSelect, that, when present, modifies the modal to add a select button that calls `onSelect` when clicked.
 - Update `createImageModal` in `public/js/custom-ui/modal.mjs`.

@@ -1,4 +1,6 @@
 // Main application entry point
+import { render } from 'preact';
+import { html } from 'htm/preact';
 import { loadTags } from './tags.mjs';
 import { getCurrentDescription } from './autocomplete-setup.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
@@ -10,6 +12,7 @@ import { createGalleryPreview } from './gallery-preview.mjs';
 import { fetchJson, fetchWithRetry, FetchError, getQueryParam } from './util.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
+import { ImageUpload } from './custom-ui/image-upload.mjs';
 
 let workflows = [];
 let autoCompleteInstance = null;
@@ -17,6 +20,7 @@ let generatedImageDisplay = null;
 let carouselDisplay = null;
 let galleryDisplay = null;
 let currentProgressBanner = null;
+let uploadComponentRefs = []; // Store references to ImageUpload component instances
 
 // Helper function to generate random seed
 function generateRandomSeed() {
@@ -33,12 +37,67 @@ function updateSeedIfNotLocked() {
   }
 }
 
+// Function to render image upload components based on workflow
+function renderImageUploadComponents(count) {
+  const container = document.getElementById('image-upload-slots');
+  if (!container) return;
+  
+  // Clear component refs
+  uploadComponentRefs = [];
+  
+  // Clear container
+  container.innerHTML = '';
+  
+  if (count <= 0) {
+    render(null, container);
+    return;
+  }
+  
+  // Create handler for gallery requests
+  const handleGalleryRequest = (componentIndex) => {
+    console.log('Gallery request for component:', componentIndex);
+    // TODO: Implement gallery selection mode
+  };
+  
+  // Create components
+  const components = [];
+  for (let i = 0; i < count; i++) {
+    components.push(html`
+      <${ImageUpload}
+        id=${i}
+        ref=${(ref) => {
+          if (ref) {
+            uploadComponentRefs[i] = ref;
+          }
+        }}
+        onImageChange=${(file) => {
+          console.log(`Image ${i} changed:`, file);
+        }}
+        onGalleryRequest=${() => handleGalleryRequest(i)}
+      />
+    `);
+  }
+  
+  // Render all components
+  render(html`${components}`, container);
+  
+  console.log(`Rendered ${count} image upload components`);
+}
+
 // Function to handle workflow selection change
 function handleWorkflowChange() {
   const workflowSelect = document.getElementById('workflow');
   const selectedWorkflowName = workflowSelect.value;
   
-  if (!selectedWorkflowName) return;
+  if (!selectedWorkflowName) {
+    // No workflow selected - hide and clear upload components
+    const imageUploadContainer = document.getElementById('image-upload-container');
+    if (imageUploadContainer) {
+      imageUploadContainer.style.display = 'none';
+    }
+    renderImageUploadComponents(0);
+    return;
+  }
   
   const selectedWorkflow = workflows.find(w => w.name === selectedWorkflowName);
   if (!selectedWorkflow) return;
@@ -54,6 +113,20 @@ function handleWorkflowChange() {
     // Disable autocomplete using the official autocomplete="off" attribute
     descriptionTextarea.setAttribute('autocomplete', 'off');
     console.log('Autocomplete disabled for workflow:', selectedWorkflowName);
+  }
+  
+  // Show/hide image upload container and render components based on inputImages
+  const imageUploadContainer = document.getElementById('image-upload-container');
+  if (imageUploadContainer) {
+    if (selectedWorkflow.inputImages && selectedWorkflow.inputImages > 0) {
+      imageUploadContainer.style.display = '';
+      renderImageUploadComponents(selectedWorkflow.inputImages);
+      console.log('Image upload enabled for workflow:', selectedWorkflowName, 'with', selectedWorkflow.inputImages, 'images');
+    } else {
+      imageUploadContainer.style.display = 'none';
+      renderImageUploadComponents(0);
+      console.log('Image upload disabled for workflow:', selectedWorkflowName);
+    }
   }
 }
 

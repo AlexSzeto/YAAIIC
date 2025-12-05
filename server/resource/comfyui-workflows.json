@@ -3,6 +3,7 @@
     {
       "name": "Text to Image (Illustrious Characters)",
       "autocomplete": true,
+      "inputImages": 2,
       "base": "illustrious-text-to-image.json",
       "format": "png",
       "type": "txt2img",
@@ -82,6 +83,7 @@
       "upload": [
         {
           "from": "image",
+          "index": 0,
           "storePathAs": "imagePath"
         },
         {
@@ -112,6 +114,15 @@
           "to": ["36", "inputs", "image"]
         }
       ]
+    },
+    {
+      "name": "Image to Image Workflow",
+      "autocomplete": false,
+      "base": "img2img.json",
+      "format": "png",
+      "type": "img2img",
+      "inputImages": 1,
+      "replace": []
     }
   ]
 }
