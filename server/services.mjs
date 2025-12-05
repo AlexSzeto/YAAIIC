@@ -106,13 +106,6 @@ export function getOllamaAPIPath() {
   return config.ollamaAPIPath;
 }
 
-export function getComfyUIAPIPath() {
-  if (!config) {
-    throw new Error('Services module not initialized - config not available');
-  }
-  return config.comfyuiAPIPath;
-}
-
 // Get the full config object
 export function getConfig() {
   if (!config) {

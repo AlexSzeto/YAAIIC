@@ -96,6 +96,20 @@ export class GalleryDisplay extends Component {
     if (this.onLoad && typeof this.onLoad === 'function') {
       const dataToLoad = this.getSelectedItemsData();
       this.onLoad(dataToLoad);
+      const { selectedItems, galleryData } = this.state;
+      
+      // If items are selected, pass only those selected item objects
+      // Otherwise, pass all gallery data
+      if (selectedItems.length > 0) {
+        const selectedItemObjects = galleryData.filter(item => 
+          selectedItems.includes(item.uid)
+        );
+        this.onLoad(selectedItemObjects);
+        console.log('Loading selected items:', selectedItemObjects.length);
+      } else {
+        this.onLoad(galleryData);
+        console.log('Loading all gallery items:', galleryData.length);
+      }
     }
     this.hideModal();
   }
