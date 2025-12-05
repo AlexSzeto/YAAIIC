@@ -3,20 +3,52 @@ import path from 'path';
 import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
-import { getComfyUIAPIPath } from './services.mjs';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
 import { setObjectPathValue } from './util.mjs';
+import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
+import {
+  generateTaskId,
+  createTask,
+  getTask,
+  updateTask,
+  setTaskPromptId,
+  emitProgressUpdate,
+  emitTaskCompletion,
+  emitTaskError,
+  emitTaskErrorByTaskId,
+  handleSSEConnection
+} from './sse.mjs';
+
+// Store ComfyUI API path locally
+let comfyUIAPIPath = null;
 
 // Function to add image data entry (will be set by server.mjs)
 let addImageDataEntry = null;
+
+// Initialize generate module with ComfyUI API path
+export function initializeGenerateModule(apiPath) {
+  comfyUIAPIPath = apiPath;
+  console.log('Generate module initialized with ComfyUI API path:', apiPath);
+}
 
 export function setAddImageDataEntry(func) {
   addImageDataEntry = func;
 }
 
+// Re-export SSE functions for backwards compatibility
+export {
+  emitProgressUpdate,
+  emitTaskCompletion,
+  emitTaskError,
+  emitTaskErrorByTaskId,
+  handleSSEConnection
+};
+
 // Function to upload image to ComfyUI
 export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
-  const comfyuiAPIPath = getComfyUIAPIPath();
+  if (!comfyUIAPIPath) {
+    throw new Error('Generate module not initialized - ComfyUI API path not available');
+  }
   
   return new Promise((resolve, reject) => {
     try {
@@ -34,7 +66,7 @@ export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "i
       console.log(`Uploading image to ComfyUI: ${filename} (type: ${imageType})`);
       
       // Parse the URL to determine if it's HTTP or HTTPS
-      const url = new URL(`${comfyuiAPIPath}/upload/image`);
+      const url = new URL(`${comfyUIAPIPath}/upload/image`);
       const httpModule = url.protocol === 'https:' ? https : http;
       
       // Create the request
@@ -82,11 +114,13 @@ export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "i
 
 // Reusable function to check ComfyUI prompt status
 export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs = 1000) {
-  const comfyuiAPIPath = getComfyUIAPIPath();
+  if (!comfyUIAPIPath) {
+    throw new Error('Generate module not initialized - ComfyUI API path not available');
+  }
   
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const response = await fetch(`${comfyuiAPIPath}/history/${promptId}`);
+      const response = await fetch(`${comfyUIAPIPath}/history/${promptId}`);
       
       if (!response.ok) {
         throw new Error(`History request failed: ${response.status}`);
@@ -127,17 +161,59 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 
 // Main image generation handler
 export async function handleImageGeneration(req, res, workflowConfig) {
+  const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
+  const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
+  let { name } = req.body;
+  
+  // Validate required parameters
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
+  }
+
+  console.log('Received generation request with prompt:', prompt);
+  console.log('Using workflow:', workflowBasePath);
+  
+  // Generate unique task ID
+  const taskId = generateTaskId();
+  
+  // Create task entry
+  createTask(taskId, {
+    prompt,
+    workflow,
+    promptId: null,
+    requestData: { ...req.body },
+    workflowConfig
+  });
+  
+  console.log(`Created task ${taskId}`);
+  
+  // Return taskId immediately
+  res.json({
+    success: true,
+    taskId: taskId,
+    message: 'Generation task created'
+  });
+  
+  // Process generation in background
+  processGenerationTask(taskId, req.body, workflowConfig).catch(error => {
+    console.error(`Error in background task ${taskId}:`, error);
+    emitTaskErrorByTaskId(taskId, 'Generation failed', error.message);
+  });
+}
+
+// Background processing function
+async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
-    let { name } = req.body;
+    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    let { name } = requestData;
     
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
+    const task = getTask(taskId);
+    if (!task) {
+      console.error(`Task ${taskId} not found during processing`);
+      return;
     }
-
-    console.log('Received generation request with prompt:', prompt);
-    console.log('Using workflow:', workflowBasePath);
+    
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
     console.log('Received name:', name);
@@ -156,9 +232,17 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     if ((!name || name.trim() === '') && namePromptPrefix) {
       try {
         console.log('Generating name using LLM...');
+        
+        // Emit SSE progress update for name generation start
+        const promptId = task.promptId || taskId;
+        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Generating name...');
+        
         const namePrompt = namePromptPrefix + prompt;
         name = await sendTextPrompt(namePrompt);
         console.log('Generated name:', name);
+        
+        // Emit SSE progress update for name generation completion
+        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Name generated');
       } catch (error) {
         console.warn('Failed to generate name:', error.message);
         name = 'Generated Character'; // Fallback name
@@ -172,12 +256,15 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
     
+    // Store the workflow JSON in the task for node title lookups
+    updateTask(taskId, { workflowData });
+    
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
         const { from, to, prefix, postfix } = mod;
         console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
-        let value = req.body[from];
+        let value = requestData[from];
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
@@ -188,18 +275,15 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       });
     }
 
-    // Get ComfyUI API path from services
-    const comfyuiAPIPath = getComfyUIAPIPath();
-
     // Send request to ComfyUI
-    const comfyResponse = await fetch(`${comfyuiAPIPath}/prompt`, {
+    const comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         prompt: workflowData,
-        client_id: 'imagen-server'
+        client_id: CLIENT_ID
       })
     });
 
@@ -216,7 +300,10 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       throw new Error('No prompt_id received from ComfyUI');
     }
 
-    console.log(`Waiting for prompt ${promptId} to complete...`);
+    // Link promptId to taskId
+    setTaskPromptId(taskId, promptId);
+
+    console.log(`Task ${taskId} linked to prompt ${promptId}, waiting for completion...`);
     
     // Wait for the prompt to complete
     const statusResult = await checkPromptStatus(promptId);
@@ -237,8 +324,14 @@ export async function handleImageGeneration(req, res, workflowConfig) {
     try {
       // Only analyze if describePrompt is provided in workflow config
       if (describePrompt) {
+        // Emit SSE progress update for description generation start
+        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Analyzing image...');
+        
         description = await sendImagePrompt(savePath, describePrompt);
         console.log('Image analysis completed:', description);
+        
+        // Emit SSE progress update for description generation completion
+        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Image analysis complete');
       } else {
         console.log('No describePrompt provided in workflow config, skipping image analysis');
         description = 'Image analysis not configured for this workflow';
@@ -270,27 +363,26 @@ export async function handleImageGeneration(req, res, workflowConfig) {
       console.log('Image data entry saved to database with UID:', uid);
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Image generated and analyzed successfully',
-      data: {
-        imageUrl: imageUrl,
-        description: description,
-        prompt: prompt,
-        seed: seed,
-        name: name,
-        workflow: workflow,
-        inpaint: inpaint || false,
-        inpaintArea: inpaintArea || null,
-        uid: uid
-      }
+    // Emit completion event
+    emitTaskCompletion(promptId, {
+      imageUrl: imageUrl,
+      description: description,
+      prompt: prompt,
+      seed: seed,
+      name: name,
+      workflow: workflow,
+      inpaint: inpaint || false,
+      inpaintArea: inpaintArea || null,
+      uid: uid,
+      maxValue: task.progress?.max || 1
     });
 
+    console.log(`Task ${taskId} completed successfully`);
+
   } catch (error) {
-    console.error('Error in image generation:', error);
-    res.status(500).json({ 
-      error: 'Failed to process generation request',
-      details: error.message 
-    });
+    console.error(`Error in task ${taskId}:`, error);
+    
+    // Emit error using taskId directly
+    emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
   }
 }
