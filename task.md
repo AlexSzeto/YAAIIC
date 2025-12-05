@@ -139,3 +139,5 @@ for (const [index, component] of uploadComponents.entries()) {
 }
 // Use fetchWithRetry to POST FormData
 ```
+
+[x] (Server) Modify the text to image generation process to process uploaded images, if it doesn't do so already

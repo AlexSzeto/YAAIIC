@@ -211,7 +211,7 @@ app.get('/tags', (req, res) => {
 });
 
 // POST endpoint for ComfyUI image generation
-app.post('/generate/txt2img', (req, res) => {
+app.post('/generate/txt2img', upload.any(), async (req, res) => {
   try {
     const { workflow } = req.body;
     
@@ -241,6 +241,47 @@ app.post('/generate/txt2img', (req, res) => {
     const nextIndex = findNextIndex('image', storageFolder);
     const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
     req.body.savePath = path.join(storageFolder, filename);
+    
+    // Handle file uploads if workflow specifies them
+    if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
+      try {
+        console.log('Processing uploaded images for txt2img workflow...');
+        
+        // Create a map of uploaded files by field name
+        const uploadedFilesByName = {};
+        req.files.forEach(file => {
+          uploadedFilesByName[file.fieldname] = file;
+        });
+        
+        // Process each upload specification
+        for (const uploadSpec of workflowData.upload) {
+          const { from, storePathAs } = uploadSpec;
+          
+          if (uploadedFilesByName[from]) {
+            const imageFile = uploadedFilesByName[from];
+            console.log(`Processing uploaded image for field '${from}'...`);
+            
+            // Generate unique filename for ComfyUI upload
+            const timestamp = Date.now();
+            const uploadFilename = `txt2img_${from}_${timestamp}.png`;
+            
+            // Upload image to ComfyUI
+            const uploadResult = await uploadImageToComfyUI(imageFile.buffer, uploadFilename, "input", true);
+            console.log(`Image uploaded successfully: ${uploadFilename}`);
+            
+            // Store the filename in request body using the specified variable name
+            req.body[storePathAs] = uploadResult.filename;
+            console.log(`Stored uploaded image path as '${storePathAs}': ${uploadResult.filename}`);
+          }
+        }
+        
+        // Remove files from request body before calling handleImageGeneration
+        delete req.files;
+      } catch (uploadError) {
+        console.error('Failed to upload images to ComfyUI:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload images', details: uploadError.message });
+      }
+    }
     
     // Call handleImageGeneration with workflow data and modifications
     handleImageGeneration(req, res, workflowData);

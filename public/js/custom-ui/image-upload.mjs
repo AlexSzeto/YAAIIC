@@ -94,7 +94,8 @@ export class ImageUpload extends Component {
   /**
    * Handle click on the upload area
    */
-  handleUploadClick = () => {
+  handleUploadClick = (e) => {
+    e.stopPropagation();
     if (this.fileInputRef) {
       this.fileInputRef.click();
     }
@@ -148,7 +149,7 @@ export class ImageUpload extends Component {
         
         <div 
           class="image-upload-area ${hasImage ? 'has-image' : ''}"
-          onClick=${hasImage ? this.handleUploadClick : this.handleGalleryClick}
+          onClick=${hasImage ? this.handleGalleryClick : this.handleGalleryClick}
         >
           ${hasImage ? html`
             <!-- Image Preview -->
@@ -169,10 +170,10 @@ export class ImageUpload extends Component {
               </button>
               <button 
                 class="image-upload-btn image-upload-gallery-btn"
-                onClick=${this.handleGalleryClick}
-                title="Select from gallery"
+                onClick=${this.handleUploadClick}
+                title="Upload from device"
               >
-                <box-icon name='image' color='#ffffff' size='20px'></box-icon>
+                <box-icon name='upload' color='#ffffff' size='20px'></box-icon>
               </button>
             </div>
           ` : html`
