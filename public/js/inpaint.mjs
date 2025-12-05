@@ -6,17 +6,13 @@ import { InpaintComponent } from './inpaint-canvas.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
 import { PaginationComponent, createPagination } from './custom-ui/pagination.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
-
-let workflows = [];
-let currentImageData = null;
-let paginationInstance = null;
-let inpaintHistory = []; // Global array to store image data objects for all inpaint generations in the current session
-import { fetchJson, fetchWithRetry } from './util.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 
 let workflows = [];
 let currentImageData = null;
+let paginationInstance = null;
+let inpaintHistory = []; // Global array to store image data objects for all inpaint generations in the current session
 let currentProgressBanner = null;
 
 // Initialize inpaintArea as a preact signal
@@ -231,6 +227,8 @@ async function handleInpaint() {
       } else {
         inpaintArea.value = null;
       }
+    }
+    
     console.log('Inpaint generation started with taskId:', result.taskId);
     
     // Unmount previous progress banner if it exists
