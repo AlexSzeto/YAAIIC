@@ -232,9 +232,17 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     if ((!name || name.trim() === '') && namePromptPrefix) {
       try {
         console.log('Generating name using LLM...');
+        
+        // Emit SSE progress update for name generation start
+        const promptId = task.promptId || taskId;
+        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Generating name...');
+        
         const namePrompt = namePromptPrefix + prompt;
         name = await sendTextPrompt(namePrompt);
         console.log('Generated name:', name);
+        
+        // Emit SSE progress update for name generation completion
+        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Name generated');
       } catch (error) {
         console.warn('Failed to generate name:', error.message);
         name = 'Generated Character'; // Fallback name
@@ -316,8 +324,14 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     try {
       // Only analyze if describePrompt is provided in workflow config
       if (describePrompt) {
+        // Emit SSE progress update for description generation start
+        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Analyzing image...');
+        
         description = await sendImagePrompt(savePath, describePrompt);
         console.log('Image analysis completed:', description);
+        
+        // Emit SSE progress update for description generation completion
+        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Image analysis complete');
       } else {
         console.log('No describePrompt provided in workflow config, skipping image analysis');
         description = 'Image analysis not configured for this workflow';

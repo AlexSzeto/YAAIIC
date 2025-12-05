@@ -1,3 +1,37 @@
+/* Modal Title Styling */
+.image-modal-title-wrapper {
+  position: relative;
+}
+
+.image-modal-title {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  background: var(--dark-background-secondary);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 1rem;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.image-modal-scaled {
+  /* No extra styles, just a marker for JS */
+}
+.image-modal-original-size {
+  /* No extra styles, just a marker for JS */
+}
+.image-modal-overflow-visible {
+  overflow: visible !important;
+}
+.image-modal-overflow-auto {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  overflow: auto !important;
+}
 /* Import shared CSS variables */
 @import 'variables.css';
 

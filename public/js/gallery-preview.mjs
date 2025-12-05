@@ -25,7 +25,8 @@ export class GalleryPreview extends Component {
     
     const { item } = this.props;
     if (item.imageUrl && !this.state.imageError) {
-      createImageModal(item.imageUrl); // Use default autoScale=true
+      // Pass item.name as title to modal
+      createImageModal(item.imageUrl, true, item.name || null);
     }
   }
 

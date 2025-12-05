@@ -176,29 +176,31 @@ class ProgressBanner extends Component {
       return null;
     }
 
-    return html`
-      <div class="progress-banner ${this.getStatusClass()}">
-        <div class="progress-banner-content">
-          <div class="progress-banner-info">
-            <span class="progress-banner-message">${message}</span>
-            <span class="progress-banner-percentage">${Math.round(percentage)}%</span>
+      return html`
+        <div class="progress-banner ${this.getStatusClass()}">
+          <div class="progress-banner-content">
+            <div class="progress-banner-info">
+              <span class="progress-banner-message">${message}</span>
+              ${percentage > 0 ? html`<span class="progress-banner-percentage">${Math.round(percentage)}%</span>` : null}
+            </div>
+            ${percentage > 0 ? html`
+              <div class="progress-banner-bar-container">
+                <div 
+                  class="progress-banner-bar" 
+                  style="width: ${percentage}%"
+                ></div>
+              </div>
+            ` : null}
           </div>
-          <div class="progress-banner-bar-container">
-            <div 
-              class="progress-banner-bar" 
-              style="width: ${percentage}%"
-            ></div>
-          </div>
+          <button 
+            class="progress-banner-dismiss" 
+            onClick=${() => this.handleDismiss()}
+            aria-label="Dismiss"
+          >
+            <box-icon name='x' color='currentColor'></box-icon>
+          </button>
         </div>
-        <button 
-          class="progress-banner-dismiss" 
-          onClick=${() => this.handleDismiss()}
-          aria-label="Dismiss"
-        >
-          <box-icon name='x' color='currentColor'></box-icon>
-        </button>
-      </div>
-    `;
+      `;
   }
 }
 

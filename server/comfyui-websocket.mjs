@@ -37,37 +37,6 @@ const promptExecutionState = new Map();
 //   startTime: Date.now()
 // });
 
-// Map node IDs to human-readable step names
-function getNodeStepName(nodeId) {
-  // This is a basic implementation - could be enhanced with node type info
-  if (!nodeId) return 'Processing...';
-  
-  // Common ComfyUI node patterns
-  if (nodeId.includes('Sampler') || nodeId.includes('KSampler')) {
-    return 'Sampling image...';
-  }
-  if (nodeId.includes('VAEDecode')) {
-    return 'Decoding image...';
-  }
-  if (nodeId.includes('VAEEncode')) {
-    return 'Encoding image...';
-  }
-  if (nodeId.includes('Save')) {
-    return 'Saving image...';
-  }
-  if (nodeId.includes('CLIP') || nodeId.includes('Encode')) {
-    return 'Encoding prompt...';
-  }
-  if (nodeId.includes('Checkpoint') || nodeId.includes('Loader')) {
-    return 'Loading model...';
-  }
-  if (nodeId.includes('Upscale')) {
-    return 'Upscaling image...';
-  }
-  
-  return `Processing ${nodeId}...`;
-}
-
 // Initialize WebSocket connection to ComfyUI
 function connectToComfyUI() {
   if (!comfyUIAPIPath) {
@@ -210,8 +179,7 @@ function handleExecuting(data) {
     
     // Emit progress update
     if (emitProgressUpdate) {
-      const stepName = getNodeStepName(node);
-      emitProgressUpdate(prompt_id, state.progress, stepName, node);
+      emitProgressUpdate(prompt_id, state.progress, null, node);
     }
   }
 }
@@ -237,8 +205,7 @@ function handleProgress(data) {
   
   // Emit progress update via SSE
   if (emitProgressUpdate) {
-    const stepName = getNodeStepName(node);
-    emitProgressUpdate(prompt_id, state.progress, stepName, node);
+    emitProgressUpdate(prompt_id, state.progress, null, node);
   }
 }
 

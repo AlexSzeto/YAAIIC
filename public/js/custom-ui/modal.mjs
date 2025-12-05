@@ -1,5 +1,5 @@
 // Custom Image Modal Module
-export function createImageModal(url, autoScale = true) {
+export function createImageModal(url, autoScale = true, title = null) {
   // Create modal overlay
   const overlay = document.createElement('div');
   overlay.className = 'image-modal-overlay';
@@ -33,32 +33,25 @@ export function createImageModal(url, autoScale = true) {
       const padding = 40; // 20px padding on each side
       const maxWidth = windowWidth - padding;
       const maxHeight = windowHeight - padding;
-      
       const imageAspectRatio = image.naturalWidth / image.naturalHeight;
       const windowAspectRatio = maxWidth / maxHeight;
-      
       let scaledWidth, scaledHeight;
-      
       if (imageAspectRatio > windowAspectRatio) {
-        // Image is wider relative to window
         scaledWidth = Math.min(maxWidth, image.naturalWidth);
         scaledHeight = scaledWidth / imageAspectRatio;
       } else {
-        // Image is taller relative to window
         scaledHeight = Math.min(maxHeight, image.naturalHeight);
         scaledWidth = scaledHeight * imageAspectRatio;
       }
-      
+      image.classList.add('image-modal-scaled');
       image.style.width = scaledWidth + 'px';
       image.style.height = scaledHeight + 'px';
-      modalContainer.style.overflow = 'visible';
+      modalContainer.classList.add('image-modal-overflow-visible');
     } else {
-      // Original size mode - set max dimensions and enable scrolling
+      image.classList.add('image-modal-original-size');
       image.style.width = image.naturalWidth + 'px';
       image.style.height = image.naturalHeight + 'px';
-      modalContainer.style.maxWidth = '90vw';
-      modalContainer.style.maxHeight = '90vh';
-      modalContainer.style.overflow = 'auto';
+      modalContainer.classList.add('image-modal-overflow-auto');
     }
   });
 
@@ -101,6 +94,14 @@ export function createImageModal(url, autoScale = true) {
 
   // Assemble modal
   modalContainer.appendChild(image);
+  // If title is provided, create and style the title element
+  if (title) {
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'image-modal-title';
+    titleDiv.textContent = title;
+    modalWrapper.appendChild(titleDiv);
+    modalWrapper.classList.add('image-modal-title-wrapper');
+  }
   modalWrapper.appendChild(modalContainer);
   modalWrapper.appendChild(closeButton);
   overlay.appendChild(modalWrapper);

@@ -148,16 +148,51 @@ function scheduleTaskCleanup(taskId) {
   }, 5 * 60 * 1000); // 5 minutes
 }
 
+// Map node IDs to human-readable step names based on node type patterns
+function getNodeStepName(nodeId) {
+  // This is a basic implementation - could be enhanced with node type info
+  if (!nodeId) return 'Processing...';
+  
+  // Common ComfyUI node patterns
+  if (nodeId.includes('Sampler') || nodeId.includes('KSampler')) {
+    return 'Sampling image...';
+  }
+  if (nodeId.includes('VAE Decode')) {
+    return 'Decoding image...';
+  }
+  if (nodeId.includes('VAE Encode')) {
+    return 'Encoding image...';
+  }
+  if (nodeId.includes('Save')) {
+    return 'Saving image...';
+  }
+  if (nodeId.includes('CLIP') || nodeId.includes('Encode')) {
+    return 'Encoding prompt...';
+  }
+  if (nodeId.includes('Checkpoint') || nodeId.includes('Loader')) {
+    return 'Loading model...';
+  }
+  if (nodeId.includes('Upscale')) {
+    return 'Upscaling image...';
+  }
+  
+  return `Processing ${nodeId}...`;
+}
+
 // Helper function to extract step title from workflow JSON
 function getStepTitleFromWorkflow(workflowData, nodeId) {
-  if (!workflowData || !nodeId) return null;
+  if (!nodeId) return null;
   
-  // Look up the node in the workflow JSON
-  const node = workflowData[nodeId];
-  if (!node) return null;
+  // If we have workflow data, try to get the _meta.title field
+  if (workflowData) {
+    const node = workflowData[nodeId];
+    if (node?._meta?.title) {
+      nodeId = node._meta.title;
+    }
+  }
   
-  // Extract the _meta.title field
-  return node._meta?.title || null;
+  // Fall back to user-friendly titles based on node ID patterns
+  return getNodeStepName(nodeId);
 }
 
 // Export functions for use in WebSocket handlers
