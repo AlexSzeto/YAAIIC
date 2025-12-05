@@ -1,35 +1,139 @@
-# Inpaint History for Inpaint UI
-[x] Insert the `PaginationComponent` at the bottom of the inpaint page.
-   1. Import the `PaginationComponent` and `createPagination` from `custom-ui/pagination.mjs` in `inpaint.mjs`
-   2. Add a pagination container div to `inpaint.html` after the inpaint container, with appropriate styling
-   3. Initialize the pagination component in `initializeInpaintPage` with empty data and 1 item per page
-   4. Create an `updateInpaintDisplay` callback function to handle pagination data updates and load the selected image data
-   5. Set the pagination component's `updateDisplay` callback to the `updateInpaintDisplay` function
+# Image Inputs
 
-[x] Create a history array of inpaint generations and use the pagination component to navigate between inpaint generations.
-   1. Create a global `inpaintHistory` array to store image data objects for all inpaint generations in the current session
-   2. Modify `loadImageDataByUID` to add the loaded image data to the history array if not already present
-   3. Update `handleInpaint` to add new inpaint results to the history array when a successful inpaint response is received
-   4. Create a `updateInpaintHistoryPagination` function to refresh the pagination component with the current history
-   5. Modify the `updateInpaintDisplay` callback to load and display the selected image data from history when pagination changes
-   6. Add proper error handling for history navigation when image data cannot be loaded
+## Goals
+Prepare the main interface for image to image generation as well as image to video generation by adding image upload related features to main UI.
 
-[x] Initialize the inpaint history with the UID initially loaded via the query parameter.
-   1. Move pagination component initialization to occur before image data loading
-   2. Ensure the initial image loaded from the query parameter UID is added to the history array
-   3. Verify that pagination state is properly updated with the initial image data
-   4. Add logging to confirm successful history initialization with the initial UID
+[] (Server) Modify the image upload parameter to of the workflow data to include an image index so multiple images can be uploaded:
+- Add an `inputImages` number parameter to the workflow data to specify the number of images to upload.
+- Update `server/resource/comfyui-workflows.json` to include `inputImages` for workflows that require it.
+```json
+// Example workflow update
+{
+  "name": "Image to Image Workflow",
+  "type": "img2img",
+  "inputImages": 1 // Number of expected input images
+}
+```
 
-[x] Automatically navigate to the latest item after inpaint completion and remove query parameter updates.
-   1. Remove URL query parameter update from `handleInpaint` function after successful inpaint operation
-   2. Remove URL query parameter update from `updateInpaintDisplay` function during history navigation
-   3. Ensure `updateInpaintHistoryPagination` automatically navigates to the most recent item (already implemented)
-   4. Update success message to indicate automatic navigation to latest generation
-   5. Maintain inpaint area preservation and seed update functionality without URL updates
+[] (Client) In the main UI, between the description text input and the generate button, add a section for uploading images that only appears when the selected workflow expects image inputs.
+- Add a container element in `public/index.html` for the image upload section.
+```html
+<!-- In public/index.html -->
+<div id="image-upload-container" class="form-group full-width" style="display: none;">
+  <label>Input Images:</label>
+  <div id="image-upload-slots" class="image-upload-slots"></div>
+</div>
+```
+- Update `public/js/main.mjs` to show/hide this container based on `selectedWorkflow.inputImages`.
 
-[x] Fix pagination display index not updating after inpaint generation completion
-   1. Investigate the asynchronous nature of `setState()` in the pagination component's `setDataList()` method
-   2. Modify `updateInpaintHistoryPagination()` to use a callback-based approach when calling `goToPage()` after `setDataList()`
-   3. Add a callback parameter to the pagination component's `setDataList()` method that executes after state update is complete
-   4. Update the `updateInpaintHistoryPagination()` function to use the callback to ensure `goToPage()` executes only after the data list state has been fully updated
-   
+[] (Client) Create a reusable image upload component.Use a blank square with a plus icon to represent the image upload area. When an image is selected, Replace the blank square with the selected image.
+- Create `public/js/custom-ui/image-upload.mjs` defining the `ImageUpload` component.
+```javascript
+import { Component } from 'preact';
+import { html } from 'htm/preact';
+
+export class ImageUpload extends Component {
+  constructor(props) {
+    // props: 
+    // - id: string/number (unique identifier)
+    // - onImageChange: (file) => void
+    // - onGalleryRequest: () => void
+    super(props);
+    this.state = {
+      imagePreview: null,
+      hasImage: false
+    };
+  }
+
+  // Public method to set image externally (e.g. from gallery)
+  setImage(blob, url) { 
+    // Update state with new image
+  }
+
+  // Handle file input change
+  handleFileSelect(e) { 
+    // Read file and update state
+  }
+
+  render() {
+    // Return html for upload square or image preview
+  }
+}
+```
+
+[] (Client) Connect the image upload component to the main UI by displaying image upload components for each image input expected by the selected workflow. Whenever the workflow changes, wipe the image upload components and display new ones if needed.
+- Update `public/js/main.mjs` to instantiate `ImageUpload` components.
+```javascript
+// In handleWorkflowChange
+if (selectedWorkflow.inputImages > 0) {
+  // Render N ImageUpload components
+  // Store references to retrieve data later
+}
+```
+
+[] (Client) Modify the image preview modal function to accept a new parameter, onSelect, that, when present, modifies the modal to add a select button that calls `onSelect` when clicked.
+- Update `createImageModal` in `public/js/custom-ui/modal.mjs`.
+```javascript
+export function createImageModal(url, autoScale = true, title = null, onSelect = null) {
+  // ... existing code
+  if (onSelect) {
+    // Create 'Select' button
+    // On click: onSelect(url); closeModal();
+  }
+}
+```
+
+[] (Client) Modify the gallery interface and create a mode for image selection:
+- remove the multi-select checkboxes and the load button.
+- Modify `public/js/custom-ui/gallery.mjs` to accept a `selectionMode` prop.
+```javascript
+// GalleryDisplay component
+render() {
+  const isSelectionMode = this.props.selectionMode;
+  // If selection mode:
+  // - Hide bulk delete button
+  // - Hide Load button
+  // - Hide checkboxes in items (via previewFactory argument or context)
+}
+```
+
+[] (Client) Complete the gallery selection mode by using the select button of the image preview modal to select an image from the gallery. This updates the selected data to an array of one single selected image.
+- Update `GalleryDisplay` to handle item clicks in selection mode.
+```javascript
+// In GalleryDisplay
+handleItemClick(item) {
+  if (this.props.selectionMode) {
+    // Open modal with onSelect callback
+    createImageModal(item.imageUrl, true, item.name, () => {
+      this.props.onSelect(item);
+      this.hideModal();
+    });
+  }
+}
+```
+
+[] (Client) Connect the image upload components to the image selection mode of the gallery.
+- Update `public/js/main.mjs` to pass a `onGalleryRequest` handler to `ImageUpload`.
+```javascript
+const handleGalleryRequest = (uploadComponentIndex) => {
+  galleryDisplay.setSelectionMode(true, (selectedImage) => {
+    // Get the specific upload component and set its image
+    uploadComponents[uploadComponentIndex].current.setImage(selectedImage);
+  });
+  galleryDisplay.showModal();
+};
+```
+
+[] (Client) Reuse or duplicate the image upload code from the inpaint UI to add uploaded images to the image generation requests.
+- Update `handleGenerate` in `public/js/main.mjs`.
+```javascript
+// Convert images to blobs and append to FormData
+const formData = new FormData();
+// ... other fields
+for (const [index, component] of uploadComponents.entries()) {
+  if (component.hasImage()) {
+    formData.append(`image_${index}`, component.getImageBlob());
+  }
+}
+// Use fetchWithRetry to POST FormData
+```
