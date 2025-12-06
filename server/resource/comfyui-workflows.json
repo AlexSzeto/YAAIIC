@@ -223,8 +223,17 @@
         {
           "from": "lastFramePath",
           "to": ["71", "inputs", "image"]
+        },
+        {
+          "from": "frames",
+          "to": ["73", "inputs", "length"]
+        },
+        {
+          "from": "framerate",
+          "to": ["63", "inputs", "frame_rate"]
         }
-      ]
+      ],
+      "extractOutputPathFromTextFile": "video-filename.txt"
     }
   ]
 }
