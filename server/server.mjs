@@ -211,7 +211,7 @@ app.get('/tags', (req, res) => {
 });
 
 // POST endpoint for ComfyUI image generation
-app.post('/generate/txt2img', upload.any(), async (req, res) => {
+app.post('/generate/image', upload.any(), async (req, res) => {
   try {
     const { workflow } = req.body;
     
@@ -245,7 +245,7 @@ app.post('/generate/txt2img', upload.any(), async (req, res) => {
     // Handle file uploads if workflow specifies them
     if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
       try {
-        console.log('Processing uploaded images for txt2img workflow...');
+        console.log('Processing uploaded images for image workflow...');
         
         // Create a map of uploaded files by field name
         const uploadedFilesByName = {};
@@ -263,7 +263,7 @@ app.post('/generate/txt2img', upload.any(), async (req, res) => {
             
             // Generate unique filename for ComfyUI upload
             const timestamp = Date.now();
-            const uploadFilename = `txt2img_${from}_${timestamp}.png`;
+            const uploadFilename = `image_${from}_${timestamp}.png`;
             
             // Upload image to ComfyUI
             const uploadResult = await uploadImageToComfyUI(imageFile.buffer, uploadFilename, "input", true);
@@ -286,7 +286,7 @@ app.post('/generate/txt2img', upload.any(), async (req, res) => {
     // Call handleImageGeneration with workflow data and modifications
     handleImageGeneration(req, res, workflowData);
   } catch (error) {
-    console.error('Error in txt2img endpoint:', error);
+    console.error('Error in image endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
   }
 });

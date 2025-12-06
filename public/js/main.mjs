@@ -45,11 +45,10 @@ function renderImageUploadComponents(count) {
   // Clear component refs
   uploadComponentRefs = [];
   
-  // Clear container
-  container.innerHTML = '';
+  // First, unmount any existing Preact components by rendering null
+  render(null, container);
   
   if (count <= 0) {
-    render(null, container);
     return;
   }
   
@@ -145,6 +144,19 @@ function handleWorkflowChange() {
       console.log('Image upload disabled for workflow:', selectedWorkflowName);
     }
   }
+  
+  // Show/hide video-specific fields based on workflow type
+  const lengthGroup = document.getElementById('length-group');
+  const framerateGroup = document.getElementById('framerate-group');
+  if (selectedWorkflow.type === 'video') {
+    if (lengthGroup) lengthGroup.style.display = '';
+    if (framerateGroup) framerateGroup.style.display = '';
+    console.log('Video fields enabled for workflow:', selectedWorkflowName);
+  } else {
+    if (lengthGroup) lengthGroup.style.display = 'none';
+    if (framerateGroup) framerateGroup.style.display = 'none';
+    console.log('Video fields disabled for workflow:', selectedWorkflowName);
+  }
 }
 
 // Function to populate workflow dropdown
@@ -161,8 +173,8 @@ async function loadWorkflows() {
       successMessage: 'Workflows loaded successfully'
     });
     
-    // Filter workflows to only include txt2img type for index page
-    const txt2imgWorkflows = workflows.filter(workflow => workflow.type === 'txt2img');
+    // Filter workflows to only include image and video types for index page
+    const imageWorkflows = workflows.filter(workflow => workflow.type === 'image' || workflow.type === 'video');
     
     const workflowSelect = document.getElementById('workflow');
     
@@ -175,8 +187,8 @@ async function loadWorkflows() {
     defaultOption.textContent = 'Select a workflow...';
     workflowSelect.appendChild(defaultOption);
     
-    // Add workflow options (only txt2img workflows)
-    txt2imgWorkflows.forEach(workflow => {
+    // Add workflow options (only image workflows)
+    imageWorkflows.forEach(workflow => {
       const option = document.createElement('option');
       option.value = workflow.name;
       option.textContent = workflow.name;
@@ -187,7 +199,7 @@ async function loadWorkflows() {
     workflowSelect.addEventListener('change', handleWorkflowChange);
     
     console.log('Workflows loaded:', workflows);
-    console.log('Filtered txt2img workflows:', txt2imgWorkflows);
+    console.log('Filtered image and video workflows:', imageWorkflows);
   } catch (error) {
     console.error('Error loading workflows:', error);
     // Error feedback is already handled by fetchJson utility
@@ -351,6 +363,18 @@ async function handleGenerate() {
     // Update seed for next generation unless locked
     updateSeedIfNotLocked();
 
+    // Calculate video-specific parameters if this is a video workflow
+    const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+    let videoParams = null;
+    if (selectedWorkflow && selectedWorkflow.type === 'video') {
+      const lengthInput = document.getElementById('length');
+      const framerateInput = document.getElementById('framerate');
+      const length = parseFloat(lengthInput.value);
+      const framerate = parseInt(framerateInput.value);
+      const frames = Math.floor(length * framerate) % 2 === 0 ? Math.floor(length * framerate) + 1 : Math.floor(length * framerate); // Ensure odd number of frames
+      videoParams = { frames, framerate };
+    }
+
     // Determine if we need to send images (img2img workflows)
     const hasUploads = uploadComponentRefs.some((component) => component && typeof component.hasImage === 'function' && component.hasImage());
 
@@ -364,6 +388,10 @@ async function handleGenerate() {
       if (nameInput.value.trim()) {
         formData.append('name', nameInput.value.trim());
       }
+      if (videoParams) {
+        formData.append('frames', videoParams.frames);
+        formData.append('framerate', videoParams.framerate);
+      }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
           const blob = component.getImageBlob();
@@ -372,7 +400,7 @@ async function handleGenerate() {
           }
         }
       });
-      response = await fetchWithRetry('/generate/txt2img', {
+      response = await fetchWithRetry('/generate/image', {
         method: 'POST',
         body: formData
       }, {
@@ -390,8 +418,12 @@ async function handleGenerate() {
       if (nameInput.value.trim()) {
         requestBody.name = nameInput.value.trim();
       }
+      if (videoParams) {
+        requestBody.frames = videoParams.frames;
+        requestBody.framerate = videoParams.framerate;
+      }
       // Send generation request and get immediate taskId response
-      response = await fetchWithRetry('/generate/txt2img', {
+      response = await fetchWithRetry('/generate/image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

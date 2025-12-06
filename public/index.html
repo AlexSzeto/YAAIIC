@@ -41,6 +41,16 @@
         <input type="text" id="name" name="name" placeholder="Enter name" />
       </div>
 
+      <div class="form-group" id="length-group" style="display: none;">
+        <label for="length">Length (seconds):</label>
+        <input type="number" id="length" name="length" min="0.1" max="10" step="0.1" value="1.0" />
+      </div>
+
+      <div class="form-group" id="framerate-group" style="display: none;">
+        <label for="framerate">Frame Rate:</label>
+        <input type="number" id="framerate" name="framerate" min="1" max="60" step="1" value="20" />
+      </div>
+
       <div class="form-group">
         <label for="seed">Seed:</label>
         <input type="number" id="seed" name="seed" min="0" max="4294967295" />
