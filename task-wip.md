@@ -1,7 +1,4 @@
 # Bugs / Fixes
-- Disable inpainting for videos
-- Disable input image (upload image) during generation
-- filter videos (show image but grey out and make non-selectable) when gallery is in selection mode (add optional file type filter)
 
 # Features
 - Workflow progress step indicator (X/Y based on distance from final node)
