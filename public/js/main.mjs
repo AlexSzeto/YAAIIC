@@ -59,7 +59,7 @@ function renderImageUploadComponents(count) {
       return;
     }
 
-    // Enable selection mode; when an item is selected, fetch the image and set it on the upload component
+    // Enable selection mode with image filter; when an item is selected, fetch the image and set it on the upload component
     galleryDisplay.showModal(true, async (selectedItem) => {
       try {
         const response = await fetch(selectedItem.imageUrl);
@@ -67,12 +67,17 @@ function renderImageUploadComponents(count) {
         const componentRef = uploadComponentRefs[componentIndex];
         if (componentRef && typeof componentRef.setImage === 'function') {
           componentRef.setImage(blob, selectedItem.imageUrl);
+          
+          // Update select button state after setting image
+          if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+            generatedImageDisplay.updateSelectButtonState();
+          }
         }
       } catch (err) {
         console.error('Failed to load selected image from gallery:', err);
         showErrorToast('Failed to load selected image');
       }
-    });
+    }, 'image');
   };
   
   // Create components
@@ -98,6 +103,76 @@ function renderImageUploadComponents(count) {
   render(html`${components}`, container);
   
   console.log(`Rendered ${count} image upload components`);
+}
+
+/**
+ * Get the currently selected workflow object
+ * @returns {Object|null} The selected workflow or null
+ */
+function getCurrentWorkflow() {
+  const workflowSelect = document.getElementById('workflow');
+  if (!workflowSelect || !workflowSelect.value) return null;
+  return workflows.find(w => w.name === workflowSelect.value);
+}
+
+/**
+ * Get the index of the first unfilled image upload component
+ * @returns {number} Index of first unfilled component, or -1 if all filled or none exist
+ */
+function getFirstUnfilledUploadIndex() {
+  for (let i = 0; i < uploadComponentRefs.length; i++) {
+    const component = uploadComponentRefs[i];
+    if (component && typeof component.hasImage === 'function' && !component.hasImage()) {
+      return i;
+    }
+  }
+  return -1; // All slots filled or no components
+}
+
+/**
+ * Get the current workflow state for updating UI elements
+ * @returns {Object} Object containing workflow and unfilled slot information
+ */
+function getWorkflowState() {
+  const workflow = getCurrentWorkflow();
+  const hasUnfilledSlot = getFirstUnfilledUploadIndex() !== -1;
+  return { workflow, hasUnfilledSlot };
+}
+
+/**
+ * Handle selection of an image from the preview to use as workflow input
+ * @param {Object} imageData - The image data object containing imageUrl, uid, etc.
+ */
+async function handleSelectAsInput(imageData) {
+  const targetIndex = getFirstUnfilledUploadIndex();
+  
+  if (targetIndex === -1) {
+    showErrorToast('All input image slots are filled');
+    return;
+  }
+  
+  try {
+    // Fetch the image as a blob
+    const response = await fetch(imageData.imageUrl);
+    const blob = await response.blob();
+    
+    // Set it on the target upload component
+    const component = uploadComponentRefs[targetIndex];
+    if (component && typeof component.setImage === 'function') {
+      component.setImage(blob, imageData.imageUrl);
+      showSuccessToast('Image selected as input');
+      
+      // Update select button state after setting image
+      if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+        generatedImageDisplay.updateSelectButtonState();
+      }
+    } else {
+      throw new Error('Upload component not available');
+    }
+  } catch (err) {
+    console.error('Failed to select image as input:', err);
+    showErrorToast('Failed to select image as input');
+  }
 }
 
 // Function to handle workflow selection change
@@ -156,6 +231,11 @@ function handleWorkflowChange() {
     if (lengthGroup) lengthGroup.style.display = 'none';
     if (framerateGroup) framerateGroup.style.display = 'none';
     console.log('Video fields disabled for workflow:', selectedWorkflowName);
+  }
+  
+  // Update select button state when workflow changes
+  if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+    generatedImageDisplay.updateSelectButtonState();
   }
 }
 
@@ -328,6 +408,15 @@ async function loadImageDataByUID(uid) {
   }
 }
 
+// Function to set disabled state for all image upload components
+function setImageUploadsDisabled(disabled) {
+  uploadComponentRefs.forEach((component) => {
+    if (component && typeof component.setDisabled === 'function') {
+      component.setDisabled(disabled);
+    }
+  });
+}
+
 // Function to handle image generation
 async function handleGenerate() {
   const descriptionText = getCurrentDescription();
@@ -358,6 +447,7 @@ async function handleGenerate() {
   generateButton.disabled = true;
   generateButton.textContent = 'Generating...';
   descriptionTextarea.disabled = true;
+  setImageUploadsDisabled(true);
   
   try {
     // Update seed for next generation unless locked
@@ -472,6 +562,7 @@ async function handleGenerate() {
         generateButton.disabled = false;
         generateButton.textContent = 'Generate';
         descriptionTextarea.disabled = false;
+        setImageUploadsDisabled(false);
       },
       (errorData) => {
         // Handle error - re-enable UI
@@ -488,6 +579,7 @@ async function handleGenerate() {
         generateButton.disabled = false;
         generateButton.textContent = 'Generate';
         descriptionTextarea.disabled = false;
+        setImageUploadsDisabled(false);
       }
     );
     
@@ -528,6 +620,7 @@ async function handleGenerate() {
     generateButton.disabled = false;
     generateButton.textContent = 'Generate';
     descriptionTextarea.disabled = false;
+    setImageUploadsDisabled(false);
   }
 }
 
@@ -559,7 +652,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize GeneratedImageDisplay
     const generatedImageDisplayElement = document.getElementById('generatedImageDisplay');
     if (generatedImageDisplayElement) {
-      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField, handleImageDeleted);
+      generatedImageDisplay = new GeneratedImageDisplay(
+        generatedImageDisplayElement,
+        handleUseField,
+        handleImageDeleted,
+        handleSelectAsInput,
+        getWorkflowState
+      );
     } else {
       console.error('Generated image display element not found');
     }

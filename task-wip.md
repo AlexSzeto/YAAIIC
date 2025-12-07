@@ -1,4 +1,5 @@
 # Bugs / Fixes
+- Refactor all custom-ui into preact components
 
 # Features
 - Workflow progress step indicator (X/Y based on distance from final node)
