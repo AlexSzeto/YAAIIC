@@ -549,7 +549,13 @@ async function handleGenerate() {
         // Handle completion - add image to carousel
         if (completionData.result && completionData.result.imageUrl) {
           carouselDisplay.addData(completionData.result);
-          showSuccessToast('Image generated successfully!');
+          
+          // Show success toast with time taken if available
+          const timeTaken = completionData.result.timeTaken;
+          const message = timeTaken 
+            ? `Workflow completed in ${timeTaken}s` 
+            : 'Image generated successfully!';
+          showSuccessToast(message);
         }
         
         // Unmount the progress banner

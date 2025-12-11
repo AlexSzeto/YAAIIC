@@ -25,6 +25,9 @@ let comfyUIAPIPath = null;
 // Function to add image data entry (will be set by server.mjs)
 let addImageDataEntry = null;
 
+// Timer map to track start times for each task
+const taskTimers = new Map(); // taskId -> startTime
+
 // Initialize generate module with ComfyUI API path
 export function initializeGenerateModule(apiPath) {
   comfyUIAPIPath = apiPath;
@@ -277,6 +280,9 @@ export async function handleImageGeneration(req, res, workflowConfig) {
   // Generate unique task ID
   const taskId = generateTaskId();
   
+  // Start timer for this task
+  taskTimers.set(taskId, Date.now());
+  
   // Create task entry
   createTask(taskId, {
     workflow,
@@ -493,6 +499,11 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const filename = path.basename(savePath);
     const imageUrl = `/image/${filename}`;
 
+    // Calculate time taken in seconds
+    const startTime = taskTimers.get(taskId);
+    const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    console.log(`Generation completed in ${timeTaken} seconds`);
+
     // Save image data to database using generationData fields
     let uid = null;
     if (addImageDataEntry) {
@@ -504,7 +515,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         description: generationData.description || '',
         workflow: workflow,
         inpaint: inpaint || false,
-        inpaintArea: inpaintArea || null
+        inpaintArea: inpaintArea || null,
+        timeTaken: timeTaken
       };
       addImageDataEntry(imageDataEntry);
       uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
@@ -522,13 +534,20 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       inpaint: inpaint || false,
       inpaintArea: inpaintArea || null,
       uid: uid,
+      timeTaken: timeTaken,
       maxValue: task.progress?.max || 1
     });
+
+    // Clean up timer
+    taskTimers.delete(taskId);
 
     console.log(`Task ${taskId} completed successfully`);
 
   } catch (error) {
     console.error(`Error in task ${taskId}:`, error);
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
     
     // Emit error using taskId directly
     emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);

@@ -65,7 +65,7 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 4. Modify SSE progress updates in [server/comfyui-websocket.mjs](server/comfyui-websocket.mjs) to prepend `stepDisplayText` to node names when sending progress events
 5. Update client-side SSE handling in [public/js/sse-manager.mjs](public/js/sse-manager.mjs) to display the step indicator in progress messages
 
-[] Workflow time to completion client side calculation
+[x] Workflow time to completion client side calculation
 1. Add a timer map in [server/generate.mjs](server/generate.mjs) to track start times keyed by task ID
    ```javascript
    // const taskTimers = new Map(); // taskId -> startTime

@@ -57,7 +57,8 @@ function createCompletionResponse(taskId, result) {
       workflow: result.workflow,
       inpaint: result.inpaint || false,
       inpaintArea: result.inpaintArea || null,
-      uid: result.uid
+      uid: result.uid,
+      timeTaken: result.timeTaken
     },
     timestamp: new Date().toISOString()
   };
