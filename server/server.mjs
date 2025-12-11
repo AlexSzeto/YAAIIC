@@ -226,6 +226,11 @@ app.post('/generate/image', upload.any(), async (req, res) => {
       return res.status(400).json({ error: `Workflow '${workflow}' not found` });
     }
     
+    // Add postGenerationPrompts from config to workflowData
+    if (config.postGenerationPrompts) {
+      workflowData.postGenerationPrompts = config.postGenerationPrompts;
+    }
+    
     // Generate random seed if not provided
     if (!req.body.seed) {
       req.body.seed = Math.floor(Math.random() * 4294967295);
@@ -523,6 +528,11 @@ app.post('/generate/inpaint', upload.fields([
       const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
       if (!workflowData) {
         return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+      }
+      
+      // Add postGenerationPrompts from config to workflowData
+      if (config.postGenerationPrompts) {
+        workflowData.postGenerationPrompts = config.postGenerationPrompts;
       }
       
       // Generate random seed if not provided

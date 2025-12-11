@@ -5,7 +5,7 @@
 - Ensuring all images being sent through image generation would already have a description by removing direct upload and adding an upload button that runs an image through description generation before being sent directly to the gallery
 - Always send description along with images to generation, and create a process for running ollama requests based on the chosen image descriptions and adding the result to the workflow input.
 
-[] Change `describePrompt` and `namePromptPrefix` into a global config, and change the prompt generation settings so the model name is specified. Each prompt is now an object with the following parameters:
+[x] Change `describePrompt` and `namePromptPrefix` into a global config, and change the prompt generation settings so the model name is specified. Each prompt is now an object with the following parameters:
 ```json
   "postGenerationPrompts": [
     {

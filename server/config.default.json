@@ -11,7 +11,7 @@
       "to": "description"
     },
     {
-      "model": "gemma:4b",
+      "model": "gemma3:4b",
       "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
       "to": "name",
       "replaceBlankFieldOnly": true

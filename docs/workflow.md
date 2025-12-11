@@ -31,15 +31,6 @@ Each workflow object supports the following parameters:
   - Whether to enable tag autocompletion for this workflow in the UI.
   - Useful for anime-style models (e.g., Pony, Illustrious) where Danbooru tags are common.
 
-- **`describePrompt`** (string, optional)
-  - A system prompt used to analyze the generated image with a vision-capable LLM (e.g., Ollama).
-  - If omitted, image analysis is skipped.
-  - The analysis result is stored in the `description` field of the image data.
-
-- **`namePromptPrefix`** (string, optional)
-  - A prompt prefix used to generate a short name for the image based on its description or prompt.
-  - If omitted, a fallback or user-provided name is used.
-
 - **`replace`** (array, optional)
   - Defines dynamic modifications to the base ComfyUI JSON before execution.
   - Used to inject user inputs (prompt, seed, paths) into the workflow nodes.
@@ -69,7 +60,6 @@ Each workflow object supports the following parameters:
   "base": "workflow_api.json",
   "format": "png",
   "autocomplete": true,
-  "describePrompt": "Describe this image...",
   "replace": [
     {
       "from": "prompt",

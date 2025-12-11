@@ -159,18 +159,59 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
   throw new Error(`Prompt ${promptId} did not complete within ${maxAttempts * intervalMs / 1000} seconds`);
 }
 
+// Function to modify generationData with a prompt
+export async function modifyGenerationDataWithPrompt(promptData, generationData) {
+  try {
+    const { model, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
+    
+    // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
+    if (replaceBlankFieldOnly && generationData[to] && generationData[to].trim() !== '') {
+      console.log(`Skipping prompt for ${to} - field already has a value`);
+      return generationData;
+    }
+    
+    // Extract prompt text from promptData.prompt
+    let processedPrompt = prompt;
+    
+    // Replace bracketed placeholders (e.g., [description]) with values from generationData
+    const bracketPattern = /\[(\w+)\]/g;
+    processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
+      return generationData[key] || match;
+    });
+    
+    console.log(`Processing prompt for ${to} with model ${model}`);
+    console.log(`Prompt: ${processedPrompt}`);
+    
+    let response;
+    
+    // If imagePath is specified in promptData, resolve the actual path from generationData
+    if (imagePath) {
+      const actualImagePath = generationData[imagePath];
+      if (!actualImagePath) {
+        throw new Error(`Image path field '${imagePath}' not found in generationData`);
+      }
+      console.log(`Using image path: ${actualImagePath}`);
+      response = await sendImagePrompt(actualImagePath, processedPrompt, model);
+    } else {
+      response = await sendTextPrompt(processedPrompt, model);
+    }
+    
+    // Store the response in generationData[promptData.to]
+    generationData[to] = response;
+    console.log(`Stored response in ${to}: ${response}`);
+    
+    return generationData;
+  } catch (error) {
+    console.error(`Error in modifyGenerationDataWithPrompt:`, error);
+    throw error;
+  }
+}
+
 // Main image generation handler
 export async function handleImageGeneration(req, res, workflowConfig) {
-  const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-  const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
-  let { name } = req.body;
+  const { base: workflowBasePath } = workflowConfig;
+  const { workflow } = req.body;
   
-  // Validate required parameters
-  if (!prompt || typeof prompt !== 'string') {
-    return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
-  }
-
-  console.log('Received generation request with prompt:', prompt);
   console.log('Using workflow:', workflowBasePath);
   
   // Generate unique task ID
@@ -178,7 +219,6 @@ export async function handleImageGeneration(req, res, workflowConfig) {
   
   // Create task entry
   createTask(taskId, {
-    prompt,
     workflow,
     promptId: null,
     requestData: { ...req.body },
@@ -204,9 +244,11 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix, extractOutputPathFromTextFile } = workflowConfig;
-    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
-    let { name } = requestData;
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationPrompts, type } = workflowConfig;
+    const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    
+    // Create generationData as a copy of requestData
+    const generationData = { ...requestData };
     
     const task = getTask(taskId);
     if (!task) {
@@ -216,7 +258,6 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
-    console.log('Received name:', name);
     
     // Log inpaint-specific parameters for debugging purposes
     if (inpaint) {
@@ -225,27 +266,6 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       console.log('Using maskPath:', maskPath);
       if (inpaintArea) {
         console.log('Using inpaintArea:', inpaintArea);
-      }
-    }
-
-    // Generate name if not provided and namePromptPrefix is available
-    if ((!name || name.trim() === '') && namePromptPrefix) {
-      try {
-        console.log('Generating name using LLM...');
-        
-        // Emit SSE progress update for name generation start
-        const promptId = task.promptId || taskId;
-        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Generating name...');
-        
-        const namePrompt = namePromptPrefix + prompt;
-        name = await sendTextPrompt(namePrompt);
-        console.log('Generated name:', name);
-        
-        // Emit SSE progress update for name generation completion
-        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Name generated');
-      } catch (error) {
-        console.warn('Failed to generate name:', error.message);
-        name = 'Generated Character'; // Fallback name
       }
     }
 
@@ -271,7 +291,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       modifications.forEach(mod => {
         const { from, to, prefix, postfix } = mod;
         console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
-        let value = requestData[from];
+        let value = generationData[from];
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
@@ -366,43 +386,49 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       throw new Error(`Generated image file not found at: ${savePath}`);
     }
 
-    console.log(`Image generated successfully, analyzing with ollama...`);
+    console.log(`Image generated successfully`);
 
-    // Analyze the generated image with ollama
-    let description = '';
-    try {
-      // Only analyze if describePrompt is provided in workflow config
-      if (describePrompt) {
-        // Emit SSE progress update for description generation start
-        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Analyzing image...');
-        
-        description = await sendImagePrompt(savePath, describePrompt);
-        console.log('Image analysis completed:', description);
-        
-        // Emit SSE progress update for description generation completion
-        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Image analysis complete');
-      } else {
-        console.log('No describePrompt provided in workflow config, skipping image analysis');
-        description = 'Image analysis not configured for this workflow';
+    // Process post-generation prompts from config if workflow type is not video
+    if (postGenerationPrompts && Array.isArray(postGenerationPrompts) && type !== 'video') {
+      console.log(`Processing ${postGenerationPrompts.length} post-generation prompts...`);
+      
+      for (const promptConfig of postGenerationPrompts) {
+        try {
+          // Emit SSE progress update
+          const stepName = promptConfig.to === 'description' ? 'Analyzing image' : `Generating ${promptConfig.to}`;
+          emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+          
+          // Emit SSE progress update for completion
+          emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, stepName + ' complete');
+        } catch (error) {
+          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the prompt fails
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'description' 
+              ? 'Image analysis unavailable' 
+              : 'Generated Content';
+          }
+        }
       }
-    } catch (error) {
-      console.warn('Failed to analyze image with ollama:', error.message);
-      description = 'Image analysis unavailable';
+    } else if (type === 'video') {
+      console.log('Skipping post-generation prompts for video workflow');
     }
 
     // Return the image URL path (relative to /image/ endpoint)
     const filename = path.basename(savePath);
     const imageUrl = `/image/${filename}`;
 
-    // Save image data to database
+    // Save image data to database using generationData fields
     let uid = null;
     if (addImageDataEntry) {
       const imageDataEntry = {
-        prompt: prompt,
-        seed: seed,
+        prompt: generationData.prompt,
+        seed: generationData.seed,
         imageUrl: imageUrl,
-        name: name,
-        description: description,
+        name: generationData.name,
+        description: generationData.description || '',
         workflow: workflow,
         inpaint: inpaint || false,
         inpaintArea: inpaintArea || null
@@ -412,13 +438,13 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       console.log('Image data entry saved to database with UID:', uid);
     }
 
-    // Emit completion event
+    // Emit completion event using generationData fields
     emitTaskCompletion(promptId, {
       imageUrl: imageUrl,
-      description: description,
-      prompt: prompt,
-      seed: seed,
-      name: name,
+      description: generationData.description || '',
+      prompt: generationData.prompt,
+      seed: generationData.seed,
+      name: generationData.name,
       workflow: workflow,
       inpaint: inpaint || false,
       inpaintArea: inpaintArea || null,
