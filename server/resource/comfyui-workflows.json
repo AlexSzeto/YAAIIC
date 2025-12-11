@@ -78,9 +78,7 @@
           "from": "savePath",
           "to": ["9", "inputs", "path"]
         }
-      ],
-      "describePrompt": "Write a detailed description of the fantasy scene in the image. Include atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short name that would be a highly descriptive but concise summary for the fantasy scene. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Text to Image (Flux Fantasy Portrait)",
@@ -103,9 +101,7 @@
           "from": "savePath",
           "to": ["44", "inputs", "path"]
         }
-      ],
-      "describePrompt": "Write a paragraph of description for the fantasy character in the image, and briefly describe the background. Include all of the following items: species and race, gender, age, facial features and expressions, occupation, hair and hair accessories (if any), what they are wearing on their body. Include only descriptions of visual qualities and anything which could seen in a still photograph. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short, catchy name for the character based on the description given. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Inpaint (Realistic Vision Fantasy)",
@@ -114,7 +110,6 @@
       "format": "jpg",
       "type": "inpaint",
       "finalNode": "9",
-      "describePrompt": "Write a paragraph description of the fantasy character or scene in this inpainted image. Include visual details such as appearance, clothing, setting, and atmosphere. Be concise and focus only on what can be seen in the image. Only include the description, do not include any other text. The description is:",
       "upload": [
         {
           "from": "image_0",
@@ -180,9 +175,7 @@
           "from": "imagePath",
           "to": ["377", "inputs", "image"]
         }
-      ],
-      "describePrompt": "Write a detailed description of the scene in the image. Include atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short name that would be a highly descriptive but concise summary for the image. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Image to Video Portrait (WAN)",
