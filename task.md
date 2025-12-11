@@ -5,10 +5,63 @@
 - Ensuring all images being sent through image generation would already have a description by removing direct upload and adding an upload button that runs an image through description generation before being sent directly to the gallery
 - Always send description along with images to generation, and create a process for running ollama requests based on the chosen image descriptions and adding the result to the workflow input.
 
+[] Change `describePrompt` and `namePromptPrefix` into a global config
+- Pass `describePrompt` and `namePromptPrefix` into the image generation input data, replacing the now removed values from the workflow data.
+
 [] Workflow progress step indicator (X/Y based on distance from final node)
-- Perform this process after the full comfyui workflow loads into memory, but before any of the generation related tasks.
-- Make use of the `finalNode` attribute from each workflow definition to track the number of step in the workflow by starting from `finalNode` and recursively looking backwards at any node that is within its input, until the algorithm reach a node that doesn't contain any input from another node. For example: `8 -> 14 -> 92 (final)` would mean the workflow has 3 steps. Record the distance of a node from the final node during the traversal. Calculate the `stepDisplayText` for each node as `(X/Y)`, where Y is the total number of steps (3 in the example) and X is `(distance from final node) - (total number of steps) + 1`. For any node that isn't in the path of the traversal, its `stepDisplayText` is a blank string. When sending the node name to the client via SSE, add `stepDisplayText` before the name of the node.
+1. Create a function in [server/generate.mjs](server/generate.mjs) to calculate workflow step structure
+   ```javascript
+   // calculateWorkflowSteps(workflow, finalNode)
+   // - Recursively traverse from finalNode backwards through node inputs
+   // - Build a map of nodeId -> distance from final node
+   // - Calculate total steps (max distance + 1)
+   // - Generate stepDisplayText for each node as "(X/Y)" where:
+   //   - Y = total steps
+   //   - X = Y - distance
+   // - Return: { stepMap: Map<nodeId, { distance, stepDisplayText }>, totalSteps }
+   ```
+2. Call `calculateWorkflowSteps` after workflow loads but before generation starts
+3. Store the step map in the generation context for the task
+4. Modify SSE progress updates in [server/comfyui-websocket.mjs](server/comfyui-websocket.mjs) to prepend `stepDisplayText` to node names when sending progress events
+5. Update client-side SSE handling in [public/js/sse-manager.mjs](public/js/sse-manager.mjs) to display the step indicator in progress messages
+
 [] Workflow time to completion client side calculation
-- On the server side, start a timer that's tied to the task Id as soon as the Id is available. At the end of the generation, add `timeTaken` in seconds to the attributes stored in the database and sent back as return data. On the client side, modify the completion toast message to `Workflow Completed in X(s)`, where X is `timeTaken`. Do not display `timeTaken` anywhere else in the client UI for now.
+1. Add a timer map in [server/generate.mjs](server/generate.mjs) to track start times keyed by task ID
+   ```javascript
+   // const taskTimers = new Map(); // taskId -> startTime
+   ```
+2. Start timer immediately after task ID is created in the generation endpoint
+3. Calculate `timeTaken` in seconds when generation completes
+4. Add `timeTaken` field to the database entry in [server/database/image-data.json](server/database/image-data.json)
+   ```json
+   {
+     "id": "string",
+     "prompt": "string",
+     "timestamp": "number",
+     "timeTaken": "number"
+   }
+   ```
+5. Include `timeTaken` in the response data sent back to client
+6. Update completion toast in [public/js/generated-image-display.mjs](public/js/generated-image-display.mjs) to show `Workflow Completed in X(s)` message
+7. Clean up timer from the map after generation completes or fails
+
 [] Lower footprint gallery preview
-- Lower the amount of space that the name and date occupy in the gallery preview by moving the text to the lower left corner and enclose it within a rounded rectangle similar to the title text in the image modal.
+1. Modify the gallery preview CSS in [public/css/custom-ui.css](public/css/custom-ui.css)
+2. Position the name and date text at the lower left corner using absolute positioning
+3. Add a solid dark gray rounded rectangle background container for the text
+4. Ensure the styling matches the title text appearance in the image modal
+
+[] Remove the upload button from the upload-image component, and add a upload button to the right of the gallery button. Pressing the button opens a dialog and when a file is chosen, the content of the file is renamed and copied into the storage folder as if it is a generated image, generate a description and a name for the image, and store all the required data into the `image-data` database just like a generated image.
+
+[] The client should store the image's description alongside its URL in the upload image component, and send the description data as `image_X_description` where X is the image's index. On the server side, the workflow data in `comfyui-workflows` has a new parameter, `pregeneratePrompts`, which is an array. For example:
+```
+{
+  "pregeneratePrompts": [
+    {
+      "model": "gemma:4b"
+      "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nImagine the dynamic motion that would carry the scenery one second forward. Write the description here:"
+    }
+  ]
+}
+```
+WIP
