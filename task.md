@@ -29,6 +29,24 @@ Unlike the current implementation of `processGenerationTask` where values are ex
 As specified, the name generation prompt now executes after the image is generated, and uses the image description data instead of the original prompt data as part of the prompt text.
 
 For now, hard code in a conditional clause to prevent these global prompts from executing if the workflow type is "video".
+1. Update [server/config.default.json](server/config.default.json) to replace `describePrompt` and `namePromptPrefix` with a new `postGenerationPrompts` array following the JSON structure above
+2. Create `modifyGenerationDataWithPrompt(promptData, generationData)` function in [server/generate.mjs](server/generate.mjs)
+   ```javascript
+   // async modifyGenerationDataWithPrompt(promptData, generationData)
+   // - Check if `replaceBlankFieldOnly` is true and target field is not blank, skip processing
+   // - Extract prompt text from `promptData.prompt`
+   // - Replace bracketed placeholders (e.g., [description]) with values from `generationData`
+   // - If `imagePath` is specified in `promptData`, resolve the actual path from `generationData`
+   // - Call LLM service (either sendTextPrompt or sendImagePrompt) with the model specified in `promptData.model`
+   // - Store the response in `generationData[promptData.to]`
+   // - Return modified `generationData`
+   ```
+3. Modify `processGenerationTask` in [server/generate.mjs](server/generate.mjs) to create a `generationData` object as a copy of `requestData` at the start
+4. After image generation completes, iterate through `postGenerationPrompts` from config
+5. For each prompt, call `modifyGenerationDataWithPrompt(promptData, generationData)`
+6. Add conditional check: skip `postGenerationPrompts` execution if workflow type is "video"
+7. Use `generationData` fields (description, name) when storing to database instead of values from `requestData`
+8. Remove old `describePrompt` and `namePromptPrefix` usage from the codebase
 
 [] Workflow progress step indicator (X/Y based on distance from final node)
 1. Create a function in [server/generate.mjs](server/generate.mjs) to calculate workflow step structure
@@ -69,16 +87,46 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 
 [] Lower footprint gallery preview
 1. Modify the gallery preview CSS in [public/css/custom-ui.css](public/css/custom-ui.css)
-2. Position the name and date text at the lower left corner using absolute positioning
-3. Add a solid dark gray rounded rectangle background container for the text
-4. Ensure the styling matches the title text appearance in the image modal
+2. Add `position: relative` to the gallery item container
+3. Position the name and date text container at the lower left corner using absolute positioning
+4. Create a solid dark gray rounded rectangle background container for the text overlay
+5. Add appropriate padding, border-radius, and margins to the text container
+6. Ensure the styling matches the title text appearance in the image modal (font size, weight, color)
+7. Test with various gallery items to ensure readability and proper overlay positioning
 
 [] Remove the upload button from the upload-image component, and add a upload button to the right of the gallery button. Pressing the button opens a dialog and when a file is chosen, the content of the file is renamed and copied into the storage folder as if it is a generated image, generate a description and a name for the image, and store all the required data into the `image-data` database just like a generated image.
+1. Remove the upload button from [public/js/custom-ui/image-upload.mjs](public/js/custom-ui/image-upload.mjs) component
+2. Add a new upload button in [public/index.html](public/index.html) positioned to the right of the gallery button
+3. Create a file input dialog handler that triggers when the upload button is clicked
+4. Create a new server endpoint in [server/server.mjs](server/server.mjs) for handling uploaded images
+   ```javascript
+   // POST /api/upload-image
+   // - Accept multipart/form-data with image file
+   // - Generate unique filename with timestamp
+   // - Copy file to server/storage/ directory
+   // - Return file path for further processing
+   ```
+5. After file upload, send the image path to the description generation endpoint
+6. Use the existing `modifyGenerationDataWithPrompt` function with config's `postGenerationPrompts` to generate description and name
+7. Create a database entry in [server/database/image-data.json](server/database/image-data.json) with:
+   ```json
+   {
+     "id": "uploaded-{timestamp}",
+     "prompt": "",
+     "timestamp": "number",
+     "timeTaken": 0,
+     "name": "generated name",
+     "description": "generated description",
+     "savePath": "path/to/uploaded/file"
+   }
+   ```
+8. Return the complete entry to the client and update the gallery display
+9. Show a toast notification indicating successful upload and description generation
 
 [] The client should store the image's description alongside its URL in the upload image component, and send the description data as `image_X_description` where X is the image's index. On the server side, the workflow data in `comfyui-workflows` has a new parameter, `preGenerationPrompts`, which is an array. For example:
 ```json
 {
-  "requiresPrompt": false
+  "requiresPrompt": false,
   "preGenerationPrompts": [
     {
       "model": "gemma:4b",
@@ -89,3 +137,18 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 }
 ```
 When the request parameters are sent to the generation function, and before the workflow inputs are modified, all pregeneration prompts process using `modifyGenerationDataWithPrompt` and its results are used to augment or replace data in `generationData` before the comfyui workflow modification process starts.
+1. Update [public/js/custom-ui/image-upload.mjs](public/js/custom-ui/image-upload.mjs) to store image descriptions
+   ```javascript
+   // Add a descriptions array to component state
+   // this.state = { images: [], descriptions: [] }
+   // When image is uploaded/selected, store its description alongside URL
+   // Add method: getImageWithDescription(index) - returns { url, description }
+   ```
+2. Modify form submission in [public/js/main.mjs](public/js/main.mjs) to include image descriptions
+3. For each uploaded image at index X, send `image_X_description` parameter with the request
+4. Update workflow configurations in [server/resource/comfyui-workflows.json](server/resource/comfyui-workflows.json) to add `preGenerationPrompts` field for workflows that need it (e.g., video workflows)
+5. In [server/generate.mjs](server/generate.mjs), modify the generation function to process pre-generation prompts
+6. Before workflow input modification, iterate through `workflow.preGenerationPrompts` if it exists
+7. For each pre-generation prompt, call `modifyGenerationDataWithPrompt(promptData, generationData)`
+8. Use the augmented `generationData` when modifying workflow inputs
+9. Ensure bracket placeholders like `[image_0_description]` are properly replaced with actual description values from request parameters
