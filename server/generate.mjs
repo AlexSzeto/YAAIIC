@@ -159,6 +159,66 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
   throw new Error(`Prompt ${promptId} did not complete within ${maxAttempts * intervalMs / 1000} seconds`);
 }
 
+// Function to calculate workflow steps based on node dependencies
+export function calculateWorkflowSteps(workflow, finalNode) {
+  // Map to store nodeId -> distance from final node
+  const distanceMap = new Map();
+  
+  // Recursive function to traverse backwards through node inputs
+  function traverseNode(nodeId, currentDistance) {
+    // If we've already visited this node with a greater or equal distance, skip
+    if (distanceMap.has(nodeId) && distanceMap.get(nodeId) >= currentDistance) {
+      return;
+    }
+    
+    // Set the distance for this node
+    distanceMap.set(nodeId, currentDistance);
+    
+    // Get the node from workflow
+    const node = workflow[nodeId];
+    if (!node || !node.inputs) {
+      return;
+    }
+    
+    // Traverse all input connections
+    for (const inputKey in node.inputs) {
+      const inputValue = node.inputs[inputKey];
+      
+      // Check if input is a node connection (array format [nodeId, outputIndex])
+      if (Array.isArray(inputValue) && typeof inputValue[0] === 'string') {
+        const connectedNodeId = inputValue[0];
+        traverseNode(connectedNodeId, currentDistance + 1);
+      }
+    }
+  }
+  
+  // Start traversal from final node
+  traverseNode(finalNode, 0);
+  
+  // Calculate total steps (max distance + 1)
+  let maxDistance = 0;
+  for (const distance of distanceMap.values()) {
+    if (distance > maxDistance) {
+      maxDistance = distance;
+    }
+  }
+  const totalSteps = maxDistance + 1;
+  
+  // Build step map with display text
+  const stepMap = new Map();
+  for (const [nodeId, distance] of distanceMap.entries()) {
+    const stepNumber = totalSteps - distance;
+    const stepDisplayText = `(${stepNumber}/${totalSteps})`;
+    stepMap.set(nodeId, {
+      distance,
+      stepNumber,
+      stepDisplayText
+    });
+  }
+  
+  return { stepMap, totalSteps };
+}
+
 // Function to modify generationData with a prompt
 export async function modifyGenerationDataWithPrompt(promptData, generationData) {
   try {
@@ -285,6 +345,19 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
 
     // Store the workflow JSON in the task for node title lookups
     updateTask(taskId, { workflowData });
+    
+    // Calculate workflow steps if finalNode is specified
+    let stepMap = null;
+    let totalSteps = null;
+    if (workflowConfig.finalNode) {
+      const stepInfo = calculateWorkflowSteps(workflowData, workflowConfig.finalNode);
+      stepMap = stepInfo.stepMap;
+      totalSteps = stepInfo.totalSteps;
+      console.log(`Calculated workflow steps: ${totalSteps} total steps`);
+      
+      // Store step map in the task for use in progress updates
+      updateTask(taskId, { stepMap, totalSteps });
+    }
     
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {

@@ -48,7 +48,7 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 7. Use `generationData` fields (description, name) when storing to database instead of values from `requestData`
 8. Remove old `describePrompt` and `namePromptPrefix` usage from the codebase
 
-[] Workflow progress step indicator (X/Y based on distance from final node)
+[x] Workflow progress step indicator (X/Y based on distance from final node)
 1. Create a function in [server/generate.mjs](server/generate.mjs) to calculate workflow step structure
    ```javascript
    // calculateWorkflowSteps(workflow, finalNode)

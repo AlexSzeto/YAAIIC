@@ -212,6 +212,12 @@ export function emitProgressUpdate(promptId, progress, currentStep, nodeId = nul
     }
   }
   
+  // Prepend step indicator if available
+  if (nodeId && task.stepMap && task.stepMap.has(nodeId)) {
+    const stepInfo = task.stepMap.get(nodeId);
+    stepTitle = `${stepInfo.stepDisplayText} ${stepTitle}`;
+  }
+  
   // Fall back to 'Processing...' if no title found
   if (!stepTitle) {
     stepTitle = 'Processing...';
