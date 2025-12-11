@@ -201,8 +201,8 @@
   },
   "64": {
     "inputs": {
-      "width": 480,
-      "height": 832,
+      "width": 832,
+      "height": 480,
       "upscale_method": "lanczos",
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
@@ -284,8 +284,8 @@
   },
   "72": {
     "inputs": {
-      "width": 480,
-      "height": 832,
+      "width": 832,
+      "height": 480,
       "upscale_method": "lanczos",
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",

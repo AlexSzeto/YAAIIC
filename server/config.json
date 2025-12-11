@@ -1,6 +1,0 @@
-{
-  "ollamaAPIPath": "http://localhost:11434",
-  "ollamaLaunchPath": "/mnt/ai-250/start-ollama.sh",
-  "comfyuiAPIPath": "http://localhost:8188",
-  "comfyuiLaunchPath": "/mnt/ai-250/start-comfyui.sh"
-}

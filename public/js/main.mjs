@@ -45,11 +45,10 @@ function renderImageUploadComponents(count) {
   // Clear component refs
   uploadComponentRefs = [];
   
-  // Clear container
-  container.innerHTML = '';
+  // First, unmount any existing Preact components by rendering null
+  render(null, container);
   
   if (count <= 0) {
-    render(null, container);
     return;
   }
   
@@ -60,7 +59,7 @@ function renderImageUploadComponents(count) {
       return;
     }
 
-    // Enable selection mode; when an item is selected, fetch the image and set it on the upload component
+    // Enable selection mode with image filter; when an item is selected, fetch the image and set it on the upload component
     galleryDisplay.showModal(true, async (selectedItem) => {
       try {
         const response = await fetch(selectedItem.imageUrl);
@@ -68,12 +67,17 @@ function renderImageUploadComponents(count) {
         const componentRef = uploadComponentRefs[componentIndex];
         if (componentRef && typeof componentRef.setImage === 'function') {
           componentRef.setImage(blob, selectedItem.imageUrl);
+          
+          // Update select button state after setting image
+          if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+            generatedImageDisplay.updateSelectButtonState();
+          }
         }
       } catch (err) {
         console.error('Failed to load selected image from gallery:', err);
         showErrorToast('Failed to load selected image');
       }
-    });
+    }, 'image');
   };
   
   // Create components
@@ -99,6 +103,76 @@ function renderImageUploadComponents(count) {
   render(html`${components}`, container);
   
   console.log(`Rendered ${count} image upload components`);
+}
+
+/**
+ * Get the currently selected workflow object
+ * @returns {Object|null} The selected workflow or null
+ */
+function getCurrentWorkflow() {
+  const workflowSelect = document.getElementById('workflow');
+  if (!workflowSelect || !workflowSelect.value) return null;
+  return workflows.find(w => w.name === workflowSelect.value);
+}
+
+/**
+ * Get the index of the first unfilled image upload component
+ * @returns {number} Index of first unfilled component, or -1 if all filled or none exist
+ */
+function getFirstUnfilledUploadIndex() {
+  for (let i = 0; i < uploadComponentRefs.length; i++) {
+    const component = uploadComponentRefs[i];
+    if (component && typeof component.hasImage === 'function' && !component.hasImage()) {
+      return i;
+    }
+  }
+  return -1; // All slots filled or no components
+}
+
+/**
+ * Get the current workflow state for updating UI elements
+ * @returns {Object} Object containing workflow and unfilled slot information
+ */
+function getWorkflowState() {
+  const workflow = getCurrentWorkflow();
+  const hasUnfilledSlot = getFirstUnfilledUploadIndex() !== -1;
+  return { workflow, hasUnfilledSlot };
+}
+
+/**
+ * Handle selection of an image from the preview to use as workflow input
+ * @param {Object} imageData - The image data object containing imageUrl, uid, etc.
+ */
+async function handleSelectAsInput(imageData) {
+  const targetIndex = getFirstUnfilledUploadIndex();
+  
+  if (targetIndex === -1) {
+    showErrorToast('All input image slots are filled');
+    return;
+  }
+  
+  try {
+    // Fetch the image as a blob
+    const response = await fetch(imageData.imageUrl);
+    const blob = await response.blob();
+    
+    // Set it on the target upload component
+    const component = uploadComponentRefs[targetIndex];
+    if (component && typeof component.setImage === 'function') {
+      component.setImage(blob, imageData.imageUrl);
+      showSuccessToast('Image selected as input');
+      
+      // Update select button state after setting image
+      if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+        generatedImageDisplay.updateSelectButtonState();
+      }
+    } else {
+      throw new Error('Upload component not available');
+    }
+  } catch (err) {
+    console.error('Failed to select image as input:', err);
+    showErrorToast('Failed to select image as input');
+  }
 }
 
 // Function to handle workflow selection change
@@ -145,6 +219,24 @@ function handleWorkflowChange() {
       console.log('Image upload disabled for workflow:', selectedWorkflowName);
     }
   }
+  
+  // Show/hide video-specific fields based on workflow type
+  const lengthGroup = document.getElementById('length-group');
+  const framerateGroup = document.getElementById('framerate-group');
+  if (selectedWorkflow.type === 'video') {
+    if (lengthGroup) lengthGroup.style.display = '';
+    if (framerateGroup) framerateGroup.style.display = '';
+    console.log('Video fields enabled for workflow:', selectedWorkflowName);
+  } else {
+    if (lengthGroup) lengthGroup.style.display = 'none';
+    if (framerateGroup) framerateGroup.style.display = 'none';
+    console.log('Video fields disabled for workflow:', selectedWorkflowName);
+  }
+  
+  // Update select button state when workflow changes
+  if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
+    generatedImageDisplay.updateSelectButtonState();
+  }
 }
 
 // Function to populate workflow dropdown
@@ -161,8 +253,8 @@ async function loadWorkflows() {
       successMessage: 'Workflows loaded successfully'
     });
     
-    // Filter workflows to only include txt2img type for index page
-    const txt2imgWorkflows = workflows.filter(workflow => workflow.type === 'txt2img');
+    // Filter workflows to only include image and video types for index page
+    const imageWorkflows = workflows.filter(workflow => workflow.type === 'image' || workflow.type === 'video');
     
     const workflowSelect = document.getElementById('workflow');
     
@@ -175,8 +267,8 @@ async function loadWorkflows() {
     defaultOption.textContent = 'Select a workflow...';
     workflowSelect.appendChild(defaultOption);
     
-    // Add workflow options (only txt2img workflows)
-    txt2imgWorkflows.forEach(workflow => {
+    // Add workflow options (only image workflows)
+    imageWorkflows.forEach(workflow => {
       const option = document.createElement('option');
       option.value = workflow.name;
       option.textContent = workflow.name;
@@ -187,7 +279,7 @@ async function loadWorkflows() {
     workflowSelect.addEventListener('change', handleWorkflowChange);
     
     console.log('Workflows loaded:', workflows);
-    console.log('Filtered txt2img workflows:', txt2imgWorkflows);
+    console.log('Filtered image and video workflows:', imageWorkflows);
   } catch (error) {
     console.error('Error loading workflows:', error);
     // Error feedback is already handled by fetchJson utility
@@ -316,6 +408,15 @@ async function loadImageDataByUID(uid) {
   }
 }
 
+// Function to set disabled state for all image upload components
+function setImageUploadsDisabled(disabled) {
+  uploadComponentRefs.forEach((component) => {
+    if (component && typeof component.setDisabled === 'function') {
+      component.setDisabled(disabled);
+    }
+  });
+}
+
 // Function to handle image generation
 async function handleGenerate() {
   const descriptionText = getCurrentDescription();
@@ -346,10 +447,23 @@ async function handleGenerate() {
   generateButton.disabled = true;
   generateButton.textContent = 'Generating...';
   descriptionTextarea.disabled = true;
+  setImageUploadsDisabled(true);
   
   try {
     // Update seed for next generation unless locked
     updateSeedIfNotLocked();
+
+    // Calculate video-specific parameters if this is a video workflow
+    const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+    let videoParams = null;
+    if (selectedWorkflow && selectedWorkflow.type === 'video') {
+      const lengthInput = document.getElementById('length');
+      const framerateInput = document.getElementById('framerate');
+      const length = parseFloat(lengthInput.value);
+      const framerate = parseInt(framerateInput.value);
+      const frames = Math.floor(length * framerate) % 2 === 0 ? Math.floor(length * framerate) + 1 : Math.floor(length * framerate); // Ensure odd number of frames
+      videoParams = { frames, framerate };
+    }
 
     // Determine if we need to send images (img2img workflows)
     const hasUploads = uploadComponentRefs.some((component) => component && typeof component.hasImage === 'function' && component.hasImage());
@@ -364,6 +478,10 @@ async function handleGenerate() {
       if (nameInput.value.trim()) {
         formData.append('name', nameInput.value.trim());
       }
+      if (videoParams) {
+        formData.append('frames', videoParams.frames);
+        formData.append('framerate', videoParams.framerate);
+      }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
           const blob = component.getImageBlob();
@@ -372,7 +490,7 @@ async function handleGenerate() {
           }
         }
       });
-      response = await fetchWithRetry('/generate/txt2img', {
+      response = await fetchWithRetry('/generate/image', {
         method: 'POST',
         body: formData
       }, {
@@ -390,8 +508,12 @@ async function handleGenerate() {
       if (nameInput.value.trim()) {
         requestBody.name = nameInput.value.trim();
       }
+      if (videoParams) {
+        requestBody.frames = videoParams.frames;
+        requestBody.framerate = videoParams.framerate;
+      }
       // Send generation request and get immediate taskId response
-      response = await fetchWithRetry('/generate/txt2img', {
+      response = await fetchWithRetry('/generate/image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -440,6 +562,7 @@ async function handleGenerate() {
         generateButton.disabled = false;
         generateButton.textContent = 'Generate';
         descriptionTextarea.disabled = false;
+        setImageUploadsDisabled(false);
       },
       (errorData) => {
         // Handle error - re-enable UI
@@ -456,6 +579,7 @@ async function handleGenerate() {
         generateButton.disabled = false;
         generateButton.textContent = 'Generate';
         descriptionTextarea.disabled = false;
+        setImageUploadsDisabled(false);
       }
     );
     
@@ -496,6 +620,7 @@ async function handleGenerate() {
     generateButton.disabled = false;
     generateButton.textContent = 'Generate';
     descriptionTextarea.disabled = false;
+    setImageUploadsDisabled(false);
   }
 }
 
@@ -527,7 +652,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize GeneratedImageDisplay
     const generatedImageDisplayElement = document.getElementById('generatedImageDisplay');
     if (generatedImageDisplayElement) {
-      generatedImageDisplay = new GeneratedImageDisplay(generatedImageDisplayElement, handleUseField, handleImageDeleted);
+      generatedImageDisplay = new GeneratedImageDisplay(
+        generatedImageDisplayElement,
+        handleUseField,
+        handleImageDeleted,
+        handleSelectAsInput,
+        getWorkflowState
+      );
     } else {
       console.error('Generated image display element not found');
     }

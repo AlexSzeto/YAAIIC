@@ -50,3 +50,15 @@ export function findNextIndex(prefix, storageFolder) {
   const maxIndex = Math.max(...indices);
   return maxIndex + 1;
 }
+
+/**
+ * Read a text file from the storage folder and extract the output path.
+ * @param {string} filename - The name of the text file to read
+ * @param {string} storageFolder - The path to the storage folder
+ * @returns {string} The extracted output path from the text file
+ */
+export function readOutputPathFromTextFile(filename, storageFolder) {
+  const filePath = filename.includes(storageFolder) ? filename : `${storageFolder}\\${filename}`;
+  const content = fs.readFileSync(filePath, 'utf8').trim();
+  return content;
+}

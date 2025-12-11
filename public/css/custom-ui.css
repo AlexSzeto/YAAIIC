@@ -323,6 +323,12 @@
   border-color: var(--dark-border-highlight);
 }
 
+.gallery-item.disabled,
+.gallery-item-wrapper.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .gallery-item-image {
   width: 100%;
   height: 70%;
@@ -905,6 +911,12 @@
 
 .image-upload-area.has-image:hover {
   border-color: var(--dark-border-highlight);
+}
+
+.image-upload-area.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 /* Empty State */

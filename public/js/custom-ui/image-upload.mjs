@@ -14,10 +14,12 @@ export class ImageUpload extends Component {
     // - id: string/number (unique identifier)
     // - onImageChange: (file) => void
     // - onGalleryRequest: () => void
+    // - disabled: boolean (optional)
     this.state = {
       imagePreview: null,
       hasImage: false,
-      imageFile: null
+      imageFile: null,
+      disabled: props.disabled || false
     };
     
     this.fileInputRef = null;
@@ -97,6 +99,7 @@ export class ImageUpload extends Component {
    */
   handleUploadClick = (e) => {
     e.stopPropagation();
+    if (this.state.disabled) return;
     if (this.fileInputRef) {
       this.fileInputRef.click();
     }
@@ -107,6 +110,7 @@ export class ImageUpload extends Component {
    */
   handlePreviewClick = (e) => {
     e.stopPropagation();
+    if (this.state.disabled) return;
     const { imagePreview } = this.state;
     if (imagePreview) {
       createImageModal(imagePreview, true);
@@ -118,6 +122,7 @@ export class ImageUpload extends Component {
    */
   handleGalleryClick = (e) => {
     e.stopPropagation();
+    if (this.state.disabled) return;
     if (this.props.onGalleryRequest) {
       this.props.onGalleryRequest();
     }
@@ -128,6 +133,7 @@ export class ImageUpload extends Component {
    */
   handleClearClick = (e) => {
     e.stopPropagation();
+    if (this.state.disabled) return;
     this.clearImage();
   }
 
@@ -145,9 +151,17 @@ export class ImageUpload extends Component {
     return this.state.hasImage;
   }
 
+  /**
+   * Set the disabled state of the component
+   * @param {boolean} disabled - Whether the component should be disabled
+   */
+  setDisabled(disabled) {
+    this.setState({ disabled });
+  }
+
   render() {
     const { id } = this.props;
-    const { imagePreview, hasImage } = this.state;
+    const { imagePreview, hasImage, disabled } = this.state;
 
     return html`
       <div class="image-upload-component">
@@ -157,10 +171,11 @@ export class ImageUpload extends Component {
           accept="image/*"
           style="display: none;"
           onChange=${this.handleFileSelect}
+          disabled=${disabled}
         />
         
         <div 
-          class="image-upload-area ${hasImage ? 'has-image' : ''}"
+          class="image-upload-area ${hasImage ? 'has-image' : ''} ${disabled ? 'disabled' : ''}"
           onClick=${hasImage ? this.handlePreviewClick : this.handleGalleryClick}
         >
           ${hasImage ? html`

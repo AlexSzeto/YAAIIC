@@ -17,6 +17,11 @@ export class GalleryPreview extends Component {
   }
 
   handleImageClick = (e) => {
+    // Don't open modal if disabled
+    if (this.props.disabled) {
+      return;
+    }
+    
     // Don't open modal if clicking on checkbox or checkbox container
     if (e.target.type === 'checkbox' || 
         e.target.closest('.gallery-item-checkbox-container')) {
@@ -56,11 +61,11 @@ export class GalleryPreview extends Component {
   }
 
   render() {
-    const { item, onSelect, isSelected, disableCheckbox = false } = this.props;
+    const { item, onSelect, isSelected, disableCheckbox = false, disabled = false } = this.props;
     const { imageError } = this.state;
 
     return html`
-      <div class="gallery-item" style=${{ position: 'relative' }}>
+      <div class="gallery-item ${disabled ? 'disabled' : ''}" style=${{ position: 'relative' }}>
         ${onSelect && html`
           <div class="gallery-item-checkbox-container">
             <input
@@ -84,7 +89,7 @@ export class GalleryPreview extends Component {
             color: '#999999',
             fontSize: '10px',
             cursor: 'default'
-          } : { cursor: 'pointer' }}
+          } : disabled ? { cursor: 'not-allowed' } : { cursor: 'pointer' }}
           onError=${this.handleImageError}
           onClick=${this.handleImageClick}
         >
@@ -104,11 +109,11 @@ export class GalleryPreview extends Component {
 }
 
 // Factory function to create a gallery preview (for compatibility with existing code)
-export function createGalleryPreview(item, onSelect, isSelected = false, disableCheckbox = false, onImageClick = null) {
+export function createGalleryPreview(item, onSelect, isSelected = false, disableCheckbox = false, onImageClick = null, disabled = false) {
   const container = document.createElement('div');
   
   // Render the Preact component into the container
-  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} isSelected=${isSelected} disableCheckbox=${disableCheckbox} onImageClick=${onImageClick} />`, container);
+  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} isSelected=${isSelected} disableCheckbox=${disableCheckbox} onImageClick=${onImageClick} disabled=${disabled} />`, container);
   
   // Return the first child element (the actual gallery item)
   return container.firstElementChild;

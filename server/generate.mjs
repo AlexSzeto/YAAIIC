@@ -4,7 +4,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
-import { setObjectPathValue } from './util.mjs';
+import { setObjectPathValue, readOutputPathFromTextFile } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
   generateTaskId,
@@ -204,7 +204,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
+    const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix, extractOutputPathFromTextFile } = workflowConfig;
     const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     let { name } = requestData;
     
@@ -255,7 +255,14 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
-    
+
+    // saveFilename: filename portion of savePath, no folder or extension
+    if (savePath) {
+      requestData.saveFilename = path.basename(savePath, path.extname(savePath));
+    }
+    // storagePath: absolute path to /storage folder
+    requestData.storagePath = path.join(actualDirname, 'storage');
+
     // Store the workflow JSON in the task for node title lookups
     updateTask(taskId, { workflowData });
     
@@ -274,6 +281,11 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         }
       });
     }
+
+    // Write the modified workflow to workflow.json for debugging
+    const debugWorkflowPath = path.join(actualDirname, 'storage', 'sent-workflow.json');
+    fs.writeFileSync(debugWorkflowPath, JSON.stringify(workflowData, null, 2), 'utf8');
+    console.log(`Workflow written to: ${debugWorkflowPath}`);
 
     // Send request to ComfyUI
     const comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
@@ -310,6 +322,43 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     
     if (statusResult.error) {
       throw new Error('ComfyUI generation failed');
+    }
+
+    // Handle extractOutputPathFromTextFile if specified
+    if (extractOutputPathFromTextFile) {
+      console.log(`Extracting output path from text file: ${extractOutputPathFromTextFile}`);
+      
+      // Compute absolute storage path
+      const __dirname = path.dirname(new URL(import.meta.url).pathname);
+      const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+      const storagePath = path.join(actualDirname, 'storage');
+      
+      try {
+        // Read the output path from the text file
+        let actualOutputPath = readOutputPathFromTextFile(extractOutputPathFromTextFile, storagePath);
+        console.log(`Extracted output path: ${actualOutputPath}`);
+        
+        // Replace extension based on format parameter if provided
+        if (workflowConfig.format) {
+          // Extract extension from format (e.g., "image/webp" -> "webp")
+          const formatExtension = workflowConfig.format;
+          const extractedDir = path.dirname(actualOutputPath);
+          const extractedBasename = path.basename(actualOutputPath, path.extname(actualOutputPath));
+          actualOutputPath = path.join(extractedDir, `${extractedBasename}.${formatExtension}`);
+          console.log(`Modified output path based on format: ${actualOutputPath}`);
+        }
+        
+        // Copy the file from the extracted path to savePath
+        if (fs.existsSync(actualOutputPath)) {
+          fs.copyFileSync(actualOutputPath, savePath);
+          console.log(`Successfully copied file from ${actualOutputPath} to ${savePath}`);
+        } else {
+          throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
+        }
+      } catch (error) {
+        console.error(`Failed to extract and copy output file:`, error);
+        throw new Error(`Failed to process output file: ${error.message}`);
+      }
     }
 
     // Check if the file was created

@@ -30,7 +30,8 @@ export class GalleryDisplay extends Component {
       selectedItems: [], // Array of selected item UIDs
       shouldFocusSearch: false, // Flag to control when search input should be focused
       selectionMode: false, // Whether gallery is in selection mode
-      onSelect: null // Callback for selection mode
+      onSelect: null, // Callback for selection mode
+      fileTypeFilter: null // Optional filter: 'image' or 'video'
     };
     
     // Pagination component will be created when modal is shown
@@ -62,6 +63,34 @@ export class GalleryDisplay extends Component {
     if (e.key === 'Escape' && this.state.isVisible) {
       this.hideModal();
     }
+  }
+
+  /**
+   * Check if an item is a video based on its URL or workflow type
+   * @param {Object} item - The gallery item
+   * @returns {boolean} True if the item is a video
+   */
+  isVideoItem(item) {
+    if (!item) return false;
+    
+    // Check imageUrl extension for video formats
+    if (item.imageUrl) {
+      const videoExtensions = ['.mp4', '.webm', '.gif', '.webp'];
+      const url = item.imageUrl.toLowerCase();
+      if (videoExtensions.some(ext => url.endsWith(ext))) {
+        return true;
+      }
+    }
+    
+    // Check workflow type
+    if (item.workflow && typeof item.workflow === 'string') {
+      const workflowLower = item.workflow.toLowerCase();
+      if (workflowLower.includes('video')) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   handleSearchInput = (e) => {
@@ -274,17 +303,19 @@ export class GalleryDisplay extends Component {
    * Show the modal
    * @param {boolean} selectionMode - Whether to show in selection mode
    * @param {Function} onSelect - Callback when an item is selected (for selection mode)
+   * @param {string} fileTypeFilter - Optional filter: 'image' or 'video'
    */
-  showModal(selectionMode = false, onSelect = null) {
+  showModal(selectionMode = false, onSelect = null, fileTypeFilter = null) {
     this.setState({ 
       isVisible: true, 
       selectedItems: [], // Clear selections when modal opens
       shouldFocusSearch: true, // Enable search focus for this render
       selectionMode,
-      onSelect
+      onSelect,
+      fileTypeFilter
     });
     this.fetchGalleryData();
-    console.log('Gallery modal opened', selectionMode ? 'in selection mode' : '');
+    console.log('Gallery modal opened', selectionMode ? 'in selection mode' : '', fileTypeFilter ? `with filter: ${fileTypeFilter}` : '');
   }
   
   /**
@@ -297,7 +328,8 @@ export class GalleryDisplay extends Component {
       selectedItems: [], // Clear selections when modal closes
       shouldFocusSearch: false, // Reset focus flag
       selectionMode: false, // Reset selection mode
-      onSelect: null // Clear onSelect callback
+      onSelect: null, // Clear onSelect callback
+      fileTypeFilter: null // Clear file type filter
     });
     
     // Clean up pagination component
@@ -357,7 +389,7 @@ export class GalleryDisplay extends Component {
   renderGalleryItems() {
     const maxItems = 32; // Still maintain grid layout with 32 slots
     const itemsToShow = this.state.currentPageData; // Use pagination data instead of slicing
-    const { selectionMode } = this.state;
+    const { selectionMode, fileTypeFilter } = this.state;
     
     // Create items using the previewFactory
     const items = [];
@@ -370,7 +402,12 @@ export class GalleryDisplay extends Component {
         const onSelectCallback = selectionMode ? null : this.handleItemSelect;
         const disableCheckbox = selectionMode;
         const onImageClick = selectionMode ? this.handleItemClick : null;
-        const preview = this.previewFactory(item, onSelectCallback, isSelected, disableCheckbox, onImageClick);
+        
+        // Determine if this item should be disabled based on file type filter
+        const isVideo = this.isVideoItem(item);
+        const shouldDisable = selectionMode && fileTypeFilter === 'image' && isVideo;
+        
+        const preview = this.previewFactory(item, onSelectCallback, isSelected, disableCheckbox, onImageClick, shouldDisable);
         if (preview) {
           // Create a wrapper div to hold the DOM element content
           items.push(
@@ -533,10 +570,10 @@ export function createGallery(queryPath, previewFactory, onLoad) {
 
   // Return an object that matches the original API
   return {
-    showModal(selectionMode = false, onSelect = null) {
+    showModal(selectionMode = false, onSelect = null, fileTypeFilter = null) {
       init();
       if (galleryRef) {
-        galleryRef.showModal(selectionMode, onSelect);
+        galleryRef.showModal(selectionMode, onSelect, fileTypeFilter);
       }
     },
     hideModal() {

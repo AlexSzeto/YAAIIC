@@ -4,8 +4,22 @@ import { createImageModal } from './custom-ui/modal.mjs';
 import { showToast, showSuccessToast, showErrorToast } from './custom-ui/toast.mjs';
 import { showDialog } from './custom-ui/dialog.mjs';
 
+// Video file extensions that cannot be inpainted
+const VIDEO_EXTENSIONS = ['.webp', '.webm', '.mp4', '.gif'];
+
+/**
+ * Check if a URL points to a video file based on extension
+ * @param {string} url - The URL to check
+ * @returns {boolean} - True if the URL ends with a video extension
+ */
+function isVideoUrl(url) {
+  if (!url) return false;
+  const lowerUrl = url.toLowerCase();
+  return VIDEO_EXTENSIONS.some(ext => lowerUrl.endsWith(ext));
+}
+
 export class GeneratedImageDisplay {
-  constructor(baseElement, onUseField = null, onImageDeleted = null) {
+  constructor(baseElement, onUseField = null, onImageDeleted = null, onSelectAsInput = null, getWorkflowState = null) {
     if (!baseElement) {
       throw new Error('BaseElement is required for GeneratedImageDisplay');
     }
@@ -13,6 +27,8 @@ export class GeneratedImageDisplay {
     this.baseElement = baseElement;
     this.onUseField = onUseField;
     this.onImageDeleted = onImageDeleted; // Callback for when image is deleted
+    this.onSelectAsInput = onSelectAsInput; // Callback for when image is selected as input
+    this.getWorkflowState = getWorkflowState; // Function to get current workflow state
     this.currentImageData = null; // Store current image data including uid
     
     // Get references to the inner elements
@@ -22,12 +38,13 @@ export class GeneratedImageDisplay {
     this.tagsTextarea = baseElement.querySelector('.info-tags');
     this.descriptionTextarea = baseElement.querySelector('.info-description');
     this.seedInput = baseElement.querySelector('.info-seed');
+    this.selectButton = baseElement.querySelector('.image-select-btn');
     this.inpaintButton = baseElement.querySelector('.image-inpaint-btn');
     this.deleteButton = baseElement.querySelector('.image-delete-btn');
     
     // Validate that all required elements exist
     if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsTextarea || 
-        !this.descriptionTextarea || !this.seedInput || !this.inpaintButton || !this.deleteButton) {
+        !this.descriptionTextarea || !this.seedInput || !this.selectButton || !this.inpaintButton || !this.deleteButton) {
       throw new Error('GeneratedImageDisplay: Required inner elements not found in baseElement');
     }
     
@@ -59,6 +76,11 @@ export class GeneratedImageDisplay {
         const field = e.target.closest('.use-btn').getAttribute('data-field');
         this.useFieldInForm(field);
       });
+    });
+    
+    // Set up select button listener
+    this.selectButton.addEventListener('click', () => {
+      this.selectImageAsInput();
     });
     
     // Set up delete button listener
@@ -148,6 +170,48 @@ export class GeneratedImageDisplay {
     } else {
       console.warn('No onUseField callback provided');
     }
+  }
+  
+  /**
+   * Select the current image as input for the workflow
+   */
+  async selectImageAsInput() {
+    if (!this.currentImageData || !this.currentImageData.imageUrl) {
+      showErrorToast('No image to select');
+      return;
+    }
+    
+    if (isVideoUrl(this.currentImageData.imageUrl)) {
+      showErrorToast('Cannot use video as input image');
+      return;
+    }
+    
+    // Call the callback to notify main.mjs
+    if (this.onSelectAsInput) {
+      this.onSelectAsInput(this.currentImageData);
+    }
+  }
+  
+  /**
+   * Update the select button's disabled state based on current workflow
+   * Should be called whenever workflow changes or data changes
+   */
+  updateSelectButtonState() {
+    if (!this.getWorkflowState) {
+      this.selectButton.disabled = true;
+      return;
+    }
+    
+    const { workflow, hasUnfilledSlot } = this.getWorkflowState();
+    const isVideo = this.currentImageData && isVideoUrl(this.currentImageData.imageUrl);
+    
+    // Enable only if: workflow exists, has input images, has unfilled slot, and current image is not a video
+    const shouldEnable = workflow && 
+                        workflow.inputImages > 0 && 
+                        hasUnfilledSlot && 
+                        !isVideo;
+    
+    this.selectButton.disabled = !shouldEnable;
   }
   
   /**
@@ -306,8 +370,12 @@ export class GeneratedImageDisplay {
     this.baseElement.style.display = 'block';
     
     // Enable action buttons when valid image data is present
-    this.inpaintButton.disabled = !data.uid;
+    // Disable inpaint for video files (webp, webm, mp4, gif)
+    this.inpaintButton.disabled = !data.uid || isVideoUrl(data.imageUrl);
     this.deleteButton.disabled = !data.uid;
+    
+    // Update select button state
+    this.updateSelectButtonState();
     
     console.log('GeneratedImageDisplay data updated:', data);
   }
@@ -337,6 +405,7 @@ export class GeneratedImageDisplay {
     this.seedInput.value = '';
     
     // Disable action buttons
+    this.selectButton.disabled = true;
     this.inpaintButton.disabled = true;
     this.deleteButton.disabled = true;
     

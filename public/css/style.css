@@ -486,6 +486,29 @@ p {
   gap: 10px;
 }
 
+.image-select-btn {
+  background-color: var(--success-background, #28a745);
+  color: white;
+  border: 1px solid var(--success-border, #28a745);
+}
+
+.image-select-btn:hover {
+  background-color: var(--success-hover, #218838);
+  border-color: var(--success-border-hover, #218838);
+}
+
+.image-select-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--success-focus, #28a74580);
+}
+
+.image-select-btn:disabled {
+  background-color: var(--secondary-background);
+  border-color: var(--dark-border-secondary);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .image-inpaint-btn {
   background-color: var(--primary-background);
   color: white;
