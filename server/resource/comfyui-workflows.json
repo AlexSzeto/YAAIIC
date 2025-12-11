@@ -6,6 +6,7 @@
       "base": "illustrious-text-to-image.json",
       "format": "png",
       "type": "image",
+      "finalNode": "10",
       "replace": [
         {
           "from": "prompt",
@@ -29,6 +30,7 @@
       "base": "illustrious-image-style.json",
       "format": "png",
       "type": "image",
+      "finalNode": "11",
       "upload": [
         {
           "from": "image_0",
@@ -61,6 +63,7 @@
       "base": "flux-fantasy-text-to-landscape.json",
       "format": "jpg",
       "type": "image",
+      "finalNode": "9",
       "replace": [
         {
           "from" : "prompt",
@@ -83,6 +86,7 @@
       "base": "flux-fantasy-text-to-portrait.json",
       "format": "jpg",
       "type": "image",
+      "finalNode": "44",
       "replace": [
         {
           "from" : "prompt",
@@ -105,6 +109,7 @@
       "base": "realvis-fantasy-inpaint.json",
       "format": "jpg",
       "type": "inpaint",
+      "finalNode": "9",
       "upload": [
         {
           "from": "image_0",
@@ -146,6 +151,7 @@
       "format": "png",
       "type": "image",
       "inputImages": 1,
+      "finalNode": "229",
       "upload": [
         {
           "from": "image_0",
@@ -177,6 +183,7 @@
       "base": "wan-image-to-video-portrait.json",
       "format": "webp",
       "type": "video",
+      "finalNode": "76",
       "inputImages": 2,
       "upload": [
         {
@@ -230,6 +237,7 @@
       "base": "wan-image-to-video-landscape.json",
       "format": "webp",
       "type": "video",
+      "finalNode": "76",
       "inputImages": 2,
       "upload": [
         {
