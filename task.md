@@ -166,7 +166,30 @@ When the request parameters are sent to the generation function, and before the 
 [x] Implement support for the `optionalPrompt` workflow data parameter. Send this value as part of the workflow list, and skip workflow validation for a filled in prompt when this parameter is set to true
 
 [] modify the generation step calculation algorithm to include pre generation prompts and post generation prompts. Do not modify the upload task progress.
-- If pre generation prompts are present, increase the total number of steps by 1. The pre generation prompts should be at step (1/X) where X is the final tally of the total number of steps
-- This means that if pre gen prompts are present, the workflow steps starts at 2, not 1.
-- If post generation prompts are present, increase the total number of steps by 1 again. The post generation prompts should be at step (X/X) since it is always the last step.
-- For percentage progression of the pre and post generation steps, divide the progression percentage evenly between the prompts in each of the steps.
+1. Create `calculateWorkflowSteps` function in [server/generate.mjs](server/generate.mjs)
+   ```javascript
+   // calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts, hasPostGenPrompts)
+   // - Recursively traverse from finalNode backwards through node inputs
+   // - Build a map of nodeId -> distance from final node
+   // - Calculate base workflow total steps (max distance + 1)
+   // - If hasPreGenPrompts is true, add 1 to total steps
+   // - If hasPostGenPrompts is true, add 1 to total steps
+   // - If pre-gen prompts exist, shift workflow step numbers to start at 2 instead of 1
+   // - Generate stepDisplayText for each node as "(X/Y)" where:
+   //   - Y = total steps
+   //   - X = (Y - distance) or (Y - distance + 1) if pre-gen prompts exist
+   // - Return: { stepMap: Map<nodeId, { distance, stepDisplayText }>, totalSteps, preGenStepInfo, postGenStepInfo }
+   //   - preGenStepInfo: { stepText: "(1/Y)", promptCount: number } (if pre-gen prompts exist)
+   //   - postGenStepInfo: { stepText: "(Y/Y)", promptCount: number } (if post-gen prompts exist)
+   ```
+2. Call `calculateWorkflowSteps` in the generation function after workflow loads but before generation starts
+3. Store the step map and step info in the generation task context
+4. Modify [server/comfyui-websocket.mjs](server/comfyui-websocket.mjs) to use the step map when sending progress events
+5. Prepend `stepDisplayText` from the step map to node names in progress SSE events
+6. In [server/generate.mjs](server/generate.mjs), add SSE progress updates for pre-generation prompts
+7. When processing pre-generation prompts, send SSE progress updates with step text "(1/Y)"
+8. Calculate percentage progress by dividing 100% evenly among the number of pre-gen prompts (e.g., 3 prompts: 33%, 66%, 100%)
+9. Add SSE progress updates for post-generation prompts
+10. When processing post-generation prompts, send SSE progress updates with step text "(Y/Y)"
+11. Calculate percentage progress by dividing 100% evenly among the number of post-gen prompts
+12. Update client-side SSE handling in [public/js/sse-manager.mjs](public/js/sse-manager.mjs) to display the step indicator in progress messages
