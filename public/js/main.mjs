@@ -713,13 +713,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         try {
-          showToast('Uploading and analyzing image...');
-          
           // Create form data
           const formData = new FormData();
           formData.append('image', file);
           
-          // Upload image
+          // Upload image and get task ID
           const response = await fetch('/api/upload-image', {
             method: 'POST',
             body: formData
@@ -730,24 +728,66 @@ document.addEventListener('DOMContentLoaded', async function() {
           }
           
           const result = await response.json();
+          const taskId = result.taskId;
           
-          // Show success message
-          showSuccessToast(`Image uploaded: ${result.name || 'Unnamed'}`);
+          console.log('Upload task created with ID:', taskId);
           
-          // Refresh gallery if it's open
-          if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
-            try {
-              await galleryDisplay.fetchGalleryData();
-            } catch (galleryError) {
-              console.warn('Failed to refresh gallery:', galleryError);
-            }
+          // Unmount previous progress banner if it exists
+          if (currentProgressBanner) {
+            currentProgressBanner.unmount();
+            currentProgressBanner = null;
           }
+          
+          // Create progress banner with completion callback
+          currentProgressBanner = createProgressBanner(
+            taskId,
+            sseManager,
+            (completionData) => {
+              // Handle completion
+              console.log('Upload complete:', completionData);
+              
+              // Show success toast with time taken if available
+              const timeTaken = completionData.result?.timeTaken;
+              const message = timeTaken 
+                ? `Upload completed in ${timeTaken}s` 
+                : 'Image uploaded successfully';
+              showSuccessToast(message);
+              
+              // Refresh gallery if it's open
+              if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
+                galleryDisplay.fetchGalleryData().catch(err => {
+                  console.warn('Failed to refresh gallery:', err);
+                });
+              }
+              
+              // Unmount the progress banner
+              if (currentProgressBanner) {
+                currentProgressBanner.unmount();
+                currentProgressBanner = null;
+              }
+            },
+            (errorData) => {
+              // Handle error
+              console.error('Upload error:', errorData);
+              showErrorToast(errorData.error?.message || 'Failed to process uploaded image');
+              
+              // Unmount the progress banner
+              if (currentProgressBanner) {
+                currentProgressBanner.unmount();
+                currentProgressBanner = null;
+              }
+            }
+          );
           
           // Clear the file input
           uploadFileInput.value = '';
           
         } catch (error) {
           console.error('Upload error:', error);
+          if (currentProgressBanner) {
+            currentProgressBanner.unmount();
+            currentProgressBanner = null;
+          }
           showErrorToast('Failed to upload image');
           uploadFileInput.value = '';
         }

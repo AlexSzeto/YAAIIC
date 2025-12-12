@@ -123,7 +123,7 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 8. Return the complete entry to the client and update the gallery display
 9. Show a toast notification indicating successful upload and description generation
 
-[] Update the upload image endpoint to use sse similarly to workflow generation tasks
+[x] Update the upload image endpoint to use sse similarly to workflow generation tasks
 1. Modify the `/api/upload-image` endpoint in [server/server.mjs](server/server.mjs) to return a task ID immediately
 2. Create a new generation task queue entry for the upload processing
 3. Use the existing SSE infrastructure in [server/sse.mjs](server/sse.mjs) to broadcast progress updates

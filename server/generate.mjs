@@ -270,6 +270,153 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
   }
 }
 
+// Handler for upload image processing
+export async function handleImageUpload(file, config) {
+  // Generate unique task ID
+  const taskId = generateTaskId();
+  
+  // Start timer for this task
+  taskTimers.set(taskId, Date.now());
+  
+  // Create task entry
+  createTask(taskId, {
+    workflow: 'Uploaded Image',
+    promptId: null,
+    requestData: { filename: file.originalname },
+    workflowConfig: { type: 'upload' }
+  });
+  
+  console.log(`Created upload task ${taskId}`);
+  
+  // Process upload task asynchronously
+  processUploadTask(taskId, file, config).catch(error => {
+    console.error(`Error in upload task ${taskId}:`, error);
+    emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
+  });
+  
+  return taskId;
+}
+
+// Process upload task asynchronously
+async function processUploadTask(taskId, file, config) {
+  try {
+    const __dirname = path.dirname(new URL(import.meta.url).pathname);
+    const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+    
+    // Emit progress: Uploading file
+    emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, 'Uploading file...');
+    
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname) || '.png';
+    const filename = `upload_${timestamp}${ext}`;
+    
+    // Save file to storage directory
+    const storageFolder = path.join(actualDirname, 'storage');
+    if (!fs.existsSync(storageFolder)) {
+      fs.mkdirSync(storageFolder, { recursive: true });
+    }
+    
+    const savePath = path.join(storageFolder, filename);
+    fs.writeFileSync(savePath, file.buffer);
+    console.log(`Image saved to: ${savePath}`);
+    
+    // Create generationData object with the saved path
+    const generationData = {
+      savePath: savePath,
+      prompt: '',
+      seed: 0,
+      workflow: 'Uploaded Image',
+      name: '',
+      description: ''
+    };
+    
+    // Process post-generation prompts to generate description and name
+    if (config.postGenerationPrompts && Array.isArray(config.postGenerationPrompts)) {
+      console.log('Processing post-generation prompts for uploaded image...');
+      
+      let promptIndex = 0;
+      for (const promptConfig of config.postGenerationPrompts) {
+        try {
+          promptIndex++;
+          // Emit progress for each prompt
+          const stepName = promptConfig.to === 'description' ? 'Generating description' : `Generating ${promptConfig.to}`;
+          const progressValue = 1 + promptIndex;
+          const progressPercent = Math.round((progressValue / 4) * 100);
+          emitProgressUpdate(taskId, { percentage: progressPercent, value: progressValue, max: 4 }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+        } catch (error) {
+          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'description' 
+              ? 'No description available' 
+              : file.originalname.replace(ext, '');
+          }
+        }
+      }
+    }
+    
+    // Emit progress: Saving to database
+    emitProgressUpdate(taskId, { percentage: 90, value: 3, max: 4 }, 'Saving to database...');
+    
+    // Calculate time taken in seconds
+    const startTime = taskTimers.get(taskId);
+    const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    
+    // Create database entry
+    const imageUrl = `/image/${filename}`;
+    let uid = null;
+    
+    if (addImageDataEntry) {
+      const imageDataEntry = {
+        prompt: generationData.prompt || '',
+        seed: 0,
+        imageUrl: imageUrl,
+        name: generationData.name || file.originalname.replace(ext, ''),
+        description: generationData.description || 'Uploaded image',
+        workflow: 'Uploaded Image',
+        inpaint: false,
+        inpaintArea: null,
+        timeTaken: timeTaken
+      };
+      
+      addImageDataEntry(imageDataEntry);
+      uid = imageDataEntry.uid;
+      console.log('Image data entry saved with UID:', uid);
+    }
+    
+    // Emit completion event
+    emitTaskCompletion(taskId, {
+      imageUrl: imageUrl,
+      description: generationData.description || 'Uploaded image',
+      prompt: generationData.prompt || '',
+      seed: 0,
+      name: generationData.name || file.originalname.replace(ext, ''),
+      workflow: 'Uploaded Image',
+      inpaint: false,
+      inpaintArea: null,
+      uid: uid,
+      timeTaken: timeTaken,
+      maxValue: 4
+    });
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
+    
+    console.log(`Upload task ${taskId} completed successfully`);
+    
+  } catch (error) {
+    console.error(`Error in upload task ${taskId}:`, error);
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
+    
+    // Emit error
+    emitTaskErrorByTaskId(taskId, 'Failed to process uploaded image', error.message);
+  }
+}
+
 // Main image generation handler
 export async function handleImageGeneration(req, res, workflowConfig) {
   const { base: workflowBasePath } = workflowConfig;

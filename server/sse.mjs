@@ -197,9 +197,17 @@ function getStepTitleFromWorkflow(workflowData, nodeId) {
 }
 
 // Export functions for use in WebSocket handlers
-export function emitProgressUpdate(promptId, progress, currentStep, nodeId = null) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
+export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, nodeId = null) {
+  // Try to resolve as promptId first, then as taskId
+  let taskId = promptIdToTaskId.get(promptIdOrTaskId);
+  if (!taskId) {
+    // Check if it's already a taskId
+    if (activeTasks.has(promptIdOrTaskId)) {
+      taskId = promptIdOrTaskId;
+    } else {
+      return; // Not found
+    }
+  }
   
   const task = activeTasks.get(taskId);
   if (!task) return;
@@ -230,9 +238,17 @@ export function emitProgressUpdate(promptId, progress, currentStep, nodeId = nul
   emitSSEToTask(taskId, message);
 }
 
-export function emitTaskCompletion(promptId, result) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
+export function emitTaskCompletion(promptIdOrTaskId, result) {
+  // Try to resolve as promptId first, then as taskId
+  let taskId = promptIdToTaskId.get(promptIdOrTaskId);
+  if (!taskId) {
+    // Check if it's already a taskId
+    if (activeTasks.has(promptIdOrTaskId)) {
+      taskId = promptIdOrTaskId;
+    } else {
+      return; // Not found
+    }
+  }
   
   const task = activeTasks.get(taskId);
   if (!task) return;
@@ -243,9 +259,17 @@ export function emitTaskCompletion(promptId, result) {
   scheduleTaskCleanup(taskId);
 }
 
-export function emitTaskError(promptId, errorMessage, errorDetails) {
-  const taskId = promptIdToTaskId.get(promptId);
-  if (!taskId) return;
+export function emitTaskError(promptIdOrTaskId, errorMessage, errorDetails) {
+  // Try to resolve as promptId first, then as taskId
+  let taskId = promptIdToTaskId.get(promptIdOrTaskId);
+  if (!taskId) {
+    // Check if it's already a taskId
+    if (activeTasks.has(promptIdOrTaskId)) {
+      taskId = promptIdOrTaskId;
+    } else {
+      return; // Not found
+    }
+  }
   
   emitTaskErrorByTaskId(taskId, errorMessage, errorDetails);
 }
