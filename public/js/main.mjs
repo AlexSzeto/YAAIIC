@@ -66,7 +66,8 @@ function renderImageUploadComponents(count) {
         const blob = await response.blob();
         const componentRef = uploadComponentRefs[componentIndex];
         if (componentRef && typeof componentRef.setImage === 'function') {
-          componentRef.setImage(blob, selectedItem.imageUrl);
+          // Pass the description from the selected item
+          componentRef.setImage(blob, selectedItem.imageUrl, selectedItem.description || null);
           
           // Update select button state after setting image
           if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
@@ -424,7 +425,11 @@ async function handleGenerate() {
   const nameInput = document.getElementById('name');
   const seedInput = document.getElementById('seed');
   
-  if (!descriptionText.trim()) {
+  // Get selected workflow to check if prompt is optional
+  const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+  
+  // Only validate prompt if it's not optional
+  if (!selectedWorkflow?.optionalPrompt && !descriptionText.trim()) {
     showErrorToast('Please enter a description before generating an image.');
     return;
   }
@@ -484,9 +489,13 @@ async function handleGenerate() {
       }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
-          const blob = component.getImageBlob();
-          if (blob) {
-            formData.append(`image_${index}`, blob, `image_${index}.png`);
+          const imageData = component.getImageWithDescription();
+          if (imageData.blob) {
+            formData.append(`image_${index}`, imageData.blob, `image_${index}.png`);
+            // Include description if available
+            if (imageData.description) {
+              formData.append(`image_${index}_description`, imageData.description);
+            }
           }
         }
       });

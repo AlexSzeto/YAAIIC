@@ -133,10 +133,10 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 7. Handle completion event to refresh gallery and show success toast
 8. Handle error events and display appropriate error messages
 
-[] The client should store the image's description alongside its URL in the upload image component, and send the description data as `image_X_description` where X is the image's index. On the server side, the workflow data in `comfyui-workflows` has a new parameter, `preGenerationPrompts`, which is an array. For example:
+[x] The client should store the image's description alongside its URL in the upload image component, and send the description data as `image_X_description` where X is the image's index. On the server side, the workflow data in `comfyui-workflows` has a new parameter, `preGenerationPrompts`, which is an array. For example:
 ```json
 {
-  "requiresPrompt": false,
+  "optionalPrompt": true,
   "preGenerationPrompts": [
     {
       "model": "gemma:4b",
@@ -162,3 +162,5 @@ When the request parameters are sent to the generation function, and before the 
 7. For each pre-generation prompt, call `modifyGenerationDataWithPrompt(promptData, generationData)`
 8. Use the augmented `generationData` when modifying workflow inputs
 9. Ensure bracket placeholders like `[image_0_description]` are properly replaced with actual description values from request parameters
+
+[x] Implement support for the `optionalPrompt` workflow data parameter. Send this value as part of the workflow list, and skip workflow validation for a filled in prompt when this parameter is set to true

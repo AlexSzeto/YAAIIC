@@ -183,8 +183,17 @@
       "base": "wan-image-to-video-portrait.json",
       "format": "webp",
       "type": "video",
+      "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nImagine the dynamic motion that would carry the scenery one second forward. Write the description here:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        }
+      ],
       "upload": [
         {
           "from": "image_0",
@@ -237,8 +246,17 @@
       "base": "wan-image-to-video-landscape.json",
       "format": "webp",
       "type": "video",
+      "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nImagine the dynamic motion that would carry the scenery one second forward. Write the description here:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        }
+      ],
       "upload": [
         {
           "from": "image_0",

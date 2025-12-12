@@ -457,7 +457,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationPrompts, type } = workflowConfig;
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationPrompts, preGenerationPrompts, type } = workflowConfig;
     const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     
     // Create generationData as a copy of requestData
@@ -482,6 +482,32 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       }
     }
 
+    // Process pre-generation prompts if they exist
+    if (preGenerationPrompts && Array.isArray(preGenerationPrompts) && preGenerationPrompts.length > 0) {
+      console.log(`Processing ${preGenerationPrompts.length} pre-generation prompts...`);
+      
+      for (const promptConfig of preGenerationPrompts) {
+        try {
+          // Emit SSE progress update
+          const stepName = `Generating ${promptConfig.to}`;
+          emitProgressUpdate(taskId, { percentage: 0, value: 0, max: 1 }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+          
+          // Emit SSE progress update for completion
+          emitProgressUpdate(taskId, { percentage: 100, value: 1, max: 1 }, stepName + ' complete');
+        } catch (error) {
+          console.warn(`Failed to process pre-generation prompt for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the prompt fails and field is empty
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'prompt' 
+              ? 'Dynamic motion and camera movement' 
+              : 'Generated Content';
+          }
+        }
+      }
+    }
+
     // Load the ComfyUI workflow
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     // Fix Windows path issue by removing leading slash
@@ -491,10 +517,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
 
     // saveFilename: filename portion of savePath, no folder or extension
     if (savePath) {
-      requestData.saveFilename = path.basename(savePath, path.extname(savePath));
+      generationData.saveFilename = path.basename(savePath, path.extname(savePath));
     }
     // storagePath: absolute path to /storage folder
-    requestData.storagePath = path.join(actualDirname, 'storage');
+    generationData.storagePath = path.join(actualDirname, 'storage');
 
     // Store the workflow JSON in the task for node title lookups
     updateTask(taskId, { workflowData });

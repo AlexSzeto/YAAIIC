@@ -19,6 +19,7 @@ export class ImageUpload extends Component {
       imagePreview: null,
       hasImage: false,
       imageFile: null,
+      imageDescription: null,
       disabled: props.disabled || false
     };
     
@@ -29,12 +30,14 @@ export class ImageUpload extends Component {
    * Public method to set image externally (e.g. from gallery)
    * @param {Blob} blob - The image blob
    * @param {string} url - The image URL for preview
+   * @param {string} description - Optional image description
    */
-  setImage(blob, url) {
+  setImage(blob, url, description = null) {
     this.setState({
       imagePreview: url,
       hasImage: true,
-      imageFile: blob
+      imageFile: blob,
+      imageDescription: description
     });
     
     // Notify parent of the change
@@ -50,7 +53,8 @@ export class ImageUpload extends Component {
     this.setState({
       imagePreview: null,
       hasImage: false,
-      imageFile: null
+      imageFile: null,
+      imageDescription: null
     });
     
     // Reset file input
@@ -149,6 +153,17 @@ export class ImageUpload extends Component {
    */
   hasImage() {
     return this.state.hasImage;
+  }
+
+  /**
+   * Get image with its description
+   * @returns {{blob: Blob, description: string|null}}
+   */
+  getImageWithDescription() {
+    return {
+      blob: this.state.imageFile,
+      description: this.state.imageDescription
+    };
   }
 
   /**
