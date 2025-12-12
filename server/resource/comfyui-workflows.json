@@ -189,7 +189,7 @@
       "preGenerationPrompts": [
         {
           "model": "gemma3:4b",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nImagine the dynamic motion that would carry the scenery one second forward. Write the description here:",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
           "to": "prompt",
           "replaceBlankFieldOnly": true
         }
@@ -252,7 +252,7 @@
       "preGenerationPrompts": [
         {
           "model": "gemma3:4b",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nImagine the dynamic motion that would carry the scenery one second forward. Write the description here:",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
           "to": "prompt",
           "replaceBlankFieldOnly": true
         }

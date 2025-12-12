@@ -165,7 +165,7 @@ When the request parameters are sent to the generation function, and before the 
 
 [x] Implement support for the `optionalPrompt` workflow data parameter. Send this value as part of the workflow list, and skip workflow validation for a filled in prompt when this parameter is set to true
 
-[] modify the generation step calculation algorithm to include pre generation prompts and post generation prompts. Do not modify the upload task progress.
+[x] modify the generation step calculation algorithm to include pre generation prompts and post generation prompts. Do not modify the upload task progress.
 1. Create `calculateWorkflowSteps` function in [server/generate.mjs](server/generate.mjs)
    ```javascript
    // calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts, hasPostGenPrompts)
