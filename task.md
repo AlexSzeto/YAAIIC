@@ -85,7 +85,7 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 6. Update completion toast in [public/js/generated-image-display.mjs](public/js/generated-image-display.mjs) to show `Workflow Completed in X(s)` message
 7. Clean up timer from the map after generation completes or fails
 
-[] Lower footprint gallery preview
+[x] Lower footprint gallery preview
 1. Modify the gallery preview CSS in [public/css/custom-ui.css](public/css/custom-ui.css)
 2. Add `position: relative` to the gallery item container
 3. Position the name and date text container at the lower left corner using absolute positioning
