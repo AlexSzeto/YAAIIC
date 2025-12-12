@@ -180,7 +180,7 @@
     {
       "name": "Image to Video Portrait (WAN)",
       "autocomplete": false,
-      "base": "wan-image-to-video-portrait.json",
+      "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
       "optionalPrompt": true,
@@ -247,7 +247,7 @@
     {
       "name": "Image to Video Landscape (WAN)",
       "autocomplete": false,
-      "base": "wan-image-to-video-landscape.json",
+      "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
       "optionalPrompt": true,
@@ -276,6 +276,22 @@
         }
       ],
       "replace": [
+        {
+          "value": 832,
+          "to": ["64", "inputs", "width"]
+        },
+        {
+          "value": 480,
+          "to": ["64", "inputs", "height"]
+        },
+        {
+          "value": 832,
+          "to": ["72", "inputs", "width"]
+        },
+        {
+          "value": 480,
+          "to": ["72", "inputs", "height"]
+        },
         {
           "from": "prompt",
           "to": ["6", "inputs", "text"]
