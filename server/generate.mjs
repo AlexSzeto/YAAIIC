@@ -243,7 +243,7 @@ export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = f
 // Function to modify generationData with a prompt
 export async function modifyGenerationDataWithPrompt(promptData, generationData) {
   try {
-    const { model, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
+    const { model, template, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
     
     // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
     if (replaceBlankFieldOnly && generationData[to] && generationData[to].trim() !== '') {
@@ -251,14 +251,22 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
       return generationData;
     }
     
-    // Extract prompt text from promptData.prompt
-    let processedPrompt = prompt;
+    // Extract prompt text from promptData.prompt or promptData.template
+    let processedPrompt = prompt || template;
     
     // Replace bracketed placeholders (e.g., [description]) with values from generationData
     const bracketPattern = /\[(\w+)\]/g;
     processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
       return generationData[key] || match;
     });
+    
+    // If template is present instead of model, just do string replacement
+    if (template) {
+      console.log(`Processing template for ${to}: ${processedPrompt}`);
+      generationData[to] = processedPrompt;
+      console.log(`Stored template result in ${to}: ${processedPrompt}`);
+      return generationData;
+    }
     
     console.log(`Processing prompt for ${to} with model ${model}`);
     console.log(`Prompt: ${processedPrompt}`);
