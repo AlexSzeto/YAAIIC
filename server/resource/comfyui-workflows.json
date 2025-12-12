@@ -326,6 +326,68 @@
         }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
+    },
+    {
+      "name": "Image to Video Loop (WAN5b)",
+      "autocomplete": false,
+      "base": "wan5b-image-to-video-loop.json",
+      "format": "webp",
+      "type": "video",
+      "finalNode": "119",
+      "inputImages": 1,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "[image_0_description]",
+          "to": "description"
+        }
+      ],
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "firstFramePath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "seed",
+          "to": ["63", "inputs", "noise_seed"]
+        },
+        {
+          "from": "seed",
+          "to": ["109", "inputs", "noise_seed"]
+        },
+        {
+          "from": "saveFilename",
+          "to": ["106", "inputs", "filename_prefix"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["119", "inputs", "output_file_path"]
+        },
+        {
+          "from": "firstFramePath",
+          "to": ["56", "inputs", "image"]
+        },
+        {
+          "from": "frames",
+          "to": ["122", "inputs", "value"]
+        },
+        {
+          "from": "framerate",
+          "to": ["106", "inputs", "frame_rate"]
+        }        
+      ],
+      "extractOutputPathFromTextFile": "video-filename.txt"
     }    
   ]
 }

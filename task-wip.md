@@ -5,6 +5,7 @@
 - Refactor all custom-ui into preact components
 
 # Features
+- Workflow time estimate (from last 5 generations)
 - Rename generated image
 - Image tagging
 - Auto download models from Hugging Face

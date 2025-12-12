@@ -582,14 +582,25 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
-        const { from, to, prefix, postfix } = mod;
-        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
-        let value = generationData[from];
+        const { from, value: directValue, to, prefix, postfix } = mod;
+        
+        // Determine the source of the value
+        let value;
+        if (directValue !== undefined) {
+          // Use direct value if provided
+          value = directValue;
+          console.log(`Modifying: direct value to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        } else if (from) {
+          // Use value from generationData
+          value = generationData[from];
+          console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        }
+        
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
 
-        if(value && to && Array.isArray(to)) {
+        if(value !== undefined && to && Array.isArray(to)) {
           workflowData = setObjectPathValue(workflowData, to, value);
         }
       });

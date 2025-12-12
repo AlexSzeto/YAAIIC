@@ -193,3 +193,14 @@ When the request parameters are sent to the generation function, and before the 
 10. When processing post-generation prompts, send SSE progress updates with step text "(Y/Y)"
 11. Calculate percentage progress by dividing 100% evenly among the number of post-gen prompts
 12. Update client-side SSE handling in [public/js/sse-manager.mjs](public/js/sse-manager.mjs) to display the step indicator in progress messages
+
+[x] Support direct value assignment in workflow modifications without requiring values to come from generationData
+
+- When a workflow modification contains a `value` property instead of a `from` property, the system should directly use that value rather than looking it up from `generationData`. This allows hardcoding specific values in workflow configurations.
+
+1. Modify workflow modification logic in [server/generate.mjs](server/generate.mjs#L582-L597)
+2. Update modification processing to check for `value` property first
+3. If `value` is present, use it directly instead of looking up from `generationData[from]`
+4. If `value` is not present, fall back to existing `from` behavior
+5. Support `prefix` and `postfix` with both direct values and lookup values
+6. Update logging to distinguish between direct value and lookup modifications
