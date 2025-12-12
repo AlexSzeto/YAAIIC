@@ -145,6 +145,47 @@
       ]
     },
     {
+      "name": "Inpaint (Waifu Anime)",
+      "autocomplete": true,
+      "base": "waifu-anime-inpaint.json",
+      "format": "png",
+      "type": "inpaint",
+      "finalNode": "9",
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "imagePath"
+        },
+        {
+          "from": "mask",
+          "storePathAs": "maskPath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"],
+          "prefix": "a painterly digital art style illustration\n\n"
+        },
+        {
+          "from": "seed",
+          "to": ["3", "inputs", "seed"]
+        },
+        {
+          "from": "savePath",
+          "to": ["9", "inputs", "path"]
+        },
+        {
+          "from": "imagePath",
+          "to": ["20", "inputs", "image"]
+        },
+        {
+          "from": "maskPath",
+          "to": ["36", "inputs", "image"]
+        }
+      ]
+    },
+    {
       "name": "Image Edit (Qwen)",
       "autocomplete": false,
       "base": "qwen-image-to-image.json",
