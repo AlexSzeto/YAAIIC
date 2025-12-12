@@ -123,6 +123,16 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 8. Return the complete entry to the client and update the gallery display
 9. Show a toast notification indicating successful upload and description generation
 
+[] Update the upload image endpoint to use sse similarly to workflow generation tasks
+1. Modify the `/api/upload-image` endpoint in [server/server.mjs](server/server.mjs) to return a task ID immediately
+2. Create a new generation task queue entry for the upload processing
+3. Use the existing SSE infrastructure in [server/sse.mjs](server/sse.mjs) to broadcast progress updates
+4. Send SSE events for each stage: "Uploading file", "Generating description", "Generating name", "Saving to database"
+5. Update client-side upload handler in [public/index.html](public/index.html) to listen for SSE events using the task ID
+6. Display progress updates in a progress banner using [public/js/custom-ui/progress-banner.mjs](public/js/custom-ui/progress-banner.mjs)
+7. Handle completion event to refresh gallery and show success toast
+8. Handle error events and display appropriate error messages
+
 [] The client should store the image's description alongside its URL in the upload image component, and send the description data as `image_X_description` where X is the image's index. On the server side, the workflow data in `comfyui-workflows` has a new parameter, `preGenerationPrompts`, which is an array. For example:
 ```json
 {
