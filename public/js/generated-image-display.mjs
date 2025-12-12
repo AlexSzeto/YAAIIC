@@ -364,7 +364,7 @@ export class GeneratedImageDisplay {
     this.nameInput.value = data.name || '';
     this.tagsTextarea.value = data.prompt || '';
     this.descriptionTextarea.value = data.description || 'No description available';
-    this.seedInput.value = data.seed || 'Unknown';
+    this.seedInput.value = data.seed;
     
     // Show the display
     this.baseElement.style.display = 'block';

@@ -694,6 +694,68 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.error('Gallery button not found or GalleryDisplay not initialized');
     }
     
+    // Set up upload button
+    const uploadButton = document.getElementById('upload-btn');
+    const uploadFileInput = document.getElementById('upload-file-input');
+    if (uploadButton && uploadFileInput) {
+      uploadButton.addEventListener('click', () => {
+        uploadFileInput.click();
+      });
+      
+      uploadFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showErrorToast('Please select an image file');
+          return;
+        }
+        
+        try {
+          showToast('Uploading and analyzing image...');
+          
+          // Create form data
+          const formData = new FormData();
+          formData.append('image', file);
+          
+          // Upload image
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          
+          // Show success message
+          showSuccessToast(`Image uploaded: ${result.name || 'Unnamed'}`);
+          
+          // Refresh gallery if it's open
+          if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
+            try {
+              await galleryDisplay.fetchGalleryData();
+            } catch (galleryError) {
+              console.warn('Failed to refresh gallery:', galleryError);
+            }
+          }
+          
+          // Clear the file input
+          uploadFileInput.value = '';
+          
+        } catch (error) {
+          console.error('Upload error:', error);
+          showErrorToast('Failed to upload image');
+          uploadFileInput.value = '';
+        }
+      });
+    } else {
+      console.error('Upload button or file input not found');
+    }
+    
     // Set up generate button
     const generateButton = document.getElementById('generate-btn');
     if (generateButton) {

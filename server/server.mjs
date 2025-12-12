@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule } from './generate.mjs';
+import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt } from './generate.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
@@ -208,6 +208,87 @@ app.get('/tags', (req, res) => {
       console.error('Error reading tags.csv:', err);
       res.status(500).json({ error: 'Failed to load tags.csv' });
     });
+});
+
+// POST endpoint for uploading images
+app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    
+    console.log('Received image upload:', req.file.originalname);
+    
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
+    const ext = path.extname(req.file.originalname) || '.png';
+    const filename = `upload_${timestamp}${ext}`;
+    
+    // Save file to storage directory
+    const storageFolder = path.join(actualDirname, 'storage');
+    if (!fs.existsSync(storageFolder)) {
+      fs.mkdirSync(storageFolder, { recursive: true });
+    }
+    
+    const savePath = path.join(storageFolder, filename);
+    fs.writeFileSync(savePath, req.file.buffer);
+    console.log(`Image saved to: ${savePath}`);
+    
+    // Create generationData object with the saved path
+    const generationData = {
+      savePath: savePath,
+      prompt: '',
+      seed: 0,
+      workflow: 'Uploaded Image',
+      name: '',
+      description: ''
+    };
+    
+    // Process post-generation prompts to generate description and name
+    if (config.postGenerationPrompts && Array.isArray(config.postGenerationPrompts)) {
+      console.log('Processing post-generation prompts for uploaded image...');
+      
+      for (const promptConfig of config.postGenerationPrompts) {
+        try {
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+        } catch (error) {
+          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'description' 
+              ? 'No description available' 
+              : req.file.originalname.replace(ext, '');
+          }
+        }
+      }
+    }
+    
+    // Create database entry
+    const imageUrl = `/image/${filename}`;
+    const imageDataEntry = {
+      prompt: generationData.prompt || '',
+      seed: 0,
+      imageUrl: imageUrl,
+      name: generationData.name || req.file.originalname.replace(ext, ''),
+      description: generationData.description || 'Uploaded image',
+      workflow: 'Uploaded Image',
+      inpaint: false,
+      inpaintArea: null,
+      timeTaken: 0
+    };
+    
+    addImageDataEntry(imageDataEntry);
+    console.log('Image data entry saved with UID:', imageDataEntry.uid);
+    
+    // Return the complete entry to client
+    res.json({
+      success: true,
+      ...imageDataEntry
+    });
+    
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ error: 'Failed to upload image', details: error.message });
+  }
 });
 
 // POST endpoint for ComfyUI image generation

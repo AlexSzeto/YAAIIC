@@ -94,7 +94,7 @@ For now, hard code in a conditional clause to prevent these global prompts from 
 6. Ensure the styling matches the title text appearance in the image modal (font size, weight, color)
 7. Test with various gallery items to ensure readability and proper overlay positioning
 
-[] Remove the upload button from the upload-image component, and add a upload button to the right of the gallery button. Pressing the button opens a dialog and when a file is chosen, the content of the file is renamed and copied into the storage folder as if it is a generated image, generate a description and a name for the image, and store all the required data into the `image-data` database just like a generated image.
+[x] Remove the upload button from the upload-image component, and add a upload button to the right of the gallery button. Pressing the button opens a dialog and when a file is chosen, the content of the file is renamed and copied into the storage folder as if it is a generated image, generate a description and a name for the image, and store all the required data into the `image-data` database just like a generated image.
 1. Remove the upload button from [public/js/custom-ui/image-upload.mjs](public/js/custom-ui/image-upload.mjs) component
 2. Add a new upload button in [public/index.html](public/index.html) positioned to the right of the gallery button
 3. Create a file input dialog handler that triggers when the upload button is clicked

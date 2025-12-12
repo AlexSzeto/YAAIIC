@@ -201,14 +201,6 @@ export class ImageUpload extends Component {
             <div class="image-upload-empty">
               <box-icon name='image' color='#888888' size='48px'></box-icon>
               <div class="image-upload-text">Select Image</div>
-              <button 
-                class="image-upload-btn image-upload-gallery-btn-empty"
-                onClick=${this.handleUploadClick}
-                title="Upload from device"
-              >
-                <box-icon name='upload' color='#ffffff' size='16px'></box-icon>
-                Upload
-              </button>
             </div>
           `}
         </div>
