@@ -160,7 +160,7 @@ async function handleSelectAsInput(imageData) {
     // Set it on the target upload component
     const component = uploadComponentRefs[targetIndex];
     if (component && typeof component.setImage === 'function') {
-      component.setImage(blob, imageData.imageUrl);
+      component.setImage(blob, imageData.imageUrl, imageData.description);
       showSuccessToast('Image selected as input');
       
       // Update select button state after setting image
