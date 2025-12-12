@@ -164,3 +164,9 @@ When the request parameters are sent to the generation function, and before the 
 9. Ensure bracket placeholders like `[image_0_description]` are properly replaced with actual description values from request parameters
 
 [x] Implement support for the `optionalPrompt` workflow data parameter. Send this value as part of the workflow list, and skip workflow validation for a filled in prompt when this parameter is set to true
+
+[] modify the generation step calculation algorithm to include pre generation prompts and post generation prompts. Do not modify the upload task progress.
+- If pre generation prompts are present, increase the total number of steps by 1. The pre generation prompts should be at step (1/X) where X is the final tally of the total number of steps
+- This means that if pre gen prompts are present, the workflow steps starts at 2, not 1.
+- If post generation prompts are present, increase the total number of steps by 1 again. The post generation prompts should be at step (X/X) since it is always the last step.
+- For percentage progression of the pre and post generation steps, divide the progression percentage evenly between the prompts in each of the steps.
