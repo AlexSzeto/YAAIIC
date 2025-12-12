@@ -5,6 +5,8 @@
 - Refactor all custom-ui into preact components
 
 # Features
+- Move video properties between 1st and 3rd row (between workflow and descriptions)
+- client side Change length in seconds to number of frames (length)
 - Workflow time estimate (from last 5 generations)
 - Rename generated image
 - Image tagging
