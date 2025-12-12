@@ -25,6 +25,9 @@ let comfyUIAPIPath = null;
 // Function to add image data entry (will be set by server.mjs)
 let addImageDataEntry = null;
 
+// Timer map to track start times for each task
+const taskTimers = new Map(); // taskId -> startTime
+
 // Initialize generate module with ComfyUI API path
 export function initializeGenerateModule(apiPath) {
   comfyUIAPIPath = apiPath;
@@ -159,26 +162,302 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
   throw new Error(`Prompt ${promptId} did not complete within ${maxAttempts * intervalMs / 1000} seconds`);
 }
 
+// Function to calculate workflow steps based on node dependencies
+export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = false, hasPostGenPrompts = false) {
+  // Map to store nodeId -> distance from final node
+  const distanceMap = new Map();
+  
+  // Recursive function to traverse backwards through node inputs
+  function traverseNode(nodeId, currentDistance) {
+    // If we've already visited this node with a greater or equal distance, skip
+    if (distanceMap.has(nodeId) && distanceMap.get(nodeId) >= currentDistance) {
+      return;
+    }
+    
+    // Set the distance for this node
+    distanceMap.set(nodeId, currentDistance);
+    
+    // Get the node from workflow
+    const node = workflow[nodeId];
+    if (!node || !node.inputs) {
+      return;
+    }
+    
+    // Traverse all input connections
+    for (const inputKey in node.inputs) {
+      const inputValue = node.inputs[inputKey];
+      
+      // Check if input is a node connection (array format [nodeId, outputIndex])
+      if (Array.isArray(inputValue) && typeof inputValue[0] === 'string') {
+        const connectedNodeId = inputValue[0];
+        traverseNode(connectedNodeId, currentDistance + 1);
+      }
+    }
+  }
+  
+  // Start traversal from final node
+  traverseNode(finalNode, 0);
+  
+  // Calculate base workflow total steps (max distance + 1)
+  let maxDistance = 0;
+  for (const distance of distanceMap.values()) {
+    if (distance > maxDistance) {
+      maxDistance = distance;
+    }
+  }
+  const baseWorkflowSteps = maxDistance + 1;
+  
+  // Calculate total steps including pre-gen and post-gen prompts
+  let totalSteps = baseWorkflowSteps;
+  if (hasPreGenPrompts) totalSteps += 1;
+  if (hasPostGenPrompts) totalSteps += 1;
+  
+  console.log(`Base workflow steps: ${baseWorkflowSteps}, Total steps with prompts: ${totalSteps}`);
+  
+  // Build step map with display text
+  // If pre-gen prompts exist, shift workflow step numbers to start at 2 instead of 1
+  const stepOffset = hasPreGenPrompts ? 1 : 0;
+  const stepMap = new Map();
+  for (const [nodeId, distance] of distanceMap.entries()) {
+    const stepNumber = baseWorkflowSteps - distance + stepOffset;
+    const stepDisplayText = `(${stepNumber}/${totalSteps})`;
+    stepMap.set(nodeId, {
+      distance,
+      stepNumber,
+      stepDisplayText
+    });
+  }
+  
+  // Create step info for pre-gen and post-gen prompts
+  const preGenStepInfo = hasPreGenPrompts ? {
+    stepText: `(1/${totalSteps})`
+  } : null;
+  
+  const postGenStepInfo = hasPostGenPrompts ? {
+    stepText: `(${totalSteps}/${totalSteps})`
+  } : null;
+  
+  return { stepMap, totalSteps, preGenStepInfo, postGenStepInfo };
+}
+
+// Function to modify generationData with a prompt
+export async function modifyGenerationDataWithPrompt(promptData, generationData) {
+  try {
+    const { model, template, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
+    
+    // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
+    if (replaceBlankFieldOnly && generationData[to] && generationData[to].trim() !== '') {
+      console.log(`Skipping prompt for ${to} - field already has a value`);
+      return generationData;
+    }
+    
+    // Extract prompt text from promptData.prompt or promptData.template
+    let processedPrompt = prompt || template;
+    
+    // Replace bracketed placeholders (e.g., [description]) with values from generationData
+    const bracketPattern = /\[(\w+)\]/g;
+    processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
+      return generationData[key] || match;
+    });
+    
+    // If template is present instead of model, just do string replacement
+    if (template) {
+      console.log(`Processing template for ${to}: ${processedPrompt}`);
+      generationData[to] = processedPrompt;
+      console.log(`Stored template result in ${to}: ${processedPrompt}`);
+      return generationData;
+    }
+    
+    console.log(`Processing prompt for ${to} with model ${model}`);
+    console.log(`Prompt: ${processedPrompt}`);
+    
+    let response;
+    
+    // If imagePath is specified in promptData, resolve the actual path from generationData
+    if (imagePath) {
+      const actualImagePath = generationData[imagePath];
+      if (!actualImagePath) {
+        throw new Error(`Image path field '${imagePath}' not found in generationData`);
+      }
+      console.log(`Using image path: ${actualImagePath}`);
+      response = await sendImagePrompt(actualImagePath, processedPrompt, model);
+    } else {
+      response = await sendTextPrompt(processedPrompt, model);
+    }
+    
+    // Store the response in generationData[promptData.to]
+    generationData[to] = response;
+    console.log(`Stored response in ${to}: ${response}`);
+    
+    return generationData;
+  } catch (error) {
+    console.error(`Error in modifyGenerationDataWithPrompt:`, error);
+    throw error;
+  }
+}
+
+// Handler for upload image processing
+export async function handleImageUpload(file, config) {
+  // Generate unique task ID
+  const taskId = generateTaskId();
+  
+  // Start timer for this task
+  taskTimers.set(taskId, Date.now());
+  
+  // Create task entry
+  createTask(taskId, {
+    workflow: 'Uploaded Image',
+    promptId: null,
+    requestData: { filename: file.originalname },
+    workflowConfig: { type: 'upload' }
+  });
+  
+  console.log(`Created upload task ${taskId}`);
+  
+  // Process upload task asynchronously
+  processUploadTask(taskId, file, config).catch(error => {
+    console.error(`Error in upload task ${taskId}:`, error);
+    emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
+  });
+  
+  return taskId;
+}
+
+// Process upload task asynchronously
+async function processUploadTask(taskId, file, config) {
+  try {
+    const __dirname = path.dirname(new URL(import.meta.url).pathname);
+    const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+    
+    // Emit progress: Uploading file
+    emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, 'Uploading file...');
+    
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname) || '.png';
+    const filename = `upload_${timestamp}${ext}`;
+    
+    // Save file to storage directory
+    const storageFolder = path.join(actualDirname, 'storage');
+    if (!fs.existsSync(storageFolder)) {
+      fs.mkdirSync(storageFolder, { recursive: true });
+    }
+    
+    const savePath = path.join(storageFolder, filename);
+    fs.writeFileSync(savePath, file.buffer);
+    console.log(`Image saved to: ${savePath}`);
+    
+    // Create generationData object with the saved path
+    const generationData = {
+      savePath: savePath,
+      prompt: '',
+      seed: 0,
+      workflow: 'Uploaded Image',
+      name: '',
+      description: ''
+    };
+    
+    // Process post-generation prompts to generate description and name
+    if (config.postGenerationPrompts && Array.isArray(config.postGenerationPrompts)) {
+      console.log('Processing post-generation prompts for uploaded image...');
+      
+      let promptIndex = 0;
+      for (const promptConfig of config.postGenerationPrompts) {
+        try {
+          promptIndex++;
+          // Emit progress for each prompt
+          const stepName = promptConfig.to === 'description' ? 'Generating description' : `Generating ${promptConfig.to}`;
+          const progressValue = 1 + promptIndex;
+          const progressPercent = Math.round((progressValue / 4) * 100);
+          emitProgressUpdate(taskId, { percentage: progressPercent, value: progressValue, max: 4 }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+        } catch (error) {
+          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'description' 
+              ? 'No description available' 
+              : file.originalname.replace(ext, '');
+          }
+        }
+      }
+    }
+    
+    // Emit progress: Saving to database
+    emitProgressUpdate(taskId, { percentage: 90, value: 3, max: 4 }, 'Saving to database...');
+    
+    // Calculate time taken in seconds
+    const startTime = taskTimers.get(taskId);
+    const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    
+    // Create database entry
+    const imageUrl = `/image/${filename}`;
+    let uid = null;
+    
+    if (addImageDataEntry) {
+      const imageDataEntry = {
+        prompt: generationData.prompt || '',
+        seed: 0,
+        imageUrl: imageUrl,
+        name: generationData.name || file.originalname.replace(ext, ''),
+        description: generationData.description || 'Uploaded image',
+        workflow: 'Uploaded Image',
+        inpaint: false,
+        inpaintArea: null,
+        timeTaken: timeTaken
+      };
+      
+      addImageDataEntry(imageDataEntry);
+      uid = imageDataEntry.uid;
+      console.log('Image data entry saved with UID:', uid);
+    }
+    
+    // Emit completion event
+    emitTaskCompletion(taskId, {
+      imageUrl: imageUrl,
+      description: generationData.description || 'Uploaded image',
+      prompt: generationData.prompt || '',
+      seed: 0,
+      name: generationData.name || file.originalname.replace(ext, ''),
+      workflow: 'Uploaded Image',
+      inpaint: false,
+      inpaintArea: null,
+      uid: uid,
+      timeTaken: timeTaken,
+      maxValue: 4
+    });
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
+    
+    console.log(`Upload task ${taskId} completed successfully`);
+    
+  } catch (error) {
+    console.error(`Error in upload task ${taskId}:`, error);
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
+    
+    // Emit error
+    emitTaskErrorByTaskId(taskId, 'Failed to process uploaded image', error.message);
+  }
+}
+
 // Main image generation handler
 export async function handleImageGeneration(req, res, workflowConfig) {
-  const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix } = workflowConfig;
-  const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = req.body;
-  let { name } = req.body;
+  const { base: workflowBasePath } = workflowConfig;
+  const { workflow } = req.body;
   
-  // Validate required parameters
-  if (!prompt || typeof prompt !== 'string') {
-    return res.status(400).json({ error: 'Prompt parameter is required and must be a string' });
-  }
-
-  console.log('Received generation request with prompt:', prompt);
   console.log('Using workflow:', workflowBasePath);
   
   // Generate unique task ID
   const taskId = generateTaskId();
   
+  // Start timer for this task
+  taskTimers.set(taskId, Date.now());
+  
   // Create task entry
   createTask(taskId, {
-    prompt,
     workflow,
     promptId: null,
     requestData: { ...req.body },
@@ -204,9 +483,11 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, describePrompt, namePromptPrefix, extractOutputPathFromTextFile } = workflowConfig;
-    const { prompt, seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
-    let { name } = requestData;
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationPrompts, preGenerationPrompts, type } = workflowConfig;
+    const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    
+    // Create generationData as a copy of requestData
+    const generationData = { ...requestData };
     
     const task = getTask(taskId);
     if (!task) {
@@ -216,7 +497,6 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
-    console.log('Received name:', name);
     
     // Log inpaint-specific parameters for debugging purposes
     if (inpaint) {
@@ -228,24 +508,37 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       }
     }
 
-    // Generate name if not provided and namePromptPrefix is available
-    if ((!name || name.trim() === '') && namePromptPrefix) {
-      try {
-        console.log('Generating name using LLM...');
-        
-        // Emit SSE progress update for name generation start
-        const promptId = task.promptId || taskId;
-        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Generating name...');
-        
-        const namePrompt = namePromptPrefix + prompt;
-        name = await sendTextPrompt(namePrompt);
-        console.log('Generated name:', name);
-        
-        // Emit SSE progress update for name generation completion
-        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Name generated');
-      } catch (error) {
-        console.warn('Failed to generate name:', error.message);
-        name = 'Generated Character'; // Fallback name
+    // Process pre-generation prompts if they exist
+    if (preGenerationPrompts && Array.isArray(preGenerationPrompts) && preGenerationPrompts.length > 0) {
+      console.log(`Processing ${preGenerationPrompts.length} pre-generation prompts...`);
+      
+      const task = getTask(taskId);
+      const preGenStepText = task?.preGenStepInfo?.stepText || '(1/1)';
+      
+      for (let i = 0; i < preGenerationPrompts.length; i++) {
+        const promptConfig = preGenerationPrompts[i];
+        try {
+          // Calculate percentage progress by dividing evenly among prompts
+          const startPercentage = Math.round((i / preGenerationPrompts.length) * 100);
+          const endPercentage = Math.round(((i + 1) / preGenerationPrompts.length) * 100);
+          
+          // Emit SSE progress update for start
+          const stepName = `${preGenStepText} Generating ${promptConfig.to}`;
+          emitProgressUpdate(taskId, { percentage: startPercentage, value: i, max: preGenerationPrompts.length }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+          
+          // Emit SSE progress update for completion
+          emitProgressUpdate(taskId, { percentage: endPercentage, value: i + 1, max: preGenerationPrompts.length }, stepName + ' complete');
+        } catch (error) {
+          console.warn(`Failed to process pre-generation prompt for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the prompt fails and field is empty
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'prompt' 
+              ? 'Dynamic motion and camera movement' 
+              : 'Generated Content';
+          }
+        }
       }
     }
 
@@ -258,25 +551,56 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
 
     // saveFilename: filename portion of savePath, no folder or extension
     if (savePath) {
-      requestData.saveFilename = path.basename(savePath, path.extname(savePath));
+      generationData.saveFilename = path.basename(savePath, path.extname(savePath));
     }
     // storagePath: absolute path to /storage folder
-    requestData.storagePath = path.join(actualDirname, 'storage');
+    generationData.storagePath = path.join(actualDirname, 'storage');
 
     // Store the workflow JSON in the task for node title lookups
     updateTask(taskId, { workflowData });
     
+    // Calculate workflow steps if finalNode is specified
+    let stepMap = null;
+    let totalSteps = null;
+    let preGenStepInfo = null;
+    let postGenStepInfo = null;
+    if (workflowConfig.finalNode) {
+      const hasPreGenPrompts = preGenerationPrompts && Array.isArray(preGenerationPrompts) && preGenerationPrompts.length > 0;
+      const hasPostGenPrompts = postGenerationPrompts && Array.isArray(postGenerationPrompts) && type !== 'video' && postGenerationPrompts.length > 0;
+      
+      const stepInfo = calculateWorkflowSteps(workflowData, workflowConfig.finalNode, hasPreGenPrompts, hasPostGenPrompts);
+      stepMap = stepInfo.stepMap;
+      totalSteps = stepInfo.totalSteps;
+      preGenStepInfo = stepInfo.preGenStepInfo;
+      postGenStepInfo = stepInfo.postGenStepInfo;
+      console.log(`Calculated workflow steps: ${totalSteps} total steps`);
+      
+      // Store step map and step info in the task for use in progress updates
+      updateTask(taskId, { stepMap, totalSteps, preGenStepInfo, postGenStepInfo });
+    }
+    
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
-        const { from, to, prefix, postfix } = mod;
-        console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);        
-        let value = requestData[from];
+        const { from, value: directValue, to, prefix, postfix } = mod;
+        
+        // Determine the source of the value
+        let value;
+        if (directValue !== undefined) {
+          // Use direct value if provided
+          value = directValue;
+          console.log(`Modifying: direct value to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        } else if (from) {
+          // Use value from generationData
+          value = generationData[from];
+          console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+        }
+        
         if(prefix) value = `${prefix} ${value}`;
         if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
 
-        if(value && to && Array.isArray(to)) {
+        if(value !== undefined && to && Array.isArray(to)) {
           workflowData = setObjectPathValue(workflowData, to, value);
         }
       });
@@ -366,70 +690,97 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       throw new Error(`Generated image file not found at: ${savePath}`);
     }
 
-    console.log(`Image generated successfully, analyzing with ollama...`);
+    console.log(`Image generated successfully`);
 
-    // Analyze the generated image with ollama
-    let description = '';
-    try {
-      // Only analyze if describePrompt is provided in workflow config
-      if (describePrompt) {
-        // Emit SSE progress update for description generation start
-        emitProgressUpdate(promptId, { percentage: 0, value: 0, max: 1 }, 'Analyzing image...');
-        
-        description = await sendImagePrompt(savePath, describePrompt);
-        console.log('Image analysis completed:', description);
-        
-        // Emit SSE progress update for description generation completion
-        emitProgressUpdate(promptId, { percentage: 100, value: 1, max: 1 }, 'Image analysis complete');
-      } else {
-        console.log('No describePrompt provided in workflow config, skipping image analysis');
-        description = 'Image analysis not configured for this workflow';
+    // Process post-generation prompts from config if workflow type is not video
+    if (postGenerationPrompts && Array.isArray(postGenerationPrompts) && type !== 'video') {
+      console.log(`Processing ${postGenerationPrompts.length} post-generation prompts...`);
+      
+      const task = getTask(taskId);
+      const postGenStepText = task?.postGenStepInfo?.stepText || '(1/1)';
+      
+      for (let i = 0; i < postGenerationPrompts.length; i++) {
+        const promptConfig = postGenerationPrompts[i];
+        try {
+          // Calculate percentage progress by dividing evenly among prompts
+          const startPercentage = Math.round((i / postGenerationPrompts.length) * 100);
+          const endPercentage = Math.round(((i + 1) / postGenerationPrompts.length) * 100);
+          
+          // Emit SSE progress update for start
+          const stepName = promptConfig.to === 'description' ? `${postGenStepText} Analyzing image` : `${postGenStepText} Generating ${promptConfig.to}`;
+          emitProgressUpdate(promptId, { percentage: startPercentage, value: i, max: postGenerationPrompts.length }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+          
+          // Emit SSE progress update for completion
+          emitProgressUpdate(promptId, { percentage: endPercentage, value: i + 1, max: postGenerationPrompts.length }, stepName + ' complete');
+        } catch (error) {
+          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the prompt fails
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'description' 
+              ? 'Image analysis unavailable' 
+              : 'Generated Content';
+          }
+        }
       }
-    } catch (error) {
-      console.warn('Failed to analyze image with ollama:', error.message);
-      description = 'Image analysis unavailable';
+    } else if (type === 'video') {
+      console.log('Skipping post-generation prompts for video workflow');
     }
 
     // Return the image URL path (relative to /image/ endpoint)
     const filename = path.basename(savePath);
     const imageUrl = `/image/${filename}`;
 
-    // Save image data to database
+    // Calculate time taken in seconds
+    const startTime = taskTimers.get(taskId);
+    const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    console.log(`Generation completed in ${timeTaken} seconds`);
+
+    // Save image data to database using generationData fields
     let uid = null;
     if (addImageDataEntry) {
       const imageDataEntry = {
-        prompt: prompt,
-        seed: seed,
+        prompt: generationData.prompt,
+        seed: generationData.seed,
         imageUrl: imageUrl,
-        name: name,
-        description: description,
+        name: generationData.name,
+        description: generationData.description || '',
         workflow: workflow,
         inpaint: inpaint || false,
-        inpaintArea: inpaintArea || null
+        inpaintArea: inpaintArea || null,
+        timeTaken: timeTaken
       };
       addImageDataEntry(imageDataEntry);
       uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
       console.log('Image data entry saved to database with UID:', uid);
     }
 
-    // Emit completion event
+    // Emit completion event using generationData fields
     emitTaskCompletion(promptId, {
       imageUrl: imageUrl,
-      description: description,
-      prompt: prompt,
-      seed: seed,
-      name: name,
+      description: generationData.description || '',
+      prompt: generationData.prompt,
+      seed: generationData.seed,
+      name: generationData.name,
       workflow: workflow,
       inpaint: inpaint || false,
       inpaintArea: inpaintArea || null,
       uid: uid,
+      timeTaken: timeTaken,
       maxValue: task.progress?.max || 1
     });
+
+    // Clean up timer
+    taskTimers.delete(taskId);
 
     console.log(`Task ${taskId} completed successfully`);
 
   } catch (error) {
     console.error(`Error in task ${taskId}:`, error);
+    
+    // Clean up timer
+    taskTimers.delete(taskId);
     
     // Emit error using taskId directly
     emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);

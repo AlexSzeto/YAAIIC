@@ -6,6 +6,7 @@
       "base": "illustrious-text-to-image.json",
       "format": "png",
       "type": "image",
+      "finalNode": "10",
       "replace": [
         {
           "from": "prompt",
@@ -20,9 +21,7 @@
           "from": "savePath",
           "to": ["10", "inputs", "path"]
         }
-      ],
-      "describePrompt": "Write only a detailed comma-delimited list of keywords and phrases to describe the character. The list must include all of the following items in this order: species and race, gender, age, facial features and expressions, occupation, hair and hair accessories (if any), what they are wearing on their upper body (if anything). Include only descriptions of visual qualities and anything which could seen in a still photograph. Ignore qualities such as personality, scents, and other non-visual traits. Use a single set of keywords or phrase to describe the background. Be concise. All parts of the keywords and phrases must be in lowercase. only with the list of keywords and phrases, do not include any other text.",
-      "namePromptPrefix": "Write only one short, catchy name for the character based on the description given. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Image Style Transfer (Illustrious)",
@@ -31,6 +30,7 @@
       "base": "illustrious-image-style.json",
       "format": "png",
       "type": "image",
+      "finalNode": "11",
       "upload": [
         {
           "from": "image_0",
@@ -55,9 +55,7 @@
           "from": "imagePath",
           "to": ["13", "inputs", "image"]
         }
-      ],
-      "describePrompt": "Write a detailed description of the scene in the image. Include atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short name that would be a highly descriptive but concise summary for the image. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Text to Image (Flux Fantasy Landscape)",
@@ -65,6 +63,7 @@
       "base": "flux-fantasy-text-to-landscape.json",
       "format": "jpg",
       "type": "image",
+      "finalNode": "9",
       "replace": [
         {
           "from" : "prompt",
@@ -79,9 +78,7 @@
           "from": "savePath",
           "to": ["9", "inputs", "path"]
         }
-      ],
-      "describePrompt": "Write a detailed description of the fantasy scene in the image. Include atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short name that would be a highly descriptive but concise summary for the fantasy scene. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Text to Image (Flux Fantasy Portrait)",
@@ -89,6 +86,7 @@
       "base": "flux-fantasy-text-to-portrait.json",
       "format": "jpg",
       "type": "image",
+      "finalNode": "44",
       "replace": [
         {
           "from" : "prompt",
@@ -103,9 +101,7 @@
           "from": "savePath",
           "to": ["44", "inputs", "path"]
         }
-      ],
-      "describePrompt": "Write a paragraph of description for the fantasy character in the image, and briefly describe the background. Include all of the following items: species and race, gender, age, facial features and expressions, occupation, hair and hair accessories (if any), what they are wearing on their body. Include only descriptions of visual qualities and anything which could seen in a still photograph. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short, catchy name for the character based on the description given. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Inpaint (Realistic Vision Fantasy)",
@@ -113,7 +109,7 @@
       "base": "realvis-fantasy-inpaint.json",
       "format": "jpg",
       "type": "inpaint",
-      "describePrompt": "Write a paragraph description of the fantasy character or scene in this inpainted image. Include visual details such as appearance, clothing, setting, and atmosphere. Be concise and focus only on what can be seen in the image. Only include the description, do not include any other text. The description is:",
+      "finalNode": "9",
       "upload": [
         {
           "from": "image_0",
@@ -155,6 +151,7 @@
       "format": "png",
       "type": "image",
       "inputImages": 1,
+      "finalNode": "229",
       "upload": [
         {
           "from": "image_0",
@@ -178,17 +175,29 @@
           "from": "imagePath",
           "to": ["377", "inputs", "image"]
         }
-      ],
-      "describePrompt": "Write a detailed description of the scene in the image. Include atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell. Be concise. Only include the description, do not include any other text. The description is:",
-      "namePromptPrefix": "Write only one short name that would be a highly descriptive but concise summary for the image. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The name is: "
+      ]
     },
     {
       "name": "Image to Video Portrait (WAN)",
       "autocomplete": false,
-      "base": "wan-image-to-video-portrait.json",
+      "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "optionalPrompt": true,
+      "finalNode": "76",
       "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+          "to": "description"
+        }
+      ],
       "upload": [
         {
           "from": "image_0",
@@ -238,10 +247,24 @@
     {
       "name": "Image to Video Landscape (WAN)",
       "autocomplete": false,
-      "base": "wan-image-to-video-landscape.json",
+      "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "optionalPrompt": true,
+      "finalNode": "76",
       "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+          "to": "description"
+        }
+      ],
       "upload": [
         {
           "from": "image_0",
@@ -253,6 +276,22 @@
         }
       ],
       "replace": [
+        {
+          "value": 832,
+          "to": ["64", "inputs", "width"]
+        },
+        {
+          "value": 480,
+          "to": ["64", "inputs", "height"]
+        },
+        {
+          "value": 832,
+          "to": ["72", "inputs", "width"]
+        },
+        {
+          "value": 480,
+          "to": ["72", "inputs", "height"]
+        },
         {
           "from": "prompt",
           "to": ["6", "inputs", "text"]
@@ -287,6 +326,130 @@
         }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
-    }    
+    },
+    {
+      "name": "Image to Video Loop (WAN5b)",
+      "autocomplete": false,
+      "base": "wan5b-image-to-video-loop.json",
+      "format": "webp",
+      "type": "video",
+      "finalNode": "119",
+      "inputImages": 1,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "[image_0_description]",
+          "to": "description"
+        }
+      ],
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "firstFramePath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "seed",
+          "to": ["63", "inputs", "noise_seed"]
+        },
+        {
+          "from": "seed",
+          "to": ["109", "inputs", "noise_seed"]
+        },
+        {
+          "from": "saveFilename",
+          "to": ["106", "inputs", "filename_prefix"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["119", "inputs", "output_file_path"]
+        },
+        {
+          "from": "firstFramePath",
+          "to": ["56", "inputs", "image"]
+        },
+        {
+          "from": "frames",
+          "to": ["122", "inputs", "value"]
+        },
+        {
+          "from": "framerate",
+          "to": ["106", "inputs", "frame_rate"]
+        }        
+      ],
+      "extractOutputPathFromTextFile": "video-filename.txt"
+    },    
+    {
+      "name": "Image to Video (WAN5b)",
+      "autocomplete": false,
+      "base": "wan5b-image-to-video.json",
+      "format": "webp",
+      "type": "video",
+      "finalNode": "119",
+      "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+          "to": "description"
+        }
+      ],
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "firstFramePath"
+        },
+        {
+          "from": "image_1",
+          "storePathAs": "lastFramePath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "seed",
+          "to": ["109", "inputs", "noise_seed"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["119", "inputs", "output_file_path"]
+        },
+        {
+          "from": "firstFramePath",
+          "to": ["56", "inputs", "image"]
+        },
+        {
+          "from": "lastFramePath",
+          "to": ["123", "inputs", "image"]
+        },
+        {
+          "from": "frames",
+          "to": ["122", "inputs", "value"]
+        },
+        {
+          "from": "framerate",
+          "to": ["106", "inputs", "frame_rate"]
+        }        
+      ],
+      "extractOutputPathFromTextFile": "video-filename.txt"
+    }
   ]
 }

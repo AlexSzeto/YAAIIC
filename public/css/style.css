@@ -231,6 +231,21 @@ p {
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
 
+/* Upload Button in workflow controls */
+.workflow-controls .upload-btn {
+  background-color: var(--primary-background);
+  color: var(--dark-text-primary);
+}
+
+.workflow-controls .upload-btn:hover {
+  background-color: var(--primary-hover);
+}
+
+.workflow-controls .upload-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
 /* AutoComplete styling for dark mode */
 .autoComplete_wrapper {
   position: relative;

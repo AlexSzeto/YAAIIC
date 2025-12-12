@@ -265,14 +265,23 @@ async function handleInpaint() {
             // Update the seed if not locked for potential future inpaints
             updateSeedIfNotLocked();
             
-            showSuccessToast('Inpaint completed successfully!');
+            // Show success toast with time taken if available
+            const timeTaken = completionData.result.timeTaken;
+            const message = timeTaken 
+              ? `Inpaint completed in ${timeTaken}s` 
+              : 'Inpaint completed successfully!';
+            showSuccessToast(message);
           }).catch(error => {
             console.error('Error loading new image data:', error);
             showErrorToast('Failed to load inpaint result');
           });
         } else {
           console.warn('No UID found in inpaint completion data');
-          showSuccessToast('Inpaint completed');
+          const timeTaken = completionData.result?.timeTaken;
+          const message = timeTaken 
+            ? `Inpaint completed in ${timeTaken}s` 
+            : 'Inpaint completed';
+          showSuccessToast(message);
         }
         
         // Unmount the progress banner

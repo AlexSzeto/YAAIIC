@@ -66,7 +66,8 @@ function renderImageUploadComponents(count) {
         const blob = await response.blob();
         const componentRef = uploadComponentRefs[componentIndex];
         if (componentRef && typeof componentRef.setImage === 'function') {
-          componentRef.setImage(blob, selectedItem.imageUrl);
+          // Pass the description from the selected item
+          componentRef.setImage(blob, selectedItem.imageUrl, selectedItem.description || null);
           
           // Update select button state after setting image
           if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
@@ -159,7 +160,7 @@ async function handleSelectAsInput(imageData) {
     // Set it on the target upload component
     const component = uploadComponentRefs[targetIndex];
     if (component && typeof component.setImage === 'function') {
-      component.setImage(blob, imageData.imageUrl);
+      component.setImage(blob, imageData.imageUrl, imageData.description);
       showSuccessToast('Image selected as input');
       
       // Update select button state after setting image
@@ -424,7 +425,11 @@ async function handleGenerate() {
   const nameInput = document.getElementById('name');
   const seedInput = document.getElementById('seed');
   
-  if (!descriptionText.trim()) {
+  // Get selected workflow to check if prompt is optional
+  const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+  
+  // Only validate prompt if it's not optional
+  if (!selectedWorkflow?.optionalPrompt && !descriptionText.trim()) {
     showErrorToast('Please enter a description before generating an image.');
     return;
   }
@@ -484,9 +489,13 @@ async function handleGenerate() {
       }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
-          const blob = component.getImageBlob();
-          if (blob) {
-            formData.append(`image_${index}`, blob, `image_${index}.png`);
+          const imageData = component.getImageWithDescription();
+          if (imageData.blob) {
+            formData.append(`image_${index}`, imageData.blob, `image_${index}.png`);
+            // Include description if available
+            if (imageData.description) {
+              formData.append(`image_${index}_description`, imageData.description);
+            }
           }
         }
       });
@@ -549,7 +558,13 @@ async function handleGenerate() {
         // Handle completion - add image to carousel
         if (completionData.result && completionData.result.imageUrl) {
           carouselDisplay.addData(completionData.result);
-          showSuccessToast('Image generated successfully!');
+          
+          // Show success toast with time taken if available
+          const timeTaken = completionData.result.timeTaken;
+          const message = timeTaken 
+            ? `Workflow completed in ${timeTaken}s` 
+            : 'Image generated successfully!';
+          showSuccessToast(message);
         }
         
         // Unmount the progress banner
@@ -686,6 +701,108 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
     } else {
       console.error('Gallery button not found or GalleryDisplay not initialized');
+    }
+    
+    // Set up upload button
+    const uploadButton = document.getElementById('upload-btn');
+    const uploadFileInput = document.getElementById('upload-file-input');
+    if (uploadButton && uploadFileInput) {
+      uploadButton.addEventListener('click', () => {
+        uploadFileInput.click();
+      });
+      
+      uploadFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showErrorToast('Please select an image file');
+          return;
+        }
+        
+        try {
+          // Create form data
+          const formData = new FormData();
+          formData.append('image', file);
+          
+          // Upload image and get task ID
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          const taskId = result.taskId;
+          
+          console.log('Upload task created with ID:', taskId);
+          
+          // Unmount previous progress banner if it exists
+          if (currentProgressBanner) {
+            currentProgressBanner.unmount();
+            currentProgressBanner = null;
+          }
+          
+          // Create progress banner with completion callback
+          currentProgressBanner = createProgressBanner(
+            taskId,
+            sseManager,
+            (completionData) => {
+              // Handle completion
+              console.log('Upload complete:', completionData);
+              
+              // Show success toast with time taken if available
+              const timeTaken = completionData.result?.timeTaken;
+              const message = timeTaken 
+                ? `Upload completed in ${timeTaken}s` 
+                : 'Image uploaded successfully';
+              showSuccessToast(message);
+              
+              // Refresh gallery if it's open
+              if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
+                galleryDisplay.fetchGalleryData().catch(err => {
+                  console.warn('Failed to refresh gallery:', err);
+                });
+              }
+              
+              // Unmount the progress banner
+              if (currentProgressBanner) {
+                currentProgressBanner.unmount();
+                currentProgressBanner = null;
+              }
+            },
+            (errorData) => {
+              // Handle error
+              console.error('Upload error:', errorData);
+              showErrorToast(errorData.error?.message || 'Failed to process uploaded image');
+              
+              // Unmount the progress banner
+              if (currentProgressBanner) {
+                currentProgressBanner.unmount();
+                currentProgressBanner = null;
+              }
+            }
+          );
+          
+          // Clear the file input
+          uploadFileInput.value = '';
+          
+        } catch (error) {
+          console.error('Upload error:', error);
+          if (currentProgressBanner) {
+            currentProgressBanner.unmount();
+            currentProgressBanner = null;
+          }
+          showErrorToast('Failed to upload image');
+          uploadFileInput.value = '';
+        }
+      });
+    } else {
+      console.error('Upload button or file input not found');
     }
     
     // Set up generate button

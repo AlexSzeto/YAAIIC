@@ -116,6 +116,31 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - 400 if `uids` is missing, not an array, or contains non-integers.
   - 500 if saving changes fails.
 
+### Upload Image
+- **Endpoint**: `POST /api/upload-image`
+- **Use Case**: Upload an image file and automatically generate a description and name using LLM processing.
+- **Payload**: `multipart/form-data`.
+  - `image`: Image file (Required, must be an image MIME type).
+- **Output**: Complete image data object with generated description and name.
+  ```json
+  {
+    "uid": 1715000000000,
+    "name": "Generated Name",
+    "description": "AI-generated description of the image...",
+    "imageUrl": "/image/uploaded_1715000000000.png",
+    "prompt": "",
+    "workflow": "upload",
+    "type": "upload",
+    "seed": 0,
+    "inpaint": false,
+    "inpaintArea": null,
+    "timeTaken": 0
+  }
+  ```
+- **Error State**:
+  - 400 if no image file is provided or file type is not an image.
+  - 500 on upload processing failure.
+
 ## Generation Endpoints & Workflow
 
 ### Text-to-Image Generation

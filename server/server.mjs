@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule } from './generate.mjs';
+import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
@@ -210,6 +210,31 @@ app.get('/tags', (req, res) => {
     });
 });
 
+// POST endpoint for uploading images
+app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    
+    console.log('Received image upload:', req.file.originalname);
+    
+    // Create upload task and get task ID
+    const taskId = await handleImageUpload(req.file, config);
+    
+    // Return task ID immediately
+    res.json({
+      success: true,
+      taskId: taskId,
+      message: 'Upload task created'
+    });
+    
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ error: 'Failed to upload image', details: error.message });
+  }
+});
+
 // POST endpoint for ComfyUI image generation
 app.post('/generate/image', upload.any(), async (req, res) => {
   try {
@@ -224,6 +249,11 @@ app.post('/generate/image', upload.any(), async (req, res) => {
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
     if (!workflowData) {
       return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+    }
+    
+    // Add postGenerationPrompts from config to workflowData
+    if (config.postGenerationPrompts) {
+      workflowData.postGenerationPrompts = config.postGenerationPrompts;
     }
     
     // Generate random seed if not provided
@@ -436,6 +466,7 @@ app.get('/generate/workflows', (req, res) => {
       type: workflow.type,
       autocomplete: workflow.autocomplete,
       inputImages: workflow.inputImages || 0,
+      optionalPrompt: workflow.optionalPrompt || false,
     }));
     res.json(workflows);
   } catch (error) {
@@ -523,6 +554,11 @@ app.post('/generate/inpaint', upload.fields([
       const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
       if (!workflowData) {
         return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+      }
+      
+      // Add postGenerationPrompts from config to workflowData
+      if (config.postGenerationPrompts) {
+        workflowData.postGenerationPrompts = config.postGenerationPrompts;
       }
       
       // Generate random seed if not provided
