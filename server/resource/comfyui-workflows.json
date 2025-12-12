@@ -388,6 +388,68 @@
         }        
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
-    }    
+    },    
+    {
+      "name": "Image to Video (WAN5b)",
+      "autocomplete": false,
+      "base": "wan5b-image-to-video.json",
+      "format": "webp",
+      "type": "video",
+      "finalNode": "119",
+      "inputImages": 2,
+      "preGenerationPrompts": [
+        {
+          "model": "gemma3:4b",
+          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+          "to": "description"
+        }
+      ],
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "firstFramePath"
+        },
+        {
+          "from": "image_1",
+          "storePathAs": "lastFramePath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "seed",
+          "to": ["109", "inputs", "noise_seed"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["119", "inputs", "output_file_path"]
+        },
+        {
+          "from": "firstFramePath",
+          "to": ["56", "inputs", "image"]
+        },
+        {
+          "from": "lastFramePath",
+          "to": ["123", "inputs", "image"]
+        },
+        {
+          "from": "frames",
+          "to": ["122", "inputs", "value"]
+        },
+        {
+          "from": "framerate",
+          "to": ["106", "inputs", "frame_rate"]
+        }        
+      ],
+      "extractOutputPathFromTextFile": "video-filename.txt"
+    }
   ]
 }
