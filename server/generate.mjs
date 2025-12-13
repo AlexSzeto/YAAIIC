@@ -4,7 +4,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
-import { setObjectPathValue, readOutputPathFromTextFile } from './util.mjs';
+import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
   generateTaskId,
@@ -517,6 +517,20 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       
       for (let i = 0; i < preGenerationTasks.length; i++) {
         const promptConfig = preGenerationTasks[i];
+        
+        // Check if task has a condition
+        if (promptConfig.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping pre-generation task for ${promptConfig.to} due to unmet condition`);
+            continue;
+          }
+        }
+        
         try {
           // Calculate percentage progress by dividing evenly among tasks
           const startPercentage = Math.round((i / preGenerationTasks.length) * 100);
@@ -582,6 +596,19 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
+        // Check if modification has a condition
+        if (mod.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, mod.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping workflow modification due to unmet condition`);
+            return;
+          }
+        }
+        
         const { from, value: directValue, to, prefix, postfix } = mod;
         
         // Determine the source of the value
@@ -701,6 +728,20 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       
       for (let i = 0; i < postGenerationTasks.length; i++) {
         const promptConfig = postGenerationTasks[i];
+        
+        // Check if task has a condition
+        if (promptConfig.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping post-generation task for ${promptConfig.to} due to unmet condition`);
+            continue;
+          }
+        }
+        
         try {
           // Calculate percentage progress by dividing evenly among tasks
           const startPercentage = Math.round((i / postGenerationTasks.length) * 100);

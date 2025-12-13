@@ -122,7 +122,7 @@ if (orientationField && orientationField.offsetParent !== null) {
 7. Test generation workflows that use pre-generation and post-generation tasks to ensure they still execute correctly
 8. Check console logs to confirm tasks are being recognized and executed
 
-[] (Server) Implement a simple conditional data check.
+[x] (Server) Implement a simple conditional data check.
 1. In `server/util.mjs`, create a new utility function `checkExecutionCondition`:
 ```javascript
 /**
