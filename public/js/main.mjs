@@ -941,6 +941,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     console.log('Main: Application initialized successfully');
+    
+    // Test freezeframe.js initialization
+    new Freezeframe();
+    console.log('Freezeframe.js initialized successfully');
   } catch (error) {
     console.error('Main: Failed to initialize application:', error);
   }
