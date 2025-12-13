@@ -496,7 +496,8 @@ p {
   width: 100%;
 }
 
-.info-tags,
+.info-tags-field,
+.info-prompt,
 .info-description {
   padding: 8px;
   border: 1px solid var(--dark-border-focus);
@@ -512,14 +513,19 @@ p {
 .info-name.editing,
 .info-seed.editing,
 .info-workflow.editing,
-.info-tags.editing,
+.info-tags-field.editing,
+.info-prompt.editing,
 .info-description.editing {
   border-color: var(--primary-background);
   background-color: var(--dark-background-main);
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 
-.info-tags {
+.info-tags-field {
+  min-height: 80px;
+}
+
+.info-prompt {
   min-height: 80px;
 }
 

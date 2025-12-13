@@ -147,12 +147,12 @@
           </div>
           <div class="info-section">
             <div class="info-header">
-              <label class="info-label">Prompt:</label>
+              <label class="info-label">Tags:</label>
               <div class="info-buttons">
                 <button class="info-btn copy-btn" title="Copy to clipboard" data-field="tags">
                   <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
                 </button>
-                <button class="info-btn use-btn" title="Use in form" data-field="tags">
+                <button class="info-btn use-btn" title="Use in form" data-field="tags" disabled>
                   <box-icon name='image' color='#ffffff' size='16px'></box-icon>
                 </button>
                 <button class="info-btn edit-btn" title="Edit" data-field="tags">
@@ -160,7 +160,24 @@
                 </button>
               </div>
             </div>
-            <textarea class="info-tags" readonly></textarea>
+            <textarea class="info-tags-field" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Prompt:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="prompt">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="prompt">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="prompt">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-prompt" readonly></textarea>
           </div>
           <div class="info-section">
             <div class="info-header">

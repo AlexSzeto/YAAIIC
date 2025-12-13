@@ -164,7 +164,7 @@ _restoreFieldDisplay(element, value) { }
 9. On cancel, restore original value and call `_exitEditMode()`
 10. Handle errors from the `/edit` endpoint by showing error toast and keeping edit mode active
 
-[] Add an additional field below `name` in the generated image display for a new string array field, `tags`. When an image data doesn't have this parameter, default it to an empty array. When displayed, it is single string of comma separated tag strings from the array. The field also has all three action icon buttons, but the `use` button is disabled. If it is being edited, before it is sent to the server, the string from the text area should be split by commas into an array of individual tags.
+[x] Add an additional field below `name` in the generated image display for a new string array field, `tags`. When an image data doesn't have this parameter, default it to an empty array. When displayed, it is single string of comma separated tag strings from the array. The field also has all three action icon buttons, but the `use` button is disabled. If it is being edited, before it is sent to the server, the string from the text area should be split by commas into an array of individual tags.
 1. Update HTML template in `public/index.html` and `public/inpaint.html` to add a new `tags` field row below the `name` field
 2. Add HTML structure for tags display with label "Tags:" and container elements similar to other fields
 3. Add copy, use (disabled), and edit buttons for the tags field

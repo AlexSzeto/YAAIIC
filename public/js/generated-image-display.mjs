@@ -44,7 +44,8 @@ export class GeneratedImageDisplay {
     this.imageElement = baseElement.querySelector('.generated-image');
     this.workflowInput = baseElement.querySelector('.info-workflow');
     this.nameInput = baseElement.querySelector('.info-name');
-    this.tagsTextarea = baseElement.querySelector('.info-tags');
+    this.tagsField = baseElement.querySelector('.info-tags-field');
+    this.promptTextarea = baseElement.querySelector('.info-prompt');
     this.descriptionTextarea = baseElement.querySelector('.info-description');
     this.seedInput = baseElement.querySelector('.info-seed');
     this.selectButton = baseElement.querySelector('.image-select-btn');
@@ -52,8 +53,8 @@ export class GeneratedImageDisplay {
     this.deleteButton = baseElement.querySelector('.image-delete-btn');
     
     // Validate that all required elements exist
-    if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsTextarea || 
-        !this.descriptionTextarea || !this.seedInput || !this.selectButton || !this.inpaintButton || !this.deleteButton) {
+    if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsField || 
+        !this.promptTextarea || !this.descriptionTextarea || !this.seedInput || !this.selectButton || !this.inpaintButton || !this.deleteButton) {
       throw new Error('GeneratedImageDisplay: Required inner elements not found in baseElement');
     }
     
@@ -127,7 +128,10 @@ export class GeneratedImageDisplay {
         value = this.nameInput.value;
         break;
       case 'tags':
-        value = this.tagsTextarea.value;
+        value = this.tagsField.value;
+        break;
+      case 'prompt':
+        value = this.promptTextarea.value;
         break;
       case 'description':
         value = this.descriptionTextarea.value;
@@ -164,7 +168,11 @@ export class GeneratedImageDisplay {
         value = this.nameInput.value;
         break;
       case 'tags':
-        value = this.tagsTextarea.value;
+        // Tags use button is disabled, but handle it anyway
+        value = this.tagsField.value;
+        break;
+      case 'prompt':
+        value = this.promptTextarea.value;
         break;
       case 'description':
         value = this.descriptionTextarea.value;
@@ -380,7 +388,10 @@ export class GeneratedImageDisplay {
     // Set text fields
     this.workflowInput.value = data.workflow || '';
     this.nameInput.value = data.name || '';
-    this.tagsTextarea.value = data.prompt || '';
+    // Convert tags array to comma-separated string, default to empty array
+    const tags = data.tags || [];
+    this.tagsField.value = tags.join(', ');
+    this.promptTextarea.value = data.prompt || '';
     this.descriptionTextarea.value = data.description || 'No description available';
     this.seedInput.value = data.seed;
     
@@ -418,7 +429,8 @@ export class GeneratedImageDisplay {
     // Clear text fields
     this.workflowInput.value = '';
     this.nameInput.value = '';
-    this.tagsTextarea.value = '';
+    this.tagsField.value = '';
+    this.promptTextarea.value = '';
     this.descriptionTextarea.value = '';
     this.seedInput.value = '';
     
@@ -463,7 +475,10 @@ export class GeneratedImageDisplay {
         fieldElement = this.nameInput;
         break;
       case 'tags':
-        fieldElement = this.tagsTextarea;
+        fieldElement = this.tagsField;
+        break;
+      case 'prompt':
+        fieldElement = this.promptTextarea;
         break;
       case 'description':
         fieldElement = this.descriptionTextarea;
@@ -571,7 +586,17 @@ export class GeneratedImageDisplay {
     try {
       // Update the current image data with the new value
       const updatedData = { ...this.currentImageData };
-      updatedData[fieldBeingEdited] = newValue;
+      
+      // Special handling for tags field - convert comma-separated string to array
+      if (fieldBeingEdited === 'tags') {
+        const tagsArray = newValue
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0);
+        updatedData[fieldBeingEdited] = tagsArray;
+      } else {
+        updatedData[fieldBeingEdited] = newValue;
+      }
 
       // Send update to server
       showToast('Saving changes...');
