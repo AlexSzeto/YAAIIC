@@ -1,4 +1,5 @@
 node_modules/
+server/logs/
 server/storage/
 server/database/
 server/config.json

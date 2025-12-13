@@ -228,7 +228,7 @@
       "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -296,7 +296,7 @@
       "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -380,7 +380,7 @@
       "optionalPrompt": true,
       "finalNode": "119",
       "inputImages": 1,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -444,7 +444,7 @@
       "inputImages": 2,
       "nameRequired": true,
       "optionalPrompt": true,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",

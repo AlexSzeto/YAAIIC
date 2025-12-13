@@ -495,6 +495,11 @@ async function handleGenerate() {
       if (videoParams) {
         formData.append('frames', videoParams.frames);
         formData.append('framerate', videoParams.framerate);
+        // Add orientation if available
+        const orientationField = document.getElementById('orientation');
+        if (orientationField && orientationField.offsetParent !== null) {
+          formData.append('orientation', orientationField.value);
+        }
       }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
@@ -529,6 +534,11 @@ async function handleGenerate() {
       if (videoParams) {
         requestBody.frames = videoParams.frames;
         requestBody.framerate = videoParams.framerate;
+        // Add orientation if available
+        const orientationField = document.getElementById('orientation');
+        if (orientationField && orientationField.offsetParent !== null) {
+          requestBody.orientation = orientationField.value;
+        }
       }
       // Send generation request and get immediate taskId response
       response = await fetchWithRetry('/generate/image', {

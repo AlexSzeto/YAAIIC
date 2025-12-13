@@ -84,7 +84,7 @@ function normalizeFrameCount(inputValue) {
 7. Apply this normalization function to the length/frames value before sending to server
 8. Test with various inputs (e.g., 1, 10, 25, 30) to verify correct normalization
 
-[] (Client) Insert a new form field, `orientation`, for video workflows, where the field is a dropdown and users can choose between the value `portrait` or `landscape`.
+[x] (Client) Insert a new form field, `orientation`, for video workflows, where the field is a dropdown and users can choose between the value `portrait` or `landscape`.
 1. In `public/index.html`, add a new form group within the `video-controls-row` created in the previous task:
 ```html
 <div class="form-group">
@@ -108,7 +108,7 @@ if (orientationField && orientationField.offsetParent !== null) {
 5. Set a default value for orientation (e.g., `landscape`) by adding `selected` attribute to one option
 6. Test that the orientation value is included in generation requests for video workflows
 
-[] (Server) Rename all references of `preGenerationPrompts` to `preGenerationTasks`, and `postGenerationPrompts` to `postGenerationTasks`.
+[x] (Server) Rename all references of `preGenerationPrompts` to `preGenerationTasks`, and `postGenerationPrompts` to `postGenerationTasks`.
 1. In `server/generate.mjs`, use search and replace to change all occurrences of `preGenerationPrompts` to `preGenerationTasks`
 2. In `server/generate.mjs`, use search and replace to change all occurrences of `postGenerationPrompts` to `postGenerationTasks`
 3. In `server/server.mjs`, update any references to these properties in workflow configuration loading or validation
