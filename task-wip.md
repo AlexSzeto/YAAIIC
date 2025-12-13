@@ -6,7 +6,6 @@
 - Workflow time estimate (from last 5 generations)
 - Rename generated image
 - Image tagging
-- Use freezeframe.js to freeze animations in gallery preview
 - Export to destination (customizable)
 - Auto download models from Hugging Face
 
