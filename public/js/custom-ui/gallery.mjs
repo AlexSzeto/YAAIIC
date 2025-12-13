@@ -37,6 +37,9 @@ export class GalleryDisplay extends Component {
     // Pagination component will be created when modal is shown
     this.pagination = null;
     
+    // Freezeframe instance for animated images
+    this.freezeframeInstance = null;
+    
     console.log('GalleryDisplay initialized successfully');
   }
   
@@ -56,6 +59,11 @@ export class GalleryDisplay extends Component {
     if (this.pagination) {
       this.pagination.destroy();
       this.pagination = null;
+    }
+    // Clean up freezeframe instance
+    if (this.freezeframeInstance) {
+      this.freezeframeInstance.destroy();
+      this.freezeframeInstance = null;
     }
   }
 
@@ -298,8 +306,50 @@ export class GalleryDisplay extends Component {
    * @param {Array} currentPageData - Current page data from pagination component
    */
   handlePaginationUpdate = (currentPageData) => {
-    this.setState({ currentPageData });
+    this.setState({ currentPageData }, () => {
+      // Apply freezeframe after state update and DOM render
+      this.applyFreezeframe();
+    });
     console.log('Gallery pagination updated:', currentPageData.length, 'items on current page');
+  }
+  
+  /**
+   * Initialize or re-initialize freezeframe for animated images in the gallery
+   */
+  applyFreezeframe() {
+    // Destroy previous instance if it exists
+    if (this.freezeframeInstance) {
+      try {
+        this.freezeframeInstance.destroy();
+      } catch (e) {
+        console.warn('Error destroying freezeframe instance:', e);
+      }
+      this.freezeframeInstance = null;
+    }
+    
+    // Check if Freezeframe is available globally
+    if (typeof Freezeframe === 'undefined') {
+      console.warn('Freezeframe library not loaded');
+      return;
+    }
+    
+    // Wait for next tick to ensure DOM is updated
+    setTimeout(() => {
+      const freezeframeElements = document.querySelectorAll('.gallery-grid .freezeframe');
+      
+      if (freezeframeElements.length > 0) {
+        try {
+          this.freezeframeInstance = new Freezeframe('.gallery-grid .freezeframe', {
+            trigger: 'hover',
+            overlay: false,
+            responsive: false
+          });
+          console.log('Freezeframe initialized for', freezeframeElements.length, 'animated images');
+        } catch (e) {
+          console.error('Error initializing freezeframe:', e);
+        }
+      }
+    }, 0);
   }
   
   /**
@@ -351,6 +401,16 @@ export class GalleryDisplay extends Component {
       this.pagination = null;
     }
     
+    // Clean up freezeframe instance
+    if (this.freezeframeInstance) {
+      try {
+        this.freezeframeInstance.destroy();
+      } catch (e) {
+        console.warn('Error destroying freezeframe on modal hide:', e);
+      }
+      this.freezeframeInstance = null;
+    }
+    
     console.log('Gallery modal closed');
   }
   
@@ -375,7 +435,10 @@ export class GalleryDisplay extends Component {
         showSuccessFeedback: false // Don't show success toast for gallery loads
       });
       
-      this.setState({ galleryData });
+      this.setState({ galleryData }, () => {
+        // Apply freezeframe after state update
+        this.applyFreezeframe();
+      });
       
       // Update pagination with new data
       if (this.pagination) {

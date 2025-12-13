@@ -14,7 +14,7 @@ Reduce the amount of active animation in gallery view by importing the javascrip
    - Verify the library loads without errors in browser console
    - This will allow testing the library behavior before committing to implementation
 
-[] Use freezeframe.js to set all animations in the gallery view to animate on hover. Image preview and generated view should still autoplay animated images, retaining its current behavior.
+[x] Use freezeframe.js to set all animations in the gallery view to animate on hover. Image preview and generated view should still autoplay animated images, retaining its current behavior.
 3. Update `js/gallery-preview.mjs` to add freezeframe class to animated images
    - Add helper method `isAnimatedImage(url)` to check if URL ends with `.gif` or `.webp`
    - In `render()` method, conditionally add `freezeframe` class to img element when `isAnimatedImage(item.imageUrl)` returns true
@@ -32,3 +32,30 @@ Reduce the amount of active animation in gallery view by importing the javascrip
    - Image modal (when clicking gallery item): should autoplay (no freezeframe class)
    - Generated image display: should autoplay (no freezeframe class)
    - Gallery pagination: animations should freeze correctly when switching pages
+
+[] Fix freezeframe canvas styling to properly fill gallery preview areas with object-fit: cover
+6. Analysis of the generated HTML structure reveals:
+   - Freezeframe wraps images in `.ff-container` divs
+   - Canvas elements use `.ff-canvas` class
+   - Original images get `.ff-image` class added
+   - Issue: nested `.ff-container` structure suggests possible double initialization
+   
+7. Add CSS rules targeting freezeframe's actual class names in `public/css/custom-ui.css`:
+   - Target `.gallery-item .ff-container` to ensure containers fill parent: `width: 100% !important; height: 100% !important; display: block; position: absolute; top: 0; left: 0;`
+   - Target `.gallery-item .ff-canvas` for canvas styling: `width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 3px;`
+   - Target `.gallery-item .ff-image` to hide original image: `display: none !important;`
+   - Use `position: absolute` on ff-container to overlay properly within the positioned `.gallery-item`
+   - Ensure `.gallery-item` maintains `position: relative` (already set in component)
+   
+8. Investigate and fix potential double initialization issue:
+   - Check if `applyFreezeframe()` in `gallery.mjs` is being called multiple times
+   - Verify selector `.gallery-grid .freezeframe` doesn't match already-processed elements
+   - Consider adding a check to skip elements that already have `.ff-container` wrapper
+   - Review console logs to confirm only one initialization per page/update
+   
+9. Test the implementation:
+   - Verify animated images in gallery view freeze properly and fill the preview area
+   - Confirm canvas uses `object-fit: cover` to maintain proper cropping
+   - Test hover behavior triggers animation correctly
+   - Check various aspect ratios (portrait/landscape/square) display properly
+   - Ensure pagination doesn't cause re-initialization issues

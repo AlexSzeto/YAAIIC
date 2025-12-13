@@ -10,6 +10,19 @@ export class GalleryPreview extends Component {
     this.state = {
       imageError: false
     };
+    
+    this.imageRef = null;
+  }
+
+  /**
+   * Check if a URL points to an animated image
+   * @param {string} url - Image URL to check
+   * @returns {boolean} True if the URL ends with .gif or .webp
+   */
+  isAnimatedImage(url) {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith('.gif') || lowerUrl.endsWith('.webp');
   }
 
   handleImageError = () => {
@@ -63,6 +76,10 @@ export class GalleryPreview extends Component {
   render() {
     const { item, onSelect, isSelected, disableCheckbox = false, disabled = false } = this.props;
     const { imageError } = this.state;
+    
+    // Check if this is an animated image for freezeframe
+    const isAnimated = this.isAnimatedImage(item.imageUrl);
+    const imageClass = `gallery-item-image${isAnimated ? ' freezeframe' : ''}`;
 
     return html`
       <div class="gallery-item ${disabled ? 'disabled' : ''}" style=${{ position: 'relative' }}>
@@ -78,7 +95,7 @@ export class GalleryPreview extends Component {
           </div>
         `}
         <img
-          class="gallery-item-image"
+          class=${imageClass}
           src=${item.imageUrl || ''}
           alt=${item.name || 'Generated image'}
           style=${imageError ? {
@@ -92,6 +109,7 @@ export class GalleryPreview extends Component {
           } : disabled ? { cursor: 'not-allowed' } : { cursor: 'pointer' }}
           onError=${this.handleImageError}
           onClick=${this.handleImageClick}
+          ref=${(el) => { this.imageRef = el; }}
         >
           ${imageError && 'No image'}
         </img>
