@@ -25,7 +25,7 @@
 4. Verify that the select button appears in gallery image modals
 5. Test that clicking select properly creates a single-item gallery
 
-[] (Client) Create a new row in the generate form in the main page specifically for video workflow types, and move the Length and Frame rate fields into the new row. Hide this row if the currently selected workflow is not a video workflow. Ensure the following: that all form fields should still exist within the same container, that length and frame rate should be placed below workflow, name, and seed, and that length and frame rate should be above description. Also ensure that after moving the form fields, length and frame rate maintains the css formatting that places the label above the input while still not stretching to fill the entire horizontal space.
+[x] (Client) Create a new row in the generate form in the main page specifically for video workflow types, and move the Length and Frame rate fields into the new row. Hide this row if the currently selected workflow is not a video workflow. Ensure the following: that all form fields should still exist within the same container, that length and frame rate should be placed below workflow, name, and seed, and that length and frame rate should be above description. Also ensure that after moving the form fields, length and frame rate maintains the css formatting that places the label above the input while still not stretching to fill the entire horizontal space.
 1. In `public/index.html`, locate the form structure within the main page
 2. Identify the existing length and frame rate form fields
 3. Create a new container div for the video-specific row:

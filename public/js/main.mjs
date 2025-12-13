@@ -222,15 +222,12 @@ function handleWorkflowChange() {
   }
   
   // Show/hide video-specific fields based on workflow type
-  const lengthGroup = document.getElementById('length-group');
-  const framerateGroup = document.getElementById('framerate-group');
+  const videoControlsRow = document.getElementById('video-controls-row');
   if (selectedWorkflow.type === 'video') {
-    if (lengthGroup) lengthGroup.style.display = '';
-    if (framerateGroup) framerateGroup.style.display = '';
+    if (videoControlsRow) videoControlsRow.style.display = 'flex';
     console.log('Video fields enabled for workflow:', selectedWorkflowName);
   } else {
-    if (lengthGroup) lengthGroup.style.display = 'none';
-    if (framerateGroup) framerateGroup.style.display = 'none';
+    if (videoControlsRow) videoControlsRow.style.display = 'none';
     console.log('Video fields disabled for workflow:', selectedWorkflowName);
   }
   

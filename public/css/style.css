@@ -73,6 +73,18 @@ p {
   align-items: end;
 }
 
+.video-controls-row {
+  display: flex;
+  flex: 1 0 100%;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.video-controls-row .form-group {
+  flex: 0 1 auto;
+  min-width: 150px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
