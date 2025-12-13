@@ -5,14 +5,14 @@
 - Image tagging
 - Update title to reflect current step number
 
-[] Dynamically update the title of the page and prefix it with the progress title, including the step indicator and node name, while any task with SSE updates is in progress. Currently this includes workflows and uploads, but try to future proof this if possible. It should be in the format of ex. "(5/10) Decoding Image - YAAIC" and reverts back to the plain title "YAAIC" when a task completes or fails.
+[x] Dynamically update the title of the page and prefix it with the progress title, including the step indicator and node name, while any task with SSE updates is in progress. Currently this includes workflows and uploads, but try to future proof this if possible. It should be in the format of ex. "(5/10) Decoding Image - YAAIIG" and reverts back to the plain title "YAAIIG" when a task completes or fails.
 1. Create a `PageTitleManager` utility in `js/util.mjs` with methods to update and reset page title:
 ```javascript
 /**
  * PageTitleManager - Manages dynamic page title updates
  */
 class PageTitleManager {
-  constructor(defaultTitle = 'YAAIC') {
+  constructor(defaultTitle = 'YAAIIG') {
     this.defaultTitle = defaultTitle;
     this.currentTitle = defaultTitle;
   }
@@ -36,7 +36,7 @@ class PageTitleManager {
 }
 ```
 2. Modify `sse-manager.mjs` to accept optional `onProgress` callbacks that include step and total information
-3. Update all SSE subscriptions in `main.mjs` and `inpaint.mjs` to format progress data as a string (e.g., `"(5/10) Decoding Image - YAAIC"`) and pass it to `PageTitleManager.update()`
+3. Update all SSE subscriptions in `main.mjs` and `inpaint.mjs` to format progress data as a string (e.g., `"(5/10) Decoding Image - YAAIIG"`) and pass it to `PageTitleManager.update()`
 4. Add cleanup calls to `PageTitleManager.reset()` in SSE `onComplete` and `onError` callbacks
 5. Ensure that the title updates work for both workflow generation and upload tasks
 

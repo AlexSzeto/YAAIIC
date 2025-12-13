@@ -267,3 +267,39 @@ export function getQueryParam(param) {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get(param);
 }
+
+/**
+ * PageTitleManager - Manages dynamic page title updates
+ */
+export class PageTitleManager {
+  constructor(defaultTitle = 'YAAIIG') {
+    this.defaultTitle = defaultTitle;
+    this.currentTitle = defaultTitle;
+  }
+  
+  /**
+   * Update page title with custom text
+   * @param {string} title - The title text to display
+   */
+  update(title) {
+    if (!title) return;
+    this.currentTitle = `${title} - ${this.defaultTitle}`;
+    document.title = this.currentTitle;
+  }
+  
+  /**
+   * Reset page title to default
+   */
+  reset() {
+    this.currentTitle = this.defaultTitle;
+    document.title = this.defaultTitle;
+  }
+  
+  /**
+   * Get the current title
+   * @returns {string}
+   */
+  getTitle() {
+    return this.currentTitle;
+  }
+}
