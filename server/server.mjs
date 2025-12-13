@@ -325,28 +325,48 @@ app.post('/generate/image', upload.any(), async (req, res) => {
 app.get('/image-data', (req, res) => {
   try {
     const query = req.query.query || '';
+    const tagsParam = req.query.tags || '';
     const sort = req.query.sort || 'descending';
     const limit = parseInt(req.query.limit) || 10;
     
-    console.log(`Image data endpoint called with query="${query}", sort="${sort}", limit=${limit}`);
+    // Parse tags from comma-separated string
+    const tags = tagsParam ? tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [];
     
-    // Filter by query (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
+    console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], sort="${sort}", limit=${limit}`);
+    
+    // Filter by query and tags
     let filteredData = imageData.imageData.filter(item => {
-      if (!query) return true; // No query means include all
-      
-      const nameMatch = item.name && item.name.toLowerCase().includes(query.toLowerCase());
-      const descriptionMatch = item.description && item.description.toLowerCase().includes(query.toLowerCase());
-      const promptMatch = item.prompt && item.prompt.toLowerCase().includes(query.toLowerCase());
-      
-      // Format timestamp as yyyy-mm-dd for searching
-      let timestampMatch = false;
-      if (item.timestamp) {
-        const date = new Date(item.timestamp);
-        const formattedDate = date.toISOString().split('T')[0]; // yyyy-mm-dd format
-        timestampMatch = formattedDate.includes(query);
+      // Query match (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
+      let queryMatch = true;
+      if (query) {
+        const nameMatch = item.name && item.name.toLowerCase().includes(query.toLowerCase());
+        const descriptionMatch = item.description && item.description.toLowerCase().includes(query.toLowerCase());
+        const promptMatch = item.prompt && item.prompt.toLowerCase().includes(query.toLowerCase());
+        
+        // Format timestamp as yyyy-mm-dd for searching
+        let timestampMatch = false;
+        if (item.timestamp) {
+          const date = new Date(item.timestamp);
+          const formattedDate = date.toISOString().split('T')[0]; // yyyy-mm-dd format
+          timestampMatch = formattedDate.includes(query);
+        }
+        
+        queryMatch = nameMatch || descriptionMatch || promptMatch || timestampMatch;
       }
       
-      return nameMatch || descriptionMatch || promptMatch || timestampMatch;
+      // Tag match - image must contain ALL tags (case insensitive)
+      let tagMatch = true;
+      if (tags.length > 0) {
+        tagMatch = item.tags && Array.isArray(item.tags) && 
+          tags.every(searchTag => 
+            item.tags.some(itemTag => 
+              itemTag.toLowerCase() === searchTag.toLowerCase()
+            )
+          );
+      }
+      
+      // Both conditions must be true
+      return queryMatch && tagMatch;
     });
     
     // Sort by timestamp
@@ -457,7 +477,55 @@ app.delete('/image-data/delete', (req, res) => {
     res.status(500).json({ error: 'Failed to process deletion request', details: error.message });
   }
 });
-
+// POST endpoint for editing image data
+app.post('/edit', (req, res) => {
+  try {
+    const updatedData = req.body;
+    
+    // Validate that uid is present
+    if (!updatedData.uid) {
+      return res.status(400).json({ error: 'Missing required field: uid' });
+    }
+    
+    // Validate that uid is a number
+    if (typeof updatedData.uid !== 'number' || !Number.isInteger(updatedData.uid)) {
+      return res.status(400).json({ error: 'UID must be an integer' });
+    }
+    
+    console.log(`Edit request for UID: ${updatedData.uid}`);
+    
+    // Search for the image with matching UID
+    const imageIndex = imageData.imageData.findIndex(item => item.uid === updatedData.uid);
+    
+    if (imageIndex === -1) {
+      console.log(`No image found with UID: ${updatedData.uid}`);
+      return res.status(404).json({ error: `Image with uid ${updatedData.uid} not found` });
+    }
+    
+    // Replace the entire object in place with the new data
+    imageData.imageData[imageIndex] = updatedData;
+    
+    // Save changes to file
+    try {
+      saveImageData();
+      console.log(`Successfully updated image data for UID: ${updatedData.uid}`);
+      res.json({ 
+        success: true, 
+        data: updatedData
+      });
+    } catch (saveError) {
+      console.error('Failed to save after edit:', saveError);
+      res.status(500).json({ 
+        error: 'Failed to save changes after edit', 
+        details: saveError.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in edit endpoint:', error);
+    res.status(500).json({ error: 'Failed to process edit request', details: error.message });
+  }
+});
 // GET endpoint for workflow list
 app.get('/generate/workflows', (req, res) => {
   try {

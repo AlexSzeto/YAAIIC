@@ -1,5 +1,6 @@
 import { render, Component } from 'preact';
 import { html } from 'htm/preact';
+import { PageTitleManager } from '../util.mjs';
 
 /**
  * Map ComfyUI node types to human-readable step names
@@ -48,6 +49,10 @@ class ProgressBanner extends Component {
       currentValue: 0,
       maxValue: 0
     };
+    
+    // Create page title manager instance with custom default title from props or document.title
+    const defaultTitle = props.defaultTitle || document.title;
+    this.pageTitleManager = new PageTitleManager(defaultTitle);
   }
 
   componentDidMount() {
@@ -90,12 +95,19 @@ class ProgressBanner extends Component {
       message = getStepName(data.progress.node);
     }
 
+    // Format page title with step indicator if currentValue and maxValue are available
+    let titleMessage = message;
+    if (data.progress.currentValue > 0 && data.progress.maxValue > 0) {
+      titleMessage = `(${data.progress.currentValue}/${data.progress.maxValue}) ${message}`;
+    }
+
+    // Update page title with progress information
+    this.pageTitleManager.update(titleMessage);
+
     this.setState({
       status: 'in-progress',
       percentage: data.progress.percentage || 0,
       message: message,
-      currentValue: data.progress.currentValue || 0,
-      maxValue: data.progress.maxValue || 0
     });
   }
 
@@ -104,6 +116,9 @@ class ProgressBanner extends Component {
    * @param {Object} data - Completion data from server
    */
   handleComplete(data) {
+    // Reset page title to default
+    this.pageTitleManager.reset();
+    
     this.setState({
       status: 'completed',
       percentage: 100,
@@ -128,6 +143,9 @@ class ProgressBanner extends Component {
    * @param {Object} data - Error data from server
    */
   handleError(data) {
+    // Reset page title to default
+    this.pageTitleManager.reset();
+    
     this.setState({
       status: 'error',
       percentage: 0,

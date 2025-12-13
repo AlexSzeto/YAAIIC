@@ -31,11 +31,21 @@ export class GeneratedImageDisplay {
     this.getWorkflowState = getWorkflowState; // Function to get current workflow state
     this.currentImageData = null; // Store current image data including uid
     
+    // Track edit state
+    this.editState = {
+      isEditing: false,
+      fieldBeingEdited: null, // 'name', 'tags', 'description', 'seed', or 'workflow'
+      originalValue: null,
+      fieldElement: null,
+      originalHTML: null
+    };
+    
     // Get references to the inner elements
     this.imageElement = baseElement.querySelector('.generated-image');
     this.workflowInput = baseElement.querySelector('.info-workflow');
     this.nameInput = baseElement.querySelector('.info-name');
-    this.tagsTextarea = baseElement.querySelector('.info-tags');
+    this.tagsField = baseElement.querySelector('.info-tags-field');
+    this.promptTextarea = baseElement.querySelector('.info-prompt');
     this.descriptionTextarea = baseElement.querySelector('.info-description');
     this.seedInput = baseElement.querySelector('.info-seed');
     this.selectButton = baseElement.querySelector('.image-select-btn');
@@ -43,8 +53,8 @@ export class GeneratedImageDisplay {
     this.deleteButton = baseElement.querySelector('.image-delete-btn');
     
     // Validate that all required elements exist
-    if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsTextarea || 
-        !this.descriptionTextarea || !this.seedInput || !this.selectButton || !this.inpaintButton || !this.deleteButton) {
+    if (!this.imageElement || !this.workflowInput || !this.nameInput || !this.tagsField || 
+        !this.promptTextarea || !this.descriptionTextarea || !this.seedInput || !this.selectButton || !this.inpaintButton || !this.deleteButton) {
       throw new Error('GeneratedImageDisplay: Required inner elements not found in baseElement');
     }
     
@@ -55,12 +65,13 @@ export class GeneratedImageDisplay {
   }
   
   /**
-   * Set up event listeners for copy and use buttons
+   * Set up event listeners for copy, use, and edit buttons
    */
   setupButtonListeners() {
-    // Get all copy and use buttons
+    // Get all copy, use, and edit buttons
     const copyButtons = this.baseElement.querySelectorAll('.copy-btn');
     const useButtons = this.baseElement.querySelectorAll('.use-btn');
+    const editButtons = this.baseElement.querySelectorAll('.edit-btn');
     
     // Set up copy button listeners
     copyButtons.forEach(button => {
@@ -75,6 +86,14 @@ export class GeneratedImageDisplay {
       button.addEventListener('click', (e) => {
         const field = e.target.closest('.use-btn').getAttribute('data-field');
         this.useFieldInForm(field);
+      });
+    });
+    
+    // Set up edit button listeners
+    editButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const field = e.target.closest('.edit-btn').getAttribute('data-field');
+        this._enterEditMode(field);
       });
     });
     
@@ -109,7 +128,10 @@ export class GeneratedImageDisplay {
         value = this.nameInput.value;
         break;
       case 'tags':
-        value = this.tagsTextarea.value;
+        value = this.tagsField.value;
+        break;
+      case 'prompt':
+        value = this.promptTextarea.value;
         break;
       case 'description':
         value = this.descriptionTextarea.value;
@@ -146,7 +168,11 @@ export class GeneratedImageDisplay {
         value = this.nameInput.value;
         break;
       case 'tags':
-        value = this.tagsTextarea.value;
+        // Tags use button is disabled, but handle it anyway
+        value = this.tagsField.value;
+        break;
+      case 'prompt':
+        value = this.promptTextarea.value;
         break;
       case 'description':
         value = this.descriptionTextarea.value;
@@ -362,7 +388,10 @@ export class GeneratedImageDisplay {
     // Set text fields
     this.workflowInput.value = data.workflow || '';
     this.nameInput.value = data.name || '';
-    this.tagsTextarea.value = data.prompt || '';
+    // Convert tags array to comma-separated string, default to empty array
+    const tags = data.tags || [];
+    this.tagsField.value = tags.join(', ');
+    this.promptTextarea.value = data.prompt || '';
     this.descriptionTextarea.value = data.description || 'No description available';
     this.seedInput.value = data.seed;
     
@@ -400,7 +429,8 @@ export class GeneratedImageDisplay {
     // Clear text fields
     this.workflowInput.value = '';
     this.nameInput.value = '';
-    this.tagsTextarea.value = '';
+    this.tagsField.value = '';
+    this.promptTextarea.value = '';
     this.descriptionTextarea.value = '';
     this.seedInput.value = '';
     
@@ -413,5 +443,279 @@ export class GeneratedImageDisplay {
     this.baseElement.style.display = 'none';
     
     console.log('GeneratedImageDisplay blanked');
+  }
+
+  /**
+   * Enter edit mode for a specific field
+   * @param {string} fieldName - The name of the field to edit
+   * @private
+   */
+  _enterEditMode(fieldName) {
+    // Don't allow editing if already in edit mode
+    if (this.editState.isEditing) {
+      showErrorToast('Please finish editing the current field first');
+      return;
+    }
+
+    // Don't allow editing if no image data is loaded
+    if (!this.currentImageData) {
+      showErrorToast('No image data loaded');
+      return;
+    }
+
+    // Get the field element and its parent section
+    let fieldElement;
+    let fieldSection;
+    
+    switch(fieldName) {
+      case 'workflow':
+        fieldElement = this.workflowInput;
+        break;
+      case 'name':
+        fieldElement = this.nameInput;
+        break;
+      case 'tags':
+        fieldElement = this.tagsField;
+        break;
+      case 'prompt':
+        fieldElement = this.promptTextarea;
+        break;
+      case 'description':
+        fieldElement = this.descriptionTextarea;
+        break;
+      case 'seed':
+        fieldElement = this.seedInput;
+        break;
+      default:
+        console.error('Unknown field for edit:', fieldName);
+        return;
+    }
+
+    fieldSection = fieldElement.closest('.info-section');
+    if (!fieldSection) {
+      console.error('Could not find info-section for field:', fieldName);
+      return;
+    }
+
+    // Store original state
+    this.editState.isEditing = true;
+    this.editState.fieldBeingEdited = fieldName;
+    this.editState.originalValue = fieldElement.value;
+    this.editState.fieldElement = fieldElement;
+    this.editState.originalHTML = fieldSection.querySelector('.info-buttons').innerHTML;
+
+    // Make field editable
+    this._makeFieldEditable(fieldElement, fieldName);
+
+    // Replace action buttons with confirm/cancel buttons
+    const buttonsContainer = fieldSection.querySelector('.info-buttons');
+    buttonsContainer.innerHTML = `
+      <button class="info-btn confirm-edit-btn" title="Confirm edit" style="background-color: #28a745;">
+        <box-icon name='check' color='#ffffff' size='16px'></box-icon>
+      </button>
+      <button class="info-btn cancel-edit-btn" title="Cancel edit" style="background-color: #dc3545;">
+        <box-icon name='x' color='#ffffff' size='16px'></box-icon>
+      </button>
+    `;
+
+    // Add event listeners to confirm/cancel buttons
+    buttonsContainer.querySelector('.confirm-edit-btn').addEventListener('click', () => {
+      this._confirmEdit();
+    });
+    
+    buttonsContainer.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+      this._cancelEdit();
+    });
+
+    console.log('Entered edit mode for field:', fieldName);
+  }
+
+  /**
+   * Exit edit mode and restore original view
+   * @private
+   */
+  _exitEditMode() {
+    if (!this.editState.isEditing) {
+      return;
+    }
+
+    const { fieldBeingEdited, fieldElement, originalHTML } = this.editState;
+    
+    // Restore field to non-editable state
+    this._restoreFieldDisplay(fieldElement, fieldElement.value);
+
+    // Restore action buttons
+    const fieldSection = fieldElement.closest('.info-section');
+    if (fieldSection) {
+      const buttonsContainer = fieldSection.querySelector('.info-buttons');
+      buttonsContainer.innerHTML = originalHTML;
+      
+      // Re-attach event listeners (they were removed when innerHTML was replaced)
+      this.setupButtonListeners();
+    }
+
+    // Clear edit state
+    this.editState.isEditing = false;
+    this.editState.fieldBeingEdited = null;
+    this.editState.originalValue = null;
+    this.editState.fieldElement = null;
+    this.editState.originalHTML = null;
+
+    console.log('Exited edit mode for field:', fieldBeingEdited);
+  }
+
+  /**
+   * Confirm the edit and save to server
+   * @private
+   */
+  async _confirmEdit() {
+    if (!this.editState.isEditing || !this.currentImageData) {
+      return;
+    }
+
+    const { fieldBeingEdited, fieldElement } = this.editState;
+    const newValue = fieldElement.value;
+
+    // Disable buttons during save
+    const buttonsContainer = fieldElement.closest('.info-section').querySelector('.info-buttons');
+    const confirmBtn = buttonsContainer.querySelector('.confirm-edit-btn');
+    const cancelBtn = buttonsContainer.querySelector('.cancel-edit-btn');
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+
+    try {
+      // Update the current image data with the new value
+      const updatedData = { ...this.currentImageData };
+      
+      // Special handling for tags field - convert comma-separated string to array
+      if (fieldBeingEdited === 'tags') {
+        const tagsArray = newValue
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0);
+        updatedData[fieldBeingEdited] = tagsArray;
+      } else {
+        updatedData[fieldBeingEdited] = newValue;
+      }
+
+      // Send update to server
+      showToast('Saving changes...');
+      
+      const response = await fetchWithRetry('/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData)
+      }, {
+        maxRetries: 2,
+        retryDelay: 1000,
+        showUserFeedback: false
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showSuccessToast('Changes saved successfully');
+        
+        // Update local data
+        this.currentImageData = result.data;
+        
+        // Exit edit mode
+        this._exitEditMode();
+      } else {
+        throw new Error('Failed to save changes');
+      }
+
+    } catch (error) {
+      console.error('Error saving edit:', error);
+      
+      let errorMessage = 'Failed to save changes';
+      if (error instanceof FetchError) {
+        switch (error.status) {
+          case 400:
+            errorMessage = 'Invalid data format';
+            break;
+          case 404:
+            errorMessage = 'Image not found';
+            break;
+          case 500:
+            errorMessage = 'Server error';
+            break;
+          default:
+            errorMessage = error.message || 'Failed to save changes';
+        }
+      } else {
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      showErrorToast(errorMessage);
+      
+      // Re-enable buttons
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
+  }
+
+  /**
+   * Cancel the edit and restore original value
+   * @private
+   */
+  _cancelEdit() {
+    if (!this.editState.isEditing) {
+      return;
+    }
+
+    const { fieldElement, originalValue } = this.editState;
+    
+    // Restore original value
+    fieldElement.value = originalValue;
+    
+    // Exit edit mode
+    this._exitEditMode();
+    
+    showToast('Edit cancelled');
+  }
+
+  /**
+   * Replace text display with editable textarea
+   * @param {HTMLElement} element - The element to make editable
+   * @param {string} fieldName - The field name
+   * @private
+   */
+  _makeFieldEditable(element, fieldName) {
+    // Remove readonly attribute
+    element.removeAttribute('readonly');
+    
+    // Add CSS class to indicate edit mode
+    element.classList.add('editing');
+    
+    // Focus on the field
+    element.focus();
+    
+    // For textareas, select all text
+    if (element.tagName === 'TEXTAREA') {
+      element.select();
+    } else {
+      // For input fields, move cursor to end
+      element.setSelectionRange(element.value.length, element.value.length);
+    }
+  }
+
+  /**
+   * Restore textarea to static text display
+   * @param {HTMLElement} element - The element to restore
+   * @param {string} value - The value to display
+   * @private
+   */
+  _restoreFieldDisplay(element, value) {
+    // Set the value
+    element.value = value;
+    
+    // Add readonly attribute back
+    element.setAttribute('readonly', '');
+    
+    // Remove edit mode CSS class
+    element.classList.remove('editing');
   }
 }

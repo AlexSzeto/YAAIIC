@@ -204,7 +204,7 @@
     },
     "class_type": "Wan22FirstLastFrameToVideoLatent",
     "_meta": {
-      "title": "Wan22FirstLastFrameToVideoLatent"
+      "title": "VAE Encode"
     }
   },
   "106": {
@@ -252,7 +252,7 @@
     },
     "class_type": "Wan22ImageToVideoLatent",
     "_meta": {
-      "title": "Wan22ImageToVideoLatent"
+      "title": "VAE Encode"
     }
   },
   "108": {

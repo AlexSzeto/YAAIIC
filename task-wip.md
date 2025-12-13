@@ -1,13 +1,32 @@
 # Bugs / Fixes
-
+- Use in form buttons are not triggering form validation (for name field and possibly others)
 - Refactor all custom-ui into preact components
+- Fix pre generation tasks having an incorrect max step number as indicated by this event stream log:
+```
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":0,"currentStep":"(1/1) Generating prompt...","currentValue":0,"maxValue":2},"timestamp":"2025-12-13T17:34:28.476Z"}
+
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":50,"currentStep":"(1/1) Generating prompt complete","currentValue":1,"maxValue":2},"timestamp":"2025-12-13T17:34:29.509Z"}
+
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":50,"currentStep":"(1/1) Generating description...","currentValue":1,"maxValue":2},"timestamp":"2025-12-13T17:34:29.509Z"}
+
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":100,"currentStep":"(1/1) Generating description complete","currentValue":2,"maxValue":2},"timestamp":"2025-12-13T17:34:29.510Z"}
+
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":0,"currentStep":"Starting generation...","currentValue":0,"maxValue":0},"timestamp":"2025-12-13T17:34:29.526Z"}
+
+event: progress
+data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress":{"percentage":0,"currentStep":"(5/18) Processing Load Image...","currentValue":0,"maxValue":0},"timestamp":"2025-12-13T17:34:29.565Z"}
+```
+For example, the correct `currentStep` for the first item should be `(1/18) Generating prompt`.
 
 # Features
-- Workflow time estimate (from last 5 generations)
-- Rename generated image
-- Image tagging
-- Use freezeframe.js to freeze animations in gallery preview
 - Export to destination (customizable)
+- Move generation options (requireName, optionalPrompt, etc.) into an options object and only pass that to the client
+- Use a solution other than freezeframe.js to freeze animations in gallery preview
 - Auto download models from Hugging Face
 
 # Scratch Space
