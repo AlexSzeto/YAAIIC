@@ -224,6 +224,7 @@
       "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
@@ -291,6 +292,7 @@
       "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
@@ -374,6 +376,7 @@
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
       "type": "video",
+      "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "119",
       "inputImages": 1,
@@ -439,6 +442,8 @@
       "type": "video",
       "finalNode": "119",
       "inputImages": 2,
+      "nameRequired": true,
+      "optionalPrompt": true,
       "preGenerationPrompts": [
         {
           "model": "gemma3:4b",

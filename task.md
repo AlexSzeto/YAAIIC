@@ -258,3 +258,5 @@ if (galleryDisplay) {
 }
 ```
 10. Test all four scenarios: upload, generation, gallery load, and inpaint to ensure consistent behavior
+
+[] Add an optional `nameRequired` parameter to the workflow data. When set to `true`, a name is required before workflow can start on the client side.
