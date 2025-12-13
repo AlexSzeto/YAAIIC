@@ -457,7 +457,55 @@ app.delete('/image-data/delete', (req, res) => {
     res.status(500).json({ error: 'Failed to process deletion request', details: error.message });
   }
 });
-
+// POST endpoint for editing image data
+app.post('/edit', (req, res) => {
+  try {
+    const updatedData = req.body;
+    
+    // Validate that uid is present
+    if (!updatedData.uid) {
+      return res.status(400).json({ error: 'Missing required field: uid' });
+    }
+    
+    // Validate that uid is a number
+    if (typeof updatedData.uid !== 'number' || !Number.isInteger(updatedData.uid)) {
+      return res.status(400).json({ error: 'UID must be an integer' });
+    }
+    
+    console.log(`Edit request for UID: ${updatedData.uid}`);
+    
+    // Search for the image with matching UID
+    const imageIndex = imageData.imageData.findIndex(item => item.uid === updatedData.uid);
+    
+    if (imageIndex === -1) {
+      console.log(`No image found with UID: ${updatedData.uid}`);
+      return res.status(404).json({ error: `Image with uid ${updatedData.uid} not found` });
+    }
+    
+    // Replace the entire object in place with the new data
+    imageData.imageData[imageIndex] = updatedData;
+    
+    // Save changes to file
+    try {
+      saveImageData();
+      console.log(`Successfully updated image data for UID: ${updatedData.uid}`);
+      res.json({ 
+        success: true, 
+        data: updatedData
+      });
+    } catch (saveError) {
+      console.error('Failed to save after edit:', saveError);
+      res.status(500).json({ 
+        error: 'Failed to save changes after edit', 
+        details: saveError.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in edit endpoint:', error);
+    res.status(500).json({ error: 'Failed to process edit request', details: error.message });
+  }
+});
 // GET endpoint for workflow list
 app.get('/generate/workflows', (req, res) => {
   try {

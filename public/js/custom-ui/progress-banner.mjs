@@ -95,8 +95,14 @@ class ProgressBanner extends Component {
       message = getStepName(data.progress.node);
     }
 
+    // Format page title with step indicator if currentValue and maxValue are available
+    let titleMessage = message;
+    if (data.progress.currentValue > 0 && data.progress.maxValue > 0) {
+      titleMessage = `(${data.progress.currentValue}/${data.progress.maxValue}) ${message}`;
+    }
+
     // Update page title with progress information
-    this.pageTitleManager.update(message);
+    this.pageTitleManager.update(titleMessage);
 
     this.setState({
       status: 'in-progress',

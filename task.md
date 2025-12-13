@@ -40,7 +40,7 @@ class PageTitleManager {
 4. Add cleanup calls to `PageTitleManager.reset()` in SSE `onComplete` and `onError` callbacks
 5. Ensure that the title updates work for both workflow generation and upload tasks
 
-[] Create a new endpoint, `/edit`, that allows POST requests and accepts payloads in the format of an image data (from `image-data.json`). The endpoint makes an edit to the image database by looking for an entry that matches the UID and replaces the data of the object, in place, with the values sent.
+[x] Create a new endpoint, `/edit`, that allows POST requests and accepts payloads in the format of an image data (from `image-data.json`). The endpoint makes an edit to the image database by looking for an entry that matches the UID and replaces the data of the object, in place, with the values sent.
 1. Add a new `/edit` POST endpoint in `server/server.mjs` that accepts JSON payloads
 2. Validate that the incoming payload contains a `uid` field
 3. Search through `imageData.imageData` array to find the entry with matching `uid`
@@ -100,7 +100,7 @@ Request/Response format:
 }
 ```
 
-[] Modify the generated image display so the current pencil icon is replaced with a picture icon, same as the one for selecting a gallery image in the upload image component. Each data field displayed now has a third icon button, using the pencil icon, to trigger the editing of that field. In edit mode, the inactive text container is replaced by an editable but non-resizable text area of the exact same size. The copy/use/edit buttons are replaced by confirm (checkmark icon button with green background) and cancel (x icon button with red background) buttons. Once confirmed, the entire image data with the edit is sent to the server via the `/edit` endpoint, and the data is also updated locally. After a confirm or cancel, the UI should revert back to a normal generated image display view.
+[x] Modify the generated image display so the current pencil icon is replaced with a picture icon, same as the one for selecting a gallery image in the upload image component. Each data field displayed now has a third icon button, using the pencil icon, to trigger the editing of that field. In edit mode, the inactive text container is replaced by an editable but non-resizable text area of the exact same size. The copy/use/edit buttons are replaced by confirm (checkmark icon button with green background) and cancel (x icon button with red background) buttons. Once confirmed, the entire image data with the edit is sent to the server via the `/edit` endpoint, and the data is also updated locally. After a confirm or cancel, the UI should revert back to a normal generated image display view.
 1. Update the HTML template in `public/index.html` and `public/inpaint.html` to add edit buttons for each field
 2. Change the pencil icon button (currently used for inpaint) to a picture/image icon (🖼️)
 3. Add a new edit button with pencil icon (✏️) for each editable field: `name`, `tags`, `description`, `seed`, `workflow`
