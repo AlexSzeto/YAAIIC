@@ -25,14 +25,44 @@
 4. Verify that the select button appears in gallery image modals
 5. Test that clicking select properly creates a single-item gallery
 
-[] (Client) Create a new row in the generate form in the main page specifically for video workflow types, and move the Length and Frame rate fields into the new row. Hide this row if the currently selected workflow is not a video workflow.
-1. Open `public/index.html` and locate the workflow controls section
-2. Create a new `div` with class `workflow-controls` or similar for the video-specific row
-3. Move the `length-group` and `framerate-group` divs into this new row container
-4. Add CSS styling to match the existing workflow controls layout
-5. In `public/js/main.mjs`, locate the workflow change handler that shows/hides video fields
-6. Update the handler to show/hide the entire new video row container instead of individual fields
-7. Test with video and non-video workflows to ensure proper visibility toggling
+[] (Client) Create a new row in the generate form in the main page specifically for video workflow types, and move the Length and Frame rate fields into the new row. Hide this row if the currently selected workflow is not a video workflow. Ensure the following: that all form fields should still exist within the same container, that length and frame rate should be placed below workflow, name, and seed, and that length and frame rate should be above description. Also ensure that after moving the form fields, length and frame rate maintains the css formatting that places the label above the input while still not stretching to fill the entire horizontal space.
+1. In `public/index.html`, locate the form structure within the main page
+2. Identify the existing length and frame rate form fields
+3. Create a new container div for the video-specific row:
+```html
+<div id="video-controls-row" style="display: none;">
+  <!-- Length and frame rate fields will be moved here -->
+</div>
+```
+4. Move the length and frame rate form groups into this new container
+5. Position the new container after the seed field and before the description field
+6. In `public/js/main.mjs`, locate the workflow change event handler
+7. Update the handler to show/hide the `video-controls-row` based on workflow type:
+```javascript
+// Check if current workflow is video type
+const isVideoWorkflow = selectedWorkflow.type === 'video' || 
+                       selectedWorkflow.name.toLowerCase().includes('video');
+const videoControlsRow = document.getElementById('video-controls-row');
+if (videoControlsRow) {
+  videoControlsRow.style.display = isVideoWorkflow ? 'flex' : 'none';
+}
+```
+8. Ensure the form groups within the video row use flexbox or grid to maintain vertical label positioning
+9. Add CSS rules in `public/css/style.css` if needed:
+```css
+#video-controls-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+#video-controls-row .form-group {
+  flex: 0 1 auto;
+  min-width: 150px;
+}
+```
+10. Test with video and non-video workflows to verify show/hide behavior
+11. Verify that form submission still captures all field values correctly
 
 [] (Client) Change the video `frames` field to use the label `Length (frames)`, and update the logic so that the value sent to the server is no longer based on frame rate, but it must be a number in the following sequence: `(n * 4) + 1`, where `n` is 0 or greater. For example, acceptable frame numbers would start with `1, 5, 9, 13, ...`. Do not restrict the number the user can input, but modify the number, rounding up to the next valid number if necessary, before it is sent to the server. Change the default length to `25`.
 1. Update `public/index.html`: change the label from "Length (seconds):" to "Length (frames):"
@@ -55,9 +85,9 @@ function normalizeFrameCount(inputValue) {
 8. Test with various inputs (e.g., 1, 10, 25, 30) to verify correct normalization
 
 [] (Client) Insert a new form field, `orientation`, for video workflows, where the field is a dropdown and users can choose between the value `portrait` or `landscape`.
-1. In `public/index.html`, add a new form group within the video-specific row created in the previous task:
+1. In `public/index.html`, add a new form group within the `video-controls-row` created in the previous task:
 ```html
-<div class="form-group" id="orientation-group" style="display: none;">
+<div class="form-group">
   <label for="orientation">Orientation:</label>
   <select id="orientation" name="orientation">
     <option value="portrait">Portrait</option>
@@ -65,17 +95,32 @@ function normalizeFrameCount(inputValue) {
   </select>
 </div>
 ```
-2. In `public/js/main.mjs`, update the workflow change handler to show/hide the orientation field for video workflows
-3. Update the form data collection logic to include the orientation value when submitting video generations
-4. Test that the field appears for video workflows and is hidden for others
+2. Position the orientation field alongside length and frame rate fields in the video controls row
+3. In `public/js/main.mjs`, update the form data collection function to include the orientation value:
+```javascript
+// Get orientation value
+const orientationField = document.getElementById('orientation');
+if (orientationField && orientationField.offsetParent !== null) {
+  formData.orientation = orientationField.value;
+}
+```
+4. Ensure the orientation field is visible when video workflows are selected (already handled by showing video-controls-row)
+5. Set a default value for orientation (e.g., `landscape`) by adding `selected` attribute to one option
+6. Test that the orientation value is included in generation requests for video workflows
 
 [] (Server) Rename all references of `preGenerationPrompts` to `preGenerationTasks`, and `postGenerationPrompts` to `postGenerationTasks`.
-1. Use find/replace in `server/generate.mjs` to rename all occurrences of `preGenerationPrompts` to `preGenerationTasks`
-2. Use find/replace in `server/generate.mjs` to rename all occurrences of `postGenerationPrompts` to `postGenerationTasks`
-3. Update `server/server.mjs` to rename the same properties in workflow configuration handling
-4. Update any workflow configuration JSON files in `server/resource/` that use these property names
-5. Update `server/config.json` or `server/config.default.json` if they reference these properties
-6. Test that generation workflows still execute pre and post generation tasks correctly
+1. In `server/generate.mjs`, use search and replace to change all occurrences of `preGenerationPrompts` to `preGenerationTasks`
+2. In `server/generate.mjs`, use search and replace to change all occurrences of `postGenerationPrompts` to `postGenerationTasks`
+3. In `server/server.mjs`, update any references to these properties in workflow configuration loading or validation
+4. Search all workflow JSON files in `server/resource/` directory:
+   - Update `wan-image-to-video.json`
+   - Update `wan5b-image-to-video.json`
+   - Update `wan5b-image-to-video-loop.json`
+   - Update any other workflow files that reference these properties
+5. Check `server/config.json` and `server/config.default.json` for any references to these property names and update them
+6. Verify that the renamed properties are correctly accessed in all code paths
+7. Test generation workflows that use pre-generation and post-generation tasks to ensure they still execute correctly
+8. Check console logs to confirm tasks are being recognized and executed
 
 [] (Server) Implement a simple conditional data check.
 1. In `server/util.mjs`, create a new utility function `checkExecutionCondition`:
