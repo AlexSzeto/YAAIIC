@@ -100,18 +100,31 @@ export class GalleryDisplay extends Component {
   }
 
   /**
-   * Handle item click in selection mode by opening modal with select button
+   * Handle item click by opening modal with select button
+   * In selection mode: calls the onSelect callback
+   * In normal gallery mode: creates a single-item gallery
    */
   handleItemClick = (item) => {
-    const { selectionMode, onSelect } = this.state;
-    if (!selectionMode || !item || !item.imageUrl) {
+    if (!item || !item.imageUrl) {
       return;
     }
+    
+    const { selectionMode, onSelect } = this.state;
+    
+    // Create modal with select button
     createImageModal(item.imageUrl, true, item.name || null, () => {
-      if (onSelect) {
+      if (selectionMode && onSelect) {
+        // Selection mode: call the provided callback
         onSelect(item);
+        this.hideModal();
+      } else {
+        // Normal gallery mode: create single-item gallery
+        if (this.onLoad && typeof this.onLoad === 'function') {
+          this.onLoad([item]);
+          console.log('Loading single-item gallery:', item.name);
+        }
+        this.hideModal();
       }
-      this.hideModal();
     });
   }
 
@@ -401,7 +414,8 @@ export class GalleryDisplay extends Component {
         // Pass null for onSelect in selection mode to hide checkboxes
         const onSelectCallback = selectionMode ? null : this.handleItemSelect;
         const disableCheckbox = selectionMode;
-        const onImageClick = selectionMode ? this.handleItemClick : null;
+        // Always pass handleItemClick so select button is available in modal
+        const onImageClick = this.handleItemClick;
         
         // Determine if this item should be disabled based on file type filter
         const isVideo = this.isVideoItem(item);

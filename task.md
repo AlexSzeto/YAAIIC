@@ -6,7 +6,7 @@
 - client side Change length in seconds to number of frames (length)
 - Unify gallery behavior so new generations are always added to the start and gallery resets to viewing the first item
 
-[] (Client) Remove the close button in the upper right corner of the image preview modal, and maintain current capability to close the image preview modal by clicking outside of it.
+[x] (Client) Remove the close button in the upper right corner of the image preview modal, and maintain current capability to close the image preview modal by clicking outside of it.
 1. Locate the close button creation code in `public/js/custom-ui/modal.mjs` within the `createImageModal` function
 2. Remove the close button element creation and all associated event listeners
 3. Remove the `modalWrapper.appendChild(closeButton)` call
@@ -14,7 +14,7 @@
 5. Keep the escape key handler for closing the modal
 6. Test that modal still closes properly via overlay click and escape key
 
-[] (Client) Enable the select button on image preview during gallery view. When selected, immediately load in a gallery with 1 image that consist of the selected image only.
+[x] (Client) Enable the select button on image preview during gallery view. When selected, immediately load in a gallery with 1 image that consist of the selected image only.
 1. Locate where image modals are opened from gallery in `public/js/custom-ui/gallery.mjs` (likely in the `GalleryPreview` component)
 2. Update the `handleImageClick` or equivalent method to pass an `onSelect` callback when calling `createImageModal`
 3. The `onSelect` callback should:
