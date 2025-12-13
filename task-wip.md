@@ -3,11 +3,9 @@
 - Refactor all custom-ui into preact components
 
 # Features
-- Workflow time estimate (from last 5 generations)
-- Rename generated image
-- Image tagging
-- Use freezeframe.js to freeze animations in gallery preview
 - Export to destination (customizable)
+- Move generation options (requireName, optionalPrompt, etc.) into an options object and only pass that to the client
+- Use a solution other than freezeframe.js to freeze animations in gallery preview
 - Auto download models from Hugging Face
 
 # Scratch Space
