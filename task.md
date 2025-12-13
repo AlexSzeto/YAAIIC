@@ -64,7 +64,7 @@ if (videoControlsRow) {
 10. Test with video and non-video workflows to verify show/hide behavior
 11. Verify that form submission still captures all field values correctly
 
-[] (Client) Change the video `frames` field to use the label `Length (frames)`, and update the logic so that the value sent to the server is no longer based on frame rate, but it must be a number in the following sequence: `(n * 4) + 1`, where `n` is 0 or greater. For example, acceptable frame numbers would start with `1, 5, 9, 13, ...`. Do not restrict the number the user can input, but modify the number, rounding up to the next valid number if necessary, before it is sent to the server. Change the default length to `25`.
+[x] (Client) Change the video `frames` field to use the label `Length (frames)`, and update the logic so that the value sent to the server is no longer based on frame rate, but it must be a number in the following sequence: `(n * 4) + 1`, where `n` is 0 or greater. For example, acceptable frame numbers would start with `1, 5, 9, 13, ...`. Do not restrict the number the user can input, but modify the number, rounding up to the next valid number if necessary, before it is sent to the server. Change the default length to `25`.
 1. Update `public/index.html`: change the label from "Length (seconds):" to "Length (frames):"
 2. Change the input `id` and `name` from "length" to "frames" if needed, or keep as "length" but update semantics
 3. Update the input's `value` attribute to "25" as the new default

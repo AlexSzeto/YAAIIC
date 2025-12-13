@@ -14,6 +14,19 @@ import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 import { ImageUpload } from './custom-ui/image-upload.mjs';
 
+/**
+ * Normalize frame count to (n * 4) + 1 sequence
+ * @param {number|string} inputValue - The input frame count
+ * @returns {number} Normalized frame count following (n * 4) + 1 pattern
+ */
+function normalizeFrameCount(inputValue) {
+  const num = parseInt(inputValue, 10);
+  if (isNaN(num) || num < 1) return 1;
+  // Calculate n where (n * 4) + 1 >= num
+  const n = Math.ceil((num - 1) / 4);
+  return (n * 4) + 1;
+}
+
 let workflows = [];
 let autoCompleteInstance = null;
 let generatedImageDisplay = null;
@@ -461,9 +474,8 @@ async function handleGenerate() {
     if (selectedWorkflow && selectedWorkflow.type === 'video') {
       const lengthInput = document.getElementById('length');
       const framerateInput = document.getElementById('framerate');
-      const length = parseFloat(lengthInput.value);
+      const frames = normalizeFrameCount(lengthInput.value);
       const framerate = parseInt(framerateInput.value);
-      const frames = Math.floor(length * framerate) % 2 === 0 ? Math.floor(length * framerate) + 1 : Math.floor(length * framerate); // Ensure odd number of frames
       videoParams = { frames, framerate };
     }
 

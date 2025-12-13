@@ -374,6 +374,7 @@
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
       "type": "video",
+      "optionalPrompt": true,
       "finalNode": "119",
       "inputImages": 1,
       "preGenerationPrompts": [
