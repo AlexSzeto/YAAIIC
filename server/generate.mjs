@@ -4,7 +4,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
-import { setObjectPathValue, readOutputPathFromTextFile } from './util.mjs';
+import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
   generateTaskId,
@@ -357,12 +357,12 @@ async function processUploadTask(taskId, file, config) {
       description: ''
     };
     
-    // Process post-generation prompts to generate description and name
-    if (config.postGenerationPrompts && Array.isArray(config.postGenerationPrompts)) {
-      console.log('Processing post-generation prompts for uploaded image...');
+    // Process post-generation tasks to generate description and name
+    if (config.postGenerationTasks && Array.isArray(config.postGenerationTasks)) {
+      console.log('Processing post-generation tasks for uploaded image...');
       
       let promptIndex = 0;
-      for (const promptConfig of config.postGenerationPrompts) {
+      for (const promptConfig of config.postGenerationTasks) {
         try {
           promptIndex++;
           // Emit progress for each prompt
@@ -483,7 +483,7 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationPrompts, preGenerationPrompts, type } = workflowConfig;
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, type } = workflowConfig;
     const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     
     // Create generationData as a copy of requestData
@@ -508,31 +508,45 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       }
     }
 
-    // Process pre-generation prompts if they exist
-    if (preGenerationPrompts && Array.isArray(preGenerationPrompts) && preGenerationPrompts.length > 0) {
-      console.log(`Processing ${preGenerationPrompts.length} pre-generation prompts...`);
+    // Process pre-generation tasks if they exist
+    if (preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0) {
+      console.log(`Processing ${preGenerationTasks.length} pre-generation tasks...`);
       
       const task = getTask(taskId);
       const preGenStepText = task?.preGenStepInfo?.stepText || '(1/1)';
       
-      for (let i = 0; i < preGenerationPrompts.length; i++) {
-        const promptConfig = preGenerationPrompts[i];
+      for (let i = 0; i < preGenerationTasks.length; i++) {
+        const promptConfig = preGenerationTasks[i];
+        
+        // Check if task has a condition
+        if (promptConfig.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping pre-generation task for ${promptConfig.to} due to unmet condition`);
+            continue;
+          }
+        }
+        
         try {
-          // Calculate percentage progress by dividing evenly among prompts
-          const startPercentage = Math.round((i / preGenerationPrompts.length) * 100);
-          const endPercentage = Math.round(((i + 1) / preGenerationPrompts.length) * 100);
+          // Calculate percentage progress by dividing evenly among tasks
+          const startPercentage = Math.round((i / preGenerationTasks.length) * 100);
+          const endPercentage = Math.round(((i + 1) / preGenerationTasks.length) * 100);
           
           // Emit SSE progress update for start
           const stepName = `${preGenStepText} Generating ${promptConfig.to}`;
-          emitProgressUpdate(taskId, { percentage: startPercentage, value: i, max: preGenerationPrompts.length }, stepName + '...');
+          emitProgressUpdate(taskId, { percentage: startPercentage, value: i, max: preGenerationTasks.length }, stepName + '...');
           
           await modifyGenerationDataWithPrompt(promptConfig, generationData);
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(taskId, { percentage: endPercentage, value: i + 1, max: preGenerationPrompts.length }, stepName + ' complete');
+          emitProgressUpdate(taskId, { percentage: endPercentage, value: i + 1, max: preGenerationTasks.length }, stepName + ' complete');
         } catch (error) {
-          console.warn(`Failed to process pre-generation prompt for ${promptConfig.to}:`, error.message);
-          // Set a fallback value if the prompt fails and field is empty
+          console.warn(`Failed to process pre-generation task for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the task fails and field is empty
           if (!generationData[promptConfig.to]) {
             generationData[promptConfig.to] = promptConfig.to === 'prompt' 
               ? 'Dynamic motion and camera movement' 
@@ -565,8 +579,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     let preGenStepInfo = null;
     let postGenStepInfo = null;
     if (workflowConfig.finalNode) {
-      const hasPreGenPrompts = preGenerationPrompts && Array.isArray(preGenerationPrompts) && preGenerationPrompts.length > 0;
-      const hasPostGenPrompts = postGenerationPrompts && Array.isArray(postGenerationPrompts) && type !== 'video' && postGenerationPrompts.length > 0;
+      const hasPreGenPrompts = preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0;
+      const hasPostGenPrompts = postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video' && postGenerationTasks.length > 0;
       
       const stepInfo = calculateWorkflowSteps(workflowData, workflowConfig.finalNode, hasPreGenPrompts, hasPostGenPrompts);
       stepMap = stepInfo.stepMap;
@@ -582,6 +596,19 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
+        // Check if modification has a condition
+        if (mod.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, mod.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping workflow modification due to unmet condition`);
+            return;
+          }
+        }
+        
         const { from, value: directValue, to, prefix, postfix } = mod;
         
         // Determine the source of the value
@@ -607,7 +634,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     }
 
     // Write the modified workflow to workflow.json for debugging
-    const debugWorkflowPath = path.join(actualDirname, 'storage', 'sent-workflow.json');
+    const debugWorkflowPath = path.join(actualDirname, 'logs', 'sent-workflow.json');
     fs.writeFileSync(debugWorkflowPath, JSON.stringify(workflowData, null, 2), 'utf8');
     console.log(`Workflow written to: ${debugWorkflowPath}`);
 
@@ -692,28 +719,42 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
 
     console.log(`Image generated successfully`);
 
-    // Process post-generation prompts from config if workflow type is not video
-    if (postGenerationPrompts && Array.isArray(postGenerationPrompts) && type !== 'video') {
-      console.log(`Processing ${postGenerationPrompts.length} post-generation prompts...`);
+    // Process post-generation tasks from config if workflow type is not video
+    if (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') {
+      console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
       
       const task = getTask(taskId);
       const postGenStepText = task?.postGenStepInfo?.stepText || '(1/1)';
       
-      for (let i = 0; i < postGenerationPrompts.length; i++) {
-        const promptConfig = postGenerationPrompts[i];
+      for (let i = 0; i < postGenerationTasks.length; i++) {
+        const promptConfig = postGenerationTasks[i];
+        
+        // Check if task has a condition
+        if (promptConfig.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping post-generation task for ${promptConfig.to} due to unmet condition`);
+            continue;
+          }
+        }
+        
         try {
-          // Calculate percentage progress by dividing evenly among prompts
-          const startPercentage = Math.round((i / postGenerationPrompts.length) * 100);
-          const endPercentage = Math.round(((i + 1) / postGenerationPrompts.length) * 100);
+          // Calculate percentage progress by dividing evenly among tasks
+          const startPercentage = Math.round((i / postGenerationTasks.length) * 100);
+          const endPercentage = Math.round(((i + 1) / postGenerationTasks.length) * 100);
           
           // Emit SSE progress update for start
           const stepName = promptConfig.to === 'description' ? `${postGenStepText} Analyzing image` : `${postGenStepText} Generating ${promptConfig.to}`;
-          emitProgressUpdate(promptId, { percentage: startPercentage, value: i, max: postGenerationPrompts.length }, stepName + '...');
+          emitProgressUpdate(promptId, { percentage: startPercentage, value: i, max: postGenerationTasks.length }, stepName + '...');
           
           await modifyGenerationDataWithPrompt(promptConfig, generationData);
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(promptId, { percentage: endPercentage, value: i + 1, max: postGenerationPrompts.length }, stepName + ' complete');
+          emitProgressUpdate(promptId, { percentage: endPercentage, value: i + 1, max: postGenerationTasks.length }, stepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the prompt fails

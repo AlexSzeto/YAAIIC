@@ -38,12 +38,12 @@ export class ImageUpload extends Component {
       hasImage: true,
       imageFile: blob,
       imageDescription: description
+    }, () => {
+      // Notify parent of the change after state update completes
+      if (this.props.onImageChange) {
+        this.props.onImageChange(blob);
+      }
     });
-    
-    // Notify parent of the change
-    if (this.props.onImageChange) {
-      this.props.onImageChange(blob);
-    }
   }
 
   /**
@@ -55,17 +55,17 @@ export class ImageUpload extends Component {
       hasImage: false,
       imageFile: null,
       imageDescription: null
+    }, () => {
+      // Reset file input
+      if (this.fileInputRef) {
+        this.fileInputRef.value = '';
+      }
+      
+      // Notify parent of the change after state update completes
+      if (this.props.onImageChange) {
+        this.props.onImageChange(null);
+      }
     });
-    
-    // Reset file input
-    if (this.fileInputRef) {
-      this.fileInputRef.value = '';
-    }
-    
-    // Notify parent of the change
-    if (this.props.onImageChange) {
-      this.props.onImageChange(null);
-    }
   }
 
   /**
@@ -88,12 +88,12 @@ export class ImageUpload extends Component {
         imagePreview: event.target.result,
         hasImage: true,
         imageFile: file
+      }, () => {
+        // Notify parent of the change after state update completes
+        if (this.props.onImageChange) {
+          this.props.onImageChange(file);
+        }
       });
-      
-      // Notify parent of the change
-      if (this.props.onImageChange) {
-        this.props.onImageChange(file);
-      }
     };
     reader.readAsDataURL(file);
   }

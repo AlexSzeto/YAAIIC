@@ -14,6 +14,19 @@ import { sseManager } from './sse-manager.mjs';
 import { createProgressBanner } from './custom-ui/progress-banner.mjs';
 import { ImageUpload } from './custom-ui/image-upload.mjs';
 
+/**
+ * Normalize frame count to (n * 4) + 1 sequence
+ * @param {number|string} inputValue - The input frame count
+ * @returns {number} Normalized frame count following (n * 4) + 1 pattern
+ */
+function normalizeFrameCount(inputValue) {
+  const num = parseInt(inputValue, 10);
+  if (isNaN(num) || num < 1) return 1;
+  // Calculate n where (n * 4) + 1 >= num
+  const n = Math.ceil((num - 1) / 4);
+  return (n * 4) + 1;
+}
+
 let workflows = [];
 let autoCompleteInstance = null;
 let generatedImageDisplay = null;
@@ -93,7 +106,8 @@ function renderImageUploadComponents(count) {
           }
         }}
         onImageChange=${(file) => {
-          console.log(`Image ${i} changed:`, file);
+          console.log(`[main.mjs] Image ${i} onImageChange callback triggered:`, { hasFile: !!file });
+          validateGenerateButton();
         }}
         onGalleryRequest=${() => handleGalleryRequest(i)}
       />
@@ -222,15 +236,12 @@ function handleWorkflowChange() {
   }
   
   // Show/hide video-specific fields based on workflow type
-  const lengthGroup = document.getElementById('length-group');
-  const framerateGroup = document.getElementById('framerate-group');
+  const videoControlsRow = document.getElementById('video-controls-row');
   if (selectedWorkflow.type === 'video') {
-    if (lengthGroup) lengthGroup.style.display = '';
-    if (framerateGroup) framerateGroup.style.display = '';
+    if (videoControlsRow) videoControlsRow.style.display = 'flex';
     console.log('Video fields enabled for workflow:', selectedWorkflowName);
   } else {
-    if (lengthGroup) lengthGroup.style.display = 'none';
-    if (framerateGroup) framerateGroup.style.display = 'none';
+    if (videoControlsRow) videoControlsRow.style.display = 'none';
     console.log('Video fields disabled for workflow:', selectedWorkflowName);
   }
   
@@ -238,6 +249,9 @@ function handleWorkflowChange() {
   if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
     generatedImageDisplay.updateSelectButtonState();
   }
+  
+  // Validate generate button based on nameRequired
+  validateGenerateButton();
 }
 
 // Function to populate workflow dropdown
@@ -418,6 +432,53 @@ function setImageUploadsDisabled(disabled) {
   });
 }
 
+// Function to validate and update generate button state
+function validateGenerateButton() {
+  const generateButton = document.getElementById('generate-btn');
+  if (!generateButton) return;
+  
+  const workflowSelect = document.getElementById('workflow');
+  const nameInput = document.getElementById('name');
+  
+  if (!workflowSelect) return;
+  
+  const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+  if (!selectedWorkflow) {
+    generateButton.disabled = false;
+    return;
+  }
+  
+  // Check if workflow requires name but name is empty
+  if (selectedWorkflow.nameRequired && !nameInput?.value.trim()) {
+    generateButton.disabled = true;
+    return;
+  }
+  
+  // Check if workflow requires a prompt but prompt is empty
+  if (!selectedWorkflow.optionalPrompt) {
+    const descriptionText = getCurrentDescription();
+    if (!descriptionText || !descriptionText.trim()) {
+      generateButton.disabled = true;
+      return;
+    }
+  }
+  
+  // Check if workflow requires images but not enough images are uploaded
+  if (selectedWorkflow.inputImages && selectedWorkflow.inputImages > 0) {
+    const uploadedImagesCount = uploadComponentRefs.filter(
+      component => component && typeof component.hasImage === 'function' && component.hasImage()
+    ).length;
+    
+    if (uploadedImagesCount < selectedWorkflow.inputImages) {
+      generateButton.disabled = true;
+      return;
+    }
+  }
+  
+  // All validations passed
+  generateButton.disabled = false;
+}
+
 // Function to handle image generation
 async function handleGenerate() {
   const descriptionText = getCurrentDescription();
@@ -436,6 +497,12 @@ async function handleGenerate() {
   
   if (!workflowSelect.value) {
     showErrorToast('Please select a workflow before generating an image.');
+    return;
+  }
+  
+  // Validate name is provided if workflow requires it
+  if (selectedWorkflow?.nameRequired && !nameInput.value.trim()) {
+    showErrorToast('Please enter a name for this workflow.');
     return;
   }
   
@@ -464,9 +531,8 @@ async function handleGenerate() {
     if (selectedWorkflow && selectedWorkflow.type === 'video') {
       const lengthInput = document.getElementById('length');
       const framerateInput = document.getElementById('framerate');
-      const length = parseFloat(lengthInput.value);
+      const frames = normalizeFrameCount(lengthInput.value);
       const framerate = parseInt(framerateInput.value);
-      const frames = Math.floor(length * framerate) % 2 === 0 ? Math.floor(length * framerate) + 1 : Math.floor(length * framerate); // Ensure odd number of frames
       videoParams = { frames, framerate };
     }
 
@@ -486,6 +552,11 @@ async function handleGenerate() {
       if (videoParams) {
         formData.append('frames', videoParams.frames);
         formData.append('framerate', videoParams.framerate);
+        // Add orientation if available
+        const orientationField = document.getElementById('orientation');
+        if (orientationField && orientationField.offsetParent !== null) {
+          formData.append('orientation', orientationField.value);
+        }
       }
       uploadComponentRefs.forEach((component, index) => {
         if (component && typeof component.hasImage === 'function' && component.hasImage()) {
@@ -520,6 +591,11 @@ async function handleGenerate() {
       if (videoParams) {
         requestBody.frames = videoParams.frames;
         requestBody.framerate = videoParams.framerate;
+        // Add orientation if available
+        const orientationField = document.getElementById('orientation');
+        if (orientationField && orientationField.offsetParent !== null) {
+          requestBody.orientation = orientationField.value;
+        }
       }
       // Send generation request and get immediate taskId response
       response = await fetchWithRetry('/generate/image', {
@@ -762,6 +838,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 : 'Image uploaded successfully';
               showSuccessToast(message);
               
+              // Show carousel with the uploaded image
+              if (completionData.result && carouselDisplay) {
+                carouselDisplay.setData([completionData.result]);
+                console.log('Loaded uploaded image into carousel display');
+              }
+              
               // Refresh gallery if it's open
               if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
                 galleryDisplay.fetchGalleryData().catch(err => {
@@ -809,6 +891,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const generateButton = document.getElementById('generate-btn');
     if (generateButton) {
       generateButton.addEventListener('click', handleGenerate);
+    }
+    
+    // Set up name field validation
+    const nameInput = document.getElementById('name');
+    if (nameInput) {
+      nameInput.addEventListener('input', validateGenerateButton);
+    }
+    
+    // Set up description field validation
+    const descriptionTextarea = document.getElementById('description');
+    if (descriptionTextarea) {
+      descriptionTextarea.addEventListener('input', validateGenerateButton);
     }
     
     // Check for UID query parameter and load specific image

@@ -251,9 +251,9 @@ app.post('/generate/image', upload.any(), async (req, res) => {
       return res.status(400).json({ error: `Workflow '${workflow}' not found` });
     }
     
-    // Add postGenerationPrompts from config to workflowData
-    if (config.postGenerationPrompts) {
-      workflowData.postGenerationPrompts = config.postGenerationPrompts;
+    // Add postGenerationTasks from config to workflowData
+    if (config.postGenerationTasks) {
+      workflowData.postGenerationTasks = config.postGenerationTasks;
     }
     
     // Generate random seed if not provided
@@ -467,6 +467,7 @@ app.get('/generate/workflows', (req, res) => {
       autocomplete: workflow.autocomplete,
       inputImages: workflow.inputImages || 0,
       optionalPrompt: workflow.optionalPrompt || false,
+      nameRequired: workflow.nameRequired || false,
     }));
     res.json(workflows);
   } catch (error) {
@@ -556,9 +557,9 @@ app.post('/generate/inpaint', upload.fields([
         return res.status(400).json({ error: `Workflow '${workflow}' not found` });
       }
       
-      // Add postGenerationPrompts from config to workflowData
-      if (config.postGenerationPrompts) {
-        workflowData.postGenerationPrompts = config.postGenerationPrompts;
+      // Add postGenerationTasks from config to workflowData
+      if (config.postGenerationTasks) {
+        workflowData.postGenerationTasks = config.postGenerationTasks;
       }
       
       // Generate random seed if not provided

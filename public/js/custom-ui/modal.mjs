@@ -18,12 +18,6 @@ export function createImageModal(url, autoScale = true, title = null, onSelect =
   image.alt = 'Modal Image';
   image.className = autoScale ? 'image-modal-autoscale' : 'image-modal-original';
 
-  // Create close button
-  const closeButton = document.createElement('button');
-  closeButton.className = 'image-modal-close';
-  closeButton.innerHTML = '×';
-  closeButton.setAttribute('aria-label', 'Close modal');
-
   // Handle image loading
   image.addEventListener('load', function() {
     if (autoScale) {
@@ -79,9 +73,6 @@ export function createImageModal(url, autoScale = true, title = null, onSelect =
     }
   };
 
-  // Event listeners
-  closeButton.addEventListener('click', closeModal);
-  
   // Close when clicking on overlay (but not on the image or container)
   overlay.addEventListener('click', function(e) {
     if (e.target === overlay) {
@@ -120,12 +111,8 @@ export function createImageModal(url, autoScale = true, title = null, onSelect =
   }
   
   modalWrapper.appendChild(modalContainer);
-  modalWrapper.appendChild(closeButton);
   overlay.appendChild(modalWrapper);
 
   // Add to page
   document.body.appendChild(overlay);
-
-  // Focus close button for accessibility
-  closeButton.focus();
 }

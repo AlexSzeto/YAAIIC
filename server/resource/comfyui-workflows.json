@@ -145,6 +145,47 @@
       ]
     },
     {
+      "name": "Inpaint (Waifu Anime)",
+      "autocomplete": true,
+      "base": "waifu-anime-inpaint.json",
+      "format": "png",
+      "type": "inpaint",
+      "finalNode": "9",
+      "upload": [
+        {
+          "from": "image_0",
+          "storePathAs": "imagePath"
+        },
+        {
+          "from": "mask",
+          "storePathAs": "maskPath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"],
+          "prefix": "a painterly digital art style illustration\n\n"
+        },
+        {
+          "from": "seed",
+          "to": ["3", "inputs", "seed"]
+        },
+        {
+          "from": "savePath",
+          "to": ["9", "inputs", "path"]
+        },
+        {
+          "from": "imagePath",
+          "to": ["20", "inputs", "image"]
+        },
+        {
+          "from": "maskPath",
+          "to": ["36", "inputs", "image"]
+        }
+      ]
+    },
+    {
       "name": "Image Edit (Qwen)",
       "autocomplete": false,
       "base": "qwen-image-to-image.json",
@@ -178,15 +219,16 @@
       ]
     },
     {
-      "name": "Image to Video Portrait (WAN)",
+      "name": "Image to Video (WAN22)",
       "autocomplete": false,
       "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "76",
       "inputImages": 2,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -210,85 +252,34 @@
       ],
       "replace": [
         {
-          "from": "prompt",
-          "to": ["6", "inputs", "text"]
-        },
-        {
-          "from": "seed",
-          "to": ["57", "inputs", "noise_seed"]
-        },
-        {
-          "from": "saveFilename",
-          "to": ["63", "inputs", "filename_prefix"]
-        },
-        {
-          "from": "storagePath",
-          "to": ["76", "inputs", "output_file_path"]
-        },
-        {
-          "from": "firstFramePath",
-          "to": ["52", "inputs", "image"]
-        },
-        {
-          "from": "lastFramePath",
-          "to": ["71", "inputs", "image"]
-        },
-        {
-          "from": "frames",
-          "to": ["73", "inputs", "length"]
-        },
-        {
-          "from": "framerate",
-          "to": ["63", "inputs", "frame_rate"]
-        }
-      ],
-      "extractOutputPathFromTextFile": "video-filename.txt"
-    },
-    {
-      "name": "Image to Video Landscape (WAN)",
-      "autocomplete": false,
-      "base": "wan-image-to-video.json",
-      "format": "webp",
-      "type": "video",
-      "optionalPrompt": true,
-      "finalNode": "76",
-      "inputImages": 2,
-      "preGenerationPrompts": [
-        {
-          "model": "gemma3:4b",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
-          "to": "prompt",
-          "replaceBlankFieldOnly": true
-        },
-        {
-          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
-          "to": "description"
-        }
-      ],
-      "upload": [
-        {
-          "from": "image_0",
-          "storePathAs": "firstFramePath"
-        },
-        {
-          "from": "image_1",
-          "storePathAs": "lastFramePath"
-        }
-      ],
-      "replace": [
-        {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
           "value": 832,
           "to": ["64", "inputs", "width"]
         },
         {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
           "value": 480,
           "to": ["64", "inputs", "height"]
         },
         {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
           "value": 832,
           "to": ["72", "inputs", "width"]
         },
         {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
           "value": 480,
           "to": ["72", "inputs", "height"]
         },
@@ -333,9 +324,11 @@
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
       "type": "video",
+      "nameRequired": true,
+      "optionalPrompt": true,
       "finalNode": "119",
       "inputImages": 1,
-      "preGenerationPrompts": [
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -354,6 +347,22 @@
         }
       ],
       "replace": [
+        {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
+          "value": 832,
+          "to": ["120", "inputs", "value"]
+        },
+        {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
+          "value": 480,
+          "to": ["121", "inputs", "value"]
+        },
         {
           "from": "prompt",
           "to": ["6", "inputs", "text"]
@@ -397,7 +406,9 @@
       "type": "video",
       "finalNode": "119",
       "inputImages": 2,
-      "preGenerationPrompts": [
+      "nameRequired": true,
+      "optionalPrompt": true,
+      "preGenerationTasks": [
         {
           "model": "gemma3:4b",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, including invented ones. Only include the description, do not include any other text. The description is:",
@@ -420,6 +431,22 @@
         }
       ],
       "replace": [
+        {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
+          "value": 832,
+          "to": ["120", "inputs", "value"]
+        },
+        {
+          "condition": {
+            "where": { "generationData": "orientation" },
+            "equals": { "value": "landscape" }
+          },
+          "value": 480,
+          "to": ["121", "inputs", "value"]
+        },
         {
           "from": "prompt",
           "to": ["6", "inputs", "text"]

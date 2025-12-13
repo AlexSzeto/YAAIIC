@@ -495,8 +495,8 @@ async function loadImageDataByUID(uid) {
     try {
       const existingIndex = inpaintHistory.findIndex(item => item.uid === currentImageData.uid);
       if (existingIndex === -1) {
-        inpaintHistory.push(currentImageData);
-        console.log('Added image data to history. Total items:', inpaintHistory.length);
+        inpaintHistory.unshift(currentImageData);
+        console.log('Added image data to history at start. Total items:', inpaintHistory.length);
         
         // Update pagination with new history
         updateInpaintHistoryPagination();
@@ -627,11 +627,10 @@ function updateInpaintHistoryPagination() {
       
       // Use callback to ensure goToPage() executes after setDataList() state update is complete
       paginationInstance.setDataList([...inpaintHistory], () => {
-        // Navigate to the most recent item (last in array) after data list has been updated
+        // Navigate to the first item (index 0) after data list has been updated
         if (inpaintHistory.length > 0) {
-          const lastPageIndex = inpaintHistory.length - 1;
-          paginationInstance.goToPage(lastPageIndex);
-          console.log('Navigated to most recent history item at index:', lastPageIndex);
+          paginationInstance.goToPage(0);
+          console.log('Navigated to most recent history item at index 0');
         } else {
           console.log('No history items available for pagination');
         }

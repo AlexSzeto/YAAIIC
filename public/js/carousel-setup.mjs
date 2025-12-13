@@ -94,35 +94,20 @@ export class CarouselDisplay {
   setData(dataList) {
     this.dataList = Array.isArray(dataList) ? dataList : [];
     
-    // If we have a currently selected item, try to find it in the new list
-    let targetPageIndex = 0;
-    if (this.selectedName && this.selectedTimestamp) {
-      const foundIndex = this.dataList.findIndex(item => 
-        item.name === this.selectedName && item.timestamp === this.selectedTimestamp
-      );
-      
-      if (foundIndex !== -1) {
-        targetPageIndex = foundIndex; // For carousel, page index = item index
-      } else {
-        this.selectedName = null;
-        this.selectedTimestamp = null;
-      }
-    }
+    // Always navigate to the first page (index 0)
+    const targetPageIndex = 0;
     
     // Update pagination component with new data
     this.pagination.setDataList(this.dataList);
     
-    // Navigate to target page if needed
-    if (targetPageIndex > 0 && targetPageIndex < this.dataList.length) {
+    // Navigate to first page
+    if (this.dataList.length > 0) {
       // Use setTimeout to ensure pagination component has updated its state
       setTimeout(() => {
         try {
           this.pagination.goToPage(targetPageIndex);
         } catch (error) {
-          console.warn('Failed to navigate to target page:', targetPageIndex, error.message);
-          // Reset selected item tracking if navigation fails
-          this.selectedName = null;
-          this.selectedTimestamp = null;
+          console.warn('Failed to navigate to first page:', error.message);
         }
       }, 0);
     }
@@ -138,45 +123,32 @@ export class CarouselDisplay {
   }
   
   /**
-   * Add a single data item to the end of the list
+   * Add a single data item to the beginning of the list
    * @param {Object} data - Data object to add
    */
   addData(data) {
     if (!data) return;
     
-    const newDataList = [...this.dataList, data];
+    // Insert at the beginning instead of end
+    const newDataList = [data, ...this.dataList];
     this.dataList = newDataList;
     
     // Update pagination component with new data
     this.pagination.setDataList(this.dataList);
     
-    // Move to the newly added item (last item) with validation
-    const lastPageIndex = this.dataList.length - 1;
-    if (lastPageIndex >= 0 && this.dataList.length > 0) {
-      // Use setTimeout to ensure pagination component has updated its state
-      setTimeout(() => {
-        try {
-          this.pagination.goToPage(lastPageIndex);
-        } catch (error) {
-          console.warn('Failed to navigate to last page:', error.message);
-          // Fallback: try to go to last available page
-          try {
-            this.pagination.goToLastPage();
-          } catch (fallbackError) {
-            console.error('Failed to navigate to last page even with fallback:', fallbackError.message);
-          }
-        }
-      }, 0);
-    }
+    // Move to the first item (index 0) instead of last
+    setTimeout(() => {
+      try {
+        this.pagination.goToPage(0);
+      } catch (error) {
+        console.warn('Failed to navigate to first page:', error.message);
+      }
+    }, 0);
     
-    // Update container visibility based on data availability
-    if (this.dataList.length === 0) {
-      this.baseElement.style.display = 'none';
-    } else {
-      this.baseElement.style.display = 'block';
-    }
+    // Update container visibility
+    this.baseElement.style.display = 'block';
     
-    console.log('CarouselDisplay data added, moved to index:', lastPageIndex);
+    console.log('CarouselDisplay data added at start, moved to index 0');
   }
   
   /**

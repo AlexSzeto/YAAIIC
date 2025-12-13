@@ -62,3 +62,49 @@ export function readOutputPathFromTextFile(filename, storageFolder) {
   const content = fs.readFileSync(filePath, 'utf8').trim();
   return content;
 }
+
+/**
+ * Check if an execution condition is met
+ * @param {Object} dataSources - Object containing data sources like { generationData: {...}, value: ... }
+ * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }
+ * @returns {boolean} True if condition is met, false otherwise
+ */
+export function checkExecutionCondition(dataSources, conditionData) {
+  if (!conditionData) return true; // No condition means always execute
+  
+  const { where, equals } = conditionData;
+  if (!where || !equals) return true;
+  
+  /**
+   * Helper function to resolve a value from data sources
+   * @param {Object} valueSpec - Object like { generationData: "key" } or { value: "directValue" }
+   * @returns {*} The resolved value
+   */
+  const resolveValue = (valueSpec) => {
+    const specKeys = Object.keys(valueSpec);
+    if (specKeys.length === 0) return undefined;
+    
+    const sourceKey = specKeys[0]; // e.g., "generationData" or "value"
+    
+    // If sourceKey is "value", return the direct value
+    if (sourceKey === 'value') {
+      return valueSpec.value;
+    }
+    
+    // Otherwise, resolve from data sources
+    const dataKey = valueSpec[sourceKey]; // e.g., "orientation"
+    const sourceData = dataSources[sourceKey];
+    if (!sourceData) return undefined;
+    
+    return sourceData[dataKey];
+  };
+  
+  // Resolve the actual value from 'where'
+  const actualValue = resolveValue(where);
+  
+  // Resolve the expected value from 'equals'
+  const expectedValue = resolveValue(equals);
+  
+  // Compare values
+  return actualValue === expectedValue;
+}
