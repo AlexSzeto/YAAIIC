@@ -781,6 +781,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 : 'Image uploaded successfully';
               showSuccessToast(message);
               
+              // Show carousel with the uploaded image
+              if (completionData.result && carouselDisplay) {
+                carouselDisplay.setData([completionData.result]);
+                console.log('Loaded uploaded image into carousel display');
+              }
+              
               // Refresh gallery if it's open
               if (galleryDisplay && galleryDisplay.state && galleryDisplay.state.isVisible) {
                 galleryDisplay.fetchGalleryData().catch(err => {

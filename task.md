@@ -210,7 +210,7 @@ for (const modification of modifications) {
 8. Add conditional checking for post-generation tasks similarly
 9. Test with a sample workflow config that includes conditional tasks based on orientation
 
-[] Unify gallery behavior so new generations are always added to the start and gallery resets to viewing the first item
+[x] Unify gallery behavior so new generations are always added to the start and gallery resets to viewing the first item
 1. In `public/js/carousel-setup.mjs`, modify the `addData` method to insert at the beginning:
 ```javascript
 addData(data) {
