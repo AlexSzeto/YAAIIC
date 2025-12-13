@@ -1,105 +1,114 @@
 # Client-Side Refactoring Plan
 
 ## Overview
-The goal of this refactor is to transition the client-side codebase from a hybrid approach (mixing vanilla JS DOM manipulation with isolated Preact components) to a fully React-like architecture using Preact. Each entry point (`index.html` and `inpaint.html`) will be treated as a Single Page Application (SPA) with a single root Preact component managing the entire page state.
+The goal is to transition from a hybrid Vanilla JS/Preact app to a pure Preact architecture. To ensure the application remains stable and verifiable throughout the process, we will adopt a **Parallel Implementation Strategy**. We will build the new application alongside the existing one using new entry points (`index-v2.html`, `inpaint-v2.html`).
 
-This will improve maintainability, reduce bugs related to DOM state synchronization, and enable better code reuse.
+## Architecture Decisions
+- **State Management**: Use **`@preact/signals`** for shared application state (Workflow config, Form data, UI State). This reduces prop drilling and re-renders.
+- **Styling**: Continue using `public/css/style.css` and `custom-ui.css`. Components should use standard CSS classes.
+- **Components**: Functional components with Hooks.
+- **Entry Points**:
+    - `public/js/app.mjs`: Main SPA root.
+    - `public/js/inpaint-page.mjs`: Inpaint SPA root.
 
-## Scope
-- **Root Files**: `public/index.html`, `public/inpaint.html` (cleaning up static HTML).
-- **Entry Points**: `public/js/main.mjs`, `public/js/inpaint.mjs` (converting to root Preact components).
-- **Existing Components**: Refactoring vanilla JS "Managers" into pure Preact components.
-- **New Components**: Creating a library of generic UI elements and application-specific business logic components.
+## Implementation Details & Verification Plan
 
-## Existing Components to Refactor
+### Phase 1: Foundation (Generic UI)
+**Goal**: Create a robust library of "dumb" controls.
+- **Spec**: All form components (`input`, `select`, `checkbox`, `textarea`) must:
+    - Accept `value` (controlled) and `onChange` (events).
+    - Accept `label`, `error`, and `disabled` props.
+    - Use standard CSS classes from `style.css`.
+- **New Files**: `public/js/custom-ui/*.mjs` (button, input, select, textarea, checkbox, modal, toast, image-carousel).
+- **Verification Task**:
+    - Create `public/ui-test.html`.
+    - Import and render *every* generic component in a showroom style.
+    - **Check**: Visually verify styling and console log events on interaction.
 
-| Current Component / File | Status | Refactoring Plan |
-|--------------------------|--------|------------------|
-| `generated-image-display.mjs` | **Vanilla JS Class** | Convert to `generated-image-result.mjs` (Preact). Remove manual event listeners and direct DOM updates. Use props for data and callbacks for actions. |
-| `carousel-setup.mjs` (`CarouselDisplay`) | **Vanilla JS Class** | Convert to `image-carousel.mjs` (Preact). Integrate directly into the parent component instead of passing DOM elements. |
-| `gallery.mjs` (`GalleryDisplay`) | **Preact Class** | Component is already Preact, but usage is via `createGallery` wrapper. Remove wrapper and use `<GalleryDisplay />` directly in the new App component. |
-| `image-upload.mjs` | **Preact Functional** | Good state. Ensure it accepts `value` and `onChange` props to be fully controlled by the parent form. |
-| `inpaint.mjs` (`InpaintApp`) | **Preact Class** | Expand scope to include the entire page logic (form, validation) or wrap in a new `inpaint-page.mjs` component. |
-| `pagination.mjs` | **Preact Functional** | Keep as is, ensure easy integration. |
-| `progress-banner.mjs` | **Preact Functional** | Keep as is. |
+### Phase 2: Main Page Core (Form & State)
+**Goal**: Replicate the "Workflow Selection" and "Generation Parameters" logic in `index-v2.html`.
+- **New Files**:
+    - `public/js/app-ui/workflow-selector.mjs`: Validates logic for "locking" seeds, hiding/showing fields based on workflow.
+    - `public/js/app-ui/generation-form.mjs`: Consumes `Workflow` signal, renders appropriate Inputs.
+    - `public/js/app.mjs` (Root): Sets up Signals (`workflow`, `prompt`, `seed`, etc.).
+    - `public/index-v2.html`: New mount point.
+- **Verification Task**:
+    - Open `index-v2.html`.
+    - **Check**: Workflow dropdown populates from server.
+    - **Check**: "Video" fields appear/disappear when switching between Image/Video workflows.
+    - **Check**: Seed randomization works.
 
-## New Generic Components (`custom-ui`)
-These components should be dumb, presentational components located in `public/js/custom-ui/`.
+### Phase 3: Results & Execution
+**Goal**: Implement the Generation loop and Result display.
+- **New Files**:
+    - `public/js/app-ui/generated-image-result.mjs`: pure Preact version of the old class.
+    - Update `app.mjs`: Add `handleGenerate` function relying on `sse-manager.mjs`.
+- **Verification Task**:
+    - In `index-v2.html`, click Generate.
+    - **Check**: Progress banner appears (using existing `progress-banner.mjs` refactored/wrapped).
+    - **Check**: Result image displays upon completion.
+    - **Check**: Metadata (workflow, seed) in the result view matches the request.
 
-*   **`button.mjs`**: Standardize button styles (primary, secondary, icon-only) and loading states.
-*   **`input.mjs`**: Wrapper for `<input>` with label, error message, and standard styling.
-*   **`textarea.mjs`**: Wrapper for `<textarea>` (integrating `textarea-caret-position-wrapper` if needed).
-*   **`select.mjs`**: Wrapper for `<select>` with label.
-*   **`checkbox.mjs`**: Wrapper for toggle/checkbox inputs.
-*   **`modal.mjs`**: A declarative Preact component for Modals (replacing the imperative `dialog.mjs` logic).
-*   **`toast.mjs`**: A Toast context/provider to allow triggering toasts from anywhere via hooks.
+### Phase 4: Carousel & Gallery Integration
+**Goal**: Connect the history and gallery to `v2`.
+- **New Files**:
+    - `public/js/custom-ui/image-carousel.mjs`: New component.
+    - `public/js/custom-ui/gallery.mjs`: Refactor to be a standard component `<Gallery isOpen={...} />`.
+- **Verification Task**:
+    - **Check**: Carousel shows historical images in `index-v2.html`.
+    - **Check**: Clicking "Gallery" button opens the modal.
+    - **Check**: Selecting an image in Gallery brings it into the "Input Image" slot (if needed) or carousel.
 
-## New App-Specific Components (`app-ui`)
-These components contain business logic and are specific to this application. Locate in `public/js/app-ui/`.
+### Phase 5: Inpaint Page Migration
+**Goal**: Move Inpaint to V2.
+- **New Files**:
+    - `public/inpaint-v2.html`.
+    - `public/js/inpaint-page.mjs`.
+    - `public/js/app-ui/inpaint-canvas.mjs` (Refactored to accept Signals or controlled props for mask data).
+- **Verification Task**:
+    - Open `inpaint-v2.html?uid=123`.
+    - **Check**: Image loads into canvas.
+    - **Check**: Masking works.
+    - **Check**: Inpaint generation works.
 
-*   **`workflow-selector.mjs`**: Handles fetching workflows, displaying the dropdown, and triggering parent updates.
-*   **`generation-form.mjs`**: Encapsulates the entire form logic for the main page (Prompt, Negative Prompt, Seed, Dimensions, Batch Size). Manage state locally or via signals.
-*   **`seed-control.mjs`**: Specialized component for the Seed input + Randomize button + Lock checkbox.
-*   **`app.mjs`**: The root component for `index.html`. Manages global state (current image, history, active workflow) and layout.
-*   **`inpaint-page.mjs`**: The root component for `inpaint.html`.
+### Phase 6: Switchover & Cleanup
+**Goal**: Replace V1 with V2.
+- **Tasks**:
+    - Rename `index.html` -> `index-legacy.html` / `index-v2.html` -> `index.html`.
+    - Rename `inpaint.html` -> `inpaint-legacy.html` / `inpaint-v2.html` -> `inpaint.html`.
+    - Delete legacy JS files (`main.mjs`, `generated-image-display.mjs`, etc.).
+    - Delete `ui-test.html` and legacy htmls.
+- **Final Verification**:
+    - Run full manual regression test on the new `index.html` and `inpaint.html`.
 
-## Refactoring Steps
-
-1.  **Preparation**:
-    *   Create `public/js/app-ui` folder.
-    *   Create `public/js/custom-ui` folder (if not clean).
-
-2.  **Generic UI Library**:
-    *   Build `button.mjs`, `input.mjs`, `select.mjs`, `modal.mjs` components first.
-
-3.  **Component Conversion**:
-    *   Convert `generated-image-display.mjs` -> `generated-image-result.mjs`.
-    *   Convert `carousel-setup.mjs` -> `image-carousel.mjs`.
-
-4.  **Root Migration (Iterative)**:
-    *   **Phase 1 (Main Page)**: Create `app.mjs`. Move `loadWorkflows` and `handleGenerate` logic into it. Replace `index.html` body with `<div id="app"></div>`. Render `App`.
-    *   **Phase 2 (Inpaint Page)**: Create `inpaint-page.mjs`. Move `handleInpaint` logic into it. Replace `inpaint.html` body.
-
-5.  **Cleanup**:
-    *   Remove unused files (`main.mjs` legacy code, old vanilla classes).
-    *   Update `index.html` and `inpaint.html` imports.
-
-## File Overview and Disposition
-
-This section lists every file currently in `public/js` (and subdirectories) alongside the proposed new files, defining the complete target state of the `public/js` folder.
+## File Overview
 
 | File Location | Type | Disposition | Details |
 |---------------|------|-------------|---------|
 | **`public/js/`** | | | |
-| `app.mjs` | **New** | **Create** | Root component for the main generation page. Replaces logic in `main.mjs`. |
-| `autocomplete-setup.mjs` | Existing | **Refactor** | Logic moves to `useAutocomplete` or `input.mjs`. File will eventually be deleted. |
-| `carousel-setup.mjs` | Existing | **Delete** | Replaced by `custom-ui/image-carousel.mjs`. |
-| `gallery-preview.mjs` | Existing | **Delete** | Merged into `custom-ui/gallery.mjs`. |
-| `generated-image-display.mjs` | Existing | **Delete** | Replaced by `app-ui/generated-image-result.mjs`. |
-| `inpaint-canvas.mjs` | Existing | **Refactor** | Rename/move to `app-ui/inpaint-canvas.mjs`. |
-| `inpaint-page.mjs` | **New** | **Create** | Root component for the inpaint page. Replaces logic in `inpaint.mjs`. |
-| `inpaint.mjs` | Existing | **Replace** | Replaced by `inpaint-page.mjs`. Entry point logic moves here. |
-| `main.mjs` | Existing | **Replace** | Replaced by `app.mjs`. Entry point logic moves here. |
-| `sse-manager.mjs` | Existing | **Keep** | Standard utility. |
-| `tags.mjs` | Existing | **Keep** | Standard utility. |
-| `textarea-caret-position-wrapper.mjs` | Existing | **Keep** | Dependency for autocomplete. |
-| `util.mjs` | Existing | **Keep** | Standard utility. |
+| `app.mjs` | **New** | **Create** | V2 Root for Main Page. |
+| `inpaint-page.mjs` | **New** | **Create** | V2 Root for Inpaint Page. |
+| `autocomplete-setup.mjs` | Existing | **Refactor** | Convert to `useAutocomplete` hook. |
+| `sse-manager.mjs` | Existing | **Keep** | |
+| `tags.mjs` | Existing | **Keep** | |
+| `textarea-caret-position-wrapper.mjs` | Existing | **Keep** | |
+| `util.mjs` | Existing | **Keep** | |
 | **`public/js/app-ui/`** | | | |
-| `app-ui/generated-image-result.mjs` | **New** | **Create** | Replaces `generated-image-display.mjs`. |
-| `app-ui/generation-form.mjs` | **New** | **Create** | Container for the main generation form inputs. |
-| `app-ui/seed-control.mjs` | **New** | **Create** | Reusable seed input with randomize/lock. |
-| `app-ui/workflow-selector.mjs` | **New** | **Create** | Workflow dropdown logic. |
+| `generated-image-result.mjs` | **New** | **Create** | Displays success result + metadata. |
+| `generation-form.mjs` | **New** | **Create** | Orchestrates inputs based on Workflow. |
+| `inpaint-canvas.mjs` | **Move** | **Refactor** | Move from root, ensure prop-based control. |
+| `seed-control.mjs` | **New** | **Create** | Seed Input + Lock + Random. |
+| `workflow-selector.mjs` | **New** | **Create** | Dropdown logic. |
 | **`public/js/custom-ui/`** | | | |
-| `custom-ui/button.mjs` | **New** | **Create** | Generic button component. |
-| `custom-ui/checkbox.mjs` | **New** | **Create** | Generic checkbox component. |
-| `custom-ui/dialog.mjs` | Existing | **Delete** | Replaced by `custom-ui/modal.mjs`. |
-| `custom-ui/gallery.mjs` | Existing | **Update** | Refactor to stand-alone component. |
-| `custom-ui/image-carousel.mjs` | **New** | **Create** | Replaces `carousel-setup.mjs`. |
-| `custom-ui/image-upload.mjs` | Existing | **Update** | Refactor to controlled component. |
-| `custom-ui/input.mjs` | **New** | **Create** | Generic input component. |
-| `custom-ui/modal.mjs` | **New** | **Create** | Generic modal component (replaces `dialog.mjs` and old `modal.mjs`). |
-| `custom-ui/pagination.mjs` | Existing | **Keep** | Generic pagination. |
-| `custom-ui/progress-banner.mjs` | Existing | **Update** | Refactor to standard component usage. |
-| `custom-ui/select.mjs` | **New** | **Create** | Generic select component. |
-| `custom-ui/textarea.mjs` | **New** | **Create** | Generic textarea component. |
-| `custom-ui/toast.mjs` | Existing | **Refactor** | Convert to Context-based Toast system. |
+| `button.mjs` | **New** | **Create** | |
+| `checkbox.mjs` | **New** | **Create** | |
+| `gallery.mjs` | Existing | **Refactor** | Convert to controlled `<Gallery />`. |
+| `image-carousel.mjs` | **New** | **Create** | |
+| `image-upload.mjs` | Existing | **Refactor** | Convert to controlled component. |
+| `input.mjs` | **New** | **Create** | |
+| `modal.mjs` | **New** | **Create** | Replacement for old dialog/modal logic. |
+| `pagination.mjs` | Existing | **Keep** | |
+| `progress-banner.mjs` | Existing | **Update** | Integrate into App hierarchy. |
+| `select.mjs` | **New** | **Create** | |
+| `textarea.mjs` | **New** | **Create** | |
+| `toast.mjs` | Existing | **Refactor** | Signal/Context based. |
