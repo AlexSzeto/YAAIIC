@@ -106,7 +106,8 @@ function renderImageUploadComponents(count) {
           }
         }}
         onImageChange=${(file) => {
-          console.log(`Image ${i} changed:`, file);
+          console.log(`[main.mjs] Image ${i} onImageChange callback triggered:`, { hasFile: !!file });
+          validateGenerateButton();
         }}
         onGalleryRequest=${() => handleGalleryRequest(i)}
       />
@@ -248,6 +249,9 @@ function handleWorkflowChange() {
   if (generatedImageDisplay && typeof generatedImageDisplay.updateSelectButtonState === 'function') {
     generatedImageDisplay.updateSelectButtonState();
   }
+  
+  // Validate generate button based on nameRequired
+  validateGenerateButton();
 }
 
 // Function to populate workflow dropdown
@@ -428,6 +432,53 @@ function setImageUploadsDisabled(disabled) {
   });
 }
 
+// Function to validate and update generate button state
+function validateGenerateButton() {
+  const generateButton = document.getElementById('generate-btn');
+  if (!generateButton) return;
+  
+  const workflowSelect = document.getElementById('workflow');
+  const nameInput = document.getElementById('name');
+  
+  if (!workflowSelect) return;
+  
+  const selectedWorkflow = workflows.find(w => w.name === workflowSelect.value);
+  if (!selectedWorkflow) {
+    generateButton.disabled = false;
+    return;
+  }
+  
+  // Check if workflow requires name but name is empty
+  if (selectedWorkflow.nameRequired && !nameInput?.value.trim()) {
+    generateButton.disabled = true;
+    return;
+  }
+  
+  // Check if workflow requires a prompt but prompt is empty
+  if (!selectedWorkflow.optionalPrompt) {
+    const descriptionText = getCurrentDescription();
+    if (!descriptionText || !descriptionText.trim()) {
+      generateButton.disabled = true;
+      return;
+    }
+  }
+  
+  // Check if workflow requires images but not enough images are uploaded
+  if (selectedWorkflow.inputImages && selectedWorkflow.inputImages > 0) {
+    const uploadedImagesCount = uploadComponentRefs.filter(
+      component => component && typeof component.hasImage === 'function' && component.hasImage()
+    ).length;
+    
+    if (uploadedImagesCount < selectedWorkflow.inputImages) {
+      generateButton.disabled = true;
+      return;
+    }
+  }
+  
+  // All validations passed
+  generateButton.disabled = false;
+}
+
 // Function to handle image generation
 async function handleGenerate() {
   const descriptionText = getCurrentDescription();
@@ -446,6 +497,12 @@ async function handleGenerate() {
   
   if (!workflowSelect.value) {
     showErrorToast('Please select a workflow before generating an image.');
+    return;
+  }
+  
+  // Validate name is provided if workflow requires it
+  if (selectedWorkflow?.nameRequired && !nameInput.value.trim()) {
+    showErrorToast('Please enter a name for this workflow.');
     return;
   }
   
@@ -834,6 +891,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const generateButton = document.getElementById('generate-btn');
     if (generateButton) {
       generateButton.addEventListener('click', handleGenerate);
+    }
+    
+    // Set up name field validation
+    const nameInput = document.getElementById('name');
+    if (nameInput) {
+      nameInput.addEventListener('input', validateGenerateButton);
+    }
+    
+    // Set up description field validation
+    const descriptionTextarea = document.getElementById('description');
+    if (descriptionTextarea) {
+      descriptionTextarea.addEventListener('input', validateGenerateButton);
     }
     
     // Check for UID query parameter and load specific image

@@ -467,6 +467,7 @@ app.get('/generate/workflows', (req, res) => {
       autocomplete: workflow.autocomplete,
       inputImages: workflow.inputImages || 0,
       optionalPrompt: workflow.optionalPrompt || false,
+      nameRequired: workflow.nameRequired || false,
     }));
     res.json(workflows);
   } catch (error) {
