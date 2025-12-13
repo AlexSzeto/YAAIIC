@@ -325,28 +325,48 @@ app.post('/generate/image', upload.any(), async (req, res) => {
 app.get('/image-data', (req, res) => {
   try {
     const query = req.query.query || '';
+    const tagsParam = req.query.tags || '';
     const sort = req.query.sort || 'descending';
     const limit = parseInt(req.query.limit) || 10;
     
-    console.log(`Image data endpoint called with query="${query}", sort="${sort}", limit=${limit}`);
+    // Parse tags from comma-separated string
+    const tags = tagsParam ? tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [];
     
-    // Filter by query (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
+    console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], sort="${sort}", limit=${limit}`);
+    
+    // Filter by query and tags
     let filteredData = imageData.imageData.filter(item => {
-      if (!query) return true; // No query means include all
-      
-      const nameMatch = item.name && item.name.toLowerCase().includes(query.toLowerCase());
-      const descriptionMatch = item.description && item.description.toLowerCase().includes(query.toLowerCase());
-      const promptMatch = item.prompt && item.prompt.toLowerCase().includes(query.toLowerCase());
-      
-      // Format timestamp as yyyy-mm-dd for searching
-      let timestampMatch = false;
-      if (item.timestamp) {
-        const date = new Date(item.timestamp);
-        const formattedDate = date.toISOString().split('T')[0]; // yyyy-mm-dd format
-        timestampMatch = formattedDate.includes(query);
+      // Query match (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
+      let queryMatch = true;
+      if (query) {
+        const nameMatch = item.name && item.name.toLowerCase().includes(query.toLowerCase());
+        const descriptionMatch = item.description && item.description.toLowerCase().includes(query.toLowerCase());
+        const promptMatch = item.prompt && item.prompt.toLowerCase().includes(query.toLowerCase());
+        
+        // Format timestamp as yyyy-mm-dd for searching
+        let timestampMatch = false;
+        if (item.timestamp) {
+          const date = new Date(item.timestamp);
+          const formattedDate = date.toISOString().split('T')[0]; // yyyy-mm-dd format
+          timestampMatch = formattedDate.includes(query);
+        }
+        
+        queryMatch = nameMatch || descriptionMatch || promptMatch || timestampMatch;
       }
       
-      return nameMatch || descriptionMatch || promptMatch || timestampMatch;
+      // Tag match - image must contain ALL tags (case insensitive)
+      let tagMatch = true;
+      if (tags.length > 0) {
+        tagMatch = item.tags && Array.isArray(item.tags) && 
+          tags.every(searchTag => 
+            item.tags.some(itemTag => 
+              itemTag.toLowerCase() === searchTag.toLowerCase()
+            )
+          );
+      }
+      
+      // Both conditions must be true
+      return queryMatch && tagMatch;
     });
     
     // Sort by timestamp

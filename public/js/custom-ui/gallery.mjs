@@ -359,9 +359,26 @@ export class GalleryDisplay extends Component {
    */
   async fetchGalleryData() {
     try {
-      const query = this.state.searchQuery.trim();
+      const searchText = this.state.searchQuery.trim();
       const url = new URL(this.queryPath, window.location.origin);
-      url.searchParams.set('query', query);
+      
+      // Detect if this is a tag search (contains comma)
+      if (searchText.includes(',')) {
+        // Tag search mode - split by commas and send as tags
+        const tags = searchText
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0);
+        
+        // Send tags as comma-separated string in query parameter
+        url.searchParams.set('tags', tags.join(','));
+        url.searchParams.set('query', ''); // Empty query for tag search
+      } else {
+        // Normal query search mode
+        url.searchParams.set('query', searchText);
+        url.searchParams.set('tags', ''); // Empty tags for query search
+      }
+      
       // Remove server-side limit - get all matching data for client-side pagination
       url.searchParams.set('limit', '320');
       
@@ -491,7 +508,9 @@ export class GalleryDisplay extends Component {
             <div class="gallery-search">
               <input
                 type="text"
-                placeholder="Search images..."
+                placeholder=${this.state.searchQuery.includes(',') 
+                  ? 'Tag search (comma-separated)' 
+                  : 'Search images...'}
                 value=${this.state.searchQuery}
                 onInput=${this.handleSearchInput}
                 ref=${(input) => { 
@@ -503,7 +522,7 @@ export class GalleryDisplay extends Component {
                 }}
               />
               <box-icon
-                name="search"
+                name=${this.state.searchQuery.includes(',') ? 'purchase-tag' : 'search'}
                 color="#999999"
                 class="gallery-search-icon"
               ></box-icon>

@@ -198,7 +198,7 @@ if (this.editState.fieldBeingEdited === 'tags') {
 8. Update the `display()` method to include tags when populating `this.currentImageData`
 9. Ensure tags field styling matches other fields in `css/style.css` or `css/custom-ui.css`
 
-[] Modify the gallery search input so that when the search textbox detects a comma, the search becomes a tag search instead. Split the text by commas, remove empty string entries, and send this to the `/image-data` endpoint under a new field in the payload, `tags`, which accepts an array of strings. Modify the client behavior so when `tags` are sent, `query` is an empty string, and when `query` is sent, `tags` is an empty array. Update the criteria of a matching search result so that it must fulfill the current criteria for a `query` match AND the image must contain every tag (string must be equal but can be in different letter cases) that is being sent in the payload.
+[x] Modify the gallery search input so that when the search textbox detects a comma, the search becomes a tag search instead. Split the text by commas, remove empty string entries, and send this to the `/image-data` endpoint under a new field in the payload, `tags`, which accepts an array of strings. Modify the client behavior so when `tags` are sent, `query` is an empty string, and when `query` is sent, `tags` is an empty array. Update the criteria of a matching search result so that it must fulfill the current criteria for a `query` match AND the image must contain every tag (string must be equal but can be in different letter cases) that is being sent in the payload.
 1. Modify the gallery search handler in `main.mjs` and `inpaint.mjs` to detect commas in the search input
 2. Add logic to determine search mode:
 ```javascript
@@ -260,7 +260,7 @@ let filtered = imageData.imageData.filter(item => {
 7. Test that tag search works with multiple tags (all tags must match)
 8. Test that tag matching is case-insensitive
 
-[] Add visual indicator in the UI to show when tag search mode is active
+[x] Add visual indicator in the UI to show when tag search mode is active
 1. Modify the search input section in `gallery.mjs` render method to conditionally display different icons based on search mode
 2. Check if `searchQuery` contains a comma to determine if tag search is active
 3. When tag search is active, replace the search icon (`bx-search`) with a tag icon (`bx-purchase-tag`)
