@@ -1,21 +1,21 @@
 # Client-Side Refactor: Pure Preact Architecture
 
 ## Preparation
-[ ] **Setup Directories & Indices**
-    1. Create `public/js/app-ui` directory.
-    2. Create `public/js/custom-ui` directory.
-    3. Create `public/index-v2.html` by copying `index.html`.
+[x] **Setup Directories & Indices**
+    1. [x] Create `public/js/app-ui` directory.
+    2. [x] Create `public/js/custom-ui` directory.
+    3. [x] Create `public/index-v2.html` by copying `index.html`.
        - clear the `<body>` content (keep the structure but remove inner specific divs like `#workflow-controls`, `#generated-image-display`).
        - Add `<div id="app"></div>` as the single root.
        - Comment out old script imports (`main.mjs`, etc.) and add `<script type="module" src="/js/app.mjs"></script>`.
-    4. Create `public/inpaint-v2.html` by copying `inpaint.html`.
+    4. [x] Create `public/inpaint-v2.html` by copying `inpaint.html`.
        - Clear body content, add `<div id="app"></div>`.
        - Update script import to `<script type="module" src="/js/inpaint-page.mjs"></script>`.
 
 ## Phase 1: Foundation (Generic UI Library)
 *Build these as dumb, stateless components in `public/js/custom-ui/`.*
 
-[ ] **Button Component (`button.mjs`)**
+[x] **Button Component (`button.mjs`)**
     1. **Variants & CSS Mapping**:
        - `primary`: `.btn-with-icon .generate-button` (Blue, Standard).
        - `secondary`: `.btn-with-icon` (Gray/Default).
@@ -41,12 +41,12 @@
        - Apply combined classes based on variant: e.g., `primary` -> `class="btn-with-icon generate-button"`.
        - For `icon` variants, ensure children (if any) are visually hidden or omitted if only an icon is desired.
 
-[ ] **Input Components (`input.mjs`, `textarea.mjs`, `select.mjs`)**
+[x] **Input Components (`input.mjs`, `textarea.mjs`, `select.mjs`)**
     1. **Input**: `function Input({ label, error, ...props })`. Renders `<label>` + `<input>` + error message.
     2. **Textarea**: `function Textarea({ label, error, ...props })`. Renders `<label>` + `<textarea>` + error message.
     3. **Select**: `function Select({ label, options = [], value, onChange, ...props })`. `options` is array of `{label, value}`.
 
-[ ] **Checkbox Component (`checkbox.mjs`)**
+[x] **Checkbox Component (`checkbox.mjs`)**
     *Custom Dark Theme Implementation to replace native browser style.*
     1. Specification:
        ```javascript
@@ -72,7 +72,7 @@
        - **Focus**: `box-shadow` matching other inputs.
     4. **Accessibility**: Ensure keyboard toggling (Spring/Space) works via the hidden input logic.
 
-[ ] **Modal Component (`modal.mjs`)**
+[x] **Modal Component (`modal.mjs`)**
     *Declarative replacement for `dialog.mjs`.*
     1. Specification:
        ```javascript
@@ -88,7 +88,7 @@
     2. Logic: Render directly into the tree (or via Portal if preferred, but direct is fine for V2).
     3. Close on backdrop click (optional).
 
-[ ] **Refactor Toast (`toast.mjs`)**
+[x] **Refactor Toast (`toast.mjs`)**
     1. Create `ToastContext`.
     2. Create `ToastProvider` component that holds the state of active toasts.
     3. implementations:
@@ -99,7 +99,7 @@
        // returns { show(msg, type), success(msg), error(msg) }
        ```
 
-[ ] **Image Carousel (`image-carousel.mjs`)**
+[x] **Image Carousel (`image-carousel.mjs`)**
     1. Specification:
        ```javascript
        export function ImageCarousel({ 
@@ -113,11 +113,11 @@
     2. Logic: Reuse `CarouselDisplay` logic but using state.
     3. Feature: Arrow keys navigation support (when focused/active).
 
-[ ] **VERIFICATION: Phase 1**
-    1. Create `public/ui-test.html`.
-    2. Create `public/js/ui-test-app.mjs`.
-    3. Render every component above in various states (loading, error, populated).
-    4. Confirm visually that styles match the existing app.
+[x] **VERIFICATION: Phase 1**
+    1. [x] Create `public/ui-test.html`.
+    2. [x] Create `public/js/ui-test-app.mjs`.
+    3. [x] Render every component above in various states (loading, error, populated).
+    4. [x] Confirm visually that styles match the existing app.
 
 ## Phase 2: Main Page Core (Form & State)
 

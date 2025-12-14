@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAAIIG v2</title>
+    <!-- Preact and HTM via CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://esm.sh/preact@10.19.2",
+          "preact/": "https://esm.sh/preact@10.19.2/",
+          "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
+          "@preact/signals": "https://esm.sh/@preact/signals@1.2.2?external=preact",
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+        }
+      }
+    </script>
+    <!-- Autocomplete.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.min.js"></script>
+    <!-- Boxicons for icons -->
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+    <!-- Textarea Caret Position library wrapper -->
+    <script src="/js/textarea-caret-position-wrapper.mjs"></script>
+    <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/custom-ui.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <!-- Root App Container -->
+    <div id="app"></div>
+
+    <!-- Main Entry Point -->
+    <script type="module" src="/js/app.mjs"></script>
+  </body>
+</html>
