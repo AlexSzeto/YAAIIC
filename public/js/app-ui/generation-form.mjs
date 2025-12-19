@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Textarea } from '../custom-ui/textarea.mjs';
 import { Input } from '../custom-ui/input.mjs';
 import { Select } from '../custom-ui/select.mjs';
+import { Button } from '../custom-ui/button.mjs';
 import { SeedControl } from './seed-control.mjs';
 
 /**
@@ -12,8 +13,10 @@ import { SeedControl } from './seed-control.mjs';
  * @param {Object|null} props.workflow - Selected workflow object
  * @param {Object} props.formState - Form field values
  * @param {Function} props.onFieldChange - Callback for field changes: (fieldName, value) => void
+ * @param {boolean} props.isGenerating - Whether generation is in progress
+ * @param {Function} props.onGenerate - Callback for generate action
  */
-export function GenerationForm({ workflow, formState, onFieldChange }) {
+export function GenerationForm({ workflow, formState, onFieldChange, isGenerating, onGenerate }) {
   
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
@@ -90,9 +93,23 @@ export function GenerationForm({ workflow, formState, onFieldChange }) {
         <!-- Image upload controls will be injected here -->
       </div>
 
-      <!-- Row 4: Action Buttons (Placeholder) -->
-      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center;">
-        <!-- Action buttons will be injected here -->
+      <!-- Row 4: Action Buttons -->
+      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-end;">
+        <${Button} 
+          variant="secondary"
+          onClick=${() => window.location.reload()}
+          disabled=${isGenerating}
+        >
+          Reset
+        <//>
+        <${Button} 
+          variant="primary"
+          onClick=${onGenerate}
+          loading=${isGenerating}
+          disabled=${isGenerating || !workflow}
+        >
+          ${isGenerating ? 'Generating...' : 'Generate'}
+        <//>
       </div>
 
     </div>

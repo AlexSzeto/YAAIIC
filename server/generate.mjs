@@ -634,7 +634,11 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     }
 
     // Write the modified workflow to workflow.json for debugging
-    const debugWorkflowPath = path.join(actualDirname, 'logs', 'sent-workflow.json');
+    const logsDir = path.join(actualDirname, 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+    const debugWorkflowPath = path.join(logsDir, 'sent-workflow.json');
     fs.writeFileSync(debugWorkflowPath, JSON.stringify(workflowData, null, 2), 'utf8');
     console.log(`Workflow written to: ${debugWorkflowPath}`);
 
