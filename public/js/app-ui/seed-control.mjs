@@ -35,10 +35,12 @@ export function SeedControl({ seed, setSeed, locked, setLocked }) {
       onChange=${handleSeedChange}
     />
     
-    <${Checkbox}
-      label="Lock seed"
-      checked=${locked}
-      onChange=${handleLockChange}
-    />
+    <div style="margin-bottom: 6px;">
+      <${Checkbox}
+        label="Lock seed"
+        checked=${locked}
+        onChange=${handleLockChange}
+      />
+    </div>
   `;
 }

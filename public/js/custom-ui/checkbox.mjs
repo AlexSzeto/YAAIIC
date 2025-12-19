@@ -25,6 +25,7 @@ export function Checkbox({
 }) {
   const containerStyle = {
     display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
     cursor: disabled ? 'default' : 'pointer',
     opacity: disabled ? 0.6 : 1,

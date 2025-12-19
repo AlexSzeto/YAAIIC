@@ -1049,7 +1049,6 @@
   border: 2px solid var(--dark-border-primary);
   border-radius: 4px;
   color: var(--primary-background);
-  margin-right: 10px;
   flex-shrink: 0;
   transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }

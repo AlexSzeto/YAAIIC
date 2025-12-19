@@ -22,25 +22,31 @@ export function GenerationForm({ workflow, formState, onFieldChange }) {
   const isVideoWorkflow = workflow?.type === 'video';
 
   return html`
-    <div class="generation-form">
+    <div class="generation-form" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
       
-      <${Input}
-        label="Name"
-        type="text"
-        placeholder="Enter name"
-        value=${formState.name || ''}
-        onChange=${handleChange('name')}
-      />
+      <!-- Row 1: Name, Seed, Lock -->
+      <div class="form-row" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+        <div>
+          <${Input}
+            label="Name"
+            type="text"
+            placeholder="Enter name"
+            value=${formState.name || ''}
+            onChange=${handleChange('name')}
+          />
+        </div>
 
-      <${SeedControl}
-        seed=${formState.seed || -1}
-        setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
-        locked=${formState.seedLocked || false}
-        setLocked=${(locked) => onFieldChange('seedLocked', locked)}
-      />
+        <${SeedControl}
+          seed=${formState.seed || -1}
+          setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
+          locked=${formState.seedLocked || false}
+          setLocked=${(locked) => onFieldChange('seedLocked', locked)}
+        />
+      </div>
 
+      <!-- Row 2: Video Controls (Conditional) -->
       ${isVideoWorkflow && html`
-        <div class="video-controls-row" style="display: contents;">
+        <div class="form-row video-controls" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
           <${Input}
             label="Length (frames)"
             type="number"
@@ -71,12 +77,23 @@ export function GenerationForm({ workflow, formState, onFieldChange }) {
         </div>
       `}
 
+      <!-- Description -->
       <${Textarea}
         label="Description"
         placeholder="Enter your text here..."
         value=${formState.description || ''}
         onChange=${handleChange('description')}
       />
+
+      <!-- Row 3: Image Upload (Placeholder) -->
+      <div id="image-upload-container" class="form-row">
+        <!-- Image upload controls will be injected here -->
+      </div>
+
+      <!-- Row 4: Action Buttons (Placeholder) -->
+      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center;">
+        <!-- Action buttons will be injected here -->
+      </div>
 
     </div>
   `;
