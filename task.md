@@ -119,11 +119,13 @@
     3. [x] Render every component above in various states (loading, error, populated).
     4. [x] Confirm visually that styles match the existing app.
 
-[] **UI Style Unification**
+[x] **UI Style Unification**
     1. All interactive components (buttons, inputs) should have:
      - focus (clear white outline, see carousel button)
      - same disabled color (see carousel button)
      - same hover color (see carousel button)
+    2. [x] Fix style mismatches (button borders, textarea scope).
+    3. [x] Refine Checkbox & Carousel (checkbox states, carousel margin).
      
 ## Phase 2: Main Page Core (Form & State)
 

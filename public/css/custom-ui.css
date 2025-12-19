@@ -418,6 +418,7 @@
   outline: 2px solid var(--primary-focus);
   outline-offset: 1px;
   border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
 .gallery-controls {
@@ -1035,4 +1036,37 @@
 .image-upload-gallery-btn-empty:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+/* ===== CUSTOM CHECKBOX ===== */
+.custom-checkbox-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: var(--dark-background-tertiary);
+  border: 2px solid var(--dark-border-primary);
+  border-radius: 4px;
+  color: var(--primary-background);
+  margin-right: 10px;
+  flex-shrink: 0;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+/* Hover state on the container triggers visual change */
+.form-group:not(.disabled):hover .custom-checkbox-visual {
+  background-color: var(--dark-background-hover);
+}
+
+/* Active/Pressed state */
+.form-group:not(.disabled):active .custom-checkbox-visual {
+  background-color: var(--dark-background-tertiary);
+}
+
+/* Focus state linked to the hidden input */
+.form-group input:focus + .custom-checkbox-visual {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
+  border-color: var(--dark-border-focus);
 }

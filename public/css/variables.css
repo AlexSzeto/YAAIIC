@@ -46,7 +46,7 @@
   --shadow-color-strong: rgba(0, 0, 0, 0.3);
   
   /* Focus and Interaction States */
-  --focus-shadow-primary: rgba(85, 85, 85, 0.3);
+  --focus-shadow-primary: rgba(255, 255, 255, 0.6);
   --focus-shadow-white: rgba(255, 255, 255, 0.3);
   
   /* Scrollbar Colors */

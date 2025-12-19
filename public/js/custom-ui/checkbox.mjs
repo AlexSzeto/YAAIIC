@@ -5,21 +5,7 @@ import { html } from 'htm/preact';
  * Custom Dark Theme Implementation using box-icons
  */
 export function Checkbox({ label, checked = false, onChange, disabled = false, id, className = '', ...props }) {
-  // Styles for the custom visual checkbox
-  const checkboxStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '24px',
-    height: '24px',
-    backgroundColor: 'var(--dark-background-tertiary)',
-    border: '2px solid var(--dark-border-primary)',
-    borderRadius: '4px',
-    color: 'var(--primary-background)', // Icon color
-    marginRight: '10px',
-    flexShrink: 0,
-    transition: 'border-color 0.2s, box-shadow 0.2s'
-  };
+
 
   const containerStyle = {
     display: 'flex',
@@ -38,7 +24,7 @@ export function Checkbox({ label, checked = false, onChange, disabled = false, i
   };
 
   return html`
-    <label class="form-group ${className}" style=${containerStyle}>
+    <label class="form-group ${className} ${disabled ? 'disabled' : ''}" style=${containerStyle}>
       <input 
         type="checkbox" 
         class="visually-hidden" 
@@ -50,7 +36,7 @@ export function Checkbox({ label, checked = false, onChange, disabled = false, i
         style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;"
       />
       
-      <div class="custom-checkbox-visual" style=${checkboxStyle}>
+      <div class="custom-checkbox-visual">
         ${checked && html`<box-icon name='check' size='20px' color='#ffffff'></box-icon>`}
       </div>
 
