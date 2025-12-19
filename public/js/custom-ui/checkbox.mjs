@@ -3,25 +3,46 @@ import { html } from 'htm/preact';
 /**
  * Checkbox Component
  * Custom Dark Theme Implementation using box-icons
+ * 
+ * @param {Object} props
+ * @param {string} props.label - Label text
+ * @param {boolean} [props.checked=false] - Checked state
+ * @param {Function} props.onChange - Change handler
+ * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {string} [props.labelPosition='right'] - Position of label: 'left' or 'right'
+ * @param {string} [props.id] - ID for the input
+ * @param {string} [props.className=''] - Additional CSS classes
  */
-export function Checkbox({ label, checked = false, onChange, disabled = false, id, className = '', ...props }) {
-
-
+export function Checkbox({ 
+  label, 
+  checked = false, 
+  onChange, 
+  disabled = false, 
+  labelPosition = 'right',
+  id, 
+  className = '', 
+  ...props 
+}) {
   const containerStyle = {
     display: 'flex',
     alignItems: 'center',
     cursor: disabled ? 'default' : 'pointer',
     opacity: disabled ? 0.6 : 1,
-    userSelect: 'none'
+    userSelect: 'none',
+    gap: '8px' // Add spacing between checkbox and label
   };
 
-  // Handle click on the container to toggle the hidden input
-  const handleClick = (e) => {
-    if (disabled) return;
-    // If the click hit the input directly, let it propagate. 
-    // If it hit the label/div, we need to manually trigger change or rely on label[for] behavior.
-    // If we wrap in <label>, text selection defaults are handled nicely.
-  };
+  const checkboxVisual = html`
+    <div class="custom-checkbox-visual">
+      ${checked && html`<box-icon name='check' size='20px' color='#ffffff'></box-icon>`}
+    </div>
+  `;
+
+  const labelElement = html`
+    <span class="checkbox-label" style="font-size: 14px; font-weight: 500; color: var(--dark-text-secondary);">
+      ${label}
+    </span>
+  `;
 
   return html`
     <label class="form-group ${className} ${disabled ? 'disabled' : ''}" style=${containerStyle}>
@@ -36,13 +57,7 @@ export function Checkbox({ label, checked = false, onChange, disabled = false, i
         style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;"
       />
       
-      <div class="custom-checkbox-visual">
-        ${checked && html`<box-icon name='check' size='20px' color='#ffffff'></box-icon>`}
-      </div>
-
-      <span class="checkbox-label" style="font-size: 14px; font-weight: 500; color: var(--dark-text-secondary);">
-        ${label}
-      </span>
+      ${labelPosition === 'left' ? html`${labelElement}${checkboxVisual}` : html`${checkboxVisual}${labelElement}`}
     </label>
   `;
 }

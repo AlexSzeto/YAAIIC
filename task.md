@@ -129,7 +129,7 @@
      
 ## Phase 2: Main Page Core (Form & State)
 
-[ ] **Workflow Selector (`app-ui/workflow-selector.mjs`)**
+[x] **Workflow Selector (`app-ui/workflow-selector.mjs`)**
     1. Fetch logic: Call `/generate/workflows` on mount.
     2. State: Maintain list of workflows.
     3. UI: Render `Select` component.
@@ -141,7 +141,7 @@
        }) { ... }
        ```
 
-[ ] **Seed Control (`app-ui/seed-control.mjs`)**
+[x] **Seed Control (`app-ui/seed-control.mjs`)**
     1. Specification:
        ```javascript
        export function SeedControl({ 
@@ -151,36 +151,34 @@
          setLocked // function(bool)
        }) { ... }
        ```
-    2. Logic: "Randomize" button generates random seed (using `Math.random` or existing util).
+    2. Logic: "Randomize" button calls parent callback; parent generates random seed.
 
-[ ] **Generation Form (`app-ui/generation-form.mjs`)**
+[x] **Generation Form (`app-ui/generation-form.mjs`)**
     1. Component that orchestrates the inputs.
     2. Props: `state` (Signal or Object containing all form fields).
     3. Logic:
-       - Show/Hide fields based on `state.workflow` (e.g. video params).
-       - Render `Prompt`, `NegativePrompt` (Textareas).
-       - Render `Width`, `Height`, `BatchSize` (Inputs).
+       - Show/Hide video controls based on workflow type.
+       - Render `Name` (always visible), `Description` (Textarea).
+       - Render video controls conditionally (Length, Frame Rate, Orientation).
        - Render `SeedControl`.
 
-[ ] **App Root (`app.mjs`)**
+[x] **App Root (`app.mjs`)**
     1. Import `render` from Preact.
-    2. Setup Signals/State:
+    2. Setup State using `useState`:
        ```javascript
-       const appState = {
-         workflow: signal(null),
-         prompt: signal(""),
-         seed: signal(-1),
-         isGenerating: signal(false),
-         // ...
-       };
+       const [workflow, setWorkflow] = useState(null);
+       const [formState, setFormState] = useState({
+         name: '', description: '', seed: generateRandomSeed(),
+         seedLocked: false, length: 25, framerate: 20, orientation: 'portrait'
+       });
        ```
     3. Render `<ToastProvider><div class="app-container">...</div></ToastProvider>`.
     4. Compose: `<WorkflowSelector />`, `<GenerationForm />`.
     
-[ ] **VERIFICATION: Phase 2**
+[x] **VERIFICATION: Phase 2**
     1. Open `public/index-v2.html`.
     2. Check that Workflows load from server.
-    3. Check that changing workflow clears/resets relevant form fields.
+    3. Check that changing workflow shows/hides video controls.
     4. Check locking seed prevents randomization.
 
 ## Phase 3: Results & Execution
