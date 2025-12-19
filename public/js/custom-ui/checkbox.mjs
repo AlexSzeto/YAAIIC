@@ -24,7 +24,7 @@ export function Checkbox({ label, checked = false, onChange, disabled = false, i
   const containerStyle = {
     display: 'flex',
     alignItems: 'center',
-    cursor: disabled ? 'not-allowed' : 'pointer',
+    cursor: disabled ? 'default' : 'pointer',
     opacity: disabled ? 0.6 : 1,
     userSelect: 'none'
   };
@@ -51,7 +51,7 @@ export function Checkbox({ label, checked = false, onChange, disabled = false, i
       />
       
       <div class="custom-checkbox-visual" style=${checkboxStyle}>
-        ${checked && html`<box-icon name='check' size='20px' color='var(--success-background)'></box-icon>`}
+        ${checked && html`<box-icon name='check' size='20px' color='#ffffff'></box-icon>`}
       </div>
 
       <span class="checkbox-label" style="font-size: 14px; font-weight: 500; color: var(--dark-text-secondary);">

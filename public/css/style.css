@@ -453,7 +453,6 @@ p {
 
 .info-btn:hover {
   background-color: var(--dark-background-hover);
-  border-color: var(--dark-border-highlight);
 }
 
 .info-btn:active {
@@ -469,7 +468,7 @@ p {
   background-color: var(--secondary-background);
   border-color: var(--dark-border-secondary);
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .info-btn:disabled:hover {
@@ -562,7 +561,7 @@ p {
   background-color: var(--secondary-background);
   border-color: var(--dark-border-secondary);
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .image-inpaint-btn {
@@ -585,7 +584,7 @@ p {
   background-color: var(--secondary-background);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 /* Delete Button Container - Legacy support */
@@ -616,7 +615,7 @@ p {
   background-color: var(--secondary-background);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 /* Carousel Display Styling */
@@ -660,10 +659,14 @@ p {
   background-color: var(--dark-background-hover);
 }
 
+.carousel-btn:active {
+  background-color: var(--dark-background-tertiary);
+}
+
 .carousel-btn:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.6;
 }
 

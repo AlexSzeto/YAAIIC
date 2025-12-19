@@ -1,5 +1,6 @@
 import { html } from 'htm/preact';
-import { createContext, useContext, useState, useCallback } from 'preact/hooks';
+import { createContext } from 'preact';
+import { useContext, useState, useCallback } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 
 // Create Context

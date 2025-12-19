@@ -23,25 +23,28 @@ export function Modal({
   footer,
   className = ''
 }) {
-  if (!isOpen) return null;
-
   const overlayRef = useRef(null);
 
   // Close on Escape
   useEffect(() => {
+    if (!isOpen) return;
     const handleEscape = (e) => {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   // Lock body scroll
   useEffect(() => {
-    const originalStyle = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = originalStyle; };
+    if (isOpen) {
+      const originalStyle = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = originalStyle; };
+    }
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleOverlayClick = (e) => {
     if (e.target === overlayRef.current) {
