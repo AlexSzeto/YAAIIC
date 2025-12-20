@@ -111,56 +111,74 @@ export function Modal({
 import { render } from 'preact';
 
 export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null) {
-  // Create a container for the imperative modal
   const container = document.createElement('div');
   document.body.appendChild(container);
 
   const close = () => {
     render(null, container);
     container.remove();
+    document.body.style.overflow = '';
   };
   
-  const handleSelect = () => {
+  // Lock body scroll
+  document.body.style.overflow = 'hidden';
+  
+  const handleSelect = (e) => {
+    e.stopPropagation();
     if (onSelect) onSelect();
-    close(); // Should we close? In legacy code, it seemed to imply closing.
+    close();
   };
 
-  // We need a wrapper component to manage 'isOpen' state if we want animation, 
-  // but for simple imperative usage, we can just render it with isOpen=true 
-  // and unmount on close.
-  
   const ImperativeImageModal = () => {
-    // If we want to use the footer for "Use as Input" button (legacy behavior)
-    let footer = null;
-    if (allowSelect && onSelect) {
-        // Need to import Button? Or just use raw HTML to avoid circular deps if Button uses Modal?
-        // Button doesn't use Modal. But let's avoid imports if possible or keep it simple.
-        // We can just use standard buttons or reuse style classes.
-        // Actually, we can just pass the button VNode.
-        footer = html`
-            <button class="btn-with-icon image-select-btn" onClick=${handleSelect}>
-                <box-icon name='check' color='#ffffff'></box-icon>
-                Use as Input
-            </button>
-        `;
-    }
+    const overlayRef = useRef(null);
+
+    const handleOverlayClick = (e) => {
+      if (e.target === overlayRef.current) {
+        close();
+      }
+    };
+    
+    // Handle Escape
+    useEffect(() => {
+        const handleEscape = (e) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, []);
 
     return html`
-      <${Modal} 
-        isOpen=${true} 
-        onClose=${close} 
-        title=${title || 'Image Preview'} 
-        size="large"
-        footer=${footer}
+      <div 
+        class="image-modal-overlay" 
+        ref=${overlayRef}
+        onClick=${handleOverlayClick}
       >
-        <div style="display: flex; justify-content: center; align-items: center; background: #000; min-height: 200px;">
+        <div class="image-modal-container">
+           <button 
+             class="image-modal-close" 
+             onClick=${close}
+             aria-label="Close"
+           >
+             <box-icon name='x' color='var(--dark-text-primary)'></box-icon>
+           </button>
+
            <img 
              src=${imageUrl} 
              alt=${title || 'Preview'} 
-             style="max-width: 100%; max-height: 80vh; object-fit: contain;" 
+             style="max-width: 100%; max-height: calc(100vh - 60px); display: block; object-fit: contain;" 
            />
+           
+           ${title && html`
+             <div class="image-modal-title">
+               ${title}
+             </div>
+           `}
+
+           ${allowSelect && onSelect && html`
+             <button class="image-modal-select" onClick=${handleSelect}>
+               Use as Input
+             </button>
+           `}
         </div>
-      <//>
+      </div>
     `;
   };
 

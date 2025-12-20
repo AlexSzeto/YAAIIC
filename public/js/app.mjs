@@ -344,7 +344,12 @@ function App() {
         queryPath="/image-data"
         previewFactory=${createGalleryPreview}
         onSelect=${handleGallerySelect}
-        selectionMode=${true}
+        onLoad=${(items) => {
+          if (items && items.length > 0) {
+             handleGallerySelect(items[0]);
+          }
+        }}
+        selectionMode=${false}
       />
     </div>
   `;

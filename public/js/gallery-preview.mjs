@@ -1,6 +1,7 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createImageModal } from './custom-ui/modal.mjs'
+import { Checkbox } from './custom-ui/checkbox.mjs'
 
 // Gallery Preview Component
 export class GalleryPreview extends Component {
@@ -67,13 +68,13 @@ export class GalleryPreview extends Component {
     return html`
       <div class="gallery-item ${disabled ? 'disabled' : ''}" style=${{ position: 'relative' }}>
         ${onSelect && html`
-          <div class="gallery-item-checkbox-container">
-            <input
-              type="checkbox"
-              class="gallery-item-checkbox shared-checkbox"
+          <div class="gallery-item-checkbox-container" onClick=${(e) => e.stopPropagation()}>
+            <${Checkbox}
               checked=${isSelected || false}
               disabled=${disableCheckbox}
               onChange=${this.handleCheckboxChange}
+              label=${null}
+              className="gallery-item-checkbox"
             />
           </div>
         `}

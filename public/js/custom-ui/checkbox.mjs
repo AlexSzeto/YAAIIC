@@ -23,6 +23,8 @@ export function Checkbox({
   className = '', 
   ...props 
 }) {
+  const hasLabel = label != null && String(label).trim() !== '';
+
   const containerStyle = {
     display: 'flex',
     flexDirection: 'row',
@@ -30,7 +32,9 @@ export function Checkbox({
     cursor: disabled ? 'default' : 'pointer',
     opacity: disabled ? 0.6 : 1,
     userSelect: 'none',
-    gap: '8px' // Add spacing between checkbox and label
+    gap: hasLabel ? '8px' : '0', // Add spacing only if label exists
+    minWidth: hasLabel ? undefined : 'auto', // Override .form-group min-width when no label
+    justifyContent: hasLabel ? 'flex-start' : 'center' // Center content if no label
   };
 
   const checkboxVisual = html`
@@ -39,11 +43,11 @@ export function Checkbox({
     </div>
   `;
 
-  const labelElement = html`
+  const labelElement = hasLabel ? html`
     <span class="checkbox-label" style="font-size: 14px; font-weight: 500; color: var(--dark-text-secondary);">
       ${label}
     </span>
-  `;
+  ` : null;
 
   return html`
     <label class="form-group ${className} ${disabled ? 'disabled' : ''}" style=${containerStyle}>

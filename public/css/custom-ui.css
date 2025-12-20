@@ -401,25 +401,7 @@
   pointer-events: auto;
 }
 
-.gallery-item-checkbox {
-  /* Use shared checkbox styling with gallery-specific overrides */
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  cursor: pointer;
-  accent-color: var(--primary-background);
-  transform: none !important;
-  position: relative;
-  z-index: 11;
-  pointer-events: auto;
-}
-
-.gallery-item-checkbox:focus {
-  outline: 2px solid var(--primary-focus);
-  outline-offset: 1px;
-  border-radius: 2px;
-  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
-}
+/* Scaling removed as per user request */
 
 .gallery-controls {
   display: flex;
