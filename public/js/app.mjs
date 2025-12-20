@@ -150,7 +150,7 @@ function App() {
   const handleUseSeed = (seed) => {
     setFormState(prev => ({
       ...prev,
-      seed,
+      seed: String(seed),
       seedLocked: true
     }));
     toast.show('Seed copied to form and locked');
@@ -162,6 +162,27 @@ function App() {
       description: prompt
     }));
     toast.show('Prompt copied to form');
+  };
+
+  const handleUseWorkflow = (wfName) => {
+     setWorkflow(wfName);
+     toast.show(`Workflow set to ${wfName}`);
+  };
+
+  const handleUseName = (name) => {
+    setFormState(prev => ({
+        ...prev,
+        name: name
+    }));
+    toast.show('Name copied to form');
+  };
+
+  const handleUseDescription = (desc) => {
+    setFormState(prev => ({
+        ...prev,
+        description: desc
+    }));
+    toast.show('Description copied to form');
   };
   
   const handleDeleteImage = async (image) => {
@@ -184,6 +205,39 @@ function App() {
   const handleInpaint = (image) => {
     if (image.uid) {
       window.location.href = `inpaint.html?uid=${image.uid}`;
+    }
+  };
+
+  const handleEdit = async (uid, field, value) => {
+    try {
+      // Special handling for tags: ensure strictly array
+      let valueToSend = value;
+      if (field === 'tags') {
+         if (typeof value === 'string') {
+             valueToSend = value.split(',').map(t => t.trim()).filter(Boolean);
+         } else if (!Array.isArray(value)) {
+             valueToSend = [];
+         }
+      }
+
+      const response = await fetchJson('/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...generatedImage,
+          [field]: valueToSend
+        })
+      });
+
+      if (response.success && response.data) {
+        setGeneratedImage(response.data);
+        toast.success(`${field} updated`);
+      } else {
+        throw new Error('Failed to update image');
+      }
+    } catch (err) {
+      console.error('Edit failed:', err);
+      toast.error(err.message || 'Failed to save changes');
     }
   };
 
@@ -222,8 +276,12 @@ function App() {
         image=${generatedImage}
         onUseSeed=${handleUseSeed}
         onUsePrompt=${handleUsePrompt}
+        onUseWorkflow=${handleUseWorkflow}
+        onUseName=${handleUseName}
+        onUseDescription=${handleUseDescription}
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
+        onEdit=${handleEdit}
       />
     </div>
   `;
