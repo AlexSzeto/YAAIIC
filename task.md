@@ -245,6 +245,15 @@
     2. Render `<ImageCarousel items={history} selected={currentImage} />`.
     3. Render `<Gallery />` (controlled by `isGalleryOpen` state).
 
+[] **Missing features and fixes**
+    1. Gallery select checkboxes not available.
+    2. Restore Load and Delete actions in gallery.
+    3. Fix Image Preview modal styles - image should be at 100% if possible, container should display entire image - scale down if needed. Name displayed at the bottom left, within the image, action button should be at the bottom right, within the image. 
+    4. Restore functionality for Upload button.
+    5. Restore the image upload component as image select component, and put it back into the workflow form.
+    6. Investigate why the generated result is not showing on page load when session history has data.
+    7. Generated result delete action should use custom dialog for confirmation.
+
 [ ] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.
     2. Check selecting image from Gallery works (loads into main view or upload slot).
