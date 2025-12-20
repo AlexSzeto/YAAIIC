@@ -11,6 +11,9 @@ import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { fetchJson } from './util.mjs';
 import { useToast } from './custom-ui/toast.mjs';
+import { initAutoComplete } from './autocomplete-setup.mjs';
+import { loadTags } from './tags.mjs';
+import { useEffect } from 'preact/hooks';
 
 /**
  * Helper function to generate random seed
@@ -41,6 +44,23 @@ function App() {
   const [generatedImage, setGeneratedImage] = useState(null);
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Initialize autocomplete
+  useEffect(() => {
+    async function setupAutocomplete() {
+      try {
+        await loadTags();
+        // Short delay to ensure DOM is ready if needed, though useEffect should run after render
+        setTimeout(() => {
+             initAutoComplete();
+             console.log('Autocomplete initialized in App V2');
+        }, 100);
+      } catch (err) {
+        console.error('Failed to initialize autocomplete:', err);
+      }
+    }
+    setupAutocomplete();
+  }, []); // Run once on mount
 
   // Handle field changes
   const handleFieldChange = (fieldName, value) => {

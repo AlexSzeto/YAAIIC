@@ -83,6 +83,8 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
       <!-- Description -->
       <${Textarea}
         label="Description"
+        id="description"
+        autocomplete=${workflow?.autocomplete ? undefined : 'off'}
         placeholder="Enter your text here..."
         value=${formState.description || ''}
         onChange=${handleChange('description')}
