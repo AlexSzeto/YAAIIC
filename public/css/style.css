@@ -218,6 +218,7 @@ p {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
+  cursor: default;
 }
 
 .generate-button:disabled:hover {
@@ -563,6 +564,7 @@ p {
   border-color: var(--dark-border-secondary);
   opacity: 0.5;
   cursor: default;
+  pointer-events: none;
 }
 
 .image-inpaint-btn {
