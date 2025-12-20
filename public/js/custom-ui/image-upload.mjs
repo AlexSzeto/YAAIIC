@@ -1,225 +1,187 @@
-import { Component } from 'preact';
 import { html } from 'htm/preact';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import { createImageModal } from './modal.mjs';
 
 /**
  * ImageUpload Component
- * A reusable component that displays a blank square with a plus icon for image upload.
- * When an image is selected, it shows a preview of the image.
+ * A reusable component for uploading images via file selection or gallery.
  */
-export class ImageUpload extends Component {
-  constructor(props) {
-    super(props);
-    // props:
-    // - id: string/number (unique identifier)
-    // - onImageChange: (file) => void
-    // - onGalleryRequest: () => void
-    // - disabled: boolean (optional)
-    this.state = {
-      imagePreview: null,
-      hasImage: false,
-      imageFile: null,
-      imageDescription: null,
-      disabled: props.disabled || false
-    };
-    
-    this.fileInputRef = null;
-  }
+export function ImageUpload({ 
+  label,
+  value, // string (URL) or Blob/File
+  onChange, // (fileOrUrl) => void
+  onSelectFromGallery,
+  disabled = false
+}) {
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
 
-  /**
-   * Public method to set image externally (e.g. from gallery)
-   * @param {Blob} blob - The image blob
-   * @param {string} url - The image URL for preview
-   * @param {string} description - Optional image description
-   */
-  setImage(blob, url, description = null) {
-    this.setState({
-      imagePreview: url,
-      hasImage: true,
-      imageFile: blob,
-      imageDescription: description
-    }, () => {
-      // Notify parent of the change after state update completes
-      if (this.props.onImageChange) {
-        this.props.onImageChange(blob);
-      }
-    });
-  }
+  // Update preview when value changes
+  useEffect(() => {
+    if (!value) {
+      setPreviewUrl(null);
+      return;
+    }
 
-  /**
-   * Clear the current image
-   */
-  clearImage() {
-    this.setState({
-      imagePreview: null,
-      hasImage: false,
-      imageFile: null,
-      imageDescription: null
-    }, () => {
-      // Reset file input
-      if (this.fileInputRef) {
-        this.fileInputRef.value = '';
-      }
-      
-      // Notify parent of the change after state update completes
-      if (this.props.onImageChange) {
-        this.props.onImageChange(null);
-      }
-    });
-  }
+    if (typeof value === 'string') {
+      setPreviewUrl(value);
+    } else if (value instanceof Blob || value instanceof File) {
+      const url = URL.createObjectURL(value);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [value]);
 
-  /**
-   * Handle file input change
-   */
-  handleFileSelect = (e) => {
+  const handleFileSelect = (e) => {
+    if (disabled) return;
     const file = e.target.files[0];
     if (!file) return;
-    
-    // Validate file type
+
     if (!file.type.startsWith('image/')) {
       console.error('Selected file is not an image');
       return;
     }
     
-    // Read file and update state
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      this.setState({
-        imagePreview: event.target.result,
-        hasImage: true,
-        imageFile: file
-      }, () => {
-        // Notify parent of the change after state update completes
-        if (this.props.onImageChange) {
-          this.props.onImageChange(file);
+    // Pass the file up
+    if (onChange) onChange(file);
+    
+    // Clear input so same file can be selected again if needed
+    e.target.value = '';
+  };
+
+  const handleUploadClick = (e) => {
+    // Only open file dialog if we don't have an image, or if we want to replace it?
+    // User flow: 
+    // - empty -> click -> open file (or gallery depending on implementation details)
+    // - filled -> click -> open preview
+    
+    // The previous implementation:
+    // - hasImage: preview click
+    // - !hasImage: gallery click (if props.onGalleryRequest) OR file input if no gallery request? 
+    // Actually the logic was: `onClick=${hasImage ? this.handlePreviewClick : this.handleGalleryClick}`
+    // And `handleGalleryClick` calls `onGalleryRequest`.
+    
+    // But what if I want to upload a file from disk explicitly?
+    // The previous component had a hidden file input but only triggered it... wait.
+    // `handleGalleryClick`: if (this.props.onGalleryRequest) ... 
+    // It didn't seem to trigger file input unless `onGalleryRequest` wasn't passed?
+    // Looking at old code: 
+    // handleUploadClick trigered fileInputRef.click(). 
+    // But the main render onclick was: `onClick=${hasImage ? this.handlePreviewClick : this.handleGalleryClick}`
+    // So if I click the box, it opens gallery. How do I upload from disk?
+    // Ah, maybe the user wants both options.
+    
+    // Let's improve UI:
+    // If empty: Show "Select Image" (triggers Gallery if available, or File Input?)
+    // Maybe we should allow both?
+    // For now, let's replicate: Click -> Gallery.
+    // But how to get file from disk?
+    // Perhaps `onSelectFromGallery` handles that choice?
+    
+    // Re-reading task: "Convert to: export function ImageUpload(...)".
+    // "Refactor Image Upload (`custom-ui/image-upload.mjs`)"
+    
+    // I will add a small button for "Upload from Disk" if possible, or just default to file input if onSelectFromGallery is strictly for gallery.
+    // Let's assume the main click triggers `onSelectFromGallery` which opens a modal that might have "Upload" tab?
+    // Or, simpler: Main click triggers File Input. Gallery button (if provided) triggers Gallery.
+    
+    // Old code:
+    // hasImage ? handlePreviewClick : handleGalleryClick
+    
+    // I will make the empty state click trigger onSelectFromGallery if provided, otherwise file input.
+    // And I will add a small "upload" icon/button for file input explicitly?
+    
+    e.stopPropagation();
+    if (disabled) return;
+    
+    if (previewUrl) {
+      if (typeof value === 'string') {
+        createImageModal(value, true);
+      } else if (previewUrl) {
+         createImageModal(previewUrl, true);
+      }
+    } else {
+        if (onSelectFromGallery) {
+            onSelectFromGallery();
+        } else {
+            fileInputRef.current.click();
         }
-      });
-    };
-    reader.readAsDataURL(file);
-  }
-
-  /**
-   * Handle click on the upload area
-   */
-  handleUploadClick = (e) => {
-    e.stopPropagation();
-    if (this.state.disabled) return;
-    if (this.fileInputRef) {
-      this.fileInputRef.click();
     }
-  }
+  };
 
-  /**
-   * Handle click on image preview to open modal
-   */
-  handlePreviewClick = (e) => {
+  const handleClearClick = (e) => {
     e.stopPropagation();
-    if (this.state.disabled) return;
-    const { imagePreview } = this.state;
-    if (imagePreview) {
-      createImageModal(imagePreview, true);
-    }
-  }
+    if (disabled) return;
+    if (onChange) onChange(null);
+  };
 
-  /**
-   * Handle gallery button click
-   */
-  handleGalleryClick = (e) => {
-    e.stopPropagation();
-    if (this.state.disabled) return;
-    if (this.props.onGalleryRequest) {
-      this.props.onGalleryRequest();
-    }
-  }
+  const triggerFileUpload = (e) => {
+      e.stopPropagation();
+      if (disabled) return;
+      fileInputRef.current.click();
+  };
 
-  /**
-   * Handle clear button click
-   */
-  handleClearClick = (e) => {
-    e.stopPropagation();
-    if (this.state.disabled) return;
-    this.clearImage();
-  }
-
-  /**
-   * Get the image file/blob
-   */
-  getImageBlob() {
-    return this.state.imageFile;
-  }
-
-  /**
-   * Check if component has an image
-   */
-  hasImage() {
-    return this.state.hasImage;
-  }
-
-  /**
-   * Get image with its description
-   * @returns {{blob: Blob, description: string|null}}
-   */
-  getImageWithDescription() {
-    return {
-      blob: this.state.imageFile,
-      description: this.state.imageDescription
-    };
-  }
-
-  /**
-   * Set the disabled state of the component
-   * @param {boolean} disabled - Whether the component should be disabled
-   */
-  setDisabled(disabled) {
-    this.setState({ disabled });
-  }
-
-  render() {
-    const { id } = this.props;
-    const { imagePreview, hasImage, disabled } = this.state;
-
-    return html`
-      <div class="image-upload-component">
-        <input
-          type="file"
-          ref=${(el) => this.fileInputRef = el}
-          accept="image/*"
-          style="display: none;"
-          onChange=${this.handleFileSelect}
-          disabled=${disabled}
-        />
-        
-        <div 
-          class="image-upload-area ${hasImage ? 'has-image' : ''} ${disabled ? 'disabled' : ''}"
-          onClick=${hasImage ? this.handlePreviewClick : this.handleGalleryClick}
-        >
-          ${hasImage ? html`
-            <!-- Image Preview -->
-            <img 
-              src=${imagePreview} 
-              alt="Upload preview" 
-              class="image-upload-preview"
-            />
+  return html`
+    <div class="image-upload-component">
+      ${label && html`<label class="input-label">${label}</label>`}
+      <input
+        type="file"
+        ref=${fileInputRef}
+        accept="image/*"
+        style="display: none;"
+        onChange=${handleFileSelect}
+        disabled=${disabled}
+      />
+      
+      <div 
+        class="image-upload-area ${previewUrl ? 'has-image' : ''} ${disabled ? 'disabled' : ''}"
+        onClick=${handleUploadClick}
+      >
+        ${previewUrl ? html`
+          <!-- Image Preview -->
+          <img 
+            src=${previewUrl} 
+            alt="Upload preview" 
+            class="image-upload-preview"
+          />
+          
+          <!-- Overlay Buttons -->
+          <div class="image-upload-overlay">
+            <button 
+              class="image-upload-btn image-upload-clear-btn"
+              onClick=${handleClearClick}
+              title="Clear image"
+            >
+              <box-icon name='x' color='#ffffff' size='20px'></box-icon>
+            </button>
+            <button
+               class="image-upload-btn image-upload-replace-btn"
+               onClick=${(e) => { e.stopPropagation(); if(onSelectFromGallery) onSelectFromGallery(); else fileInputRef.current.click(); }}
+               title="Replace image"
+               style="margin-right: 8px;"
+            >
+               <box-icon name='image' color='#ffffff' size='20px'></box-icon>
+            </button>
+          </div>
+        ` : html`
+          <!-- Empty State -->
+          <div class="image-upload-empty">
+            <box-icon name='image-add' color='#888888' size='48px'></box-icon>
+            <div class="image-upload-text">Select Image</div>
+            <div class="image-upload-subtext">From Gallery</div>
             
-            <!-- Overlay Buttons -->
-            <div class="image-upload-overlay">
-              <button 
-                class="image-upload-btn image-upload-clear-btn"
-                onClick=${this.handleClearClick}
-                title="Clear image"
-              >
-                <box-icon name='x' color='#ffffff' size='20px'></box-icon>
-              </button>
-            </div>
-          ` : html`
-            <!-- Empty State -->
-            <div class="image-upload-empty">
-              <box-icon name='image' color='#888888' size='48px'></box-icon>
-              <div class="image-upload-text">Select Image</div>
-            </div>
-          `}
-        </div>
+            <!-- File upload explicit button -->
+            <button 
+                class="btn-text-only" 
+                style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);"
+                onClick=${triggerFileUpload}
+            >
+                Or upload from device
+            </button>
+          </div>
+        `}
       </div>
-    `;
-  }
+    </div>
+  `;
 }
+

@@ -1,19 +1,22 @@
 // Main application entry point for V2
 import { render } from 'preact';
 import { html } from 'htm/preact';
-import { useState } from 'preact/hooks';
-import { ToastProvider } from './custom-ui/toast.mjs';
+import { useState, useEffect, useCallback } from 'preact/hooks';
+import { ToastProvider, useToast } from './custom-ui/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
+import { GeneratedResult } from './app-ui/generated-result.mjs';
 
 import { ProgressBanner } from './custom-ui/progress-banner.mjs';
-import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { fetchJson } from './util.mjs';
-import { useToast } from './custom-ui/toast.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
-import { useEffect } from 'preact/hooks';
+
+import { Gallery } from './custom-ui/gallery.mjs';
+import { ImageCarousel } from './custom-ui/image-carousel.mjs';
+import { createGalleryPreview } from './gallery-preview.mjs';
+import { Button } from './custom-ui/button.mjs';
 
 /**
  * Helper function to generate random seed
@@ -45,22 +48,33 @@ function App() {
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Initialize autocomplete
+  // Phase 4: History & Gallery State
+  const [history, setHistory] = useState([]);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  // Initialize autocomplete & Load Initial History
   useEffect(() => {
-    async function setupAutocomplete() {
+    async function init() {
       try {
         await loadTags();
-        // Short delay to ensure DOM is ready if needed, though useEffect should run after render
         setTimeout(() => {
              initAutoComplete();
              console.log('Autocomplete initialized in App V2');
         }, 100);
+
+        // Load recent history
+        const recent = await fetchJson('/image-data?limit=20');
+        if (Array.isArray(recent)) {
+          setHistory(recent);
+          // Optionally set the first image as current?
+          // if (recent.length > 0 && !generatedImage) setGeneratedImage(recent[0]);
+        }
       } catch (err) {
-        console.error('Failed to initialize autocomplete:', err);
+        console.error('Failed to initialize app:', err);
       }
     }
-    setupAutocomplete();
-  }, []); // Run once on mount
+    init();
+  }, []);
 
   // Handle field changes
   const handleFieldChange = (fieldName, value) => {
@@ -73,7 +87,6 @@ function App() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
-    console.log('Workflow changed:', newWorkflow);
   };
   
   // Handle Generate
@@ -101,23 +114,12 @@ function App() {
         workflow: workflow.name,
         name: formState.name,
         description: formState.description,
-        prompt: formState.description, // Map description to prompt for workflow compatibility
-        seed: formState.seed
-      };
-      
-      // Add video fields if workflow type suggests video (checking if typical video fields are present in formState is loose, but workflow object should be the source of truth)
-      // Inspecting main.mjs logic: it checks "if (videoControlsRow.style.display !== 'none')" 
-      // Here we can check workflow type if we had it, or just properties. 
-      // The task says "Show/Hide video controls based on workflow type".
-      // Let's assume if it is an image-to-video or text-to-video workflow.
-      // For now, let's include them if the workflow seems to support them, or just always send them?
-      // main.mjs sends them if the fields are visible.
-      // Let's just send them. Redundant fields are likely ignored.
-      Object.assign(requestBody, {
+        prompt: formState.description,
+        seed: formState.seed,
         length: formState.length,
         framerate: formState.framerate,
         orientation: formState.orientation
-      });
+      };
 
       const response = await fetchJson('/generate/image', {
         method: 'POST',
@@ -147,9 +149,12 @@ function App() {
       try {
         const img = await fetchJson(`/image-data/${data.result.uid}`);
         setGeneratedImage(img);
+        
+        // Add to history
+        setHistory(prev => [img, ...prev]);
+        
         toast.success(`Generated: ${img.name || 'Image'}`);
         
-        // Update seed if not locked (to emulate behavior of fresh seed for next run)
         if (!formState.seedLocked) {
            handleFieldChange('seed', generateRandomSeed());
         }
@@ -158,30 +163,22 @@ function App() {
         toast.error('Failed to load generated image');
       }
     }
-    // We don't nullify taskId immediately so the banner can show "Complete" then hide.
   };
   
   const handleGenerationError = (data) => {
     setIsGenerating(false);
     console.error('Generation error:', data);
-    // Banner handles display, we just log
   };
   
+  // Handlers for Generated Result
   const handleUseSeed = (seed) => {
-    setFormState(prev => ({
-      ...prev,
-      seed: String(seed),
-      seedLocked: true
-    }));
-    toast.show('Seed copied to form and locked');
+    setFormState(prev => ({ ...prev, seed: String(seed), seedLocked: true }));
+    toast.show('Seed copied and locked');
   };
   
   const handleUsePrompt = (prompt) => {
-    setFormState(prev => ({
-      ...prev,
-      description: prompt
-    }));
-    toast.show('Prompt copied to form');
+    setFormState(prev => ({ ...prev, description: prompt }));
+    toast.show('Prompt copied');
   };
 
   const handleUseWorkflow = (wfName) => {
@@ -190,24 +187,17 @@ function App() {
   };
 
   const handleUseName = (name) => {
-    setFormState(prev => ({
-        ...prev,
-        name: name
-    }));
-    toast.show('Name copied to form');
+    setFormState(prev => ({ ...prev, name: name }));
+    toast.show('Name copied');
   };
 
   const handleUseDescription = (desc) => {
-    setFormState(prev => ({
-        ...prev,
-        description: desc
-    }));
-    toast.show('Description copied to form');
+    setFormState(prev => ({ ...prev, description: desc }));
+    toast.show('Description copied');
   };
   
   const handleDeleteImage = async (image) => {
     if (!confirm(`Are you sure you want to delete "${image.name}"?`)) return;
-    
     try {
       await fetchJson('/image-data/delete', {
         method: 'DELETE',
@@ -215,7 +205,14 @@ function App() {
         body: JSON.stringify({ uids: [image.uid] })
       });
       
-      setGeneratedImage(null);
+      // Remove from history
+      setHistory(prev => prev.filter(item => item.uid !== image.uid));
+      
+      // If deleted image was current, clear it or pick next
+      if (generatedImage && generatedImage.uid === image.uid) {
+        setGeneratedImage(null);
+      }
+
       toast.success('Image deleted');
     } catch (err) {
       toast.error(err.message || 'Failed to delete image');
@@ -223,14 +220,11 @@ function App() {
   };
   
   const handleInpaint = (image) => {
-    if (image.uid) {
-      window.location.href = `inpaint.html?uid=${image.uid}`;
-    }
+    if (image.uid) window.location.href = `inpaint.html?uid=${image.uid}`;
   };
 
   const handleEdit = async (uid, field, value) => {
     try {
-      // Special handling for tags: ensure strictly array
       let valueToSend = value;
       if (field === 'tags') {
          if (typeof value === 'string') {
@@ -243,14 +237,15 @@ function App() {
       const response = await fetchJson('/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...generatedImage,
-          [field]: valueToSend
-        })
+        body: JSON.stringify({ ...generatedImage, [field]: valueToSend })
       });
 
       if (response.success && response.data) {
         setGeneratedImage(response.data);
+        
+        // Update history item
+        setHistory(prev => prev.map(item => item.uid === response.data.uid ? response.data : item));
+        
         toast.success(`${field} updated`);
       } else {
         throw new Error('Failed to update image');
@@ -261,9 +256,31 @@ function App() {
     }
   };
 
+  // Gallery handlers
+  const handleGallerySelect = async (item) => {
+     setGeneratedImage(item);
+     // Also ensure it's in history (if not already)
+     if (!history.find(h => h.uid === item.uid)) {
+         setHistory(prev => [item, ...prev]);
+     }
+  };
+
+  // Carousel handlers
+  const handleCarouselSelect = (item) => {
+    setGeneratedImage(item);
+  };
+
   return html`
     <div className="app-container">
-      <h1>YAAIIG (Yet Another AI Image Generator)</h1>
+      <div className="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">V2</small></h1>
+        <${Button} 
+          onClick=${() => setIsGalleryOpen(true)}
+          icon="images"
+        >
+          Gallery
+        <//>
+      </div>
       
       ${taskId ? html`
         <div id="progress-banner-container">
@@ -302,6 +319,28 @@ function App() {
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
+      />
+
+      <!-- Carousel for History -->
+      ${history.length > 0 && html`
+        <div className="history-carousel-container" style="margin-top: 20px;">
+          <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Session History</h3>
+          <${ImageCarousel} 
+            items=${history} 
+            selectedItem=${generatedImage}
+            onSelect=${handleCarouselSelect}
+          />
+        </div>
+      `}
+
+      <!-- Gallery Modal -->
+      <${Gallery} 
+        isOpen=${isGalleryOpen}
+        onClose=${() => setIsGalleryOpen(false)}
+        queryPath="/image-data"
+        previewFactory=${createGalleryPreview}
+        onSelect=${handleGallerySelect}
+        selectionMode=${true}
       />
     </div>
   `;

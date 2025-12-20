@@ -100,3 +100,69 @@ export function Modal({
 
   return createPortal(modalContent, document.body);
 }
+
+/**
+ * Helper to imperatively show an image modal (backward compatibility)
+ * @param {string} imageUrl 
+ * @param {boolean} allowSelect - Not used in V2 modal logic directly but kept for signature compat
+ * @param {string} title 
+ * @param {Function} onSelect - Callback if a "Select" button/action is desired (legacy behavior)
+ */
+import { render } from 'preact';
+
+export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null) {
+  // Create a container for the imperative modal
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const close = () => {
+    render(null, container);
+    container.remove();
+  };
+  
+  const handleSelect = () => {
+    if (onSelect) onSelect();
+    close(); // Should we close? In legacy code, it seemed to imply closing.
+  };
+
+  // We need a wrapper component to manage 'isOpen' state if we want animation, 
+  // but for simple imperative usage, we can just render it with isOpen=true 
+  // and unmount on close.
+  
+  const ImperativeImageModal = () => {
+    // If we want to use the footer for "Use as Input" button (legacy behavior)
+    let footer = null;
+    if (allowSelect && onSelect) {
+        // Need to import Button? Or just use raw HTML to avoid circular deps if Button uses Modal?
+        // Button doesn't use Modal. But let's avoid imports if possible or keep it simple.
+        // We can just use standard buttons or reuse style classes.
+        // Actually, we can just pass the button VNode.
+        footer = html`
+            <button class="btn-with-icon image-select-btn" onClick=${handleSelect}>
+                <box-icon name='check' color='#ffffff'></box-icon>
+                Use as Input
+            </button>
+        `;
+    }
+
+    return html`
+      <${Modal} 
+        isOpen=${true} 
+        onClose=${close} 
+        title=${title || 'Image Preview'} 
+        size="large"
+        footer=${footer}
+      >
+        <div style="display: flex; justify-content: center; align-items: center; background: #000; min-height: 200px;">
+           <img 
+             src=${imageUrl} 
+             alt=${title || 'Preview'} 
+             style="max-width: 100%; max-height: 80vh; object-fit: contain;" 
+           />
+        </div>
+      <//>
+    `;
+  };
+
+  render(html`<${ImperativeImageModal} />`, container);
+}

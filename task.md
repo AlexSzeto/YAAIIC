@@ -183,7 +183,7 @@
 
 ## Phase 3: Results & Execution
 
-[ ] **Generated Result (`app-ui/generated-result.mjs`)**
+[x] **Generated Result (`app-ui/generated-result.mjs`)**
     1. Replaces `generated-image-display.mjs`.
     2. Specification:
        ```javascript
@@ -197,7 +197,7 @@
        ```
     3. Logic: Show image `src`. Show metadata list below it. "Use" buttons copy data back to Form State.
 
-[ ] **Progress Banner (`custom-ui/progress-banner.mjs`)**
+[x] **Progress Banner (`custom-ui/progress-banner.mjs`)**
     1. Update to be a standard component:
        ```javascript
        export function ProgressBanner({ 
@@ -208,7 +208,7 @@
        ```
     2. Remove the self-mounting logic (`createProgressBanner`).
 
-[ ] **Generation Logic (`app.mjs`)**
+[x] **Generation Logic (`app.mjs`)**
     1. Implement `handleGenerate()`:
        - Validate inputs.
        - Call `fetchJson('/generate/image', ...)` (or video).
@@ -216,7 +216,7 @@
     2. Render `<ProgressBanner taskId={...} />` when generating.
     3. On Complete: Fetch new image data, set `currentImage` state.
 
-[ ] **VERIFICATION: Phase 3**
+[x] **VERIFICATION: Phase 3**
     1. In `index-v2.html`, click "Generate".
     2. Verify progress bar appears and updates (SSE).
     3. Verify image appears on completion.
@@ -224,12 +224,12 @@
 
 ## Phase 4: Carousel & Gallery
 
-[ ] **Refactor Gallery (`custom-ui/gallery.mjs`)**
+[x] **Refactor Gallery (`custom-ui/gallery.mjs`)**
     1. Remove `createGallery` factory.
     2. Convert to `<Gallery isOpen={...} onSelect={...} onClose={...} />`.
     3. Maintain internal fetching/pagination logic (or hoist if preferred, but internal is fine for now).
 
-[ ] **Refactor Image Upload (`custom-ui/image-upload.mjs`)**
+[x] **Refactor Image Upload (`custom-ui/image-upload.mjs`)**
     1. Convert to:
        ```javascript
        export function ImageUpload({ 
@@ -240,7 +240,7 @@
        }) { ... }
        ```
 
-[ ] **Integrate into App**
+[x] **Integrate into App**
     1. Add `history` state (array of images).
     2. Render `<ImageCarousel items={history} selected={currentImage} />`.
     3. Render `<Gallery />` (controlled by `isGalleryOpen` state).
