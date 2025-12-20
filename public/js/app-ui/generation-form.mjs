@@ -94,21 +94,37 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
       </div>
 
       <!-- Row 4: Action Buttons -->
-      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-end;">
-        <${Button} 
-          variant="secondary"
-          onClick=${() => window.location.reload()}
-          disabled=${isGenerating}
-        >
-          Reset
-        <//>
+      <!-- Row 4: Action Buttons (V1 Style) -->
+      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-start;">
         <${Button} 
           variant="primary"
+          className="generate-button"
+          icon="play"
           onClick=${onGenerate}
           loading=${isGenerating}
           disabled=${isGenerating || !workflow}
         >
           ${isGenerating ? 'Generating...' : 'Generate'}
+        <//>
+
+        <${Button} 
+          variant="primary"
+          className="gallery-btn"
+          icon="image"
+          title="Gallery"
+          onClick=${() => document.getElementById('gallery-btn')?.click()}
+        >
+          Gallery
+        <//>
+
+        <${Button} 
+          variant="primary"
+          className="upload-btn"
+          icon="upload"
+          title="Upload Image"
+          onClick=${() => document.getElementById('upload-btn')?.click()}
+        >
+          Upload
         <//>
       </div>
 

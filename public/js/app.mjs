@@ -192,13 +192,15 @@ function App() {
       <h1>YAAIIG (Yet Another AI Image Generator)</h1>
       
       ${taskId ? html`
-        <${ProgressBanner} 
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
+        <div id="progress-banner-container">
+          <${ProgressBanner} 
+            key=${taskId}
+            taskId=${taskId}
+            sseManager=${sseManager}
+            onComplete=${handleGenerationComplete}
+            onError=${handleGenerationError}
+          />
+        </div>
       ` : null}
       
       <div className="workflow-controls">
