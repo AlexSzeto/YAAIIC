@@ -3,7 +3,7 @@ import { html } from 'htm/preact';
 import { Button } from '../custom-ui/button.mjs';
 import { sendToClipboard } from '../util.mjs';
 
-export function GeneratedImageResult({ 
+export function GeneratedResult({ 
   image, 
   onUseSeed,
   onUsePrompt,
@@ -43,7 +43,7 @@ export function GeneratedImageResult({
 
   return html`
     <div className="generated-image-display content-container" style="display: block;">
-      <h3 className="generated-image-title">Generated Image</h3>
+      <h3 className="generated-result-title">Generated Result</h3>
       
       <div className="generated-image-content">
         <div className="generated-image-left">

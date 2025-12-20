@@ -7,7 +7,7 @@ import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
 
 import { ProgressBanner } from './custom-ui/progress-banner.mjs';
-import { GeneratedImageResult } from './app-ui/generated-image-result.mjs';
+import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { sseManager } from './sse-manager.mjs';
 import { fetchJson } from './util.mjs';
 import { useToast } from './custom-ui/toast.mjs';
@@ -272,7 +272,7 @@ function App() {
         />
       </div>
       
-      <${GeneratedImageResult} 
+      <${GeneratedResult} 
         image=${generatedImage}
         onUseSeed=${handleUseSeed}
         onUsePrompt=${handleUsePrompt}

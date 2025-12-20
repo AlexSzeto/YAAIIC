@@ -377,7 +377,8 @@ p {
   margin: 5px 0;
 }
 
-.generated-image-title {
+.generated-image-title,
+.generated-result-title {
   color: var(--dark-text-primary);
   margin-top: 0;
   margin-bottom: 15px;
@@ -540,7 +541,7 @@ p {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .image-select-btn {

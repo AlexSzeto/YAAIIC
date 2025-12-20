@@ -183,11 +183,11 @@
 
 ## Phase 3: Results & Execution
 
-[ ] **Generated Image Result (`app-ui/generated-image-result.mjs`)**
+[ ] **Generated Result (`app-ui/generated-result.mjs`)**
     1. Replaces `generated-image-display.mjs`.
     2. Specification:
        ```javascript
-       export function GeneratedImageResult({ 
+       export function GeneratedResult({ 
          image, // { url, seed, prompt, metadata }
          onUseSeed,
          onUsePrompt,
