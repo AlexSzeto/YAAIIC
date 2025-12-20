@@ -275,6 +275,7 @@ function App() {
       <div className="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">V2</small></h1>
         <${Button} 
+          id="gallery-btn"
           onClick=${() => setIsGalleryOpen(true)}
           icon="images"
         >
@@ -306,7 +307,10 @@ function App() {
           onFieldChange=${handleFieldChange}
           isGenerating=${isGenerating}
           onGenerate=${handleGenerate}
+          onOpenGallery=${() => setIsGalleryOpen(true)}
+          onUploadClick=${() => document.getElementById('upload-btn')?.click()} 
         />
+        <!-- Note: Passed onUploadClick logic to decouple, though implementation of upload button in Form relies on ID or prop -->
       </div>
       
       <${GeneratedResult} 

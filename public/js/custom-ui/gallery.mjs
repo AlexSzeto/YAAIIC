@@ -1,7 +1,8 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { PaginationComponent } from './pagination.mjs';
+import { PaginationControls } from './pagination.mjs';
+import { usePagination } from './use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
 import { showDialog } from './dialog.mjs';
 import { createImageModal } from './modal.mjs';
@@ -22,10 +23,13 @@ export function Gallery({
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPageData, setCurrentPageData] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [shouldFocusSearch, setShouldFocusSearch] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Use pagination hook - single source of truth
+  const pagination = usePagination(galleryData, 32);
+  const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
 
@@ -66,7 +70,6 @@ export function Gallery({
     } catch (error) {
       console.error('Error fetching gallery data:', error);
       setGalleryData([]);
-      setCurrentPageData([]);
     } finally {
       setLoading(false);
     }
@@ -292,10 +295,14 @@ export function Gallery({
             </div>
           `}
           <div class="gallery-pagination-container">
-            <${PaginationComponent} 
-              dataList=${galleryData}
-              itemsPerPage=${32}
-              updateDisplay=${(data) => setCurrentPageData(data)}
+            <${PaginationControls}
+              currentPage=${pagination.currentPage}
+              totalPages=${pagination.totalPages}
+              hasMultiplePages=${pagination.hasMultiplePages}
+              isFirstPage=${pagination.isFirstPage}
+              isLastPage=${pagination.isLastPage}
+              onNext=${pagination.goToNext}
+              onPrev=${pagination.goToPrev}
             />
           </div>
         </div>

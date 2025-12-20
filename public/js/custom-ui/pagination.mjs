@@ -2,6 +2,64 @@ import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 
 /**
+ * Stateless Pagination Controls Component (for use with usePagination hook)
+ * Pure UI component that renders prev/next navigation buttons.
+ */
+export function PaginationControls({
+  currentPage,
+  totalPages,
+  hasMultiplePages = true,
+  isFirstPage = false,
+  isLastPage = false,
+  onNext,
+  onPrev,
+  onFirst,
+  onLast,
+}) {
+  // Hide if no items (totalPages would be 1 with empty data)
+  if (totalPages === 0) {
+    return null;
+  }
+
+  const canGoPrev = hasMultiplePages && !isFirstPage;
+  const canGoNext = hasMultiplePages && !isLastPage;
+
+  return html`
+    <div 
+      class="pagination-container"
+      role="navigation"
+      aria-label="Pagination navigation"
+    >
+      <div class="pagination-nav">
+        <button 
+          class="pagination-btn pagination-prev"
+          title="Previous page"
+          aria-label="Go to previous page"
+          disabled=${!canGoPrev}
+          aria-disabled=${!canGoPrev}
+          onClick=${onPrev}
+        >
+          <box-icon name='caret-left' color='#ffffff'></box-icon>
+        </button>
+        <div class="pagination-index" aria-live="polite">
+          <span class="pagination-current">${currentPage + 1}</span> / <span class="total-pages">${totalPages}</span>
+        </div>
+        <button 
+          class="pagination-btn pagination-next"
+          title="Next page"
+          aria-label="Go to next page"
+          disabled=${!canGoNext}
+          aria-disabled=${!canGoNext}
+          onClick=${onNext}
+        >
+          <box-icon name='caret-right' color='#ffffff'></box-icon>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Carousel-style Pagination Component using Preact
  * Provides carousel-style pagination with prev/next buttons and current/total index display
  */
@@ -58,7 +116,26 @@ export class PaginationComponent extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    // Trigger update display when current page changes
+    // Sync props.dataList to state if it changed
+    if (prevProps.dataList !== this.props.dataList) {
+      const newDataList = this.props.dataList || [];
+      const totalPages = Math.max(1, Math.ceil(newDataList.length / this.state.itemsPerPage));
+      const currentPage = Math.min(this.state.currentPage, Math.max(0, totalPages - 1));
+      
+      this.setState({
+        dataList: [...newDataList],
+        totalPages,
+        currentPage
+      });
+      console.log('PaginationComponent props.dataList changed, synced to state:', {
+        dataLength: newDataList.length,
+        totalPages,
+        currentPage
+      });
+      return; // State update will trigger another componentDidUpdate
+    }
+
+    // Trigger update display when current page changes or dataList changes
     if (prevState.currentPage !== this.state.currentPage || 
         prevState.dataList !== this.state.dataList) {
       this.triggerUpdateDisplay();

@@ -15,8 +15,10 @@ import { SeedControl } from './seed-control.mjs';
  * @param {Function} props.onFieldChange - Callback for field changes: (fieldName, value) => void
  * @param {boolean} props.isGenerating - Whether generation is in progress
  * @param {Function} props.onGenerate - Callback for generate action
+ * @param {Function} [props.onOpenGallery] - Callback to open gallery
+ * @param {Function} [props.onUploadClick] - Callback for upload button
  */
-export function GenerationForm({ workflow, formState, onFieldChange, isGenerating, onGenerate }) {
+export function GenerationForm({ workflow, formState, onFieldChange, isGenerating, onGenerate, onOpenGallery, onUploadClick }) {
   
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
@@ -114,7 +116,7 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
           className="gallery-btn"
           icon="image"
           title="Gallery"
-          onClick=${() => document.getElementById('gallery-btn')?.click()}
+          onClick=${onOpenGallery || (() => document.getElementById('gallery-btn')?.click())}
         >
           Gallery
         <//>
@@ -124,7 +126,7 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
           className="upload-btn"
           icon="upload"
           title="Upload Image"
-          onClick=${() => document.getElementById('upload-btn')?.click()}
+          onClick=${onUploadClick || (() => document.getElementById('upload-btn')?.click())}
         >
           Upload
         <//>
