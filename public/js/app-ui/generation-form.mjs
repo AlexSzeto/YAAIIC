@@ -4,6 +4,7 @@ import { Input } from '../custom-ui/input.mjs';
 import { Select } from '../custom-ui/select.mjs';
 import { Button } from '../custom-ui/button.mjs';
 import { SeedControl } from './seed-control.mjs';
+import { ImageUpload } from '../custom-ui/image-upload.mjs';
 
 /**
  * Generation Form Component
@@ -18,7 +19,18 @@ import { SeedControl } from './seed-control.mjs';
  * @param {Function} [props.onOpenGallery] - Callback to open gallery
  * @param {Function} [props.onUploadClick] - Callback for upload button
  */
-export function GenerationForm({ workflow, formState, onFieldChange, isGenerating, onGenerate, onOpenGallery, onUploadClick }) {
+export function GenerationForm({ 
+  workflow, 
+  formState, 
+  onFieldChange, 
+  isGenerating, 
+  onGenerate, 
+  onOpenGallery, 
+  onUploadClick,
+  inputImages = [],
+  onImageChange,
+  onSelectFromGallery
+}) {
   
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
@@ -92,10 +104,21 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
         onChange=${handleChange('description')}
       />
 
-      <!-- Row 3: Image Upload (Placeholder) -->
-      <div id="image-upload-container" class="form-row">
-        <!-- Image upload controls will be injected here -->
-      </div>
+      <!-- Row 3: Image Upload -->
+      ${workflow?.inputImages > 0 && html`
+        <div id="image-upload-container" class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+          ${Array.from({ length: workflow.inputImages }, (_, i) => html`
+            <${ImageUpload}
+              key=${i}
+              label=${workflow.inputImages > 1 ? `Image ${i + 1}` : 'Input Image'}
+              value=${inputImages[i]?.url || inputImages[i]?.blob || null}
+              onChange=${(fileOrUrl) => onImageChange && onImageChange(i, fileOrUrl)}
+              onSelectFromGallery=${() => onSelectFromGallery && onSelectFromGallery(i)}
+              disabled=${isGenerating}
+            />
+          `)}
+        </div>
+      `}
 
       <!-- Row 4: Action Buttons -->
       <!-- Row 4: Action Buttons (V1 Style) -->
@@ -126,7 +149,7 @@ export function GenerationForm({ workflow, formState, onFieldChange, isGeneratin
           className="upload-btn"
           icon="upload"
           title="Upload Image"
-          onClick=${onUploadClick || (() => document.getElementById('upload-btn')?.click())}
+          onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
         >
           Upload
         <//>

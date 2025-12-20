@@ -19,7 +19,8 @@ export function Gallery({
   onLoad,      // Helper for legacy single-item load or "Load" button in bulk mode
   onSelect,    // Callback for selection mode (single item)
   selectionMode = false,
-  fileTypeFilter = null
+  fileTypeFilter = null,
+  onSelectAsInput = null  // Callback for "Use as Input" action from gallery preview
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,7 +240,7 @@ export function Gallery({
       const shouldDisable = selectionMode && fileTypeFilter === 'image' && isVideo;
 
       // previewFactory returns a DOM node
-      const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, handleItemClick, shouldDisable);
+      const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, handleItemClick, shouldDisable, onSelectAsInput);
       
       if (preview) {
         items.push(html`

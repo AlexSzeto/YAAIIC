@@ -51,6 +51,9 @@ function App() {
   // Phase 4: History & Gallery State
   const [history, setHistory] = useState([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  
+  // Input images for img2img workflows (array of {blob, url, description})
+  const [inputImages, setInputImages] = useState([]);
 
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
@@ -87,6 +90,81 @@ function App() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
+    // Reset input images when workflow changes
+    setInputImages([]);
+  };
+  
+  // Handle image change for a specific slot
+  const handleImageChange = (index, fileOrUrl) => {
+    setInputImages(prev => {
+      const newImages = [...prev];
+      if (fileOrUrl === null) {
+        // Clear the slot
+        newImages[index] = null;
+      } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
+        // It's a file/blob - create preview URL
+        const url = URL.createObjectURL(fileOrUrl);
+        newImages[index] = { blob: fileOrUrl, url };
+      } else if (typeof fileOrUrl === 'string') {
+        // It's a URL
+        newImages[index] = { url: fileOrUrl };
+      }
+      return newImages;
+    });
+  };
+  
+  // Handle gallery selection for a specific image slot
+  const handleSelectFromGallery = (targetIndex) => {
+    // Store which slot we're targeting, then open gallery in selection mode
+    // For now, just open the gallery. The selection handling will be wired later.
+    setIsGalleryOpen(true);
+    // TODO: Pass targetIndex to gallery so it knows which slot to fill
+  };
+  
+  // Handle "Select as Input" from generated result or gallery
+  const handleSelectAsInput = async (imageData) => {
+    // Find first empty slot
+    const requiredSlots = workflow?.inputImages || 0;
+    let targetIndex = -1;
+    
+    for (let i = 0; i < requiredSlots; i++) {
+      if (!inputImages[i]) {
+        targetIndex = i;
+        break;
+      }
+    }
+    
+    if (targetIndex === -1) {
+      toast.error('All input image slots are filled');
+      return;
+    }
+    
+    try {
+      // Fetch the image as a blob if we have a URL
+      const imageUrl = imageData.imageUrl || imageData.url;
+      if (!imageUrl) {
+        toast.error('No image URL available');
+        return;
+      }
+      
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      
+      setInputImages(prev => {
+        const newImages = [...prev];
+        newImages[targetIndex] = { 
+          blob, 
+          url: imageUrl, 
+          description: imageData.description || null 
+        };
+        return newImages;
+      });
+      
+      toast.success('Image selected as input');
+    } catch (err) {
+      console.error('Failed to select image as input:', err);
+      toast.error('Failed to select image as input');
+    }
   };
   
   // Handle Generate
@@ -106,26 +184,75 @@ function App() {
       toast.error('Please enter a name');
       return;
     }
+    
+    // Validate required images
+    if (workflow.inputImages && workflow.inputImages > 0) {
+      const uploadedCount = inputImages.filter(img => img && (img.blob || img.url)).length;
+      if (uploadedCount < workflow.inputImages) {
+        toast.error(`Please select ${workflow.inputImages} input image(s)`);
+        return;
+      }
+    }
 
     try {
       setIsGenerating(true);
       
-      const requestBody = {
-        workflow: workflow.name,
-        name: formState.name,
-        description: formState.description,
-        prompt: formState.description,
-        seed: formState.seed,
-        length: formState.length,
-        framerate: formState.framerate,
-        orientation: formState.orientation
-      };
+      // Check if we have images to send
+      const hasImages = inputImages.some(img => img && img.blob);
+      
+      let response;
+      
+      if (hasImages) {
+        // Build multipart form data with uploaded images
+        const formData = new FormData();
+        formData.append('prompt', formState.description);
+        formData.append('workflow', workflow.name);
+        formData.append('seed', formState.seed);
+        
+        if (formState.name.trim()) {
+          formData.append('name', formState.name.trim());
+        }
+        
+        // Video params
+        if (workflow.type === 'video') {
+          formData.append('frames', formState.length);
+          formData.append('framerate', formState.framerate);
+          formData.append('orientation', formState.orientation);
+        }
+        
+        // Append images
+        inputImages.forEach((img, index) => {
+          if (img && img.blob) {
+            formData.append(`image_${index}`, img.blob, `image_${index}.png`);
+            if (img.description) {
+              formData.append(`image_${index}_description`, img.description);
+            }
+          }
+        });
+        
+        response = await fetchJson('/generate/image', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // No images - use JSON
+        const requestBody = {
+          workflow: workflow.name,
+          name: formState.name,
+          description: formState.description,
+          prompt: formState.description,
+          seed: formState.seed,
+          length: formState.length,
+          framerate: formState.framerate,
+          orientation: formState.orientation
+        };
 
-      const response = await fetchJson('/generate/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+        response = await fetchJson('/generate/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+      }
       
       if (response.taskId) {
         setTaskId(response.taskId);
@@ -270,6 +397,38 @@ function App() {
     setGeneratedImage(item);
   };
 
+  // Upload handler
+  const handleUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const result = await fetchJson('/api/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (result.taskId) {
+         setTaskId(result.taskId);
+         toast.show('Uploading...', 'info');
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      toast.error(err.message || 'Upload failed');
+    }
+    
+    // Reset input
+    e.target.value = '';
+  };
+
   return html`
     <div className="app-container">
       <div className="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -308,7 +467,10 @@ function App() {
           isGenerating=${isGenerating}
           onGenerate=${handleGenerate}
           onOpenGallery=${() => setIsGalleryOpen(true)}
-          onUploadClick=${() => document.getElementById('upload-btn')?.click()} 
+          onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
+          inputImages=${inputImages}
+          onImageChange=${handleImageChange}
+          onSelectFromGallery=${handleSelectFromGallery}
         />
         <!-- Note: Passed onUploadClick logic to decouple, though implementation of upload button in Form relies on ID or prop -->
       </div>
@@ -323,6 +485,7 @@ function App() {
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
+        onSelectAsInput=${handleSelectAsInput}
       />
 
       <!-- Carousel for History -->
@@ -350,6 +513,15 @@ function App() {
           }
         }}
         selectionMode=${false}
+        onSelectAsInput=${handleSelectAsInput}
+      />
+      
+      <input 
+        type="file" 
+        id="upload-file-input" 
+        style="display: none" 
+        accept="image/*"
+        onChange=${handleUploadFile}
       />
     </div>
   `;

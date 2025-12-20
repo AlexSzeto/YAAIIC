@@ -248,11 +248,15 @@
 [] **Missing features and fixes**
     1. [x] Gallery select checkboxes not available.
     2. [x] Restore Load and Delete actions in gallery.
-    3. Fix Image Preview modal styles - image should be at 100% if possible, container should display entire image - scale down if needed. Name displayed at the bottom left, within the image, action button should be at the bottom right, within the image. 
-    4. Restore functionality for Upload button.
-    5. Restore the image upload component as image select component, and put it back into the workflow form.
-    6. Investigate why the generated result is not showing on page load when session history has data.
-    7. Generated result delete action should use custom dialog for confirmation.
+    3. [x] Fix Image Preview modal styles - image should be at 100% if possible, container should display entire image - scale down if needed. Name displayed at the bottom left, within the image, action button should be at the bottom right, within the image. 
+    4. [x] Restore functionality for Upload button.
+    5. [x] Restore the image upload component as "image-select", and put it back into the workflow form. Afterwards, restore the various places (generated result select action, gallery preview image use action, etc.) that puts an image into the workflow form.
+    6. [ ] Investigate why the generated result is not showing on page load when session history has data.
+    7. [ ] Generated result delete action should use custom dialog for confirmation.
+    8. [ ] Clicking on the image in the generated result should open the image preview modal.
+    9. [ ] Added a rounded corner to the previewed image in the image preview modal, and remove the circular close button.
+    10. [ ] Remove the gallery button from the workflow form.
+    11. [ ] Fix the image upload component opening the gallery in manage mode instead of image select mode.
 
 [ ] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.

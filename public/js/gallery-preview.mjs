@@ -29,15 +29,20 @@ export class GalleryPreview extends Component {
       return;
     }
     
-    const { item } = this.props;
+    const { item, onSelectAsInput } = this.props;
     // If a custom image click handler is provided, delegate to it
     if (this.props.onImageClick) {
       this.props.onImageClick(item);
       return;
     }
     if (item.imageUrl && !this.state.imageError) {
-      // Pass item.name as title to modal
-      createImageModal(item.imageUrl, true, item.name || null);
+      // Pass item.name as title to modal, and onSelectAsInput as the select callback
+      createImageModal(
+        item.imageUrl, 
+        !!onSelectAsInput, // allowSelect only if we have a handler
+        item.name || null,
+        onSelectAsInput ? () => onSelectAsInput(item) : null
+      );
     }
   }
 
@@ -110,11 +115,19 @@ export class GalleryPreview extends Component {
 }
 
 // Factory function to create a gallery preview (for compatibility with existing code)
-export function createGalleryPreview(item, onSelect, isSelected = false, disableCheckbox = false, onImageClick = null, disabled = false) {
+export function createGalleryPreview(item, onSelect, isSelected = false, disableCheckbox = false, onImageClick = null, disabled = false, onSelectAsInput = null) {
   const container = document.createElement('div');
   
   // Render the Preact component into the container
-  render(html`<${GalleryPreview} item=${item} onSelect=${onSelect} isSelected=${isSelected} disableCheckbox=${disableCheckbox} onImageClick=${onImageClick} disabled=${disabled} />`, container);
+  render(html`<${GalleryPreview} 
+    item=${item} 
+    onSelect=${onSelect} 
+    isSelected=${isSelected} 
+    disableCheckbox=${disableCheckbox} 
+    onImageClick=${onImageClick} 
+    disabled=${disabled}
+    onSelectAsInput=${onSelectAsInput}
+  />`, container);
   
   // Return the first child element (the actual gallery item)
   return container.firstElementChild;
