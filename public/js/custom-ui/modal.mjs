@@ -169,7 +169,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
 
            ${allowSelect && onSelect && html`
              <button class="image-modal-select" onClick=${handleSelect}>
-               Use as Input
+               Use
              </button>
            `}
         </div>

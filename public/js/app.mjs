@@ -55,6 +55,9 @@ function App() {
   
   // Input images for img2img workflows (array of {blob, url, description})
   const [inputImages, setInputImages] = useState([]);
+  
+  // Gallery selection state
+  const [gallerySelectionMode, setGallerySelectionMode] = useState({ active: false, index: -1 });
 
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
@@ -115,11 +118,10 @@ function App() {
   };
   
   // Handle gallery selection for a specific image slot
+  // Handle gallery selection for a specific image slot
   const handleSelectFromGallery = (targetIndex) => {
-    // Store which slot we're targeting, then open gallery in selection mode
-    // For now, just open the gallery. The selection handling will be wired later.
+    setGallerySelectionMode({ active: true, index: targetIndex });
     setIsGalleryOpen(true);
-    // TODO: Pass targetIndex to gallery so it knows which slot to fill
   };
   
   // Handle "Select as Input" from generated result or gallery
@@ -397,10 +399,22 @@ function App() {
 
   // Gallery handlers
   const handleGallerySelect = async (item) => {
-     setGeneratedImage(item);
-     // Also ensure it's in history (if not already)
-     if (!history.find(h => h.uid === item.uid)) {
-         setHistory(prev => [item, ...prev]);
+     if (gallerySelectionMode.active) {
+         // Selection mode: Use image as input
+         const imageUrl = item.imageUrl || item.url;
+         if (imageUrl) {
+             handleImageChange(gallerySelectionMode.index, imageUrl);
+             toast.success('Image selected from gallery');
+         }
+         setIsGalleryOpen(false);
+         setGallerySelectionMode({ active: false, index: -1 });
+     } else {
+         // View mode: View generated result
+         setGeneratedImage(item);
+         // Also ensure it's in history (if not already)
+         if (!history.find(h => h.uid === item.uid)) {
+             setHistory(prev => [item, ...prev]);
+         }
      }
   };
 
@@ -515,16 +529,21 @@ function App() {
       <!-- Gallery Modal -->
       <${Gallery} 
         isOpen=${isGalleryOpen}
-        onClose=${() => setIsGalleryOpen(false)}
+        onClose=${() => {
+            setIsGalleryOpen(false);
+            setGallerySelectionMode({ active: false, index: -1 });
+        }}
         queryPath="/image-data"
         previewFactory=${createGalleryPreview}
         onSelect=${handleGallerySelect}
         onLoad=${(items) => {
           if (items && items.length > 0) {
-             handleGallerySelect(items[0]);
+             // Replace session history with loaded items
+             setHistory(items);
+             setGeneratedImage(items[0]);
           }
         }}
-        selectionMode=${false}
+        selectionMode=${gallerySelectionMode.active}
         onSelectAsInput=${handleSelectAsInput}
       />
       

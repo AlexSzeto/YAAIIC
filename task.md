@@ -255,9 +255,16 @@
     7. [x] Generated result delete action should use custom dialog for confirmation.
     8. [x] Clicking on the image in the generated result should open the image preview modal.
     9. [x] Added a rounded corner to the previewed image in the image preview modal, and remove the circular close button.
-    10. [ ] Remove the gallery button from the workflow form.
-    11. [ ] Fix the image upload component opening the gallery in manage mode instead of image select mode.
-    12. [ ] Fix the gallery load button not working as intended - if images are selected, load them into "session history" for viewing. If no images are selected, load all valid search results into "session history" for viewing.
+    10. [x] Remove the gallery button from the workflow form.
+    11. [x] Fix the image upload component opening the gallery in manage mode instead of image select mode. Thus completely breaking the current flow for selecting an image from the gallery.
+    - additional context: Let me reiterate the three different ways a gallery can load and replace image(s) into the session history:
+      a. use load action without selecting any image, in which case the session history should be replaced by all images currently matching the search query in the gallery
+      b. use load action while one or more images are selected via the checkbox, in which case only the selected images would go into the list that replaces the session history.
+      c. open an image preview gallery and trigger the use action (currently mislabeled as "use as input"), which would replace the entire list in the session history with that single image in the preview.
+
+    12. [x] Fix the gallery load button not working as intended - if images are selected, load them into "session history" for viewing. If no images are selected, load all valid search results into "session history" for viewing.
+    13. [ ] Perform the following fixes for the image upload component: rename it as `image-select` (and change the class name to `ImageSelect`), and move it to `custom-ui/image-select.mjs`. Remove the phrase "From Gallery" and the "Or upload from device" buttons.
+    14. [ ] Update the upload dialog to only allow one file, with the proper image format, to be uploaded.
 
 [ ] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.

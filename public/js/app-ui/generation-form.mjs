@@ -134,15 +134,7 @@ export function GenerationForm({
           ${isGenerating ? 'Generating...' : 'Generate'}
         <//>
 
-        <${Button} 
-          variant="primary"
-          className="gallery-btn"
-          icon="image"
-          title="Gallery"
-          onClick=${onOpenGallery || (() => document.getElementById('gallery-btn')?.click())}
-        >
-          Gallery
-        <//>
+
 
         <${Button} 
           variant="primary"
