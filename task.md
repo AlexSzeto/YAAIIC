@@ -263,8 +263,8 @@
       c. open an image preview gallery and trigger the use action (currently mislabeled as "use as input"), which would replace the entire list in the session history with that single image in the preview.
 
     12. [x] Fix the gallery load button not working as intended - if images are selected, load them into "session history" for viewing. If no images are selected, load all valid search results into "session history" for viewing.
-    13. [ ] Perform the following fixes for the image upload component: rename it as `image-select` (and change the class name to `ImageSelect`), and move it to `custom-ui/image-select.mjs`. Remove the phrase "From Gallery" and the "Or upload from device" buttons.
-    14. [ ] Update the upload dialog to only allow one file, with the proper image format, to be uploaded.
+    13. [x] Perform the following fixes for the image upload component: rename it as `image-select` (and change the class name to `ImageSelect`), and move it to `custom-ui/image-select.mjs`. Remove the phrase "From Gallery" and the "Or upload from device" buttons.
+    14. [x] Update the upload dialog to only allow one file, with the proper image format, to be uploaded.
 
 [ ] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.
