@@ -544,6 +544,7 @@ function App() {
           }
         }}
         selectionMode=${gallerySelectionMode.active}
+        fileTypeFilter=${gallerySelectionMode.active ? 'image' : null}
         onSelectAsInput=${handleSelectAsInput}
       />
       
