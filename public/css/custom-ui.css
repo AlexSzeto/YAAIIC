@@ -650,15 +650,16 @@
   justify-content: center;
 }
 
-.image-modal-autoscale {
+.image-modal-autoscale,
+.image-modal-preview {
   display: block;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow-color-strong);
 }
 
 .image-modal-original {
   display: block;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow-color-strong);
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { Button } from '../custom-ui/button.mjs';
 import { sendToClipboard } from '../util.mjs';
+import { createImageModal } from '../custom-ui/modal.mjs';
 
 export function GeneratedResult({ 
   image, 
@@ -52,7 +53,7 @@ export function GeneratedResult({
             alt=${image.name || 'Generated Image'} 
             className="generated-image"
             style="cursor: pointer;"
-            onClick=${() => window.open(image.imageUrl, '_blank')}
+            onClick=${() => createImageModal(image.imageUrl, true, image.name)}
           />
         </div>
 

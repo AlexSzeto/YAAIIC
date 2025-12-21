@@ -152,17 +152,12 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
         onClick=${handleOverlayClick}
       >
         <div class="image-modal-container">
-           <button 
-             class="image-modal-close" 
-             onClick=${close}
-             aria-label="Close"
-           >
-             <box-icon name='x' color='var(--dark-text-primary)'></box-icon>
-           </button>
+
 
            <img 
              src=${imageUrl} 
              alt=${title || 'Preview'} 
+             class="image-modal-preview"
              style="max-width: 100%; max-height: calc(100vh - 60px); display: block; object-fit: contain;" 
            />
            

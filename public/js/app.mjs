@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { ToastProvider, useToast } from './custom-ui/toast.mjs';
+import { Modal } from './custom-ui/modal.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
 import { GeneratedResult } from './app-ui/generated-result.mjs';
@@ -66,11 +67,11 @@ function App() {
         }, 100);
 
         // Load recent history
-        const recent = await fetchJson('/image-data?limit=20');
+        const recent = await fetchJson('/image-data?limit=10');
         if (Array.isArray(recent)) {
           setHistory(recent);
-          // Optionally set the first image as current?
-          // if (recent.length > 0 && !generatedImage) setGeneratedImage(recent[0]);
+          // Optionally set the first image as current
+          if (recent.length > 0 && !generatedImage) setGeneratedImage(recent[0]);
         }
       } catch (err) {
         console.error('Failed to initialize app:', err);
@@ -323,8 +324,17 @@ function App() {
     toast.show('Description copied');
   };
   
-  const handleDeleteImage = async (image) => {
-    if (!confirm(`Are you sure you want to delete "${image.name}"?`)) return;
+  // Delete confirmation state
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, image: null });
+
+  const handleDeleteImage = (image) => {
+    setDeleteModalState({ isOpen: true, image });
+  };
+
+  const handleConfirmDelete = async () => {
+    const image = deleteModalState.image;
+    if (!image) return;
+
     try {
       await fetchJson('/image-data/delete', {
         method: 'DELETE',
@@ -343,6 +353,8 @@ function App() {
       toast.success('Image deleted');
     } catch (err) {
       toast.error(err.message || 'Failed to delete image');
+    } finally {
+      setDeleteModalState({ isOpen: false, image: null });
     }
   };
   
@@ -523,6 +535,32 @@ function App() {
         accept="image/*"
         onChange=${handleUploadFile}
       />
+      
+      <!-- Delete Confirmation Modal -->
+      <${Modal}
+        isOpen=${deleteModalState.isOpen}
+        onClose=${() => setDeleteModalState({ isOpen: false, image: null })}
+        title="Confirm Deletion"
+        size="small"
+        footer=${html`
+          <${Button} 
+            variant="secondary" 
+            onClick=${() => setDeleteModalState({ isOpen: false, image: null })}
+          >
+            Cancel
+          <//>
+          <${Button} 
+            variant="danger" 
+            onClick=${handleConfirmDelete}
+            icon="trash"
+          >
+            Delete
+          <//>
+        `}
+      >
+        <p>Are you sure you want to delete <strong>"${deleteModalState.image?.name || 'this image'}"</strong>?</p>
+        <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 10px;">This action cannot be undone.</p>
+      <//>
     </div>
   `;
 }
