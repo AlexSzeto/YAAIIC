@@ -11,8 +11,9 @@ import { Checkbox } from '../custom-ui/checkbox.mjs';
  * @param {Function} props.setSeed - Callback to update seed: (newSeed) => void
  * @param {boolean} props.locked - Whether seed is locked
  * @param {Function} props.setLocked - Callback to update lock state: (isLocked) => void
+ * @param {boolean} [props.disabled=false] - Whether the control is disabled
  */
-export function SeedControl({ seed, setSeed, locked, setLocked }) {
+export function SeedControl({ seed, setSeed, locked, setLocked, disabled = false }) {
   
   const handleSeedChange = (e) => {
     const value = parseInt(e.target.value, 10);
@@ -33,6 +34,7 @@ export function SeedControl({ seed, setSeed, locked, setLocked }) {
       max="4294967295"
       value=${seed}
       onChange=${handleSeedChange}
+      disabled=${disabled}
     />
     
     <div style="margin-bottom: 6px;">
@@ -40,7 +42,9 @@ export function SeedControl({ seed, setSeed, locked, setLocked }) {
         label="Lock seed"
         checked=${locked}
         onChange=${handleLockChange}
+        disabled=${disabled}
       />
     </div>
   `;
 }
+

@@ -69,6 +69,9 @@ function App() {
   // Input images for img2img workflows (array of {blob, url, description})
   const [inputImages, setInputImages] = useState([]);
   
+  // All available workflows (for lookup)
+  const [workflows, setWorkflows] = useState([]);
+  
   // Gallery selection state
   const [gallerySelectionMode, setGallerySelectionMode] = useState({ active: false, index: -1 });
 
@@ -81,6 +84,15 @@ function App() {
              initAutoComplete();
              console.log('Autocomplete initialized in App V2');
         }, 100);
+
+        // Load workflows for lookup
+        const workflowData = await fetchJson('/generate/workflows');
+        if (Array.isArray(workflowData)) {
+          const imageVideoWorkflows = workflowData.filter(
+            w => w.type === 'image' || w.type === 'video'
+          );
+          setWorkflows(imageVideoWorkflows);
+        }
 
         // Load recent history
         const recent = await fetchJson('/image-data?limit=10');
@@ -325,8 +337,14 @@ function App() {
   };
 
   const handleUseWorkflow = (wfName) => {
-     setWorkflow(wfName);
-     toast.show(`Workflow set to ${wfName}`);
+     // Look up full workflow object by name
+     const wf = workflows.find(w => w.name === wfName);
+     if (wf) {
+       setWorkflow(wf);
+       toast.show(`Workflow set to ${wfName}`);
+     } else {
+       toast.error(`Workflow '${wfName}' not found`);
+     }
   };
 
   const handleUseName = (name) => {
@@ -358,11 +376,20 @@ function App() {
       });
       
       // Remove from history
-      setHistory(prev => prev.filter(item => item.uid !== image.uid));
+      const newHistory = history.filter(item => item.uid !== image.uid);
+      setHistory(newHistory);
       
-      // If deleted image was current, clear it or pick next
+      // If deleted image was current, pick next available from history
       if (generatedImage && generatedImage.uid === image.uid) {
-        setGeneratedImage(null);
+        if (newHistory.length > 0) {
+          // Find original index of deleted item
+          const deletedIndex = history.findIndex(item => item.uid === image.uid);
+          // Pick next item, or previous if deleted was last
+          const nextIndex = Math.min(deletedIndex, newHistory.length - 1);
+          setGeneratedImage(newHistory[nextIndex]);
+        } else {
+          setGeneratedImage(null);
+        }
       }
 
       toast.success('Image deleted');
@@ -497,6 +524,7 @@ function App() {
         <${WorkflowSelector}
           value=${workflow}
           onChange=${handleWorkflowChange}
+          disabled=${isGenerating}
         />
         
         <${GenerationForm}

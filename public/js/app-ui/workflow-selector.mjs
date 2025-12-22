@@ -10,8 +10,9 @@ import { fetchJson } from '../util.mjs';
  * @param {Object} props
  * @param {Object|null} props.value - Selected workflow object
  * @param {Function} props.onChange - Callback when workflow changes (workflow) => void
+ * @param {boolean} [props.disabled=false] - Whether the selector is disabled
  */
-export function WorkflowSelector({ value, onChange }) {
+export function WorkflowSelector({ value, onChange, disabled = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -74,7 +75,7 @@ export function WorkflowSelector({ value, onChange }) {
       options=${options}
       value=${value?.name || ''}
       onChange=${handleChange}
-      disabled=${loading}
+      disabled=${loading || disabled}
       error=${error}
       fullWidth=${true}
     />

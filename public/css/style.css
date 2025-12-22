@@ -121,6 +121,14 @@ p {
   box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
+.form-group input:disabled,
+.form-group select:disabled {
+  background-color: var(--dark-background-tertiary);
+  border-color: var(--dark-border-secondary);
+  color: var(--dark-text-muted);
+  opacity: 0.6;
+}
+
 /* Shared Checkbox Styles */
 .shared-checkbox {
   width: auto;
@@ -258,6 +266,12 @@ p {
 .workflow-controls .upload-btn:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.workflow-controls .upload-btn:disabled {
+  background-color: var(--dark-background-disabled);
+  color: var(--dark-text-muted);
+  opacity: 0.6;
 }
 
 /* AutoComplete styling for dark mode */

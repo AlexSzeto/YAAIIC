@@ -19,11 +19,10 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 
-.image-modal-scaled {
-  /* No extra styles, just a marker for JS */
-}
+.image-modal-scaled,
 .image-modal-original-size {
-  /* No extra styles, just a marker for JS */
+  /* JS markers - no visual styles needed */
+  display: block;
 }
 .image-modal-overflow-visible {
   overflow: visible !important;

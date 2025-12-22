@@ -68,6 +68,7 @@ export function GenerationForm({
             placeholder="Enter name"
             value=${formState.name || ''}
             onChange=${handleChange('name')}
+            disabled=${isGenerating}
           />
         </div>
 
@@ -76,6 +77,7 @@ export function GenerationForm({
           setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
           locked=${formState.seedLocked || false}
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
+          disabled=${isGenerating}
         />
       </div>
 
@@ -88,6 +90,7 @@ export function GenerationForm({
             min="1"
             value=${formState.length || 25}
             onChange=${handleChange('length')}
+            disabled=${isGenerating}
           />
           
           <${Input}
@@ -98,6 +101,7 @@ export function GenerationForm({
             step="1"
             value=${formState.framerate || 20}
             onChange=${handleChange('framerate')}
+            disabled=${isGenerating}
           />
           
           <${Select}
@@ -108,6 +112,7 @@ export function GenerationForm({
             ]}
             value=${formState.orientation || 'portrait'}
             onChange=${handleChange('orientation')}
+            disabled=${isGenerating}
           />
         </div>
       `}
@@ -120,6 +125,7 @@ export function GenerationForm({
         placeholder="Enter your text here..."
         value=${formState.description || ''}
         onChange=${handleChange('description')}
+        disabled=${isGenerating}
       />
 
       <!-- Row 3: Image Upload -->
@@ -160,6 +166,7 @@ export function GenerationForm({
           icon="upload"
           title="Upload Image"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
+          disabled=${isGenerating}
         >
           Upload
         <//>

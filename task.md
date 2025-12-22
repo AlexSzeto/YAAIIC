@@ -271,11 +271,15 @@
     18. [x] There is currently an issue with video generation where either no image is being sent, or the image that is sent is incorrect. Verify that the following safeguards are in place on the server side: if the workflow requires images and the number of images sent is less than the number of images required, reject the request. If this check is missing, implement it.
     19. [x] Restore all verification logic for disabling the generate button: if a name is required and no name is provided, disable the generate button. if a prompt is required and no prompt is provided, disable the generate button. if an image is required and no image is provided, disable the generate button.
     20. [x] Fix the client side video frame number normalization logic (Normalize frame count to (n * 4) + 1 sequence).
-    21. [] Unify the components used for the generated results UI and use the custom button component.
+    21. [x] Unify the components used for the generated results UI and use the custom button component.
     22. [x] Remove the white backgrounded button style from custom button component, and refactor all white buttons to be gray instead.
-    23. [] Restore the logic to disable the workflow form, and disable the upload button, while the generation is in progress.
-    24. [] When an image is deleted but the session history is not empty, move the generated result in view to the next available item.
-    25. [] Fix the use workflow action from the generated result UI not working as intended.
+    23. [x] Restore the logic to disable the workflow form, and disable the upload button, while the generation is in progress.
+    24. [x] When an image is deleted but the session history is not empty, move the generated result in view to the next available item.
+    25. [x] Fix the use workflow action from the generated result UI not working as intended.
+    26. [x] Add disabled css style for select, name input, and seed input. Use the disabled style applied to the text area (prompt/description) as reference.
+    27. [x] Disable workflow selection, and disable the upload button, while the generation is in progress.
+    28. [] Fix the icon button colors for deselecting or reselecting images. If they are currently not using the custom button component, use the custom button component.
+    
 
 [x] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.
