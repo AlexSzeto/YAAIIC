@@ -209,37 +209,47 @@ function InfoField({
         <label className="info-label">${label}:</label>
         <div className="info-buttons">
           ${!isEditing ? html`
-            <button 
-              className="info-btn copy-btn" 
-              onClick=${onCopy} 
-              title="Copy ${label}" 
+            <${Button}
+              variant="icon"
+              className="copy-btn"
+              icon="copy"
+              onClick=${onCopy}
+              title="Copy ${label}"
               disabled=${!onCopy}
-            >
-              <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
-            </button>
-            <button 
-              className="info-btn use-btn" 
-              onClick=${onUse} 
-              title=${useTitle || `Use ${label}`} 
+            />
+            <${Button}
+              variant="icon"
+              className="use-btn"
+              icon="up-arrow-circle"
+              onClick=${onUse}
+              title=${useTitle || `Use ${label}`}
               disabled=${!onUse}
-            >
-              <box-icon name='up-arrow-circle' color='#ffffff' size='16px'></box-icon>
-            </button>
-            <button 
-              className="info-btn edit-btn" 
-              onClick=${canEdit ? handleEditClick : null} 
+            />
+            <${Button}
+              variant="icon"
+              className="edit-btn"
+              icon="pencil"
+              onClick=${canEdit ? handleEditClick : null}
               title="Edit"
               disabled=${!canEdit}
-            >
-              <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
-            </button>
+            />
           ` : html`
-             <button className="info-btn confirm-edit-btn" onClick=${handleSaveClick} title="Save" style="background-color: #28a745;">
-               <box-icon name='check' color='#ffffff' size='16px'></box-icon>
-             </button>
-             <button className="info-btn cancel-edit-btn" onClick=${onCancel} title="Cancel" style="background-color: #dc3545;">
-               <box-icon name='x' color='#ffffff' size='16px'></box-icon>
-             </button>
+            <${Button}
+              variant="icon"
+              className="confirm-edit-btn"
+              icon="check"
+              onClick=${handleSaveClick}
+              title="Save"
+              style=${{ backgroundColor: '#28a745' }}
+            />
+            <${Button}
+              variant="icon"
+              className="cancel-edit-btn"
+              icon="x"
+              onClick=${onCancel}
+              title="Cancel"
+              style=${{ backgroundColor: '#dc3545' }}
+            />
           `}
         </div>
       </div>
