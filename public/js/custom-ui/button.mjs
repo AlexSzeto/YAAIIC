@@ -20,7 +20,6 @@ export function Button({
   disabled = false, 
   icon = null, 
   children, 
-  className = '',
   ...props 
 }) {
   const getVariantClasses = (v) => {
@@ -30,13 +29,14 @@ export function Button({
       case 'success': return 'btn-with-icon image-select-btn';
       case 'danger': return 'btn-with-icon image-delete-btn';
       case 'icon': return 'info-btn'; // Small square
+      case 'icon-danger': return 'info-btn image-select-clear-btn'; // Small square, red hover
       case 'icon-nav': return 'carousel-btn'; // Medium square
       default: return 'btn-with-icon';
     }
   };
 
   const baseClass = getVariantClasses(variant);
-  const classes = `${baseClass} ${className}`.trim();
+  const classes = baseClass.trim();
 
   // Determine icon size based on variant
   const iconSize = variant === 'icon' ? '16px' : (variant === 'icon-nav' ? '24px' : undefined);

@@ -113,18 +113,16 @@ export function ImageSelect({
           <!-- Overlay Buttons -->
           <div class="image-select-overlay">
             <${Button}
-              variant="icon"
+              variant="icon-danger"
               icon="x"
               onClick=${handleClearClick}
               title="Clear image"
-              className="image-select-clear-btn"
             />
             <${Button}
               variant="icon"
               icon="image"
               onClick=${handleReplaceClick}
               title="Replace image"
-              className="image-select-replace-btn"
               style=${{ marginRight: '8px' }}
             />
           </div>

@@ -141,7 +141,7 @@ export function GeneratedResult({
 
       <div className="image-action-container">
         <${Button} 
-          className="image-select-btn"
+          variant="success"
           icon="check-circle"
           onClick=${() => onSelectAsInput && onSelectAsInput(image)}
           disabled=${!onSelectAsInput || isSelectDisabled}
@@ -150,7 +150,7 @@ export function GeneratedResult({
           Select
         <//>
         <${Button} 
-          className="image-inpaint-btn" 
+          variant="primary" 
           icon="image"
           onClick=${() => onInpaint && onInpaint(image)}
           disabled=${!image.uid || !onInpaint}
@@ -159,7 +159,7 @@ export function GeneratedResult({
           Inpaint
         <//>
         <${Button} 
-          className="image-delete-btn"
+          variant="danger"
           icon="trash"
           onClick=${() => onDelete && onDelete(image)}
           disabled=${!image.uid || !onDelete}
@@ -211,7 +211,6 @@ function InfoField({
           ${!isEditing ? html`
             <${Button}
               variant="icon"
-              className="copy-btn"
               icon="copy"
               onClick=${onCopy}
               title="Copy ${label}"
@@ -219,7 +218,6 @@ function InfoField({
             />
             <${Button}
               variant="icon"
-              className="use-btn"
               icon="up-arrow-circle"
               onClick=${onUse}
               title=${useTitle || `Use ${label}`}
@@ -227,7 +225,6 @@ function InfoField({
             />
             <${Button}
               variant="icon"
-              className="edit-btn"
               icon="pencil"
               onClick=${canEdit ? handleEditClick : null}
               title="Edit"
@@ -236,19 +233,17 @@ function InfoField({
           ` : html`
             <${Button}
               variant="icon"
-              className="confirm-edit-btn"
               icon="check"
               onClick=${handleSaveClick}
               title="Save"
-              style=${{ backgroundColor: '#28a745' }}
+              style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
             />
             <${Button}
               variant="icon"
-              className="cancel-edit-btn"
               icon="x"
               onClick=${onCancel}
               title="Cancel"
-              style=${{ backgroundColor: '#dc3545' }}
+              style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
             />
           `}
         </div>

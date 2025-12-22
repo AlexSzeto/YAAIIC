@@ -280,7 +280,7 @@
     27. [x] Disable workflow selection, and disable the upload button, while the generation is in progress.
     28. [x] Fix the icon button colors for deselecting or reselecting images. If they are currently not using the custom button component, use the custom button component.
     29. [x] Fix the bug where selecting an image through the gallery selection mode puts the preview image into the component but fails to update the form with the correct image, causing the generation to fail.
-    30. [] Remove the need to use the class name attribute to assign styles to the button component instances, and fit it into one of the existing variants instead.
+    30. [/] Remove the need to use the class name attribute to assign styles to the button component instances, and fit it into one of the existing variants instead.
 
 [x] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.

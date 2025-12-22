@@ -149,7 +149,6 @@ export function GenerationForm({
       <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-start;">
         <${Button} 
           variant="primary"
-          className="generate-button"
           icon="play"
           onClick=${onGenerate}
           loading=${isGenerating}
@@ -162,7 +161,6 @@ export function GenerationForm({
 
         <${Button} 
           variant="primary"
-          className="upload-btn"
           icon="upload"
           title="Upload Image"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
