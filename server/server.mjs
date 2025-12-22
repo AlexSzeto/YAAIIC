@@ -273,6 +273,17 @@ app.post('/generate/image', upload.any(), async (req, res) => {
     req.body.savePath = path.join(storageFolder, filename);
     
     // Handle file uploads if workflow specifies them
+    // First, validate that required images are provided
+    const requiredImages = workflowData.inputImages || 0;
+    const uploadedImages = req.files ? req.files.length : 0;
+    
+    if (requiredImages > 0 && uploadedImages < requiredImages) {
+      console.log(`Workflow '${workflow}' requires ${requiredImages} image(s), but only ${uploadedImages} were provided`);
+      return res.status(400).json({ 
+        error: `Workflow requires ${requiredImages} input image(s), but only ${uploadedImages} were provided` 
+      });
+    }
+    
     if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
       try {
         console.log('Processing uploaded images for image workflow...');

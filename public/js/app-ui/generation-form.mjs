@@ -37,6 +37,24 @@ export function GenerationForm({
   };
 
   const isVideoWorkflow = workflow?.type === 'video';
+  
+  // Compute whether generate button should be disabled
+  const isGenerateDisabled = (() => {
+    // Disabled while generating
+    if (isGenerating) return true;
+    // Disabled if no workflow selected
+    if (!workflow) return true;
+    // Disabled if name is required but not provided
+    if (workflow.nameRequired && !formState.name?.trim()) return true;
+    // Disabled if prompt is required but not provided
+    if (!workflow.optionalPrompt && !formState.description?.trim()) return true;
+    // Disabled if images are required but not all provided
+    if (workflow.inputImages && workflow.inputImages > 0) {
+      const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
+      if (filledCount < workflow.inputImages) return true;
+    }
+    return false;
+  })();
 
   return html`
     <div class="generation-form" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
@@ -129,7 +147,7 @@ export function GenerationForm({
           icon="play"
           onClick=${onGenerate}
           loading=${isGenerating}
-          disabled=${isGenerating || !workflow}
+          disabled=${isGenerateDisabled}
         >
           ${isGenerating ? 'Generating...' : 'Generate'}
         <//>
