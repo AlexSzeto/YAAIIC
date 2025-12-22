@@ -266,11 +266,11 @@
     13. [x] Perform the following fixes for the image upload component: rename it as `image-select` (and change the class name to `ImageSelect`), and move it to `custom-ui/image-select.mjs`. Remove the phrase "From Gallery" and the "Or upload from device" buttons.
     14. [x] Update the upload dialog to only allow one file, with the proper image format, to be uploaded.
     15. [x] Restore the gating for image selection where video (webp, webm, mp4, etc.) file types in the gallery are disabled from selection. Apply a fade or greyout similar to v1 of the implementation.
-    16. [ ] Restore the logic to disable the select button in the generated result preview modal when the image is not an image (e.g. video). Also disable the button when all of the images required to be selected are already selected.
+    16. [x] Restore the logic to disable the select button in the generated result preview modal when the image is not an image (e.g. video). Also disable the button when all of the images required to be selected are already selected.
     17. [ ] The icon button, when disabled, has different colors for the icon and the button. Fix the coloring so they are the same (use the slightly brighter icon color).
     18. [] There is currently an issue with video generation where either no image is being sent, or the image that is sent is incorrect. Verify that the following safeguards are in place on the server side: if the workflow requires images and the number of images sent is less than the number of images required, reject the request. If this check is missing, implement it.
     19. [] Restore all verification logic for disabling the generate button: if a name is required and no name is provided, disable the generate button. if a prompt is required and no prompt is provided, disable the generate button. if an image is required and no image is provided, disable the generate button.
-    
+    20. [] Fix the client side video frame number normalization logic (Normalize frame count to (n * 4) + 1 sequence).
 
 [ ] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.

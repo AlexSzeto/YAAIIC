@@ -14,7 +14,8 @@ export function GeneratedResult({
   onDelete,
   onInpaint,
   onSelectAsInput,
-  onEdit
+  onEdit,
+  isSelectDisabled = false
 }) {
   if (!image) return null;
 
@@ -143,7 +144,7 @@ export function GeneratedResult({
           className="image-select-btn"
           icon="check-circle"
           onClick=${() => onSelectAsInput && onSelectAsInput(image)}
-          disabled=${!onSelectAsInput}
+          disabled=${!onSelectAsInput || isSelectDisabled}
           title="Use this image as input"
         >
           Select

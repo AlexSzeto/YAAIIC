@@ -512,6 +512,18 @@ function App() {
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
         onSelectAsInput=${handleSelectAsInput}
+        isSelectDisabled=${(() => {
+          // Disable if no workflow or workflow doesn't need images
+          if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
+          // Disable if the image is a video file
+          const imageUrl = generatedImage?.imageUrl || '';
+          const isVideo = /\.(webm|mp4|webp|gif)$/i.test(imageUrl);
+          if (isVideo) return true;
+          // Disable if all slots are filled
+          const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
+          if (filledCount >= workflow.inputImages) return true;
+          return false;
+        })()}
       />
 
       <!-- Carousel for History -->
