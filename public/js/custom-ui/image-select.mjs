@@ -1,6 +1,7 @@
 import { html } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { createImageModal } from './modal.mjs';
+import { Button } from './button.mjs';
 
 /**
  * ImageSelect Component (formerly ImageUpload)
@@ -76,6 +77,15 @@ export function ImageSelect({
     if (onChange) onChange(null);
   };
 
+  const handleReplaceClick = (e) => {
+    e.stopPropagation();
+    if (onSelectFromGallery) {
+      onSelectFromGallery();
+    } else {
+      fileInputRef.current.click();
+    }
+  };
+
   return html`
     <div class="image-select-component">
       ${label && html`<label class="input-label">${label}</label>`}
@@ -102,21 +112,21 @@ export function ImageSelect({
           
           <!-- Overlay Buttons -->
           <div class="image-select-overlay">
-            <button 
-              class="image-select-btn image-select-clear-btn"
+            <${Button}
+              variant="icon"
+              icon="x"
               onClick=${handleClearClick}
               title="Clear image"
-            >
-              <box-icon name='x' color='#ffffff' size='20px'></box-icon>
-            </button>
-            <button
-               class="image-select-btn image-select-replace-btn"
-               onClick=${(e) => { e.stopPropagation(); if(onSelectFromGallery) onSelectFromGallery(); else fileInputRef.current.click(); }}
-               title="Replace image"
-               style="margin-right: 8px;"
-            >
-               <box-icon name='image' color='#ffffff' size='20px'></box-icon>
-            </button>
+              className="image-select-clear-btn"
+            />
+            <${Button}
+              variant="icon"
+              icon="image"
+              onClick=${handleReplaceClick}
+              title="Replace image"
+              className="image-select-replace-btn"
+              style=${{ marginRight: '8px' }}
+            />
           </div>
         ` : html`
           <!-- Empty State -->

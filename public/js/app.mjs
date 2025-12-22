@@ -443,8 +443,26 @@ function App() {
          // Selection mode: Use image as input
          const imageUrl = item.imageUrl || item.url;
          if (imageUrl) {
-             handleImageChange(gallerySelectionMode.index, imageUrl);
-             toast.success('Image selected from gallery');
+             try {
+                 // Fetch the image as a blob so it can be sent to the server
+                 const response = await fetch(imageUrl);
+                 const blob = await response.blob();
+                 
+                 setInputImages(prev => {
+                     const newImages = [...prev];
+                     newImages[gallerySelectionMode.index] = { 
+                         blob, 
+                         url: imageUrl, 
+                         description: item.description || null 
+                     };
+                     return newImages;
+                 });
+                 
+                 toast.success('Image selected from gallery');
+             } catch (err) {
+                 console.error('Failed to fetch image from gallery:', err);
+                 toast.error('Failed to select image from gallery');
+             }
          }
          setIsGalleryOpen(false);
          setGallerySelectionMode({ active: false, index: -1 });
