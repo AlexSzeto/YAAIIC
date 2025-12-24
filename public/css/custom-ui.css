@@ -894,6 +894,15 @@
   display: inline-block;
 }
 
+/* Match .form-group label styling */
+.input-label {
+  display: block;
+  color: var(--dark-text-secondary);
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
 .image-select-area {
   width: 150px;
   height: 150px;
@@ -977,7 +986,7 @@
 
 
 
-.image-select-clear-btn:hover {
+.btn-icon-danger:hover {
   background-color: var(--danger-background);
   border-color: var(--danger-border-hover);
 }

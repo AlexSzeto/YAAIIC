@@ -212,28 +212,29 @@ p {
   margin-top: 10px;
 }
 
-/* Generate Button Styling */
-.generate-button {
+/* Primary Button Styling */
+.btn-primary {
   background-color: var(--primary-background);
   color: white;
+  border-color: var(--primary-background);
 }
 
-.generate-button:hover {
+.btn-primary:hover {
   background-color: var(--primary-hover);
 }
 
-.generate-button:disabled {
+.btn-primary:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
   cursor: default;
 }
 
-.generate-button:disabled:hover {
+.btn-primary:disabled:hover {
   background-color: var(--dark-background-tertiary);
 }
 
-.generate-button:focus {
+.btn-primary:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
@@ -620,30 +621,30 @@ p {
   align-items: center;
 }
 
-.image-delete-btn {
+.btn-danger {
   background-color: var(--danger-background);
   color: white;
   border: 1px solid var(--danger-border);
 }
 
-.image-delete-btn:hover {
+.btn-danger:hover {
   background-color: var(--danger-hover);
   border-color: var(--danger-border-hover);
 }
 
-.image-delete-btn:focus {
+.btn-danger:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--danger-focus);
 }
 
-.image-delete-btn:disabled {
+.btn-danger:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
   cursor: default;
 }
 
-.image-delete-btn:disabled:hover {
+.btn-danger:disabled:hover {
   background-color: var(--dark-background-tertiary);
 }
 
@@ -669,7 +670,7 @@ p {
   gap: 10px;
 }
 
-.carousel-btn {
+.btn-icon-nav {
   background-color: var(--dark-background-card);
   border: 1px solid var(--dark-border-focus);
   border-radius: 4px;
@@ -683,27 +684,27 @@ p {
   height: 36px;
 }
 
-.carousel-btn:hover {
+.btn-icon-nav:hover {
   background-color: var(--dark-background-hover);
 }
 
-.carousel-btn:active {
+.btn-icon-nav:active {
   background-color: var(--dark-background-tertiary);
 }
 
-.carousel-btn:focus {
+.btn-icon-nav:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
-.carousel-btn:disabled {
+.btn-icon-nav:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   cursor: default;
   opacity: 0.6;
 }
 
-.carousel-btn:disabled:hover {
+.btn-icon-nav:disabled:hover {
   background-color: var(--dark-background-tertiary);
 }
 

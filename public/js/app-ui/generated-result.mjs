@@ -54,7 +54,7 @@ export function GeneratedResult({
             alt=${image.name || 'Generated Image'} 
             className="generated-image"
             style="cursor: pointer;"
-            onClick=${() => createImageModal(image.imageUrl, true, image.name)}
+            onClick=${() => createImageModal(image.imageUrl, true)}
           />
         </div>
 

@@ -323,12 +323,8 @@ function InpaintApp() {
 
   // Handle done button
   const handleDone = () => {
-    let returnUrl = '/';
-    if (imageData?.uid) {
-      returnUrl = `/?uid=${imageData.uid}`;
-    }
-    console.log('Navigating back to main page:', returnUrl);
-    window.location.href = returnUrl;
+    console.log('Navigating back to main page');
+    window.location.href = '/';
   };
 
   // Handle carousel selection

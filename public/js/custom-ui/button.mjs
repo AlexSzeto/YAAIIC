@@ -24,13 +24,13 @@ export function Button({
 }) {
   const getVariantClasses = (v) => {
     switch (v) {
-      case 'primary': return 'btn-with-icon generate-button';
+      case 'primary': return 'btn-with-icon btn-primary';
       case 'secondary': return 'btn-with-icon'; // Default gray style
       case 'success': return 'btn-with-icon btn-success';
-      case 'danger': return 'btn-with-icon image-delete-btn';
+      case 'danger': return 'btn-with-icon btn-danger';
       case 'icon': return 'info-btn'; // Small square
-      case 'icon-danger': return 'info-btn image-select-clear-btn'; // Small square, red hover
-      case 'icon-nav': return 'carousel-btn'; // Medium square
+      case 'icon-danger': return 'info-btn btn-icon-danger'; // Small square, red hover
+      case 'icon-nav': return 'btn-icon-nav'; // Medium square
       default: return 'btn-with-icon';
     }
   };

@@ -230,7 +230,7 @@
       "inputImages": 2,
       "preGenerationTasks": [
         {
-          "model": "gemma3:4b",
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
           "to": "prompt",
           "replaceBlankFieldOnly": true
@@ -330,7 +330,7 @@
       "inputImages": 1,
       "preGenerationTasks": [
         {
-          "model": "gemma3:4b",
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
           "to": "prompt",
           "replaceBlankFieldOnly": true
@@ -410,7 +410,7 @@
       "optionalPrompt": true,
       "preGenerationTasks": [
         {
-          "model": "gemma3:4b",
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
           "to": "prompt",
           "replaceBlankFieldOnly": true
