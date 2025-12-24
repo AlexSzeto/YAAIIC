@@ -12,6 +12,7 @@ import { sseManager } from './sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
+import { Button } from './custom-ui/button.mjs';
 
 /**
  * Helper function to generate random seed
@@ -355,6 +356,13 @@ function InpaintApp() {
     <div class="app-container">
       <div class="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">Inpaint V2</small></h1>
+        <${Button}
+          icon="home"
+          onClick=${handleDone}
+          title="Return to main page"
+        >
+          Home
+        <//>
       </div>
       
       ${taskId ? html`
@@ -369,46 +377,51 @@ function InpaintApp() {
         </div>
       ` : null}
       
-      <div class="workflow-controls">
-        <${WorkflowSelector}
-          value=${workflow}
-          onChange=${handleWorkflowChange}
-          disabled=${isGenerating}
-          filterType="inpaint"
-        />
+      <!-- Main layout: Canvas left, Form right on wide screens -->
+      <div class="inpaint-main-layout">
+        <!-- Inpaint Canvas Area -->
+        <div class="inpaint-canvas-panel content-container">
+          ${loading && html`
+            <p>Loading image for inpainting...</p>
+          `}
+          
+          ${error && html`
+            <p>${error}</p>
+          `}
+          
+          ${!loading && !error && imageData?.imageUrl && html`
+            <${InpaintCanvas}
+              imageUrl=${imageData.imageUrl}
+              inpaintArea=${inpaintArea}
+              onChangeInpaintArea=${handleInpaintAreaChange}
+            />
+          `}
+          
+          ${!loading && !error && !imageData?.imageUrl && html`
+            <p>No image loaded for inpainting</p>
+          `}
+        </div>
         
-        <${InpaintForm}
-          workflow=${workflow}
-          formState=${formState}
-          onFieldChange=${handleFieldChange}
-          isGenerating=${isGenerating}
-          onGenerate=${handleGenerate}
-          onDone=${handleDone}
-          hasValidInpaintArea=${hasValidInpaintArea}
-        />
-      </div>
-      
-      <!-- Inpaint Canvas Area -->
-      <div class="content-container">
-        ${loading && html`
-          <p>Loading image for inpainting...</p>
-        `}
-        
-        ${error && html`
-          <p>${error}</p>
-        `}
-        
-        ${!loading && !error && imageData?.imageUrl && html`
-          <${InpaintCanvas}
-            imageUrl=${imageData.imageUrl}
-            inpaintArea=${inpaintArea}
-            onChangeInpaintArea=${handleInpaintAreaChange}
-          />
-        `}
-        
-        ${!loading && !error && !imageData?.imageUrl && html`
-          <p>No image loaded for inpainting</p>
-        `}
+        <!-- Workflow Controls Panel -->
+        <div class="inpaint-form-panel">
+          <div class="workflow-controls inpaint-workflow-controls">
+            <${WorkflowSelector}
+              value=${workflow}
+              onChange=${handleWorkflowChange}
+              disabled=${isGenerating}
+              filterType="inpaint"
+            />
+            
+            <${InpaintForm}
+              workflow=${workflow}
+              formState=${formState}
+              onFieldChange=${handleFieldChange}
+              isGenerating=${isGenerating}
+              onGenerate=${handleGenerate}
+              hasValidInpaintArea=${hasValidInpaintArea}
+            />
+          </div>
+        </div>
       </div>
       
       <!-- Session History Carousel -->

@@ -140,7 +140,8 @@ export function Gallery({
   const handleItemClick = (item) => {
     if (!item || !item.imageUrl) return;
 
-    // Create modal with select button
+    // Create modal with select button - text changes based on mode
+    const buttonText = selectionMode ? 'Select' : 'View';
     createImageModal(item.imageUrl, true, item.name || null, () => {
       if (selectionMode && onSelect) {
         onSelect(item);
@@ -153,7 +154,7 @@ export function Gallery({
         }
         onClose();
       }
-    });
+    }, buttonText);
   };
 
   const handleItemSelect = (data, isSelected) => {
@@ -333,8 +334,8 @@ export function Gallery({
                 class="gallery-load-btn btn-with-icon"
                 onClick=${handleLoadClick}
               >
-                <box-icon name="save" color="#ffffff"></box-icon>
-                Load
+                <box-icon name="show" color="#ffffff"></box-icon>
+                View
               </button>
             `}
             <button 

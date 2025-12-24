@@ -19,6 +19,7 @@ export function Button({
   loading = false, 
   disabled = false, 
   icon = null, 
+  className = '',
   children, 
   ...props 
 }) {
@@ -36,7 +37,8 @@ export function Button({
   };
 
   const baseClass = getVariantClasses(variant);
-  const classes = baseClass.trim();
+  // Combine variant classes with any additional className prop
+  const classes = className ? `${baseClass} ${className}`.trim() : baseClass;
 
   // Determine icon size based on variant
   const iconSize = variant === 'icon' ? '16px' : (variant === 'icon-nav' ? '24px' : undefined);

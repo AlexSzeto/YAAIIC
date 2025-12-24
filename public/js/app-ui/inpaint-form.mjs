@@ -14,7 +14,6 @@ import { SeedControl } from './seed-control.mjs';
  * @param {Function} props.onFieldChange - Callback for field changes
  * @param {boolean} props.isGenerating - Whether generation is in progress
  * @param {Function} props.onGenerate - Callback for inpaint action
- * @param {Function} props.onDone - Callback for returning to main page
  * @param {boolean} props.hasValidInpaintArea - Whether a valid inpaint area is selected
  */
 export function InpaintForm({ 
@@ -23,7 +22,6 @@ export function InpaintForm({
   onFieldChange, 
   isGenerating, 
   onGenerate,
-  onDone,
   hasValidInpaintArea
 }) {
   
@@ -92,16 +90,6 @@ export function InpaintForm({
           disabled=${isInpaintDisabled}
         >
           ${isGenerating ? 'Inpainting...' : 'Inpaint'}
-        <//>
-
-        <${Button} 
-          variant="secondary"
-          icon="home"
-          title="Return to main page"
-          onClick=${onDone}
-          disabled=${isGenerating}
-        >
-          Done
         <//>
       </div>
 

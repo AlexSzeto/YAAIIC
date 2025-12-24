@@ -1,6 +1,7 @@
 import { html } from 'htm/preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
+import { Button } from './button.mjs';
 
 /**
  * Modal Component
@@ -107,10 +108,11 @@ export function Modal({
  * @param {boolean} allowSelect - Not used in V2 modal logic directly but kept for signature compat
  * @param {string} title 
  * @param {Function} onSelect - Callback if a "Select" button/action is desired (legacy behavior)
+ * @param {string} selectButtonText - Custom text for the select button (default: 'View')
  */
 import { render } from 'preact';
 
-export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null) {
+export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null, selectButtonText = 'View') {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
@@ -168,9 +170,13 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
            `}
 
            ${allowSelect && onSelect && html`
-             <button class="image-modal-select" onClick=${handleSelect}>
-               Use
-             </button>
+             <${Button}
+               variant="secondary"
+               onClick=${handleSelect}
+               className="image-modal-select"
+             >
+               ${selectButtonText}
+             <//>
            `}
         </div>
       </div>
