@@ -280,7 +280,7 @@
     27. [x] Disable workflow selection, and disable the upload button, while the generation is in progress.
     28. [x] Fix the icon button colors for deselecting or reselecting images. If they are currently not using the custom button component, use the custom button component.
     29. [x] Fix the bug where selecting an image through the gallery selection mode puts the preview image into the component but fails to update the form with the correct image, causing the generation to fail.
-    30. [/] Remove the need to use the class name attribute to assign styles to the button component instances, and fit it into one of the existing variants instead.
+    30. [x] Remove the need to use the class name attribute to assign styles to the button component instances, and fit it into one of the existing variants instead.
 
 [x] **VERIFICATION: Phase 4**
     1. Check "Gallery" button opens the modal.
@@ -289,24 +289,24 @@
 
 ## Phase 5: Inpaint Page Migration
 
-[ ] **Inpaint Canvas (`app-ui/inpaint-canvas.mjs`)**
+[x] **Inpaint Canvas (`app-ui/inpaint-canvas.mjs`)**
     1. Refactor existing `inpaint-canvas.mjs`.
-    2. Props: `imageUrl`, `mask` (controlled), `onChangeMask`.
-    3. Logic: Emit mask changes up to parent.
+    2. Props: `imageUrl`, `inpaintArea` (controlled), `onChangeInpaintArea`.
+    3. Logic: Emit inpaint area changes up to parent.
 
-[ ] **Inpaint Form (`app-ui/inpaint-form.mjs`)**
-    1. Reuse `GenerationForm` components or specialized inputs for Inpaint (Brush size, Strength).
+[x] **Inpaint Form (`app-ui/inpaint-form.mjs`)**
+    1. Reuse `SeedControl`, `Input`, `Textarea`, `Button` components.
     
-[ ] **Inpaint Page Root (`inpaint-page.mjs`)**
+[x] **Inpaint Page Root (`inpaint-page.mjs`)**
     1. Similar setup to `app.mjs`.
-    2. State: `sourceImage`, `mask`, `prompt`.
+    2. State: `imageData`, `inpaintArea`, `formState`, `workflow`.
     3. Logic: Handle `/generate/inpaint`.
 
-[ ] **VERIFICATION: Phase 5**
-    1. Open `public/inpaint-v2.html?uid=...`.
-    2. Verify image loads.
-    3. Verify drawing mask works.
-    4. Verify generation works.
+[/] **VERIFICATION: Phase 5**
+    1. [x] Open `public/inpaint-v2.html?uid=...`.
+    2. [x] Verify image loads.
+    3. [x] Verify drawing mask works.
+    4. [ ] Verify generation works.
 
 ## Phase 6: Switchover & Cleanup
 

@@ -11,8 +11,9 @@ import { fetchJson } from '../util.mjs';
  * @param {Object|null} props.value - Selected workflow object
  * @param {Function} props.onChange - Callback when workflow changes (workflow) => void
  * @param {boolean} [props.disabled=false] - Whether the selector is disabled
+ * @param {string|string[]} [props.filterType] - Optional filter for workflow types ('image', 'video', 'inpaint')
  */
-export function WorkflowSelector({ value, onChange, disabled = false }) {
+export function WorkflowSelector({ value, onChange, disabled = false, filterType }) {
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,13 +32,25 @@ export function WorkflowSelector({ value, onChange, disabled = false }) {
           showSuccessFeedback: false
         });
         
-        // Filter to only image and video workflows (exclude inpaint)
-        const imageVideoWorkflows = data.filter(
-          w => w.type === 'image' || w.type === 'video'
-        );
+        // Filter workflows based on filterType prop
+        let filteredWorkflows;
+        if (filterType) {
+          const types = Array.isArray(filterType) ? filterType : [filterType];
+          filteredWorkflows = data.filter(w => types.includes(w.type));
+        } else {
+          // Default: exclude inpaint workflows (backwards compatible)
+          filteredWorkflows = data.filter(
+            w => w.type === 'image' || w.type === 'video'
+          );
+        }
         
-        setWorkflows(imageVideoWorkflows);
-        console.log('Workflows loaded:', imageVideoWorkflows);
+        setWorkflows(filteredWorkflows);
+        console.log('Workflows loaded:', filteredWorkflows);
+        
+        // Auto-select first workflow if available and nothing selected
+        if (filteredWorkflows.length > 0 && !value) {
+          onChange(filteredWorkflows[0]);
+        }
       } catch (err) {
         console.error('Error loading workflows:', err);
         setError('Failed to load workflows');
@@ -47,7 +60,7 @@ export function WorkflowSelector({ value, onChange, disabled = false }) {
     }
 
     loadWorkflows();
-  }, []);
+  }, [filterType]);
 
   // Handle select change
   const handleChange = (e) => {
