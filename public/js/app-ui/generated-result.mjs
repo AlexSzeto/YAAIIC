@@ -153,11 +153,11 @@ export function GeneratedResult({
           variant="primary" 
           icon="image"
           onClick=${() => onInpaint && onInpaint(image)}
-          disabled=${!image.uid || !onInpaint}
+          disabled=${!image.uid || !onInpaint || /\.(webm|mp4|webp|gif)$/i.test(image.imageUrl || '')}
           title="Inpaint this image"
         >
           Inpaint
-        <//>
+        <//Button>
         <${Button} 
           variant="danger"
           icon="trash"

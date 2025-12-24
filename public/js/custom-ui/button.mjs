@@ -26,7 +26,7 @@ export function Button({
     switch (v) {
       case 'primary': return 'btn-with-icon generate-button';
       case 'secondary': return 'btn-with-icon'; // Default gray style
-      case 'success': return 'btn-with-icon image-select-btn';
+      case 'success': return 'btn-with-icon btn-success';
       case 'danger': return 'btn-with-icon image-delete-btn';
       case 'icon': return 'info-btn'; // Small square
       case 'icon-danger': return 'info-btn image-select-clear-btn'; // Small square, red hover

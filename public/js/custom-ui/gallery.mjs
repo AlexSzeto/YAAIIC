@@ -29,7 +29,7 @@ export function Gallery({
   const [loading, setLoading] = useState(false);
 
   // Use pagination hook - single source of truth
-  const pagination = usePagination(galleryData, 32);
+  const pagination = usePagination(galleryData, 24);
   const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
@@ -226,7 +226,7 @@ export function Gallery({
   // -- Render Helpers --
 
   const renderGalleryItems = () => {
-    const maxItems = 32;
+    const maxItems = 24;
     const itemsToShow = currentPageData;
     const items = [];
 

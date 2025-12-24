@@ -21,14 +21,14 @@
 .btn-with-icon {
   width: 120px;
   height: 44px;
-  padding: 10px 16px;
+  padding: 10px;
   border: 1px solid var(--dark-border-focus);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.3s ease;
@@ -558,28 +558,31 @@ p {
   gap: 15px;
 }
 
-.image-select-btn {
+.btn-success {
   background-color: var(--success-background, #28a745);
   color: white;
   border: 1px solid var(--success-border, #28a745);
 }
 
-.image-select-btn:hover {
+.btn-success:hover {
   background-color: var(--success-hover, #218838);
   border-color: var(--success-border-hover, #218838);
 }
 
-.image-select-btn:focus {
+.btn-success:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--success-focus, #28a74580);
 }
 
-.image-select-btn:disabled {
-  background-color: var(--secondary-background);
+.btn-success:disabled {
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: default;
-  pointer-events: none;
+}
+
+.btn-success:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 .image-inpaint-btn {
@@ -599,10 +602,14 @@ p {
 }
 
 .image-inpaint-btn:disabled {
-  background-color: var(--secondary-background);
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
   cursor: default;
+}
+
+.image-inpaint-btn:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 /* Delete Button Container - Legacy support */
@@ -630,10 +637,14 @@ p {
 }
 
 .image-delete-btn:disabled {
-  background-color: var(--secondary-background);
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
   cursor: default;
+}
+
+.image-delete-btn:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 /* Carousel Display Styling */

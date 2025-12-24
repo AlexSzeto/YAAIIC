@@ -293,7 +293,7 @@
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(100px, 1fr));
-  grid-template-rows: repeat(4, minmax(100px, 1fr));
+  grid-template-rows: repeat(3, minmax(100px, 1fr));
   gap: 10px;
   margin-bottom: 20px;
   min-height: 400px;
@@ -975,29 +975,7 @@
   opacity: 1;
 }
 
-.image-select-btn {
-  background-color: var(--dark-background-card);
-  border: 1px solid var(--dark-border-secondary);
-  border-radius: 6px;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  gap: 6px;
-}
 
-.image-select-btn:hover {
-  background-color: var(--dark-background-hover);
-  border-color: var(--dark-border-focus);
-  transform: scale(1.05);
-}
-
-.image-select-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--primary-focus);
-}
 
 .image-select-clear-btn:hover {
   background-color: var(--danger-background);

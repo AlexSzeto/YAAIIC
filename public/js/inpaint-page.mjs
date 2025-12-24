@@ -399,7 +399,7 @@ function InpaintApp() {
         `}
         
         ${error && html`
-          <p style="color: var(--danger-background);">${error}</p>
+          <p>${error}</p>
         `}
         
         ${!loading && !error && imageData?.imageUrl && html`
