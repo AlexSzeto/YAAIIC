@@ -285,7 +285,7 @@ export function Gallery({
           ${!selectionMode && html`
             <div class="gallery-bulk-delete">
               <button 
-                class="gallery-bulk-delete-btn btn-with-icon"
+                class="btn-with-icon btn-danger"
                 onClick=${deleteSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
