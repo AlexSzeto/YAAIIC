@@ -167,6 +167,9 @@ export function initAutoComplete() {
           // Move cursor position after the inserted tag and comma
           const newCursorPos = startPos + selection.length + 2;
           textarea.setSelectionRange(newCursorPos, newCursorPos);
+          
+          // Dispatch input event to sync with React/Preact state
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
     }
