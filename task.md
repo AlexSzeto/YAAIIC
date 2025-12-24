@@ -310,21 +310,22 @@
 
 ## Phase 6: Switchover & Cleanup
 
-[ ] **HTML Swap**
-    1. Rename `public/index.html` -> `public/index-legacy.html`.
-    2. Rename `public/index-v2.html` -> `public/index.html`.
-    3. Rename `public/inpaint.html` -> `public/inpaint-legacy.html`.
-    4. Rename `public/inpaint-v2.html` -> `public/inpaint.html`.
+[x] **HTML Swap**
+    1. [x] Rename `public/index.html` -> `public/index-legacy.html`.
+    2. [x] Rename `public/index-v2.html` -> `public/index.html`.
+    3. [x] Rename `public/inpaint.html` -> `public/inpaint-legacy.html`.
+    4. [x] Rename `public/inpaint-v2.html` -> `public/inpaint.html`.
 
-[ ] **File Cleanup**
-    1. Delete `public/js/main.mjs`.
-    2. Delete `public/js/inpaint.mjs`.
-    3. Delete old UI Managers (`generated-image-display.mjs`, `carousel-setup.mjs`).
-    4. Delete `public/ui-test.html`.
-    5. Delete `public/js/ui-test-app.mjs`.
+[x] **File Cleanup**
+    1. [x] Delete `public/js/main.mjs`.
+    2. [x] Delete `public/js/inpaint.mjs`.
+    3. [x] Delete old UI Managers (`generated-image-display.mjs`, `carousel-setup.mjs`).
+    4. [x] Delete `public/ui-test.html`.
+    5. [x] Delete `public/js/ui-test-app.mjs`.
+    6. [x] Delete legacy `public/js/inpaint-canvas.mjs`.
 
-[ ] **Final Regression Test**
-    1. Full walkthrough of "Text to Image".
-    2. Full walkthrough of "Image to Video".
-    3. Full walkthrough of "Inpaint".
-    4. Verify Gallery search and selection.
+[x] **Final Regression Test**
+    1. [x] Full walkthrough of "Text to Image".
+    2. [x] Full walkthrough of "Image to Video".
+    3. [x] Full walkthrough of "Inpaint".
+    4. [x] Verify Gallery search and selection.

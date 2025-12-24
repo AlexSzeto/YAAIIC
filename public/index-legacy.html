@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAAIIG</title>
+    <!-- Preact and HTM via CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://esm.sh/preact@10.19.2",
+          "preact/": "https://esm.sh/preact@10.19.2/",
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+        }
+      }
+    </script>
+    <!-- Autocomplete.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.min.js"></script>
+    <!-- Boxicons for icons -->
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+    <!-- Textarea Caret Position library wrapper -->
+    <script src="/js/textarea-caret-position-wrapper.mjs"></script>
+    <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/custom-ui.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <h1>YAAIIG (Yet Another AI Image Generator)</h1>
+
+    <!-- Workflow Configuration Row -->
+    <div class="workflow-controls">
+      <div class="form-group">
+        <label for="workflow">Workflow:</label>
+        <select id="workflow" name="workflow">
+          <option value="">Loading workflows...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter name" />
+      </div>
+
+      <div class="form-group">
+        <label for="seed">Seed:</label>
+        <input type="number" id="seed" name="seed" min="0" max="4294967295" />
+      </div>
+
+      <div class="form-group">
+        <label for="lock-seed">
+          <input type="checkbox" id="lock-seed" name="lock-seed" />
+          Lock seed
+        </label>
+      </div>
+
+      <!-- Video Controls Row -->
+      <div id="video-controls-row" class="video-controls-row" style="display: none;">
+        <div class="form-group" id="length-group">
+          <label for="length">Length (frames):</label>
+          <input type="number" id="length" name="length" min="1" value="25" />
+        </div>
+
+        <div class="form-group" id="framerate-group">
+          <label for="framerate">Frame Rate:</label>
+          <input type="number" id="framerate" name="framerate" min="1" max="60" step="1" value="20" />
+        </div>
+
+        <div class="form-group">
+          <label for="orientation">Orientation:</label>
+          <select id="orientation" name="orientation">
+            <option value="portrait" selected>Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Description:</label>
+        <textarea id="description" placeholder="Enter your text here..."></textarea>
+      </div>
+
+      <!-- Image Upload Container -->
+      <div id="image-upload-container" class="form-group full-width" style="display: none;">
+        <label>Input Images:</label>
+        <div id="image-upload-slots" class="image-upload-slots"></div>
+      </div>
+
+      <!-- Button Row Container -->
+      <div class="button-row">
+        <button id="generate-btn" class="generate-button btn-with-icon">
+          <box-icon name='play' color='#ffffff'></box-icon>
+          Generate
+        </button>
+        <button id="gallery-btn" class="gallery-btn btn-with-icon" title="Gallery">
+          <box-icon name='image' color='#ffffff'></box-icon>
+          Gallery
+        </button>
+        <button id="upload-btn" class="upload-btn btn-with-icon" title="Upload Image">
+          <box-icon name='upload' color='#ffffff'></box-icon>
+          Upload
+        </button>
+        <input type="file" id="upload-file-input" accept="image/*" style="display: none;" />
+      </div>
+    </div>
+
+    <!-- Generated Image Display Container -->
+    <div id="generatedImageDisplay" class="generated-image-display content-container" style="display: none;">
+      <h3 class="generated-image-title">Generated Image</h3>
+      <div class="generated-image-content">
+        <div class="generated-image-left">
+          <img class="generated-image" src="" alt="Generated image" />
+        </div>
+        <div class="generated-image-right">
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Workflow:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="workflow">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="workflow">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="workflow" disabled>
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-workflow" readonly />
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Name:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="name">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="name">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="name">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-name" readonly />
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Tags:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="tags">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="tags" disabled>
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="tags">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-tags-field" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Prompt:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="prompt">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="prompt">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="prompt">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-prompt" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Description:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="description">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form" data-field="description">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="description">
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <textarea class="info-description" readonly></textarea>
+          </div>
+          <div class="info-section">
+            <div class="info-header">
+              <label class="info-label">Seed:</label>
+              <div class="info-buttons">
+                <button class="info-btn copy-btn" title="Copy to clipboard" data-field="seed">
+                  <box-icon name='copy' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn use-btn" title="Use in form and lock seed" data-field="seed">
+                  <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+                </button>
+                <button class="info-btn edit-btn" title="Edit" data-field="seed" disabled>
+                  <box-icon name='pencil' color='#ffffff' size='16px'></box-icon>
+                </button>
+              </div>
+            </div>
+            <input type="text" class="info-seed" readonly />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Image Action Buttons Container -->
+      <div class="image-action-container">
+        <button class="image-select-btn btn-with-icon" title="Use this image as input">
+          <box-icon name='check-circle' color='#ffffff' size='16px'></box-icon>
+          Select
+        </button>
+        <button class="image-inpaint-btn btn-with-icon" title="Inpaint this image">
+          <box-icon name='image' color='#ffffff' size='16px'></box-icon>
+          Inpaint
+        </button>
+        <button class="image-delete-btn btn-with-icon" title="Delete this image">
+          <box-icon name='trash' color='#ffffff' size='16px'></box-icon>
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <!-- Carousel Display Container -->
+    <div id="carouselDisplay" class="carousel-display" style="display: none;">
+      <div class="carousel-controls">
+        <div id="carouselPagination"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/js/autocomplete-setup.mjs"></script>
+    <script type="module" src="/js/custom-ui/dialog.mjs"></script>
+    <script type="module" src="/js/custom-ui/toast.mjs"></script>
+    <script type="module" src="/js/main.mjs"></script>
+  </body>
+</html>
