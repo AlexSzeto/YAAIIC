@@ -21,14 +21,16 @@
 .btn-with-icon {
   width: 120px;
   height: 44px;
-  padding: 10px 16px;
-  border: none;
+  padding: 10px;
+  background-color: var(--dark-background-card);
+  color: var(--dark-text-primary);
+  border: 1px solid var(--dark-border-focus);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.3s ease;
@@ -44,7 +46,7 @@ body {
   background-color: var(--dark-background-primary);
   color: var(--dark-text-primary);
   font-family: Arial, sans-serif;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 20px;
   line-height: 1.6;
@@ -121,6 +123,14 @@ p {
   box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
+.form-group input:disabled,
+.form-group select:disabled {
+  background-color: var(--dark-background-tertiary);
+  border-color: var(--dark-border-secondary);
+  color: var(--dark-text-muted);
+  opacity: 0.6;
+}
+
 /* Shared Checkbox Styles */
 .shared-checkbox {
   width: auto;
@@ -162,11 +172,11 @@ p {
   color: var(--dark-text-primary);
 }
 
-/* Textarea within workflow controls */
-.workflow-controls textarea {
+/* Textarea within form groups */
+.form-group textarea {
   width: 100%;
   height: 100px;
-  padding: 12px;
+  padding: 8px 12px;
   border: 2px solid var(--dark-border-primary);
   border-radius: 6px;
   background-color: var(--dark-background-tertiary);
@@ -177,20 +187,20 @@ p {
   font-family: inherit;
 }
 
-.workflow-controls textarea:focus {
+.form-group textarea:focus {
   outline: none;
   border-color: var(--dark-border-focus);
   box-shadow: 0 0 0 2px var(--focus-shadow-primary);
 }
 
-.workflow-controls textarea:disabled {
+.form-group textarea:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   color: var(--dark-text-muted);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
-.workflow-controls textarea::placeholder {
+.form-group textarea::placeholder {
   color: var(--dark-text-placeholder);
 }
 
@@ -204,26 +214,29 @@ p {
   margin-top: 10px;
 }
 
-/* Generate Button Styling */
-.generate-button {
+/* Primary Button Styling */
+.btn-primary {
   background-color: var(--primary-background);
   color: white;
+  border-color: var(--primary-background);
 }
 
-.generate-button:hover {
+.btn-primary:hover {
   background-color: var(--primary-hover);
 }
 
-.generate-button:disabled {
-  background-color: var(--secondary-background);
-  opacity: 0.8;
+.btn-primary:disabled {
+  background-color: var(--dark-background-tertiary);
+  border-color: var(--dark-border-secondary);
+  opacity: 0.6;
+  cursor: default;
 }
 
-.generate-button:disabled:hover {
-  background-color: var(--secondary-background);
+.btn-primary:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
-.generate-button:focus {
+.btn-primary:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
@@ -256,6 +269,12 @@ p {
 .workflow-controls .upload-btn:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.workflow-controls .upload-btn:disabled {
+  background-color: var(--dark-background-disabled);
+  color: var(--dark-text-muted);
+  opacity: 0.6;
 }
 
 /* AutoComplete styling for dark mode */
@@ -338,6 +357,72 @@ p {
 /* Inpaint Canvas Container Styling */
 /* Uses content-container base styling */
 
+/* ===== INPAINT PAGE LAYOUT ===== */
+
+/* Expand body width for inpaint page to fit 1280px images */
+body:has(.inpaint-main-layout) {
+  max-width: 1400px; /* 1280px image + padding + margins */
+}
+
+@media (min-width: 1920px) {
+  body:has(.inpaint-main-layout) {
+    max-width: 1600px; /* Allow side-by-side layout on ultra-wide */
+  }
+}
+
+.inpaint-main-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inpaint-canvas-panel {
+  flex: 1;
+  margin-top: 0; /* Override content-container margin */
+}
+
+.inpaint-form-panel {
+  flex-shrink: 0;
+}
+
+.inpaint-workflow-controls {
+  flex-direction: column;
+}
+
+/* Wide screen layout: Canvas left, Form right */
+@media (min-width: 1920px) {
+  .inpaint-main-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    max-width: none; /* Full width for side-by-side layout */
+  }
+  
+  .inpaint-canvas-panel {
+    flex: 1;
+    min-width: 0;
+    max-width: 1340px; /* Still limit canvas size */
+  }
+  
+  .inpaint-form-panel {
+    flex: 0 0 400px;
+    max-width: 400px;
+  }
+  
+  .inpaint-workflow-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .inpaint-workflow-controls .form-group {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .inpaint-workflow-controls .form-group.full-width {
+    flex: 1 0 100%;
+  }
+}
+
 .inpaint-canvas {
   border: 1px solid var(--dark-border-focus);
   border-radius: 4px;
@@ -375,7 +460,8 @@ p {
   margin: 5px 0;
 }
 
-.generated-image-title {
+.generated-image-title,
+.generated-result-title {
   color: var(--dark-text-primary);
   margin-top: 0;
   margin-bottom: 15px;
@@ -396,7 +482,6 @@ p {
 .generated-image {
   max-width: 100%;
   height: auto;
-  max-height: 40vh;
   border-radius: 4px;
   display: block;
 }
@@ -453,7 +538,6 @@ p {
 
 .info-btn:hover {
   background-color: var(--dark-background-hover);
-  border-color: var(--dark-border-highlight);
 }
 
 .info-btn:active {
@@ -466,15 +550,14 @@ p {
 }
 
 .info-btn:disabled {
-  background-color: var(--secondary-background);
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.6;
+  cursor: default;
 }
 
 .info-btn:disabled:hover {
-  background-color: var(--secondary-background);
-  border-color: var(--dark-border-secondary);
+  background-color: var(--dark-background-tertiary);
 }
 
 .info-label {
@@ -539,30 +622,34 @@ p {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
-.image-select-btn {
+.btn-success {
   background-color: var(--success-background, #28a745);
   color: white;
   border: 1px solid var(--success-border, #28a745);
 }
 
-.image-select-btn:hover {
+.btn-success:hover {
   background-color: var(--success-hover, #218838);
   border-color: var(--success-border-hover, #218838);
 }
 
-.image-select-btn:focus {
+.btn-success:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--success-focus, #28a74580);
 }
 
-.image-select-btn:disabled {
-  background-color: var(--secondary-background);
+.btn-success:disabled {
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-success:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 .image-inpaint-btn {
@@ -582,10 +669,14 @@ p {
 }
 
 .image-inpaint-btn:disabled {
-  background-color: var(--secondary-background);
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
+}
+
+.image-inpaint-btn:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 /* Delete Button Container - Legacy support */
@@ -596,27 +687,31 @@ p {
   align-items: center;
 }
 
-.image-delete-btn {
+.btn-danger {
   background-color: var(--danger-background);
   color: white;
   border: 1px solid var(--danger-border);
 }
 
-.image-delete-btn:hover {
+.btn-danger:hover {
   background-color: var(--danger-hover);
   border-color: var(--danger-border-hover);
 }
 
-.image-delete-btn:focus {
+.btn-danger:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--danger-focus);
 }
 
-.image-delete-btn:disabled {
-  background-color: var(--secondary-background);
+.btn-danger:disabled {
+  background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
+}
+
+.btn-danger:disabled:hover {
+  background-color: var(--dark-background-tertiary);
 }
 
 /* Carousel Display Styling */
@@ -639,10 +734,9 @@ p {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 15px;
 }
 
-.carousel-btn {
+.btn-icon-nav {
   background-color: var(--dark-background-card);
   border: 1px solid var(--dark-border-focus);
   border-radius: 4px;
@@ -656,18 +750,27 @@ p {
   height: 36px;
 }
 
-.carousel-btn:hover {
+.btn-icon-nav:hover {
   background-color: var(--dark-background-hover);
 }
 
-.carousel-btn:disabled {
+.btn-icon-nav:active {
+  background-color: var(--dark-background-tertiary);
+}
+
+.btn-icon-nav:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
+}
+
+.btn-icon-nav:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.6;
 }
 
-.carousel-btn:disabled:hover {
+.btn-icon-nav:disabled:hover {
   background-color: var(--dark-background-tertiary);
 }
 

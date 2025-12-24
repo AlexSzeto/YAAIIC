@@ -24,6 +24,8 @@ data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress"
 For example, the correct `currentStep` for the first item should be `(1/18) Generating prompt`.
 
 # Features
+- Wan22 video loop
+- Add camera stability verbiage (all videos) and no limb movement verbiage (looping videos)
 - Export to destination (customizable)
 - Move generation options (requireName, optionalPrompt, etc.) into an options object and only pass that to the client
 - Use a solution other than freezeframe.js to freeze animations in gallery preview

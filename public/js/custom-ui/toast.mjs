@@ -1,216 +1,88 @@
-import { render, Component } from 'preact'
-import { html } from 'htm/preact'
+import { html } from 'htm/preact';
+import { createContext } from 'preact';
+import { useContext, useState, useCallback } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
 
-// Custom Toast Module - Class-based implementation
-let dismissedToastContainer = null;
-let toastContainerElement = null;
-let activeToasts = []; // Track all active toasts in order
-const maximumToastsVisible = 1; // Maximum number of toasts that can be visible at once
+// Create Context
+export const ToastContext = createContext(null);
 
-// ToastContainer component to manage all toasts
-class ToastContainer extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      toasts: []
-    };
-  }
+/**
+ * Toast Provider Component
+ * Manages the state of toasts and provides the 'show' method.
+ */
+export function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
 
-  addToast = (toastProps) => {
-    const newToast = { ...toastProps, id: ++toastCounter };
-    
-    this.setState(prevState => {
-      let newToasts = [...prevState.toasts, newToast];
-      
-      // Remove excess toasts if we exceed maximum
-      while (newToasts.length > maximumToastsVisible) {
-        newToasts.shift();
-      }
-      
-      return { toasts: newToasts };
-    });
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
-    return newToast.id;
-  }
+  const show = useCallback((text, options = {}) => {
+    const id = Date.now() + Math.random();
+    const duration = options.duration || Math.max(text.length * 50, 2000);
+    const type = options.type || 'info'; // 'info', 'success', 'error'
 
-  removeToast = (id) => {
-    this.setState(prevState => ({
-      toasts: prevState.toasts.filter(toast => toast.id !== id)
-    }));
-  }
+    let backgroundColor = '#2a2a2a';
+    let borderColor = '#555';
 
-  render() {
-    return html`
-      <div class="toast-container">
-        ${this.state.toasts.map(toast => 
-          html`<${Toast} 
-            key=${toast.id}
-            text=${toast.text}
-            duration=${toast.duration}
-            backgroundColor=${toast.backgroundColor}
-            borderColor=${toast.borderColor}
-            onDismiss=${() => this.removeToast(toast.id)}
-          />`
-        )}
-      </div>
-    `;
-  }
-}
-
-// Helper function to ensure toast container exists
-function ensureToastContainer() {
-  if (!toastContainerElement) {
-    toastContainerElement = document.createElement('div');
-    document.body.appendChild(toastContainerElement);
-    
-    // Create the container instance
-    window.toastContainerInstance = render(
-      html`<${ToastContainer} ref=${(ref) => { window.toastContainerRef = ref; }} />`, 
-      toastContainerElement
-    );
-  }
-}
-
-let toastCounter = 0; // For unique IDs
-
-// Helper function to calculate toast duration based on message length
-function calculateToastDuration(text) {
-  const baseDuration = text.length * 20; // 20ms per character
-  return Math.max(baseDuration, 2000); // Minimum 2 seconds
-}
-
-// Toast class to manage individual toast instances
-class Toast extends Component {
-  constructor(props) {
-    super(props);
-    this.hideTimeout = null;
-    this.isDestroyed = false;
-    
-    this.state = {
-      isVisible: false,
-      isHiding: false
-    };
-  }
-
-  componentDidMount() {
-    // Trigger show animation after component is mounted
-    requestAnimationFrame(() => {
-      if (!this.isDestroyed) {
-        this.setState({ isVisible: true });
-      }
-    });
-
-    // Auto-dismiss after duration
-    if (this.props.duration > 0) {
-      this.hideTimeout = setTimeout(() => {
-        this.dismiss();
-      }, this.props.duration);
-    }
-  }
-
-  componentWillUnmount() {
-    // Clean up timeout
-    if (this.hideTimeout) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
-    }
-  }
-
-  dismiss = () => {
-    if (this.isDestroyed || this.state.isHiding) return;
-
-    this.isDestroyed = true;
-
-    // Clear auto-dismiss timeout
-    if (this.hideTimeout) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
+    if (type === 'success') {
+      borderColor = '#28a745';
+      backgroundColor = '#1e3a2e';
+    } else if (type === 'error') {
+      borderColor = '#dc3545';
+      backgroundColor = '#3a1e1e';
+    } else if (type === 'info') {
+      borderColor = '#17a2b8';
+      backgroundColor = '#1e2a3a';
     }
 
-    // Start hide animation
-    this.setState({ isHiding: true });
+    const newToast = { id, text, duration, backgroundColor, borderColor };
 
-    // Call parent's onDismiss after animation
-    setTimeout(() => {
-      if (this.props.onDismiss) {
-        this.props.onDismiss();
-      }
-    }, 300);
-  }
+    setToasts(prev => [...prev.slice(-4), newToast]); // Keep max 5
 
-  render() {
-    const toastClasses = `toast ${this.state.isVisible ? 'show' : ''} ${this.state.isHiding ? 'hide' : ''}`;
-    
-    return html`
-      <div 
-        class=${toastClasses}
-        style=${{
-          backgroundColor: this.props.backgroundColor || '#2a2a2a',
-          borderColor: this.props.borderColor || '#555'
-        }}
-        onClick=${this.dismiss}
-      >
-        <p class="toast-text">${this.props.text}</p>
-      </div>
-    `;
-  }
+    if (duration > 0) {
+      setTimeout(() => {
+        removeToast(id);
+      }, duration);
+    }
+  }, [removeToast]);
+
+  const value = {
+    show,
+    success: (text, duration) => show(text, { type: 'success', duration }),
+    error: (text, duration) => show(text, { type: 'error', duration }),
+    info: (text, duration) => show(text, { type: 'info', duration })
+  };
+
+  return html`
+    <${ToastContext.Provider} value=${value}>
+      ${children}
+      ${createPortal(html`
+        <div class="toast-container">
+          ${toasts.map(toast => html`
+            <div 
+              class="toast show"
+              key=${toast.id}
+              style="background-color: ${toast.backgroundColor}; border-color: ${toast.borderColor}; margin-bottom: 10px; cursor: pointer;"
+              onClick=${() => removeToast(toast.id)}
+            >
+              <p class="toast-text">${toast.text}</p>
+            </div>
+          `)}
+        </div>
+      `, document.body)}
+    <//>
+  `;
 }
 
-// Public API functions that create Toast instances
-export function showToast(text, duration = 0) {
-  ensureToastContainer();
-  const calculatedDuration = duration || calculateToastDuration(text);
-  
-  if (window.toastContainerRef) {
-    return window.toastContainerRef.addToast({
-      text,
-      duration: calculatedDuration
-    });
+/**
+ * Hook to use Toast
+ * @returns {Object} { show(text, opt), success(text), error(text), info(text) }
+ */
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
   }
-  return null;
-}
-
-export function showSuccessToast(text, duration = 0) {
-  ensureToastContainer();
-  const calculatedDuration = duration || calculateToastDuration(text);
-  
-  if (window.toastContainerRef) {
-    return window.toastContainerRef.addToast({
-      text,
-      duration: calculatedDuration,
-      borderColor: '#28a745',
-      backgroundColor: '#1e3a2e'
-    });
-  }
-  return null;
-}
-
-export function showErrorToast(text, duration = 0) {
-  ensureToastContainer();
-  const calculatedDuration = duration || calculateToastDuration(text);
-  
-  if (window.toastContainerRef) {
-    return window.toastContainerRef.addToast({
-      text,
-      duration: calculatedDuration,
-      borderColor: '#dc3545',
-      backgroundColor: '#3a1e1e'
-    });
-  }
-  return null;
-}
-
-export function showInfoToast(text, duration = 0) {
-  ensureToastContainer();
-  const calculatedDuration = duration || calculateToastDuration(text);
-  
-  if (window.toastContainerRef) {
-    return window.toastContainerRef.addToast({
-      text,
-      duration: calculatedDuration,
-      borderColor: '#17a2b8',
-      backgroundColor: '#1e2a3a'
-    });
-  }
-  return null;
+  return context;
 }

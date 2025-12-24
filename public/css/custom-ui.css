@@ -7,7 +7,7 @@
   position: absolute;
   left: 24px;
   bottom: 24px;
-  background: rgba(40, 40, 40, 0.9);
+  background: rgba(40, 40, 40, 0.8);
   backdrop-filter: blur(4px);
   color: #fff;
   padding: 6px 16px;
@@ -19,11 +19,10 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 
-.image-modal-scaled {
-  /* No extra styles, just a marker for JS */
-}
+.image-modal-scaled,
 .image-modal-original-size {
-  /* No extra styles, just a marker for JS */
+  /* JS markers - no visual styles needed */
+  display: block;
 }
 .image-modal-overflow-visible {
   overflow: visible !important;
@@ -52,6 +51,17 @@
   font-weight: 500;
   transition: background-color 0.3s ease;
   flex: 0 0 auto;
+  background-color: var(--secondary-background);
+  color: var(--dark-text-primary);
+}
+
+.btn-with-icon:hover {
+  background-color: var(--secondary-hover);
+}
+
+.btn-with-icon:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--secondary-focus);
 }
 
 /* Custom Dialog Styling */
@@ -197,7 +207,7 @@
 .pagination-btn:disabled {
   background-color: var(--dark-background-tertiary);
   border-color: var(--dark-border-secondary);
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.6;
 }
 
@@ -283,7 +293,7 @@
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(100px, 1fr));
-  grid-template-rows: repeat(4, minmax(100px, 1fr));
+  grid-template-rows: repeat(3, minmax(100px, 1fr));
   gap: 10px;
   margin-bottom: 20px;
   min-height: 400px;
@@ -353,7 +363,7 @@
   bottom: 0;
   left: 0;
   padding: 8px 10px;
-  background: rgba(40, 40, 40, 0.9);
+  background: rgba(40, 40, 40, 0.8);
   backdrop-filter: blur(4px);
   margin: 6px;
   margin-right: 0;
@@ -401,24 +411,7 @@
   pointer-events: auto;
 }
 
-.gallery-item-checkbox {
-  /* Use shared checkbox styling with gallery-specific overrides */
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  cursor: pointer;
-  accent-color: var(--primary-background);
-  transform: none !important;
-  position: relative;
-  z-index: 11;
-  pointer-events: auto;
-}
-
-.gallery-item-checkbox:focus {
-  outline: 2px solid var(--primary-focus);
-  outline-offset: 1px;
-  border-radius: 2px;
-}
+/* Scaling removed as per user request */
 
 .gallery-controls {
   display: flex;
@@ -443,45 +436,6 @@
   display: flex;
   align-items: center;
   position: absolute;
-}
-
-.gallery-bulk-delete-btn {
-  background-color: var(--danger-background);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: background-color 0.2s ease;
-  white-space: nowrap;
-}
-
-.gallery-bulk-delete-btn:hover {
-  background-color: var(--danger-hover);
-}
-
-.gallery-bulk-delete-btn:active {
-  background-color: var(--danger-border-hover);
-}
-
-.gallery-bulk-delete-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--danger-focus);
-}
-
-.gallery-bulk-delete-btn:disabled {
-  background-color: var(--secondary-background);
-  color: var(--dark-text-muted);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.gallery-bulk-delete-btn:disabled:hover {
-  background-color: var(--secondary-background);
 }
 
 .gallery-search {
@@ -667,15 +621,16 @@
   justify-content: center;
 }
 
-.image-modal-autoscale {
+.image-modal-autoscale,
+.image-modal-preview {
   display: block;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow-color-strong);
 }
 
 .image-modal-original {
   display: block;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow-color-strong);
 }
 
@@ -714,34 +669,7 @@
   position: absolute;
   bottom: 24px;
   right: 24px;
-  transform: none;
-  padding: 10px 16px;
-  background-color: var(--secondary-background);
-  color: var(--dark-text-primary);
-  border: 1px solid var(--dark-border-secondary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
   z-index: 10001;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
-}
-
-.image-modal-select:hover {
-  background-color: var(--secondary-hover);
-  border-color: var(--dark-border-focus);
-  transform: translateY(-1px);
-}
-
-.image-modal-select:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--primary-focus);
-}
-
-.image-modal-select:active {
-  transform: translateY(0);
 }
 
 .image-modal-error {
@@ -888,19 +816,28 @@
   color: #ef4444;
 }
 
-/* ===== IMAGE UPLOAD COMPONENT ===== */
-.image-upload-slots {
+/* ===== IMAGE SELECT COMPONENT ===== */
+.image-select-slots {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
   margin-top: 8px;
 }
 
-.image-upload-component {
+.image-select-component {
   display: inline-block;
 }
 
-.image-upload-area {
+/* Match .form-group label styling */
+.input-label {
+  display: block;
+  color: var(--dark-text-secondary);
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.image-select-area {
   width: 150px;
   height: 150px;
   border: 2px dashed var(--dark-border-focus);
@@ -915,29 +852,29 @@
   overflow: hidden;
 }
 
-.image-upload-area:hover {
+.image-select-area:hover {
   border-color: var(--dark-border-highlight);
   background-color: var(--dark-background-hover);
 }
 
-.image-upload-area.has-image {
+.image-select-area.has-image {
   border-style: solid;
   border-color: var(--dark-border-secondary);
   padding: 0;
 }
 
-.image-upload-area.has-image:hover {
+.image-select-area.has-image:hover {
   border-color: var(--dark-border-highlight);
 }
 
-.image-upload-area.disabled {
+.image-select-area.disabled {
   opacity: 0.5;
   pointer-events: none;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 /* Empty State */
-.image-upload-empty {
+.image-select-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -947,14 +884,14 @@
   text-align: center;
 }
 
-.image-upload-text {
+.image-select-text {
   color: var(--dark-text-secondary);
   font-size: 12px;
   font-weight: 500;
 }
 
 /* Image Preview */
-.image-upload-preview {
+.image-select-preview {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -962,7 +899,7 @@
 }
 
 /* Overlay Buttons */
-.image-upload-overlay {
+.image-select-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -977,40 +914,18 @@
   transition: opacity 0.3s ease;
 }
 
-.image-upload-area:hover .image-upload-overlay {
+.image-select-area:hover .image-select-overlay {
   opacity: 1;
 }
 
-.image-upload-btn {
-  background-color: var(--dark-background-card);
-  border: 1px solid var(--dark-border-secondary);
-  border-radius: 6px;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  gap: 6px;
-}
 
-.image-upload-btn:hover {
-  background-color: var(--dark-background-hover);
-  border-color: var(--dark-border-focus);
-  transform: scale(1.05);
-}
 
-.image-upload-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--primary-focus);
-}
-
-.image-upload-clear-btn:hover {
+.btn-icon-danger:hover {
   background-color: var(--danger-background);
   border-color: var(--danger-border-hover);
 }
 
-.image-upload-gallery-btn-empty {
+.image-select-gallery-btn-empty {
   background-color: var(--secondary-background);
   color: var(--dark-text-primary);
   border: 1px solid var(--dark-border-secondary);
@@ -1027,12 +942,44 @@
   margin-top: 4px;
 }
 
-.image-upload-gallery-btn-empty:hover {
+.image-select-gallery-btn-empty:hover {
   background-color: var(--secondary-hover);
   border-color: var(--dark-border-focus);
 }
 
-.image-upload-gallery-btn-empty:focus {
+.image-select-gallery-btn-empty:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+/* ===== CUSTOM CHECKBOX ===== */
+.custom-checkbox-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: var(--dark-background-tertiary);
+  border: 2px solid var(--dark-border-primary);
+  border-radius: 4px;
+  color: var(--primary-background);
+  flex-shrink: 0;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+/* Hover state on the container triggers visual change */
+.form-group:not(.disabled):hover .custom-checkbox-visual {
+  background-color: var(--dark-background-hover);
+}
+
+/* Active/Pressed state */
+.form-group:not(.disabled):active .custom-checkbox-visual {
+  background-color: var(--dark-background-tertiary);
+}
+
+/* Focus state linked to the hidden input */
+.form-group input:focus + .custom-checkbox-visual {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-shadow-primary);
+  border-color: var(--dark-border-focus);
 }

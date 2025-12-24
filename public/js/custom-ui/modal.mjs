@@ -1,118 +1,187 @@
-// Custom Image Modal Module
-export function createImageModal(url, autoScale = true, title = null, onSelect = null) {
-  // Create modal overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'image-modal-overlay';
+import { html } from 'htm/preact';
+import { useEffect, useRef } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
+import { Button } from './button.mjs';
 
-  // Create modal wrapper (for positioning the close button)
-  const modalWrapper = document.createElement('div');
-  modalWrapper.className = 'image-modal-wrapper';
+/**
+ * Modal Component
+ * Declarative modal that renders via Portal to document.body
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen
+ * @param {Function} props.onClose
+ * @param {string} props.title
+ * @param {string} [props.size='medium'] - 'small', 'medium', 'large', 'full'
+ * @param {VNode|string} [props.footer] - Optional footer content (buttons)
+ * @param {VNode} props.children
+ */
+export function Modal({ 
+  isOpen, 
+  onClose, 
+  title, 
+  size = 'medium', 
+  children, 
+  footer,
+  className = ''
+}) {
+  const overlayRef = useRef(null);
 
-  // Create modal container
-  const modalContainer = document.createElement('div');
-  modalContainer.className = 'image-modal-container';
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
 
-  // Create image element
-  const image = document.createElement('img');
-  image.src = url;
-  image.alt = 'Modal Image';
-  image.className = autoScale ? 'image-modal-autoscale' : 'image-modal-original';
+  // Lock body scroll
+  useEffect(() => {
+    if (isOpen) {
+      const originalStyle = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = originalStyle; };
+    }
+  }, [isOpen]);
 
-  // Handle image loading
-  image.addEventListener('load', function() {
-    if (autoScale) {
-      // Calculate scaling for auto-scale mode
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-      const padding = 40; // 20px padding on each side
-      const maxWidth = windowWidth - padding;
-      const maxHeight = windowHeight - padding;
-      const imageAspectRatio = image.naturalWidth / image.naturalHeight;
-      const windowAspectRatio = maxWidth / maxHeight;
-      let scaledWidth, scaledHeight;
-      if (imageAspectRatio > windowAspectRatio) {
-        scaledWidth = Math.min(maxWidth, image.naturalWidth);
-        scaledHeight = scaledWidth / imageAspectRatio;
-      } else {
-        scaledHeight = Math.min(maxHeight, image.naturalHeight);
-        scaledWidth = scaledHeight * imageAspectRatio;
+  if (!isOpen) return null;
+
+  const handleOverlayClick = (e) => {
+    if (e.target === overlayRef.current) {
+      onClose();
+    }
+  };
+
+  const getSizeClass = () => {
+    switch (size) {
+      case 'small': return 'modal-sm';
+      case 'large': return 'modal-lg';
+      case 'full': return 'modal-full';
+      default: return ''; // medium is default
+    }
+  };
+
+  const modalContent = html`
+    <div 
+      class="dialog-overlay" 
+      onClick=${handleOverlayClick} 
+      ref=${overlayRef}
+      style="display: flex;"
+    >
+      <div 
+        class="dialog-box ${getSizeClass()} ${className}" 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="modal-title"
+      >
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3 id="modal-title" class="dialog-title" style="margin: 0;">${title}</h3>
+          <button 
+            onClick=${onClose}
+            style="background: none; border: none; color: var(--dark-text-secondary); cursor: pointer; padding: 5px;"
+            aria-label="Close"
+          >
+            <box-icon name='x' color='var(--dark-text-secondary)'></box-icon>
+          </button>
+        </div>
+        
+        <div class="dialog-content" style="margin-bottom: ${footer ? '20px' : '0'};">
+          ${children}
+        </div>
+
+        ${footer && html`
+          <div class="dialog-buttons" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            ${footer}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+
+  return createPortal(modalContent, document.body);
+}
+
+/**
+ * Helper to imperatively show an image modal (backward compatibility)
+ * @param {string} imageUrl 
+ * @param {boolean} allowSelect - Not used in V2 modal logic directly but kept for signature compat
+ * @param {string} title 
+ * @param {Function} onSelect - Callback if a "Select" button/action is desired (legacy behavior)
+ * @param {string} selectButtonText - Custom text for the select button (default: 'View')
+ */
+import { render } from 'preact';
+
+export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null, selectButtonText = 'View') {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const close = () => {
+    render(null, container);
+    container.remove();
+    document.body.style.overflow = '';
+  };
+  
+  // Lock body scroll
+  document.body.style.overflow = 'hidden';
+  
+  const handleSelect = (e) => {
+    e.stopPropagation();
+    if (onSelect) onSelect();
+    close();
+  };
+
+  const ImperativeImageModal = () => {
+    const overlayRef = useRef(null);
+
+    const handleOverlayClick = (e) => {
+      if (e.target === overlayRef.current) {
+        close();
       }
-      image.classList.add('image-modal-scaled');
-      image.style.width = scaledWidth + 'px';
-      image.style.height = scaledHeight + 'px';
-      modalContainer.classList.add('image-modal-overflow-visible');
-    } else {
-      image.classList.add('image-modal-original-size');
-      image.style.width = image.naturalWidth + 'px';
-      image.style.height = image.naturalHeight + 'px';
-      modalContainer.classList.add('image-modal-overflow-auto');
-    }
-  });
+    };
+    
+    // Handle Escape
+    useEffect(() => {
+        const handleEscape = (e) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, []);
 
-  // Handle image load error
-  image.addEventListener('error', function() {
-    const errorText = document.createElement('div');
-    errorText.className = 'image-modal-error';
-    errorText.textContent = 'Failed to load image';
-    modalContainer.appendChild(errorText);
-    modalContainer.removeChild(image);
-  });
+    return html`
+      <div 
+        class="image-modal-overlay" 
+        ref=${overlayRef}
+        onClick=${handleOverlayClick}
+      >
+        <div class="image-modal-container">
 
-  // Close modal function
-  const closeModal = function() {
-    if (overlay && overlay.parentNode) {
-      document.body.removeChild(overlay);
-      document.removeEventListener('keydown', handleEscape);
-    }
+
+           <img 
+             src=${imageUrl} 
+             alt=${title || 'Preview'} 
+             class="image-modal-preview"
+             style="max-width: 100%; max-height: calc(100vh - 60px); display: block; object-fit: contain;" 
+           />
+           
+           ${title && html`
+             <div class="image-modal-title">
+               ${title}
+             </div>
+           `}
+
+           ${allowSelect && onSelect && html`
+             <${Button}
+               variant="secondary"
+               onClick=${handleSelect}
+               className="image-modal-select"
+             >
+               ${selectButtonText}
+             <//>
+           `}
+        </div>
+      </div>
+    `;
   };
 
-  // Handle escape key
-  const handleEscape = function(e) {
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  };
-
-  // Close when clicking on overlay (but not on the image or container)
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) {
-      closeModal();
-    }
-  });
-
-  // Add escape key listener
-  document.addEventListener('keydown', handleEscape);
-
-  // Assemble modal
-  modalContainer.appendChild(image);
-  // If title is provided, create and style the title element
-  if (title) {
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'image-modal-title';
-    titleDiv.textContent = title;
-    modalWrapper.appendChild(titleDiv);
-    modalWrapper.classList.add('image-modal-title-wrapper');
-  }
-  
-  // If onSelect is provided, create a select button
-  if (onSelect) {
-    const selectButton = document.createElement('button');
-    selectButton.className = 'image-modal-select btn-with-icon gallery-load-btn';
-    selectButton.textContent = 'Select';
-    selectButton.setAttribute('aria-label', 'Select this image');
-    
-    // Handle select button click
-    selectButton.addEventListener('click', function() {
-      onSelect(url);
-      closeModal();
-    });
-    
-    modalWrapper.appendChild(selectButton);
-  }
-  
-  modalWrapper.appendChild(modalContainer);
-  overlay.appendChild(modalWrapper);
-
-  // Add to page
-  document.body.appendChild(overlay);
+  render(html`<${ImperativeImageModal} />`, container);
 }

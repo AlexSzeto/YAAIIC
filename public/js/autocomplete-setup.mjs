@@ -37,7 +37,7 @@ function getCurrentTextareaTagStartEnd(textarea) {
   return [startPos, endPos];
 }
 
-function initAutoComplete() {
+export function initAutoComplete() {
   const textarea = document.getElementById('description');
   const tags = getTags();
   
@@ -167,6 +167,9 @@ function initAutoComplete() {
           // Move cursor position after the inserted tag and comma
           const newCursorPos = startPos + selection.length + 2;
           textarea.setSelectionRange(newCursorPos, newCursorPos);
+          
+          // Dispatch input event to sync with React/Preact state
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
     }
@@ -174,13 +177,4 @@ function initAutoComplete() {
 }
 
 // Initialize autocomplete when DOM is ready
-document.addEventListener('DOMContentLoaded', async function() {
-  try {
-    // Wait for tags to be loaded (they should auto-load, but ensure they're ready)
-    await loadTags();
-    console.log('Autocomplete: Tags ready, initializing autocomplete');
-    initAutoComplete();
-  } catch (error) {
-    console.error('Autocomplete: Error loading tags:', error);
-  }
-});
+
