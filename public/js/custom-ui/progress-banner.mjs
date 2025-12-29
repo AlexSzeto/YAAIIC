@@ -69,13 +69,13 @@ export function ProgressBanner({
         message = getStepName(data.progress.node);
       }
 
-      // Format page title with step indicator if currentValue and maxValue are available
+      // Add percentage display to the message for page title
       let titleMessage = message;
-      if (data.progress.currentValue > 0 && data.progress.maxValue > 0) {
-        titleMessage = `(${data.progress.currentValue}/${data.progress.maxValue}) ${message}`;
+      if (data.progress.percentage > 0) {
+        titleMessage = `(${data.progress.percentage}%) ${message}`;
       }
 
-      // Update page title
+      // Update page title with percentage
       pageTitleManager.update(titleMessage);
 
       setState(prev => ({

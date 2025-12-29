@@ -499,9 +499,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         
         try {
           // Use global step counter for progress
-          const stepNumber = currentStep + 1;
-          const stepName = `(${stepNumber}/${totalSteps}) Generating ${promptConfig.to}`;
           const percentage = Math.round((currentStep / totalSteps) * 100);
+          const stepName = `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for start
           emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -511,9 +510,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
           // Increment step counter after completion
           currentStep++;
           const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+          const completionStepName = `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process pre-generation task for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the task fails and field is empty
@@ -707,11 +707,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         
         try {
           // Use global step counter for progress
-          const stepNumber = currentStep + 1;
-          const stepName = promptConfig.to === 'description' 
-            ? `(${stepNumber}/${totalSteps}) Analyzing image` 
-            : `(${stepNumber}/${totalSteps}) Generating ${promptConfig.to}`;
           const percentage = Math.round((currentStep / totalSteps) * 100);
+          const stepName = promptConfig.to === 'description' 
+            ? `Analyzing image` 
+            : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for start
           emitProgressUpdate(promptId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -721,9 +720,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
           // Increment step counter after completion
           currentStep++;
           const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+          const completionStepName = promptConfig.to === 'description' 
+            ? `Analyzing image` 
+            : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(promptId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          emitProgressUpdate(promptId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the prompt fails

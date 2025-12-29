@@ -216,11 +216,11 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     }
   }
   
-  // Prepend step indicator and update global step values if available
+  // Update global step values if available
   let updatedProgress = { ...progress };
   if (nodeId && task.stepMap && task.stepMap.has(nodeId)) {
     const stepInfo = task.stepMap.get(nodeId);
-    stepTitle = `${stepInfo.stepDisplayText} ${stepTitle}`;
+    // Don't prepend step display text anymore - just use the title as-is
     
     // Use global step counter if totalSteps is available
     if (task.totalSteps) {
@@ -234,6 +234,8 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
       const nodeCompletion = progress.percentage / 100; // Node completion as decimal (0-1)
       
       updatedProgress.percentage = Math.round((basePercentage + stepWeight * nodeCompletion) * 100);
+      
+      // Don't add percentage display here - let the client handle formatting
     }
   }
   

@@ -2,6 +2,7 @@
 - tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 
 # Features
+- Deprecate tag feature, add "folders". Add "folder" attribute to image data. Put buttons next to gallery to show and allow user to change folder. Save inpaint image back to the same folder as the source image. Generated image should go to the current folder. Allow user to move selected items to destination folder in the gallery.
 - Export to destination (customizable)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop

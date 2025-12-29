@@ -191,3 +191,8 @@ For example, the correct `currentStep` for the first item should be `(1/18) Gene
 ```
 
 [x] Be more granular in the completion percentage sent back for generation tasks. When comfy UI sends a status with the completion percentage of the current node, advance the total percentage between the current step and the next step. The formula would be (current step/total steps) + (1/total steps) * (node completion percentage). For example, if we are on step 2 of 4 and comfy UI is reporting 80% completion, we should report a percentage of (2/4) + (1/4) * 0.80 = 0.5 + 0.2 = 0.7 -> 70%.
+
+[x] Remove the text `(step/total)` from the SSE, and replace it by sending percentage as `(percent%)` to the client instead.
+> Remove any client side attempt to recreate this step count text, which might finally eliminate instances where the page title gets updated with duplicate step count text, i.e. `(15/18) (16/18) Sampling Image...`.
+
+[x] Eliminate `(percent%)` from the step name from the SSE, and let the client add this back to the title based on the percentage reported by the SSE.
