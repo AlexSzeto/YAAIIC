@@ -1,5 +1,3 @@
 # Untitled
-
 ## Goals
-
 ## Tasks

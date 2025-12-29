@@ -39,27 +39,22 @@ function createProgressResponse(taskId, progress, currentStep) {
 }
 
 function createCompletionResponse(taskId, result) {
+  // Extract maxValue if present, otherwise default to 1
+  const maxValue = result.maxValue || 1;
+  
+  // Create a copy of result without maxValue for the result field
+  const { maxValue: _, ...resultData } = result;
+  
   return {
     taskId: taskId,
     status: 'completed',
     progress: {
       percentage: 100,
       currentStep: 'Complete',
-      currentValue: result.maxValue || 1,
-      maxValue: result.maxValue || 1
+      currentValue: maxValue,
+      maxValue: maxValue
     },
-    result: {
-      imageUrl: result.imageUrl,
-      description: result.description,
-      prompt: result.prompt,
-      seed: result.seed,
-      name: result.name,
-      workflow: result.workflow,
-      inpaint: result.inpaint || false,
-      inpaintArea: result.inpaintArea || null,
-      uid: result.uid,
-      timeTaken: result.timeTaken
-    },
+    result: resultData,
     timestamp: new Date().toISOString()
   };
 }
@@ -221,10 +216,27 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     }
   }
   
-  // Prepend step indicator if available
+  // Update global step values if available
+  let updatedProgress = { ...progress };
   if (nodeId && task.stepMap && task.stepMap.has(nodeId)) {
     const stepInfo = task.stepMap.get(nodeId);
-    stepTitle = `${stepInfo.stepDisplayText} ${stepTitle}`;
+    // Don't prepend step display text anymore - just use the title as-is
+    
+    // Use global step counter if totalSteps is available
+    if (task.totalSteps) {
+      updatedProgress.value = stepInfo.stepNumber - 1; // -1 because we show (stepNumber/total) but value is 0-indexed
+      updatedProgress.max = task.totalSteps;
+      
+      // Calculate granular percentage within the current step
+      // Formula: (currentStep/totalSteps) + (1/totalSteps) * nodeCompletionPercentage
+      const basePercentage = (stepInfo.stepNumber - 1) / task.totalSteps; // Percentage at start of current step
+      const stepWeight = 1 / task.totalSteps; // How much this step contributes to total
+      const nodeCompletion = progress.percentage / 100; // Node completion as decimal (0-1)
+      
+      updatedProgress.percentage = Math.round((basePercentage + stepWeight * nodeCompletion) * 100);
+      
+      // Don't add percentage display here - let the client handle formatting
+    }
   }
   
   // Fall back to 'Processing...' if no title found
@@ -232,9 +244,9 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     stepTitle = 'Processing...';
   }
   
-  task.progress = { percentage: progress.percentage, currentStep: stepTitle };
+  task.progress = { percentage: updatedProgress.percentage, currentStep: stepTitle };
   
-  const message = createProgressResponse(taskId, progress, stepTitle);
+  const message = createProgressResponse(taskId, updatedProgress, stepTitle);
   emitSSEToTask(taskId, message);
 }
 

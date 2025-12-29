@@ -103,17 +103,6 @@ export function GenerationForm({
             onChange=${handleChange('framerate')}
             disabled=${isGenerating}
           />
-          
-          <${Select}
-            label="Orientation"
-            options=${[
-              { label: 'Portrait', value: 'portrait' },
-              { label: 'Landscape', value: 'landscape' }
-            ]}
-            value=${formState.orientation || 'portrait'}
-            onChange=${handleChange('orientation')}
-            disabled=${isGenerating}
-          />
         </div>
       `}
 

@@ -680,15 +680,11 @@
 }
 
 /* ===== PROGRESS BANNER ===== */
-#progress-banner-container {
+.progress-banner {
   position: fixed;
   bottom: 1rem;
   right: 1rem;
   z-index: 9999;
-}
-
-.progress-banner {
-  position: relative;
   max-width: 400px;
   min-width: 320px;
   background-color: var(--dark-background-card);

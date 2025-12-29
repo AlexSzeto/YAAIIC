@@ -1,11 +1,42 @@
 {
+  "postGenerationTasks": [
+    {
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "imagePath": "savePath",
+      "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
+      "to": "description"
+    },
+    {
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "imagePath": "savePath",
+      "prompt": "Write an objective inventory of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
+      "to": "summary"
+    },  
+    {
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+      "to": "name",
+      "replaceBlankFieldOnly": true
+    },
+    {
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+      "to": "tags"
+    }
+  ],
   "workflows": [
     {
       "name": "Text to Image (Illustrious Characters)",
-      "autocomplete": true,
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
       "base": "illustrious-text-to-image.json",
       "format": "png",
-      "type": "image",
       "finalNode": "10",
       "replace": [
         {
@@ -25,11 +56,16 @@
     },
     {
       "name": "Image Style Transfer (Illustrious)",
-      "autocomplete": true,
-      "inputImages": 1,
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 1,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect"
+      },
       "base": "illustrious-image-style.json",
       "format": "png",
-      "type": "image",
       "finalNode": "11",
       "upload": [
         {
@@ -59,10 +95,16 @@
     },
     {
       "name": "Text to Image (Flux Fantasy Landscape)",
-      "autocomplete": false,
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "landscape"
+      },
       "base": "flux-fantasy-text-to-landscape.json",
       "format": "jpg",
-      "type": "image",
       "finalNode": "9",
       "replace": [
         {
@@ -82,10 +124,16 @@
     },
     {
       "name": "Text to Image (Flux Fantasy Portrait)",
-      "autocomplete": false,
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
       "base": "flux-fantasy-text-to-portrait.json",
       "format": "jpg",
-      "type": "image",
       "finalNode": "44",
       "replace": [
         {
@@ -105,10 +153,16 @@
     },
     {
       "name": "Inpaint (Realistic Vision Fantasy)",
-      "autocomplete": false,
+      "options": {
+        "type": "inpaint",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect"
+      },
       "base": "realvis-fantasy-inpaint.json",
       "format": "jpg",
-      "type": "inpaint",
       "finalNode": "9",
       "upload": [
         {
@@ -146,10 +200,16 @@
     },
     {
       "name": "Inpaint (Waifu Anime)",
-      "autocomplete": true,
+      "options": {
+        "type": "inpaint",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect"
+      },
       "base": "waifu-anime-inpaint.json",
       "format": "png",
-      "type": "inpaint",
       "finalNode": "9",
       "upload": [
         {
@@ -187,11 +247,16 @@
     },
     {
       "name": "Image Edit (Qwen)",
-      "autocomplete": false,
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect"
+      },
       "base": "qwen-image-to-image.json",
       "format": "png",
-      "type": "image",
-      "inputImages": 1,
       "finalNode": "229",
       "upload": [
         {
@@ -220,26 +285,29 @@
     },
     {
       "name": "Image to Video (WAN22)",
-      "autocomplete": false,
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 2,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "preGenerationTasks": [
+          {
+            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "to": "prompt",
+            "replaceBlankFieldOnly": true
+          },
+          {
+            "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+            "to": "description"
+          }
+        ]
+      },
       "base": "wan-image-to-video.json",
       "format": "webp",
-      "type": "video",
-      "nameRequired": true,
-      "optionalPrompt": true,
       "finalNode": "76",
-      "inputImages": 2,
-      "preGenerationTasks": [
-        {
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
-          "to": "prompt",
-          "replaceBlankFieldOnly": true
-        },
-        {
-          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
-          "to": "description"
-        }
-      ],
       "upload": [
         {
           "from": "image_0",
@@ -320,26 +388,29 @@
     },
     {
       "name": "Image to Video Loop (WAN5b)",
-      "autocomplete": false,
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "preGenerationTasks": [
+          {
+            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "to": "prompt",
+            "replaceBlankFieldOnly": true
+          },
+          {
+            "template": "[image_0_description]",
+            "to": "description"
+          }
+        ]
+      },
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
-      "type": "video",
-      "nameRequired": true,
-      "optionalPrompt": true,
       "finalNode": "119",
-      "inputImages": 1,
-      "preGenerationTasks": [
-        {
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
-          "to": "prompt",
-          "replaceBlankFieldOnly": true
-        },
-        {
-          "template": "[image_0_description]",
-          "to": "description"
-        }
-      ],
       "upload": [
         {
           "from": "image_0",
@@ -400,26 +471,29 @@
     },    
     {
       "name": "Image to Video (WAN5b)",
-      "autocomplete": false,
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 2,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "preGenerationTasks": [
+          {
+            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "to": "prompt",
+            "replaceBlankFieldOnly": true
+          },
+          {
+            "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+            "to": "description"
+          }
+        ]
+      },
       "base": "wan5b-image-to-video.json",
       "format": "webp",
-      "type": "video",
       "finalNode": "119",
-      "inputImages": 2,
-      "nameRequired": true,
-      "optionalPrompt": true,
-      "preGenerationTasks": [
-        {
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
-          "to": "prompt",
-          "replaceBlankFieldOnly": true
-        },
-        {
-          "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
-          "to": "description"
-        }
-      ],
       "upload": [
         {
           "from": "image_0",

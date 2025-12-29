@@ -219,6 +219,13 @@ function InpaintApp() {
       // Get the original image canvas
       const imageCanvas = await createOriginalImageCanvas(imageData.imageUrl);
       
+      // Determine orientation from image dimensions - default to "detect" if undefined
+      let orientation = workflow.orientation || 'detect';
+      if (orientation === 'detect') {
+        orientation = imageCanvas.height > imageCanvas.width ? 'portrait' : 'landscape';
+        console.log(`Detected orientation: ${orientation} (${imageCanvas.width}x${imageCanvas.height})`);
+      }
+      
       // Generate mask canvas
       const maskCanvas = generateMaskCanvas(
         imageCanvas.width, 
@@ -236,6 +243,7 @@ function InpaintApp() {
       formData.append('name', formState.name.trim());
       formData.append('seed', formState.seed);
       formData.append('prompt', formState.description.trim());
+      formData.append('orientation', orientation);
       formData.append('inpaintArea', JSON.stringify(inpaintArea));
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
