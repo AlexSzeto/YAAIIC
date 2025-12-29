@@ -617,6 +617,23 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       throw new Error('ComfyUI generation failed');
     }
 
+    // Update currentStep after workflow execution completes
+    // Calculate how many steps have been completed: pre-gen tasks + workflow steps
+    const taskAfterWorkflow = getTask(taskId);
+    if (taskAfterWorkflow && taskAfterWorkflow.stepMap && taskAfterWorkflow.totalSteps) {
+      // Find the maximum step number from the workflow execution
+      let maxWorkflowStep = 0;
+      for (const stepInfo of taskAfterWorkflow.stepMap.values()) {
+        if (stepInfo.stepNumber > maxWorkflowStep) {
+          maxWorkflowStep = stepInfo.stepNumber;
+        }
+      }
+      // Update currentStep to continue from where workflow left off
+      currentStep = maxWorkflowStep;
+      updateTask(taskId, { currentStep });
+      console.log(`Workflow execution complete. Updated currentStep to ${currentStep}/${taskAfterWorkflow.totalSteps}`);
+    }
+
     // Handle extractOutputPathFromTextFile if specified
     if (extractOutputPathFromTextFile) {
       console.log(`Extracting output path from text file: ${extractOutputPathFromTextFile}`);
