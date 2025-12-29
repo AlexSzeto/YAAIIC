@@ -22,9 +22,9 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 
 ### Serve Images
 - **Endpoint**: `GET /image/:filename`
-- **Use Case**: Retrieve generated images and uploaded assets.
+- **Use Case**: Retrieve generated images, videos, and uploaded assets.
 - **Payload**: `filename` path parameter.
-- **Output**: Image file (e.g., PNG).
+- **Output**: Image or video file (e.g., PNG, JPG, WEBP).
 
 ## Data & Resources
 
@@ -43,34 +43,48 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "filters": {
       "noCharacters": true,
       "minLength": 4,
-      ...
+      "minUsageCount": 100,
+      "totalReturned": 1234
     }
   }
   ```
 - **Error State**: 500 if the source CSV file cannot be read.
 
 ### List Workflows
-- **Endpoint**: `GET /generate/workflows`
+- **Endpoint**: `GET /workflows`
 - **Use Case**: Retrieve the list of available ComfyUI workflows configured on the server.
 - **Payload**: None
-- **Output**: Array of workflow objects.
+- **Output**: Array of workflow option objects.
   ```json
   [
     {
-      "name": "workflow_name",
-      "type": "txt2img",
-      "autocomplete": true
+      "name": "Text to Image (Example)",
+      "type": "image",
+      "autocomplete": true,
+      "inputImages": 0,
+      "optionalPrompt": false,
+      "nameRequired": false,
+      "orientation": "portrait"
     },
-    ...
+    {
+      "name": "Image to Video (Example)",
+      "type": "video",
+      "autocomplete": false,
+      "inputImages": 2,
+      "optionalPrompt": true,
+      "nameRequired": true,
+      "orientation": "detect"
+    }
   ]
   ```
 - **Error State**: 500 if workflows cannot be loaded.
 
 ### Search Image History
 - **Endpoint**: `GET /image-data`
-- **Use Case**: Search through the history of generated images.
+- **Use Case**: Search through the history of generated images and videos.
 - **Payload**:
-  - `query` (query, string): Search term (matches name, description, prompt, or date).
+  - `query` (query, string): Search term (matches name, description, prompt, or date in yyyy-mm-dd format).
+  - `tags` (query, string): Comma-separated list of tags. Results must contain ALL specified tags.
   - `sort` (query, enum): 'ascending' or 'descending' (default).
   - `limit` (query, integer): Max number of results. Default: 10.
 - **Output**: Array of image data objects.
@@ -85,9 +99,18 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   {
     "uid": 1234567890,
     "name": "Generated Image",
-    "prompt": "...",
-    "imageUrl": "/image/...",
-    ...
+    "description": "AI-generated prose description...",
+    "summary": "Objective visual inventory...",
+    "tags": ["portrait", "anime", "female"],
+    "prompt": "user prompt text...",
+    "imageUrl": "/image/image_1.png",
+    "workflow": "workflow_name",
+    "type": "image",
+    "seed": 12345,
+    "inpaint": false,
+    "inpaintArea": null,
+    "timeTaken": 45000,
+    "timestamp": "2025-12-28T00:00:00.000Z"
   }
   ```
 - **Error State**:
@@ -116,44 +139,109 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - 400 if `uids` is missing, not an array, or contains non-integers.
   - 500 if saving changes fails.
 
-### Upload Image
-- **Endpoint**: `POST /api/upload-image`
-- **Use Case**: Upload an image file and automatically generate a description and name using LLM processing.
-- **Payload**: `multipart/form-data`.
-  - `image`: Image file (Required, must be an image MIME type).
-- **Output**: Complete image data object with generated description and name.
+### Edit Image Data
+- **Endpoint**: `POST /edit`
+- **Use Case**: Update metadata for an existing image entry.
+- **Payload**: JSON body with complete image data object.
   ```json
   {
-    "uid": 1715000000000,
-    "name": "Generated Name",
-    "description": "AI-generated description of the image...",
-    "imageUrl": "/image/uploaded_1715000000000.png",
-    "prompt": "",
-    "workflow": "upload",
-    "type": "upload",
-    "seed": 0,
-    "inpaint": false,
-    "inpaintArea": null,
-    "timeTaken": 0
+    "uid": 1234567890,
+    "name": "Updated Name",
+    "description": "Updated description...",
+    "tags": ["updated", "tags"],
+    ...
   }
   ```
+  - `uid` (integer, required): The unique ID of the image to update.
+  - All other fields will replace the existing entry.
+- **Output**:
+  ```json
+  {
+    "success": true,
+    "data": { ... updated image object ... }
+  }
+  ```
+- **Error State**:
+  - 400 if `uid` is missing or not an integer.
+  - 404 if image with specified UID not found.
+  - 500 if saving changes fails.
+
+### Regenerate Text Fields
+- **Endpoint**: `POST /regenerate`
+- **Use Case**: Regenerate AI-generated text fields (description, summary, name, tags) for an existing image using LLM.
+- **Payload**: JSON body.
+  ```json
+  {
+    "uid": 1234567890,
+    "fields": ["description", "name", "tags"]
+  }
+  ```
+  - `uid` (integer, required): The unique ID of the image.
+  - `fields` (array of strings, required): Fields to regenerate. Valid values: `"description"`, `"summary"`, `"name"`, `"tags"`.
+- **Output**: Task ID for SSE tracking.
+  ```json
+  {
+    "taskId": "regenerate-1234567890-1735500000000",
+    "message": "Regeneration started"
+  }
+  ```
+- **SSE Completion Event**: Returns full updated image data.
+  ```json
+  {
+    "taskId": "...",
+    "status": "completed",
+    "progress": { "percentage": 100, ... },
+    "imageData": { ... full updated image object ... },
+    "message": "Regeneration complete"
+  }
+  ```
+- **Error State**:
+  - 400 if `uid` or `fields` is missing/invalid.
+  - 404 if image with specified UID not found.
+  - 500 on processing failure.
+
+### Upload Image
+- **Endpoint**: `POST /upload/image`
+- **Use Case**: Upload an image file with automatic LLM analysis for description, summary, name, and tags.
+- **Payload**: `multipart/form-data`.
+  - `image`: Image file (Required, must be an image MIME type).
+- **Output**: Task ID for SSE tracking.
+  ```json
+  {
+    "success": true,
+    "taskId": "task_1735500000000_abc123def",
+    "message": "Upload task created"
+  }
+  ```
+- **SSE Completion Event**: Returns complete image data object with generated metadata.
 - **Error State**:
   - 400 if no image file is provided or file type is not an image.
   - 500 on upload processing failure.
 
 ## Generation Endpoints & Workflow
 
-### Text-to-Image Generation
-- **Endpoint**: `POST /generate/txt2img`
-- **Use Case**: Initiate a standard text-to-image generation task.
-- **Payload**: JSON body.
+### Generate (Image/Video)
+- **Endpoint**: `POST /generate`
+- **Use Case**: Initiate image or video generation using a configured ComfyUI workflow.
+- **Payload**: `multipart/form-data` or JSON body depending on workflow requirements.
+
+  **For workflows with input images** (`multipart/form-data`):
+  - `workflow` (string, required): Workflow name.
+  - `prompt` (string, required unless `optionalPrompt` is true): Positive prompt text.
+  - `name` (string, required if `nameRequired` is true): Name for the output.
+  - `seed` (integer, optional): Random seed. Auto-generated if omitted.
+  - `image_0` (file, if `inputImages >= 1`): First input image.
+  - `image_1` (file, if `inputImages >= 2`): Second input image.
+  - `orientation` (string, optional): 'portrait', 'landscape', or 'square' (only when `orientation: "detect"`).
+
+  **For text-only workflows** (JSON body):
   ```json
   {
-    "workflow": "workflow_name", // Required
-    "prompt": "positive prompt text", // Required
-    "seed": 12345, // Optional, random if omitted
-    "name": "Optional Name", // Optional
-    // Additional workflow-specific parameters
+    "workflow": "workflow_name",
+    "prompt": "positive prompt text",
+    "seed": 12345,
+    "name": "Optional Name",
+    "orientation": "portrait"
   }
   ```
 - **Output**:
@@ -165,7 +253,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   }
   ```
 - **Error State**:
-  - 400 if `workflow` is missing or invalid.
+  - 400 if `workflow` is missing, invalid, or required images not provided.
   - 500 on processing failure.
 
 ### Inpaint Generation
@@ -202,7 +290,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 The generation process uses an asynchronous workflow with Server-Sent Events (SSE) for progress tracking:
 
 1.  **Initiate Task**:
-    - Client sends a POST request to `/generate/txt2img` or `/generate/inpaint`.
+    - Client sends a POST request to `/generate`, `/generate/inpaint`, `/upload/image`, or `/regenerate`.
     - Server creates a background task and immediately returns a `taskId`.
 
 2.  **Subscribe to Updates**:
@@ -210,11 +298,12 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
     - Server buffers messages if the client hasn't connected yet.
 
 3.  **Process Stages (Server-Side)**:
+    - **Pre-Generation Tasks**: If configured, LLM tasks run to prepare data (e.g., auto-generate prompts).
     - **Validation & Setup**: Server verifies inputs and prepares the ComfyUI workflow.
     - **Queuing**: Request is sent to the ComfyUI backend.
-    - **Generation**: ComfyUI processes the image. SSE events emit progress percentages.
-    - **Analysis (Optional)**: If configured, the generated image is analyzed (e.g., by Ollama).
-    - **Completion**: Image is saved, and a final event is emitted.
+    - **Generation**: ComfyUI processes the image/video. SSE events emit progress percentages.
+    - **Post-Generation Tasks**: LLM analysis runs to generate description, summary, name, and tags.
+    - **Completion**: Result is saved, and a final event is emitted.
 
 4.  **SSE Event Types**:
     - `progress`: JSON data containing percentage, current step description, and values.
@@ -227,7 +316,8 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
           "currentStep": "Sampling image...",
           "currentValue": 10,
           "maxValue": 20
-        }
+        },
+        "timestamp": "2025-12-28T00:00:00.000Z"
       }
       ```
     - `complete`: Final event with result data.
@@ -235,18 +325,28 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
       {
         "taskId": "task_123456...",
         "status": "completed",
+        "progress": {
+          "percentage": 100,
+          "currentStep": "Complete",
+          "currentValue": 20,
+          "maxValue": 20
+        },
         "result": {
-          "imageUrl": "/image/filename.png",     // Path to the generated image
-          "description": "Analyzed description of image...", // From Ollama analysis (if enabled)
-          "prompt": "positive prompt text...",   // The prompt used for generation
-          "seed": 12345,                         // The seed used
-          "name": "Generated Name",              // Name (provided or generated)
-          "workflow": "workflow_name",           // The name of the workflow used
-          "inpaint": false,                      // Boolean indicating if this was an inpaint task
-          "inpaintArea": null,                   // Object {x1, y1, x2, y2} if inpaint area was specified
-          "uid": 1715000000000,                  // Unique ID in the image database
-          "maxValue": 20                         // Total steps/max value for progress
-        }
+          "imageUrl": "/image/filename.png",
+          "description": "AI-generated prose description...",
+          "summary": "Objective visual inventory...",
+          "tags": ["portrait", "anime"],
+          "prompt": "positive prompt text...",
+          "seed": 12345,
+          "name": "Generated Name",
+          "workflow": "workflow_name",
+          "type": "image",
+          "inpaint": false,
+          "inpaintArea": null,
+          "uid": 1715000000000,
+          "timeTaken": 45000
+        },
+        "timestamp": "2025-12-28T00:00:00.000Z"
       }
       ```
     - `error-event`: Emitted if the process fails.
@@ -254,7 +354,17 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
       {
         "taskId": "...",
         "status": "error",
-        "error": { "message": "..." }
+        "progress": {
+          "percentage": 0,
+          "currentStep": "Failed",
+          "currentValue": 0,
+          "maxValue": 0
+        },
+        "error": {
+          "message": "Error description",
+          "details": "Detailed error information"
+        },
+        "timestamp": "2025-12-28T00:00:00.000Z"
       }
       ```
-    - `heartbeat`: Periodic keep-alive ping (every 30s).
+    - `heartbeat`: Periodic keep-alive ping (every 30s). Format: `: heartbeat`

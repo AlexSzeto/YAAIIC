@@ -213,7 +213,7 @@ app.get('/tags', (req, res) => {
 });
 
 // POST endpoint for uploading images
-app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+app.post('/upload/image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
@@ -241,7 +241,7 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
 });
 
 // POST endpoint for ComfyUI image generation
-app.post('/generate/image', upload.any(), async (req, res) => {
+app.post('/generate', upload.any(), async (req, res) => {
   try {
     const { workflow } = req.body;
     
@@ -677,7 +677,7 @@ app.post('/regenerate', async (req, res) => {
 });
 
 // GET endpoint for workflow list
-app.get('/generate/workflows', (req, res) => {
+app.get('/workflows', (req, res) => {
   try {
     const workflows = comfyuiWorkflows.workflows.map(workflow => ({
       name: workflow.name,
