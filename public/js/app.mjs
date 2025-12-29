@@ -182,7 +182,10 @@ function App() {
         newImages[targetIndex] = { 
           blob, 
           url: imageUrl, 
-          description: imageData.description || null 
+          description: imageData.description || null,
+          summary: imageData.summary || null,
+          tags: imageData.tags || null,
+          name: imageData.name || null
         };
         return newImages;
       });
@@ -282,12 +285,16 @@ function App() {
         }
         
         // Append images
+        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
-            if (img.description) {
-              formData.append(`image_${index}_description`, img.description);
-            }
+
+            imageTextFieldNames.forEach(fieldName => {
+              if (img[fieldName]) {
+                formData.append(`image_${index}_${fieldName}`, img[fieldName]);
+              }
+            });
           }
         });
         
@@ -532,7 +539,10 @@ function App() {
                      newImages[gallerySelectionMode.index] = { 
                          blob, 
                          url: imageUrl, 
-                         description: item.description || null 
+                         description: item.description || null,
+                         summary: item.summary || null,
+                         tags: item.tags || null,
+                         name: item.name || null
                      };
                      return newImages;
                  });

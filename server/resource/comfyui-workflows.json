@@ -398,15 +398,20 @@
         "preGenerationTasks": [
           {
             "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
             "to": "prompt",
             "replaceBlankFieldOnly": true
           },
           {
             "template": "[image_0_description]",
             "to": "description"
+          },
+          {
+            "template": "[image_0_summary]",
+            "to": "summary"
           }
         ]
+
       },
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
@@ -482,13 +487,17 @@
         "preGenerationTasks": [
           {
             "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
             "to": "prompt",
             "replaceBlankFieldOnly": true
           },
           {
-            "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
             "to": "description"
+          },
+          {
+            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
+            "to": "summary"
           }
         ]
       },

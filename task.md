@@ -1,69 +1,74 @@
-# SSE Bug Fixes and Progress Event Logging
+# Advanced frames blending (cross fade)
 
 ## Goals
-Fix remaining SSE-related bugs affecting the progress UI and add comprehensive progress event logging for debugging.
+Create a more advanced version of loop fade. instead of fading into the first frame from the last few frames, I need the final frames of the animations cross fade into the start of the animation. For example, if the total number of frames is 40 and blendFrames is 5, then the animation would be manipulated in the following way:
 
-## Task 1: Fix Page Title Stuck at Final Progress Message
-[x] Clear `taskId` and `regenerateTaskId` state to `null` after generation/regeneration completes
+1. Frame 1 -> Frame 1 with Frame 36 (40-5) overlaid at 1/6 opacity
+2. Frame 2 -> Frame 2 with Frame 37 (40-4) overlaid at 2/6 opacity
+3. Frame 3 -> Frame 3 with Frame 38 (40-3) overlaid at 3/6 opacity
+4. Frame 4 -> Frame 4 with Frame 39 (40-2) overlaid at 4/6 opacity
+5. Frame 5 -> Frame 5 with Frame 40 (40-1) overlaid at 5/6 opacity
+6. Delete frames 36-40
 
-> **Root Cause**: In `app.mjs`, after `handleGenerationComplete` runs, `taskId` is never set to `null`. Since `taskId` is still truthy, the ProgressBanner component remains in the render tree. When the component unmounts via `isVisible: false`, the PageTitleManager's cleanup effect runs, but on re-renders (e.g., from form state changes), a NEW ProgressBanner is instantiated with the same `taskId`, causing it to attempt to re-subscribe to an already-deleted task on the server.
+[x] Rename createLoopFade to createFinalFrameFade.
+[x] Create createCrossFade function based on the above description.
+[x] Create a server side test script that opens storage/image_346.webp and applies createCrossFade to it, and output it to server/test.webp.
+[x] Switch generation loop fades to use createCrossFade.
 
-1. In `public/js/app.mjs`, modify `handleGenerationComplete` to call `setTaskId(null)` after processing
-2. Modify `handleGenerationError` to call `setTaskId(null)` after processing
-3. Modify `handleRegenerateComplete` to ensure `setRegenerateTaskId(null)` is called (already exists but verify timing)
-4. Modify `handleRegenerateError` to ensure `setRegenerateTaskId(null)` is called (already exists but verify timing)
-5. The conditional render `${taskId ? html\`<ProgressBanner ...>\` : null}` will then correctly unmount the banner completely
+---
 
-## Task 2: Fix Client Constantly Re-subscribing on Key Input
-[x] Prevent SSE re-subscription after task completion by clearing taskId
+# Fix Grainy Blending Artifacts
 
-> **Root Cause**: Same as Task 1. Since `taskId` persists after completion, every re-render of the App component (triggered by form input changes) causes React's reconciliation to potentially remount the ProgressBanner. The `key={taskId}` prop forces a new instance if the key changes, but since `taskId` remains constant, it's the same instance being unmounted/remounted due to the parent re-rendering while the banner's internal `isVisible` is false.
+## Research Findings
+During testing, both `createFinalFrameFade` and `createCrossFade` produce grainy/pixelated artifacts in blended frames. Research revealed this is a known issue with the Sharp library when using intermediate WebP encoding.
 
-Once Task 1 is implemented, this issue should be resolved automatically since `taskId` will be `null` after completion, preventing the ProgressBanner from rendering entirely.
+**Root Cause:**
+- Even with `lossless: true`, WebP encoding during the blending process introduces subtle compression artifacts
+- Each intermediate `.webp({ lossless: true }).toBuffer()` call adds compression artifacts
+- The `dest-in` + `over` blend mode approach is correct, but the intermediate encoding format is the problem
 
-## Task 3: Add Progress Event Logging
-[x] Create a logging system for SSE progress events similar to `sent-prompt.json`
+**Solution:**
+- Use PNG as the intermediate format during blending (truly lossless, no artifacts)
+- Convert PNG buffers back to WebP before reassembly (node-webpmux requires WebP format)
+- Only encode to WebP at two points: intermediate blending → PNG, final reassembly → WebP
+- This ensures artifact-free blending while maintaining WebP output format
 
-> Log all progress events from both ComfyUI websocket and events sent to clients for debugging purposes.
+## Implementation Plan
+[x] Update `createFinalFrameFade` to use PNG for intermediate frame processing
+[x] Update `createCrossFade` to use PNG for intermediate frame processing
+[] Test both functions to verify artifacts are eliminated
 
-1. In `server/sse.mjs`, create logging utilities:
-   - Create `resetProgressLog()` to clear/create `logs/sent-progress.json` with empty array at task start
-   - Create `logProgressEvent(eventData, source)` to append events to the log file
-   - `source` should indicate origin: `'comfyui-ws'`, `'emit-progress'`, `'emit-complete'`, `'emit-error'`
+---
 
-2. Log format for `sent-progress.json`:
-```json
-[
-  {
-    "timestamp": "2025-12-29T10:30:00.000Z",
-    "source": "comfyui-ws",
-    "type": "progress",
-    "promptId": "abc-123",
-    "taskId": "task_123_xyz",
-    "data": { "node": "5", "value": 10, "max": 20, "percentage": 50 }
-  },
-  {
-    "timestamp": "2025-12-29T10:30:01.000Z",
-    "source": "emit-progress",
-    "taskId": "task_123_xyz",
-    "data": { "percentage": 50, "currentStep": "Sampling image...", "currentValue": 2, "maxValue": 5 }
-  }
-]
-```
+# Fix Frame Extraction from Animated WebP
 
-3. In `server/comfyui-websocket.mjs`, add logging calls in:
-   - `handleProgress()` - log ComfyUI progress events
-   - `handleExecuting()` - log node execution events
-   - `handleExecutionStart()` - log execution start
+## Root Cause Discovery
+The grainy artifacts and incomplete frames are NOT caused by the blending process itself. Debugging revealed that frames extracted from the animated WebP using `node-webpmux`'s `demux()` already contain artifacts and incomplete data.
 
-4. In `server/sse.mjs`, add logging calls in:
-   - `emitProgressUpdate()` - log events being sent to clients
-   - `emitTaskCompletion()` - log completion events
-   - `emitTaskError()` - log error events
+**Why `node-webpmux` produces incomplete frames:**
+- Animated WebP files use optimization to store only the changes (deltas) between frames
+- `node-webpmux` (and the underlying `webpmux` tool) extracts frames as-is without compositing
+- This results in incomplete/partial frames that only contain the delta information
+- When frames use transparency masks and blend modes, extracting them directly produces corrupted images
 
-5. In `server/generate.mjs` and `server/server.mjs`:
-   - Call `resetProgressLog()` at the start of generation/regeneration tasks (similar to `resetPromptLog()`)
+**The Correct Solution:**
+- Use `libwebp-static` npm package which provides the actual `anim_dump` binary
+- `anim_dump` is the official Google tool that properly decodes and composites animated WebP frames
+- It outputs fully reconstructed PNG frames that we can then process with Sharp
+- This is the same tool recommended by Google for extracting complete frames
 
-6. Also verify/add reset progress calls to regenerate and inpaint processes.
+## Implementation Plan
+[x] Install `@jsquash/webp` package
+[x] Rewrite `createCrossFade` to use `node-webpmux.getFrameData()` for fully composited frame extraction
+[x] Update frame reassembly to work with the new extraction method
+[x] Reverse the opacity curve so the transition is smooth:
+1. Frame 1 -> Frame 1 with Frame 36 (40-5) overlaid at 5/6 opacity
+2. Frame 2 -> Frame 2 with Frame 37 (40-4) overlaid at 4/6 opacity
+3. Frame 3 -> Frame 3 with Frame 38 (40-3) overlaid at 3/6 opacity
+4. Frame 4 -> Frame 4 with Frame 39 (40-2) overlaid at 2/6 opacity
+5. Frame 5 -> Frame 5 with Frame 40 (40-1) overlaid at 1/6 opacity
 
-7. Export `resetProgressLog` from `sse.mjs` and import in `generate.mjs` and `server.mjs`
+[x] Remove debug frame export code
+[x] Rewrite `createFinalFrameFade` using whatever final fix solution we've found for `createCrossFade`
+[x] Test both functions to verify artifacts are eliminated
+[x] Implement robust temporary file cleanup for both functions

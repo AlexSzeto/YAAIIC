@@ -4,7 +4,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
-import { createLoopFade } from './image-utils.mjs';
+import { createCrossFade } from './image-utils.mjs';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
@@ -669,7 +669,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
           // Apply loop fade blending if enabled in workflow options
           if (workflowConfig.blendLoopFrames) {
             console.log('Applying loop fade blending to animation...');
-            await createLoopFade(savePath);
+            await createCrossFade(savePath);
           }
         } else {
           throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
