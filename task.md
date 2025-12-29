@@ -69,7 +69,7 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 5. Update client-side SSE handlers to expect `generationData` in completion events
 6. Update the `/regenerate` endpoint completion message to use `generationData` structure
 
-[] Remove the orientation form field and force all workflows to send orientation.
+[x] Remove the orientation form field and force all workflows to send orientation.
 
 > On the client side the orientation form field and either expect it as a workflow input, or in the case of "detect", send "portrait" if height > width and "landscape" otherwise (this includes square dimensions). This means that workflows returned from the workflow list will need to send the "orientation" data as well.
 

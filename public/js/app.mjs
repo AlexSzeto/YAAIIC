@@ -54,8 +54,7 @@ function App() {
     seedLocked: false,
     // Video-specific fields
     length: 25,
-    framerate: 20,
-    orientation: 'portrait'
+    framerate: 20
   });
   
   const [generatedImage, setGeneratedImage] = useState(null);
@@ -225,6 +224,29 @@ function App() {
     try {
       setIsGenerating(true);
       
+      // Determine orientation
+      let orientation = workflow.orientation || 'portrait';
+      
+      // If workflow has orientation: "detect", calculate from first input image
+      if (orientation === 'detect' && inputImages.length > 0 && inputImages[0]) {
+        const firstImage = inputImages[0];
+        if (firstImage.blob) {
+          // Load image to get dimensions
+          const img = new Image();
+          const imageUrl = URL.createObjectURL(firstImage.blob);
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imageUrl;
+          });
+          URL.revokeObjectURL(imageUrl);
+          
+          // Determine orientation: portrait if height > width, landscape otherwise
+          orientation = img.height > img.width ? 'portrait' : 'landscape';
+          console.log(`Detected orientation: ${orientation} (${img.width}x${img.height})`);
+        }
+      }
+      
       // Check if we have images to send
       const hasImages = inputImages.some(img => img && img.blob);
       
@@ -245,7 +267,7 @@ function App() {
         if (workflow.type === 'video') {
           formData.append('frames', normalizeFrameCount(formState.length));
           formData.append('framerate', formState.framerate);
-          formData.append('orientation', formState.orientation);
+          formData.append('orientation', orientation);
         }
         
         // Append images
@@ -272,7 +294,7 @@ function App() {
           seed: formState.seed,
           length: normalizeFrameCount(formState.length),
           framerate: formState.framerate,
-          orientation: formState.orientation
+          orientation: orientation
         };
 
         response = await fetchJson('/generate/image', {

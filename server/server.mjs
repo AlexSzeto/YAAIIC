@@ -686,6 +686,7 @@ app.get('/generate/workflows', (req, res) => {
       inputImages: workflow.inputImages || 0,
       optionalPrompt: workflow.optionalPrompt || false,
       nameRequired: workflow.nameRequired || false,
+      orientation: workflow.orientation
     }));
     res.json(workflows);
   } catch (error) {
