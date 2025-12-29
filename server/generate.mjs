@@ -720,7 +720,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
             : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for start
-          emitProgressUpdate(promptId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+          emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
           
           await modifyGenerationDataWithPrompt(promptConfig, generationData);
           
@@ -732,7 +732,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
             : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(promptId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
+          emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the prompt fails
@@ -777,9 +777,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     }
 
     // Emit completion event using entire generationData object
-    emitTaskCompletion(promptId, {
+    emitTaskCompletion(taskId, {
       ...generationData,
-      maxValue: task.progress?.max || 1
+      maxValue: totalSteps
     });
 
     // Clean up timer
