@@ -1,5 +1,51 @@
 import fs from 'fs';
+import path from 'path';
 import { getOllamaAPIPath } from './services.mjs';
+
+/**
+ * Reset the sent-prompt.json log file at the start of a task
+ */
+export function resetPromptLog() {
+  try {
+    const logsDir = path.join(process.cwd(), 'server', 'logs');
+    const sentPromptPath = path.join(logsDir, 'sent-prompt.json');
+    
+    // Create logs directory if it doesn't exist
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+    
+    // Clear or create sent-prompt.json with empty array
+    fs.writeFileSync(sentPromptPath, JSON.stringify([], null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error resetting prompt log:', error);
+  }
+}
+
+/**
+ * Log a prompt to sent-prompt.json
+ * @param {Object} logEntry - The log entry to append
+ */
+function logPromptToFile(logEntry) {
+  try {
+    const sentPromptPath = path.join(process.cwd(), 'server', 'logs', 'sent-prompt.json');
+    
+    // Check if file exists, if not create it with empty array
+    let logs = [];
+    if (fs.existsSync(sentPromptPath)) {
+      const content = fs.readFileSync(sentPromptPath, 'utf-8');
+      logs = JSON.parse(content);
+    }
+    
+    // Append the new log entry
+    logs.push(logEntry);
+    
+    // Write back to file
+    fs.writeFileSync(sentPromptPath, JSON.stringify(logs, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error logging prompt to file:', error);
+  }
+}
 
 /**
  * Encode image file to base64 string
@@ -19,9 +65,10 @@ export function encodeImageToBase64(imagePath) {
  * Send a text prompt to the language model via Ollama
  * @param {string} prompt - Text prompt to send to the model
  * @param {string} model - Model to use for generation (default: 'gemma3:4b')
+ * @param {string} to - Optional field name where result will be stored (for logging)
  * @returns {Promise<string>} Generated text response
  */
-export async function sendTextPrompt(prompt, model = 'gemma3:4b') {
+export async function sendTextPrompt(prompt, model = 'gemma3:4b', to = null) {
   try {
     // Validate prompt
     if (!prompt || typeof prompt !== 'string') {
@@ -58,7 +105,22 @@ export async function sendTextPrompt(prompt, model = 'gemma3:4b') {
     // Extract the response text
     if (result.response) {
       console.log('Text generation completed successfully');
-      return result.response.trim();
+      const responseText = result.response.trim();
+      
+      // Log the prompt to sent-prompt.json
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'text',
+        model,
+        prompt,
+        response: responseText
+      };
+      if (to) {
+        logEntry.to = to;
+      }
+      logPromptToFile(logEntry);
+      
+      return responseText;
     } else {
       throw new Error('No response received from model');
     }
@@ -74,9 +136,10 @@ export async function sendTextPrompt(prompt, model = 'gemma3:4b') {
  * @param {string} imagePath - Path to the image file to analyze
  * @param {string} prompt - Text prompt to guide the analysis
  * @param {string} model - Model to use for analysis (default: 'llava')
+ * @param {string} to - Optional field name where result will be stored (for logging)
  * @returns {Promise<string>} Description of what's in the image
  */
-export async function sendImagePrompt(imagePath, prompt, model = 'llava') {
+export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = null) {
   try {
     // Validate image path
     if (!imagePath || typeof imagePath !== 'string') {
@@ -130,7 +193,23 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava') {
     // Extract the response text
     if (result.response) {
       console.log('Image analysis completed successfully');
-      return result.response.trim();
+      const responseText = result.response.trim();
+      
+      // Log the prompt to sent-prompt.json
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'image',
+        model,
+        imagePath,
+        prompt,
+        response: responseText
+      };
+      if (to) {
+        logEntry.to = to;
+      }
+      logPromptToFile(logEntry);
+      
+      return responseText;
     } else {
       throw new Error(`No response received from ${model}`);
     }
@@ -192,9 +271,9 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
         throw new Error(`Image path field '${imagePath}' not found in dataObject`);
       }
       console.log(`Using image path: ${actualImagePath}`);
-      response = await sendImagePrompt(actualImagePath, processedPrompt, model);
+      response = await sendImagePrompt(actualImagePath, processedPrompt, model, to);
     } else {
-      response = await sendTextPrompt(processedPrompt, model);
+      response = await sendTextPrompt(processedPrompt, model, to);
     }
     
     // Store the response in dataObject[promptData.to]

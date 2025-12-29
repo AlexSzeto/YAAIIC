@@ -4,7 +4,7 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
 import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
-import { modifyDataWithPrompt } from './llm.mjs';
+import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
@@ -218,6 +218,9 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
+    
+    // Initialize sent-prompt.json logging
+    resetPromptLog();
     
     console.log('Received image upload:', req.file.originalname);
     
@@ -553,6 +556,9 @@ app.post('/regenerate', async (req, res) => {
     if (!fields || !Array.isArray(fields) || fields.length === 0) {
       return res.status(400).json({ error: 'Missing or invalid fields array' });
     }
+    
+    // Initialize sent-prompt.json logging
+    resetPromptLog();
     
     console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
     

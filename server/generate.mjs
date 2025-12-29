@@ -3,7 +3,7 @@ import path from 'path';
 import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
-import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt } from './llm.mjs';
+import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
@@ -447,6 +447,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       console.error(`Task ${taskId} not found during processing`);
       return;
     }
+    
+    // Initialize sent-prompt.json logging
+    resetPromptLog();
     
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);

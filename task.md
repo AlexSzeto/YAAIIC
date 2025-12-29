@@ -4,7 +4,7 @@
 Address the accumulated non essential bugs and tech debts from the most recent round of features.
 
 ## Tasks
-[] Add a sent prompt log similar to sent-workflow.json.
+[x] Add a sent prompt log similar to sent-workflow.json.
 
 > Unlike sent-workflow, at the start of a task, delete the content of sent-prompt.json. Then, for every prompt sent, open sent-prompt.json, add the data for the prompt sent to the end of the file, and write back to the file. Come up with a data format that makes sense for the data being sent and that multiple prompts may be logged in a single task. Be sure to take care of the case if the logs folder or sent-prompt.json doesn't exist.
 
