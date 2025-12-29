@@ -437,6 +437,54 @@ function App() {
     }
   };
 
+  const handleRegenerate = async (uid, field) => {
+    try {
+      toast.info('Sending request...');
+      
+      const response = await fetchJson('/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, fields: [field] })
+      });
+
+      if (!response.taskId) {
+        throw new Error('No task ID returned from server');
+      }
+
+      // Subscribe to SSE updates
+      sseManager.subscribe(response.taskId, {
+        onProgress: (data) => {
+          console.log('Regenerate progress:', data);
+          toast.info(data.message || `Regenerating ${field}...`);
+        },
+        onComplete: (data) => {
+          console.log('Regenerate complete:', data);
+          if (data.imageData) {
+            // Update the generated image display with complete data
+            setGeneratedImage(data.imageData);
+            
+            // Update history item by uid
+            setHistory(prev => prev.map(item => 
+              item.uid === data.imageData.uid ? data.imageData : item
+            ));
+            
+            toast.success(`${field} regenerated successfully`);
+          } else {
+            toast.success('Regeneration complete');
+          }
+        },
+        onError: (error) => {
+          console.error('Regenerate error:', error);
+          toast.error(error.message || `Failed to regenerate ${field}`);
+        }
+      });
+
+    } catch (err) {
+      console.error('Regenerate failed:', err);
+      toast.error(err.message || 'Failed to start regeneration');
+    }
+  };
+
   // Gallery handlers
   const handleGallerySelect = async (item) => {
      if (gallerySelectionMode.active) {
@@ -570,6 +618,7 @@ function App() {
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
+        onRegenerate=${handleRegenerate}
         onSelectAsInput=${handleSelectAsInput}
         isSelectDisabled=${(() => {
           // Disable if no workflow or workflow doesn't need images

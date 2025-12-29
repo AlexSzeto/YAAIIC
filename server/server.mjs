@@ -4,6 +4,8 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
 import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
+import { modifyDataWithPrompt } from './llm.mjs';
+import { createTask, deleteTask, getTask } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
@@ -537,6 +539,137 @@ app.post('/edit', (req, res) => {
     res.status(500).json({ error: 'Failed to process edit request', details: error.message });
   }
 });
+
+// POST endpoint for regenerating text fields
+app.post('/regenerate', async (req, res) => {
+  try {
+    const { uid, fields } = req.body;
+    
+    // Validate required fields
+    if (!uid) {
+      return res.status(400).json({ error: 'Missing required field: uid' });
+    }
+    
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      return res.status(400).json({ error: 'Missing or invalid fields array' });
+    }
+    
+    console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
+    
+    // Find the image data
+    const imageIndex = imageData.imageData.findIndex(item => item.uid === uid);
+    
+    if (imageIndex === -1) {
+      console.log(`No image found with UID: ${uid}`);
+      return res.status(404).json({ error: `Image with uid ${uid} not found` });
+    }
+    
+    const imageEntry = imageData.imageData[imageIndex];
+    
+    // Reconstruct savePath from imageUrl
+    // imageUrl format: /image/filename.ext -> storage/filename.ext
+    if (imageEntry.imageUrl) {
+      const filename = imageEntry.imageUrl.replace(/^\/image\//, '');
+      imageEntry.savePath = path.join(actualDirname, 'storage', filename);
+      console.log(`Reconstructed savePath: ${imageEntry.savePath}`);
+    }
+    
+    // Create a task ID for progress tracking
+    const taskId = `regenerate-${uid}-${Date.now()}`;
+    
+    // Create task in SSE system
+    createTask(taskId, {
+      type: 'regenerate',
+      uid: uid,
+      fields: fields
+    });
+    
+    // Send initial response with taskId for SSE tracking
+    res.json({ taskId, message: 'Regeneration started' });
+    
+    try {
+      // Get postGenerationTasks from config
+      const postGenTasks = config.postGenerationTasks || [];
+      
+      let completedFields = 0;
+      const totalFields = fields.length;
+      
+      // Process each field
+      for (const field of fields) {
+        console.log(`Regenerating field: ${field}`);
+        
+        // Find the matching task from config where task.to === field
+        const task = postGenTasks.find(t => t.to === field);
+        
+        if (!task) {
+          console.log(`No postGenerationTask found for field: ${field}`);
+          emitProgressUpdate(taskId, `Skipping ${field} - no task configured`, completedFields / totalFields);
+          completedFields++;
+          continue;
+        }
+        
+        // Emit progress
+        emitProgressUpdate(taskId, `Regenerating ${field}...`, completedFields / totalFields);
+        
+        // Call modifyDataWithPrompt to regenerate the field
+        await modifyDataWithPrompt(task, imageEntry);
+        
+        completedFields++;
+        console.log(`Completed regeneration for field: ${field}`);
+      }
+      
+      // Save updated image data
+      saveImageData();
+      
+      // Remove temporary savePath field before sending to client
+      const { savePath, ...imageDataForClient } = imageEntry;
+      
+      // Send custom completion message with full image data
+      const task = getTask(taskId);
+      if (task && task.sseClients) {
+        const completionMessage = {
+          taskId: taskId,
+          status: 'completed',
+          progress: {
+            percentage: 100,
+            currentStep: 'Complete',
+            currentValue: 1,
+            maxValue: 1
+          },
+          imageData: imageDataForClient,
+          message: 'Regeneration complete',
+          timestamp: new Date().toISOString()
+        };
+        
+        const data = JSON.stringify(completionMessage);
+        task.sseClients.forEach(client => {
+          try {
+            client.write(`event: complete\ndata: ${data}\n\n`);
+          } catch (error) {
+            console.error(`Failed to send completion to client:`, error);
+          }
+        });
+      }
+      
+      console.log(`Regeneration completed for UID: ${uid}`);
+      
+      // Clean up task after a delay to allow clients to receive completion message
+      setTimeout(() => deleteTask(taskId), 5000);
+      
+    } catch (regenerateError) {
+      console.error('Error during regeneration:', regenerateError);
+      emitTaskError(taskId, `Regeneration failed: ${regenerateError.message}`);
+      
+      // Clean up task after error
+      setTimeout(() => deleteTask(taskId), 5000);
+    }
+    
+  } catch (error) {
+    console.error('Error in regenerate endpoint:', error);
+    res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
+  }
+});
+
 // GET endpoint for workflow list
 app.get('/generate/workflows', (req, res) => {
   try {

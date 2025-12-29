@@ -103,7 +103,7 @@ Create one more type of textual content for the generated images (summary, which
    - Update addImageDataEntry function to handle summary field
    - Update file save/load logic to include summary
 
-[] Add a new action, regenerate text, for all of the tab managed paragraph fields. This is disabled for generated videos.
+[x] Add a new action, regenerate text, for all of the tab managed paragraph fields. This is disabled for generated videos.
 
 > On the server side, create a new endpoint, /regenerate, that takes in the uid of the generated image as well as an array of fields (description, summary, name, tags) that needs to be regenerated. to find the task required to regenerate a tag, look up the list of postGenerationTasks from config and use the one that where the field corresponds to the "to" property of the task. refactor the function for resolving pre/post generation tasks into llm.mjs (as a more generic modifyDataWithPrompt function) so it can be accessed outside of generate.mjs. Use the task and sse system to communicate progress. On the client side, expose the action as an additional icon button (to the left of all other existing action buttons) with the refresh icon.
 

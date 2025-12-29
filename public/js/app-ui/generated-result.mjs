@@ -16,6 +16,7 @@ export function GeneratedResult({
   onInpaint,
   onSelectAsInput,
   onEdit,
+  onRegenerate,
   isSelectDisabled = false
 }) {
   if (!image) return null;
@@ -123,6 +124,7 @@ export function GeneratedResult({
             onEditStart=${startEditing}
             onSave=${handleSave}
             onCancel=${stopEditing}
+            onRegenerate=${onRegenerate}
             editingField=${editingField}
             image=${image}
           />
@@ -182,6 +184,7 @@ export function GeneratedResult({
  * @param {Function} props.onEditStart - Edit start handler
  * @param {Function} props.onSave - Save handler
  * @param {Function} props.onCancel - Cancel handler
+ * @param {Function} props.onRegenerate - Regenerate field handler
  * @param {string} props.editingField - Currently editing field
  * @param {Object} props.image - Image data object
  */
@@ -229,7 +232,7 @@ class TabbedInfoField extends Component {
   };
 
   render() {
-    const { tabs, onCopy, editingField, onCancel } = this.props;
+    const { tabs, onCopy, editingField, onCancel, onRegenerate, image } = this.props;
     const { selectedTab, editValue } = this.state;
     
     const activeTab = tabs.find(t => t.id === selectedTab);
@@ -237,6 +240,12 @@ class TabbedInfoField extends Component {
 
     const isEditing = editingField === activeTab.id;
     const tabItems = tabs.map(t => ({ id: t.id, name: t.name }));
+    
+    // Check if this is a video file
+    const isVideo = image && /\.(webm|mp4|webp|gif)$/i.test(image.imageUrl || '');
+    
+    // Check if regenerate is available for this field (only for text fields, not videos)
+    const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'prompt' || activeTab.id === 'description' || activeTab.id === 'summary');
 
     return html`
       <div className="tabbed-info-section">
@@ -248,6 +257,13 @@ class TabbedInfoField extends Component {
           />
           <div className="info-buttons">
             ${!isEditing ? html`
+              <${Button}
+                variant="icon"
+                icon="refresh-cw"
+                onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
+                title="Regenerate ${activeTab.name}"
+                disabled=${!canRegenerate}
+              />
               <${Button}
                 variant="icon"
                 icon="copy"

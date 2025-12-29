@@ -1,6 +1,6 @@
 # Bugs / Fixes
+- tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 - Use in form buttons are not triggering form validation (for name field and possibly others)
-- Refactor all custom-ui into preact components
 - Fix pre generation tasks having an incorrect max step number as indicated by this event stream log:
 ```
 event: progress
