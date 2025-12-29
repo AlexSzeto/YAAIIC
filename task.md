@@ -141,7 +141,7 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 4. After updating the form state in these handlers, trigger a re-render or state update that causes validation to run
 5. Ensure the validation function is called whenever form state changes, not just on user input
 
-[] Change the regeneration task tracking UI to use the progress banner instead of generic toast messages.
+[x] Change the regeneration task tracking UI to use the progress banner instead of generic toast messages.
 
 1. Locate the regeneration task SSE event handling in the client code (likely in `public/js/sse-manager.mjs` or `public/js/app.mjs`)
 2. Modify the event handlers for regeneration tasks to use the progress banner component instead of toast notifications

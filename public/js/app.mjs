@@ -60,6 +60,7 @@ function App() {
   const [generatedImage, setGeneratedImage] = useState(null);
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [regenerateTaskId, setRegenerateTaskId] = useState(null);
 
   // Phase 4: History & Gallery State
   const [history, setHistory] = useState([]);
@@ -471,8 +472,6 @@ function App() {
 
   const handleRegenerate = async (uid, field) => {
     try {
-      toast.info('Sending request...');
-      
       const response = await fetchJson('/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -483,38 +482,36 @@ function App() {
         throw new Error('No task ID returned from server');
       }
 
-      // Subscribe to SSE updates
-      sseManager.subscribe(response.taskId, {
-        onProgress: (data) => {
-          console.log('Regenerate progress:', data);
-          toast.info(data.message || `Regenerating ${field}...`);
-        },
-        onComplete: (data) => {
-          console.log('Regenerate complete:', data);
-          if (data.imageData) {
-            // Update the generated image display with complete data
-            setGeneratedImage(data.imageData);
-            
-            // Update history item by uid
-            setHistory(prev => prev.map(item => 
-              item.uid === data.imageData.uid ? data.imageData : item
-            ));
-            
-            toast.success(`${field} regenerated successfully`);
-          } else {
-            toast.success('Regeneration complete');
-          }
-        },
-        onError: (error) => {
-          console.error('Regenerate error:', error);
-          toast.error(error.message || `Failed to regenerate ${field}`);
-        }
-      });
+      // Set regeneration task ID to trigger progress banner
+      setRegenerateTaskId(response.taskId);
 
     } catch (err) {
       console.error('Regenerate failed:', err);
       toast.error(err.message || 'Failed to start regeneration');
     }
+  };
+
+  const handleRegenerateComplete = async (data) => {
+    console.log('Regenerate complete:', data);
+    setRegenerateTaskId(null);
+    
+    if (data.imageData) {
+      // Update the generated image display with complete data
+      setGeneratedImage(data.imageData);
+      
+      // Update history item by uid
+      setHistory(prev => prev.map(item => 
+        item.uid === data.imageData.uid ? data.imageData : item
+      ));
+      
+      toast.success('Regeneration complete');
+    }
+  };
+
+  const handleRegenerateError = (data) => {
+    console.error('Regenerate error:', data);
+    setRegenerateTaskId(null);
+    toast.error(data.error?.message || 'Regeneration failed');
   };
 
   // Gallery handlers
@@ -607,15 +604,24 @@ function App() {
       </div>
       
       ${taskId ? html`
-        <div id="progress-banner-container">
-          <${ProgressBanner} 
-            key=${taskId}
-            taskId=${taskId}
-            sseManager=${sseManager}
-            onComplete=${handleGenerationComplete}
-            onError=${handleGenerationError}
-          />
-        </div>
+        <${ProgressBanner} 
+          key=${taskId}
+          taskId=${taskId}
+          sseManager=${sseManager}
+          onComplete=${handleGenerationComplete}
+          onError=${handleGenerationError}
+        />
+      ` : null}
+      
+      ${regenerateTaskId ? html`
+        <${ProgressBanner} 
+          key=${regenerateTaskId}
+          taskId=${regenerateTaskId}
+          sseManager=${sseManager}
+          onComplete=${handleRegenerateComplete}
+          onError=${handleRegenerateError}
+          defaultTitle="Regenerating..."
+        />
       ` : null}
       
       <div className="workflow-controls">
