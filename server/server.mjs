@@ -256,9 +256,9 @@ app.post('/generate/image', upload.any(), async (req, res) => {
       return res.status(400).json({ error: `Workflow '${workflow}' not found` });
     }
     
-    // Add postGenerationTasks from config to workflowData
-    if (config.postGenerationTasks) {
-      workflowData.postGenerationTasks = config.postGenerationTasks;
+    // Add postGenerationTasks from comfyui-workflows to workflowData
+    if (comfyuiWorkflows.postGenerationTasks) {
+      workflowData.postGenerationTasks = comfyuiWorkflows.postGenerationTasks;
     }
     
     // Generate random seed if not provided
@@ -594,8 +594,8 @@ app.post('/regenerate', async (req, res) => {
     res.json({ taskId, message: 'Regeneration started' });
     
     try {
-      // Get postGenerationTasks from config
-      const postGenTasks = config.postGenerationTasks || [];
+      // Get postGenerationTasks from comfyui-workflows
+      const postGenTasks = comfyuiWorkflows.postGenerationTasks || [];
       
       let completedFields = 0;
       const totalFields = fields.length;
@@ -775,9 +775,9 @@ app.post('/generate/inpaint', upload.fields([
         return res.status(400).json({ error: `Workflow '${workflow}' not found` });
       }
       
-      // Add postGenerationTasks from config to workflowData
-      if (config.postGenerationTasks) {
-        workflowData.postGenerationTasks = config.postGenerationTasks;
+      // Add postGenerationTasks from comfyui-workflows to workflowData
+      if (comfyuiWorkflows.postGenerationTasks) {
+        workflowData.postGenerationTasks = comfyuiWorkflows.postGenerationTasks;
       }
       
       // Generate random seed if not provided

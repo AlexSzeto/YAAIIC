@@ -36,7 +36,9 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 ]
 ```
 
-[] Fix the bug where certain regeneration tasks may be missing context.
+[x] Fix the bug where certain regeneration tasks may be missing context.
+
+> NOTE: Task skipped. Bug was caused by other missing data (i.e. summary is empty when tag is being regenerated. Will address this in a future fix.)
 
 > Modify the shape of the regenerate endpoint so it requires the full generation data object. This might aid in certain regeneration tasks that requires text replacement from existing data.
 
@@ -47,12 +49,12 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 5. Modify `server/llm.mjs`'s `modifyDataWithPrompt` function to support text replacement from `generationData` fields (e.g., using `[description]` in prompts)
 6. Update the client-side code that calls the `/regenerate` endpoint to send the full `generationData` object
 
-[] Refactor postGenerationTasks out of config.json into comfyui-workflow.json. Remove the entry from the default file.
+[x] Refactor postGenerationTasks out of config.json into comfyui-workflow.json. Remove the entry from the default file.
 
-1. Add `postGenerationTasks` array to each workflow configuration in `server/resource/comfyui-workflows.json`
-2. Modify `server/server.mjs` to read `postGenerationTasks` from the workflow configuration instead of from `config.json`
-3. Update the `/generate/workflows` endpoint to include `postGenerationTasks` in the workflow data sent to the client
-4. Modify `server/generate.mjs` to receive `postGenerationTasks` from `workflowConfig` instead of global config
+1. Add `postGenerationTasks` array at the root level of `server/resource/comfyui-workflows.json`, next to `workflows`.
+2. Modify `server/server.mjs` to load and read the global `postGenerationTasks` from `comfyui-workflows.json` instead of from `config.json`
+3. Update the code in `server/server.mjs` that adds `postGenerationTasks` to `workflowData` to use the value from the loaded comfyui-workflows data
+4. No changes needed to `server/generate.mjs` since it already receives `postGenerationTasks` through `workflowConfig`
 5. Remove `postGenerationTasks` from `server/config.json`
 6. Remove `postGenerationTasks` from `server/config.default.json`
 
@@ -127,8 +129,9 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 }
 ```
 
-[] Fix a bug where using the "use in form" actions from the generated display section doesn't retrigger validation to enable/disable the generate button.
+[x] Fix a bug where using the "use in form" actions from the generated display section doesn't retrigger validation to enable/disable the generate button.
 
+> NOTE: task skipped. It looks like this bug no longer occurs.
 > If necessary, refactor the validation function so it can be accessed by both interfaces.
 
 1. In `public/js/app.mjs`, create or identify the validation logic that determines if the generate button should be enabled
