@@ -226,7 +226,14 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     if (task.totalSteps) {
       updatedProgress.value = stepInfo.stepNumber - 1; // -1 because we show (stepNumber/total) but value is 0-indexed
       updatedProgress.max = task.totalSteps;
-      updatedProgress.percentage = Math.round(((stepInfo.stepNumber - 1) / task.totalSteps) * 100);
+      
+      // Calculate granular percentage within the current step
+      // Formula: (currentStep/totalSteps) + (1/totalSteps) * nodeCompletionPercentage
+      const basePercentage = (stepInfo.stepNumber - 1) / task.totalSteps; // Percentage at start of current step
+      const stepWeight = 1 / task.totalSteps; // How much this step contributes to total
+      const nodeCompletion = progress.percentage / 100; // Node completion as decimal (0-1)
+      
+      updatedProgress.percentage = Math.round((basePercentage + stepWeight * nodeCompletion) * 100);
     }
   }
   

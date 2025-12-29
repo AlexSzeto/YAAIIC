@@ -189,3 +189,5 @@ For example, the correct `currentStep` for the first item should be `(1/18) Gene
 // currentStep starts at 0 and increments through all phases
 // Progress format: `(${currentStep + 1}/${totalSteps}) ${stepDescription}`
 ```
+
+[x] Be more granular in the completion percentage sent back for generation tasks. When comfy UI sends a status with the completion percentage of the current node, advance the total percentage between the current step and the next step. The formula would be (current step/total steps) + (1/total steps) * (node completion percentage). For example, if we are on step 2 of 4 and comfy UI is reporting 80% completion, we should report a percentage of (2/4) + (1/4) * 0.80 = 0.5 + 0.2 = 0.7 -> 70%.
