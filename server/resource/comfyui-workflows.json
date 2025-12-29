@@ -357,6 +357,7 @@
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
       "type": "video",
+      "orientation": "detect",
       "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "119",

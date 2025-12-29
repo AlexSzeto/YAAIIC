@@ -219,8 +219,8 @@ function InpaintApp() {
       // Get the original image canvas
       const imageCanvas = await createOriginalImageCanvas(imageData.imageUrl);
       
-      // Determine orientation from image dimensions
-      let orientation = workflow.orientation || 'portrait';
+      // Determine orientation from image dimensions - default to "detect" if undefined
+      let orientation = workflow.orientation || 'detect';
       if (orientation === 'detect') {
         orientation = imageCanvas.height > imageCanvas.width ? 'portrait' : 'landscape';
         console.log(`Detected orientation: ${orientation} (${imageCanvas.width}x${imageCanvas.height})`);

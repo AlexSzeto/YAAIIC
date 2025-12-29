@@ -142,7 +142,6 @@ function App() {
   };
   
   // Handle gallery selection for a specific image slot
-  // Handle gallery selection for a specific image slot
   const handleSelectFromGallery = (targetIndex) => {
     setGallerySelectionMode({ active: true, index: targetIndex });
     setIsGalleryOpen(true);
@@ -220,20 +219,31 @@ function App() {
         return;
       }
     }
+    
+    // Validate that "detect" orientation workflows have input images
+    if (workflow.orientation === 'detect') {
+      const hasInputImages = inputImages.some(img => img && img.blob);
+      if (!hasInputImages) {
+        toast.error('This workflow requires input images to detect orientation');
+        return;
+      }
+    }
 
     try {
       setIsGenerating(true);
       
-      // Determine orientation
-      let orientation = workflow.orientation || 'portrait';
+      // Determine orientation - default to "detect" if undefined
+      let orientation = workflow.orientation || 'detect';
       
       // If workflow has orientation: "detect", calculate from first input image
       if (orientation === 'detect' && inputImages.length > 0 && inputImages[0]) {
         const firstImage = inputImages[0];
+        
         if (firstImage.blob) {
           // Load image to get dimensions
           const img = new Image();
           const imageUrl = URL.createObjectURL(firstImage.blob);
+          
           await new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
