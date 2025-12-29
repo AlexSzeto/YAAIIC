@@ -39,7 +39,7 @@ Create one more type of textual content for the generated images (summary, which
    - Display sample tag sets with various label lengths
    - Test visual appearance and click behavior
 
-[] Move the tags, prompt, and description generated info into a tabbed UI, powered by the new tabs component.
+[x] Move the tags, prompt, and description generated info into a tabbed UI, powered by the new tabs component.
 
 > Collapse the tags/prompt/description UI within the generated result UI into a single info display that can be switched via tabs. Place the tabs (using the tags component) in the same row to the left of the action icon buttons. Default the tab shown to "prompt". When a tab is chosen, display the correct info and update the associated action buttons to reflect what is or isn't available. When the content is updated to a new set of generated data, update the info text (but not the currently selected tab). This new UI will require a new internal component, TabbedInfoField, to help manage its internal states.
 

@@ -498,6 +498,30 @@ body:has(.inpaint-main-layout) {
   flex-direction: column;
 }
 
+/* Tabbed Info Section Styling */
+.tabbed-info-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.tabbed-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 10px;
+}
+
+.tabbed-info-header .tags-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.tabbed-info-header .info-buttons {
+  flex-shrink: 0;
+}
+
 .info-header {
   display: flex;
   justify-content: space-between;
@@ -642,9 +666,7 @@ body:has(.inpaint-main-layout) {
   width: 100%;
 }
 
-.info-tags-field,
-.info-prompt,
-.info-description {
+.info-tabbed {
   padding: 8px;
   border: 1px solid var(--dark-border-focus);
   border-radius: 4px;
@@ -653,30 +675,17 @@ body:has(.inpaint-main-layout) {
   font-size: 12px;
   resize: vertical;
   width: 100%;
+  min-height: 160px;
 }
 
 /* Editing mode styles */
 .info-name.editing,
 .info-seed.editing,
 .info-workflow.editing,
-.info-tags-field.editing,
-.info-prompt.editing,
-.info-description.editing {
+.info-tabbed.editing {
   border-color: var(--primary-background);
   background-color: var(--dark-background-main);
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
-}
-
-.info-tags-field {
-  min-height: 80px;
-}
-
-.info-prompt {
-  min-height: 80px;
-}
-
-.info-description {
-  min-height: 160px;
 }
 
 /* Image Action Buttons Container */

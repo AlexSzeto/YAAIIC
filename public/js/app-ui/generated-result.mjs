@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
-import { html } from 'htm/preact';
+import { html, Component } from 'htm/preact';
 import { Button } from '../custom-ui/button.mjs';
+import { Tags } from '../custom-ui/tags.mjs';
 import { sendToClipboard } from '../util.mjs';
 import { createImageModal } from '../custom-ui/modal.mjs';
 
@@ -83,48 +84,39 @@ export function GeneratedResult({
             canEdit=${true}
           />
           
-          <${InfoField} 
-            label="Tags" 
-            field="tags"
-            value=${Array.isArray(image.tags) ? image.tags.join(', ') : image.tags} 
-            isTextarea=${true}
-            isEditing=${editingField === 'tags'}
-            onEditStart=${() => startEditing('tags')}
+          <${TabbedInfoField}
+            tabs=${[
+              {
+                id: 'tags',
+                name: 'Tags',
+                value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
+                canEdit: true,
+                onUse: null, // No use button for tags
+                useTitle: ''
+              },
+              {
+                id: 'prompt',
+                name: 'Prompt',
+                value: image.prompt,
+                canEdit: true,
+                onUse: () => onUsePrompt && onUsePrompt(image.prompt),
+                useTitle: 'Use this prompt'
+              },
+              {
+                id: 'description',
+                name: 'Description',
+                value: image.description,
+                canEdit: true,
+                onUse: () => onUseDescription && onUseDescription(image.description),
+                useTitle: 'Use this description'
+              }
+            ]}
+            onCopy=${handleCopy}
+            onEditStart=${startEditing}
+            onSave=${handleSave}
             onCancel=${stopEditing}
-            onSave=${(val) => handleSave('tags', val)}
-            onCopy=${() => handleCopy(Array.isArray(image.tags) ? image.tags.join(', ') : image.tags, 'Tags')}
-            canEdit=${true}
-            /* Explicitly no onUse for Tags as requested */
-          />
-          
-          <${InfoField} 
-            label="Prompt" 
-            field="prompt"
-            value=${image.prompt} 
-            isTextarea=${true}
-            isEditing=${editingField === 'prompt'}
-            onEditStart=${() => startEditing('prompt')}
-            onCancel=${stopEditing}
-            onSave=${(val) => handleSave('prompt', val)}
-            onCopy=${() => handleCopy(image.prompt, 'Prompt')}
-            onUse=${() => onUsePrompt && onUsePrompt(image.prompt)}
-            useTitle="Use this prompt"
-            canEdit=${true}
-          />
-          
-          <${InfoField} 
-            label="Description" 
-            field="description"
-            value=${image.description} 
-            isTextarea=${true}
-            isEditing=${editingField === 'description'}
-            onEditStart=${() => startEditing('description')}
-            onCancel=${stopEditing}
-            onSave=${(val) => handleSave('description', val)}
-            onCopy=${() => handleCopy(image.description, 'Description')}
-            onUse=${() => onUseDescription && onUseDescription(image.description)}
-            useTitle="Use this description"
-            canEdit=${true}
+            editingField=${editingField}
+            image=${image}
           />
           
           <${InfoField} 
@@ -170,6 +162,132 @@ export function GeneratedResult({
       </div>
     </div>
   `;
+}
+
+/**
+ * TabbedInfoField Component
+ * Displays multiple fields (tags, prompt, description) in a tabbed interface
+ * 
+ * @param {Object} props
+ * @param {Array} props.tabs - Array of tab configurations
+ * @param {Function} props.onCopy - Copy handler
+ * @param {Function} props.onEditStart - Edit start handler
+ * @param {Function} props.onSave - Save handler
+ * @param {Function} props.onCancel - Cancel handler
+ * @param {string} props.editingField - Currently editing field
+ * @param {Object} props.image - Image data object
+ */
+class TabbedInfoField extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      selectedTab: 'prompt',
+      editValue: ''
+    };
+  }
+
+  componentDidMount() {
+    // Default to "prompt" tab
+    this.setState({ selectedTab: 'prompt' });
+  }
+
+  componentDidUpdate(prevProps) {
+    // Update editValue when editing starts
+    if (this.props.editingField && !prevProps.editingField) {
+      const activeTab = this.props.tabs.find(t => t.id === this.state.selectedTab);
+      if (activeTab) {
+        this.setState({ editValue: activeTab.value || '' });
+      }
+    }
+  }
+
+  handleTabSelect = (id) => {
+    this.setState({ selectedTab: id });
+  };
+
+  handleEditClick = () => {
+    const activeTab = this.props.tabs.find(t => t.id === this.state.selectedTab);
+    if (activeTab && activeTab.canEdit) {
+      this.setState({ editValue: activeTab.value || '' });
+      this.props.onEditStart(activeTab.id);
+    }
+  };
+
+  handleSaveClick = () => {
+    const activeTab = this.props.tabs.find(t => t.id === this.state.selectedTab);
+    if (activeTab) {
+      this.props.onSave(activeTab.id, this.state.editValue);
+    }
+  };
+
+  render() {
+    const { tabs, onCopy, editingField, onCancel } = this.props;
+    const { selectedTab, editValue } = this.state;
+    
+    const activeTab = tabs.find(t => t.id === selectedTab);
+    if (!activeTab) return null;
+
+    const isEditing = editingField === activeTab.id;
+    const tabItems = tabs.map(t => ({ id: t.id, name: t.name }));
+
+    return html`
+      <div className="tabbed-info-section">
+        <div className="tabbed-info-header">
+          <${Tags}
+            items=${tabItems}
+            selected=${[selectedTab]}
+            onSelect=${this.handleTabSelect}
+          />
+          <div className="info-buttons">
+            ${!isEditing ? html`
+              <${Button}
+                variant="icon"
+                icon="copy"
+                onClick=${() => onCopy(activeTab.name, activeTab.value)}
+                title="Copy ${activeTab.name}"
+                disabled=${!onCopy || !activeTab.value}
+              />
+              <${Button}
+                variant="icon"
+                icon="up-arrow-circle"
+                onClick=${activeTab.onUse}
+                title=${activeTab.useTitle || `Use ${activeTab.name}`}
+                disabled=${!activeTab.onUse}
+              />
+              <${Button}
+                variant="icon"
+                icon="pencil"
+                onClick=${activeTab.canEdit ? this.handleEditClick : null}
+                title="Edit"
+                disabled=${!activeTab.canEdit}
+              />
+            ` : html`
+              <${Button}
+                variant="icon"
+                icon="check"
+                onClick=${this.handleSaveClick}
+                title="Save"
+                style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
+              />
+              <${Button}
+                variant="icon"
+                icon="x"
+                onClick=${onCancel}
+                title="Cancel"
+                style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
+              />
+            `}
+          </div>
+        </div>
+        <textarea 
+            className="info-field info-tabbed ${isEditing ? 'editing' : ''}" 
+            readOnly=${!isEditing} 
+            value=${isEditing ? editValue : (activeTab.value || '')}
+            onInput=${(e) => this.setState({ editValue: e.target.value })}
+        ></textarea>
+      </div>
+    `;
+  }
 }
 
 function InfoField({ 
