@@ -6,6 +6,7 @@
       "base": "illustrious-text-to-image.json",
       "format": "png",
       "type": "image",
+      "orientation": "portrait",
       "finalNode": "10",
       "replace": [
         {
@@ -30,6 +31,7 @@
       "base": "illustrious-image-style.json",
       "format": "png",
       "type": "image",
+      "orientation": "detect",
       "finalNode": "11",
       "upload": [
         {
@@ -63,6 +65,7 @@
       "base": "flux-fantasy-text-to-landscape.json",
       "format": "jpg",
       "type": "image",
+      "orientation": "landscape",
       "finalNode": "9",
       "replace": [
         {
@@ -86,6 +89,7 @@
       "base": "flux-fantasy-text-to-portrait.json",
       "format": "jpg",
       "type": "image",
+      "orientation": "portrait",
       "finalNode": "44",
       "replace": [
         {
@@ -109,6 +113,7 @@
       "base": "realvis-fantasy-inpaint.json",
       "format": "jpg",
       "type": "inpaint",
+      "orientation": "detect",
       "finalNode": "9",
       "upload": [
         {
@@ -150,6 +155,7 @@
       "base": "waifu-anime-inpaint.json",
       "format": "png",
       "type": "inpaint",
+      "orientation": "detect",
       "finalNode": "9",
       "upload": [
         {
@@ -191,6 +197,7 @@
       "base": "qwen-image-to-image.json",
       "format": "png",
       "type": "image",
+      "orientation": "detect",
       "inputImages": 1,
       "finalNode": "229",
       "upload": [
@@ -224,6 +231,7 @@
       "base": "wan-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "orientation": "detect",
       "nameRequired": true,
       "optionalPrompt": true,
       "finalNode": "76",
@@ -404,6 +412,7 @@
       "base": "wan5b-image-to-video.json",
       "format": "webp",
       "type": "video",
+      "orientation": "detect",
       "finalNode": "119",
       "inputImages": 2,
       "nameRequired": true,
