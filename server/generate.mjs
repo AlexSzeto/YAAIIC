@@ -17,7 +17,8 @@ import {
   emitTaskCompletion,
   emitTaskError,
   emitTaskErrorByTaskId,
-  handleSSEConnection
+  handleSSEConnection,
+  resetProgressLog
 } from './sse.mjs';
 
 // Store ComfyUI API path locally
@@ -427,6 +428,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     
     // Initialize sent-prompt.json logging
     resetPromptLog();
+    resetProgressLog();
     
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);

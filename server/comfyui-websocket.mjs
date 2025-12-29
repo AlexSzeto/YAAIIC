@@ -7,11 +7,13 @@ let comfyUIAPIPath = null;
 let emitProgressUpdate = null;
 let emitTaskCompletion = null;
 let emitTaskError = null;
+let logProgressEvent = null;
 
 export function setEmitFunctions(functions) {
   emitProgressUpdate = functions.emitProgressUpdate;
   emitTaskCompletion = functions.emitTaskCompletion;
   emitTaskError = functions.emitTaskError;
+  logProgressEvent = functions.logProgressEvent;
 }
 
 // Initialize ComfyUI WebSocket with API path
@@ -151,6 +153,11 @@ function handleExecutionStart(data) {
     startTime: Date.now()
   });
   
+  // Log ComfyUI websocket event
+  if (logProgressEvent) {
+    logProgressEvent({ type: 'execution_start' }, 'comfyui-ws', prompt_id, null);
+  }
+  
   // Note: We don't emit a progress update here anymore since the step counter
   // should continue from where pre-generation left off, and the first 'executing'
   // message will trigger a proper progress update with the correct step number
@@ -170,11 +177,21 @@ function handleExecuting(data) {
     console.log(`Execution completed for prompt ${prompt_id}`);
     state.status = 'completed';
     state.currentNode = null;
+    
+    // Log ComfyUI websocket event
+    if (logProgressEvent) {
+      logProgressEvent({ type: 'executing', node: null, status: 'completed' }, 'comfyui-ws', prompt_id, null);
+    }
   } else {
     // Currently executing a node
     console.log(`Executing node ${node} for prompt ${prompt_id}`);
     state.status = 'executing';
     state.currentNode = node;
+    
+    // Log ComfyUI websocket event
+    if (logProgressEvent) {
+      logProgressEvent({ type: 'executing', node }, 'comfyui-ws', prompt_id, null);
+    }
     
     // Emit progress update
     if (emitProgressUpdate) {
@@ -201,6 +218,11 @@ function handleProgress(data) {
   state.currentNode = node;
   
   console.log(`Progress for prompt ${prompt_id}: ${state.progress.percentage}% (${value}/${max})`);
+  
+  // Log ComfyUI websocket event
+  if (logProgressEvent) {
+    logProgressEvent({ type: 'progress', node, value, max, percentage: state.progress.percentage }, 'comfyui-ws', prompt_id, null);
+  }
   
   // Emit progress update via SSE
   if (emitProgressUpdate) {

@@ -331,6 +331,7 @@ function App() {
   
   const handleGenerationComplete = async (data) => {
     setIsGenerating(false);
+    setTaskId(null);
     console.log('Generation complete:', data);
     
     if (data.result && data.result.uid) {
@@ -355,6 +356,7 @@ function App() {
   
   const handleGenerationError = (data) => {
     setIsGenerating(false);
+    setTaskId(null);
     console.error('Generation error:', data);
   };
   

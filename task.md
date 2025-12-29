@@ -4,7 +4,7 @@
 Fix remaining SSE-related bugs affecting the progress UI and add comprehensive progress event logging for debugging.
 
 ## Task 1: Fix Page Title Stuck at Final Progress Message
-[ ] Clear `taskId` and `regenerateTaskId` state to `null` after generation/regeneration completes
+[x] Clear `taskId` and `regenerateTaskId` state to `null` after generation/regeneration completes
 
 > **Root Cause**: In `app.mjs`, after `handleGenerationComplete` runs, `taskId` is never set to `null`. Since `taskId` is still truthy, the ProgressBanner component remains in the render tree. When the component unmounts via `isVisible: false`, the PageTitleManager's cleanup effect runs, but on re-renders (e.g., from form state changes), a NEW ProgressBanner is instantiated with the same `taskId`, causing it to attempt to re-subscribe to an already-deleted task on the server.
 
@@ -15,14 +15,14 @@ Fix remaining SSE-related bugs affecting the progress UI and add comprehensive p
 5. The conditional render `${taskId ? html\`<ProgressBanner ...>\` : null}` will then correctly unmount the banner completely
 
 ## Task 2: Fix Client Constantly Re-subscribing on Key Input
-[ ] Prevent SSE re-subscription after task completion by clearing taskId
+[x] Prevent SSE re-subscription after task completion by clearing taskId
 
 > **Root Cause**: Same as Task 1. Since `taskId` persists after completion, every re-render of the App component (triggered by form input changes) causes React's reconciliation to potentially remount the ProgressBanner. The `key={taskId}` prop forces a new instance if the key changes, but since `taskId` remains constant, it's the same instance being unmounted/remounted due to the parent re-rendering while the banner's internal `isVisible` is false.
 
 Once Task 1 is implemented, this issue should be resolved automatically since `taskId` will be `null` after completion, preventing the ProgressBanner from rendering entirely.
 
 ## Task 3: Add Progress Event Logging
-[ ] Create a logging system for SSE progress events similar to `sent-prompt.json`
+[x] Create a logging system for SSE progress events similar to `sent-prompt.json`
 
 > Log all progress events from both ComfyUI websocket and events sent to clients for debugging purposes.
 
