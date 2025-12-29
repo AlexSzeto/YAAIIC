@@ -244,8 +244,8 @@ class TabbedInfoField extends Component {
     // Check if this is a video file
     const isVideo = image && /\.(webm|mp4|webp|gif)$/i.test(image.imageUrl || '');
     
-    // Check if regenerate is available for this field (only for text fields, not videos)
-    const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'prompt' || activeTab.id === 'description' || activeTab.id === 'summary');
+    // Check if regenerate is available for this field (only for text fields, not videos, and not prompt)
+    const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'description' || activeTab.id === 'summary');
 
     return html`
       <div className="tabbed-info-section">
@@ -259,7 +259,7 @@ class TabbedInfoField extends Component {
             ${!isEditing ? html`
               <${Button}
                 variant="icon"
-                icon="refresh-cw"
+                icon="revision"
                 onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
                 title="Regenerate ${activeTab.name}"
                 disabled=${!canRegenerate}
