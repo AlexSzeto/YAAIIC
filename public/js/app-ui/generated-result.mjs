@@ -109,6 +109,14 @@ export function GeneratedResult({
                 canEdit: true,
                 onUse: () => onUseDescription && onUseDescription(image.description),
                 useTitle: 'Use this description'
+              },
+              {
+                id: 'summary',
+                name: 'Summary',
+                value: image.summary,
+                canEdit: true,
+                onUse: () => onUseDescription && onUseDescription(image.summary),
+                useTitle: 'Use this summary'
               }
             ]}
             onCopy=${handleCopy}

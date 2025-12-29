@@ -84,7 +84,7 @@ Create one more type of textual content for the generated images (summary, which
    - Ensure proper spacing between tabs and action buttons
    - Style selected/deselected tag button states
 
-[] Add the new summary field as one of the info tabs.
+[x] Add the new summary field as one of the info tabs.
 
 1. Add summary field to image data structure
    - Update image data schema to include `summary` field
