@@ -1,6 +1,6 @@
 # Bugs / Fixes
+- tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 - Use in form buttons are not triggering form validation (for name field and possibly others)
-- Refactor all custom-ui into preact components
 - Fix pre generation tasks having an incorrect max step number as indicated by this event stream log:
 ```
 event: progress
@@ -24,6 +24,7 @@ data: {"taskId":"task_1765647268475_z8pou5rrn","status":"in-progress","progress"
 For example, the correct `currentStep` for the first item should be `(1/18) Generating prompt`.
 
 # Features
+- Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
 - Add camera stability verbiage (all videos) and no limb movement verbiage (looping videos)
 - Export to destination (customizable)

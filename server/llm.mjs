@@ -140,3 +140,70 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava') {
     throw new Error(`Failed to analyze image: ${error.message}`);
   }
 }
+
+/**
+ * Modify data object with a prompt-based generation task
+ * @param {Object} promptData - Configuration for the prompt task
+ * @param {string} promptData.model - LLM model to use (optional if template is provided)
+ * @param {string} promptData.template - Template string with placeholders (alternative to prompt)
+ * @param {string} promptData.prompt - Direct prompt text
+ * @param {string} promptData.to - Target field to store the result
+ * @param {boolean} promptData.replaceBlankFieldOnly - Only process if target field is blank
+ * @param {string} promptData.imagePath - Field name containing the image path (for image prompts)
+ * @param {Object} dataObject - Object containing data fields
+ * @returns {Promise<Object>} Modified data object
+ */
+export async function modifyDataWithPrompt(promptData, dataObject) {
+  try {
+    const { model, template, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
+    
+    // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
+    if (replaceBlankFieldOnly && dataObject[to] && dataObject[to].trim() !== '') {
+      console.log(`Skipping prompt for ${to} - field already has a value`);
+      return dataObject;
+    }
+    
+    // Extract prompt text from promptData.prompt or promptData.template
+    let processedPrompt = prompt || template;
+    
+    // Replace bracketed placeholders (e.g., [description]) with values from dataObject
+    const bracketPattern = /\[(\w+)\]/g;
+    processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
+      return dataObject[key] || match;
+    });
+    
+    // If template is present instead of model, just do string replacement
+    if (template) {
+      console.log(`Processing template for ${to}: ${processedPrompt}`);
+      dataObject[to] = processedPrompt;
+      console.log(`Stored template result in ${to}: ${processedPrompt}`);
+      return dataObject;
+    }
+    
+    console.log(`Processing prompt for ${to} with model ${model}`);
+    console.log(`Prompt: ${processedPrompt}`);
+    
+    let response;
+    
+    // If imagePath is specified in promptData, resolve the actual path from dataObject
+    if (imagePath) {
+      const actualImagePath = dataObject[imagePath];
+      if (!actualImagePath) {
+        throw new Error(`Image path field '${imagePath}' not found in dataObject`);
+      }
+      console.log(`Using image path: ${actualImagePath}`);
+      response = await sendImagePrompt(actualImagePath, processedPrompt, model);
+    } else {
+      response = await sendTextPrompt(processedPrompt, model);
+    }
+    
+    // Store the response in dataObject[promptData.to]
+    dataObject[to] = response;
+    console.log(`Stored response in ${to}: ${response}`);
+    
+    return dataObject;
+  } catch (error) {
+    console.error(`Error in modifyDataWithPrompt:`, error);
+    throw error;
+  }
+}

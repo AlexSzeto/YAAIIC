@@ -3,7 +3,7 @@ import path from 'path';
 import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
-import { sendImagePrompt, sendTextPrompt } from './llm.mjs';
+import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt } from './llm.mjs';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
@@ -240,60 +240,9 @@ export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = f
   return { stepMap, totalSteps, preGenStepInfo, postGenStepInfo };
 }
 
-// Function to modify generationData with a prompt
+// Function to modify generationData with a prompt (wrapper for backwards compatibility)
 export async function modifyGenerationDataWithPrompt(promptData, generationData) {
-  try {
-    const { model, template, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
-    
-    // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
-    if (replaceBlankFieldOnly && generationData[to] && generationData[to].trim() !== '') {
-      console.log(`Skipping prompt for ${to} - field already has a value`);
-      return generationData;
-    }
-    
-    // Extract prompt text from promptData.prompt or promptData.template
-    let processedPrompt = prompt || template;
-    
-    // Replace bracketed placeholders (e.g., [description]) with values from generationData
-    const bracketPattern = /\[(\w+)\]/g;
-    processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
-      return generationData[key] || match;
-    });
-    
-    // If template is present instead of model, just do string replacement
-    if (template) {
-      console.log(`Processing template for ${to}: ${processedPrompt}`);
-      generationData[to] = processedPrompt;
-      console.log(`Stored template result in ${to}: ${processedPrompt}`);
-      return generationData;
-    }
-    
-    console.log(`Processing prompt for ${to} with model ${model}`);
-    console.log(`Prompt: ${processedPrompt}`);
-    
-    let response;
-    
-    // If imagePath is specified in promptData, resolve the actual path from generationData
-    if (imagePath) {
-      const actualImagePath = generationData[imagePath];
-      if (!actualImagePath) {
-        throw new Error(`Image path field '${imagePath}' not found in generationData`);
-      }
-      console.log(`Using image path: ${actualImagePath}`);
-      response = await sendImagePrompt(actualImagePath, processedPrompt, model);
-    } else {
-      response = await sendTextPrompt(processedPrompt, model);
-    }
-    
-    // Store the response in generationData[promptData.to]
-    generationData[to] = response;
-    console.log(`Stored response in ${to}: ${response}`);
-    
-    return generationData;
-  } catch (error) {
-    console.error(`Error in modifyGenerationDataWithPrompt:`, error);
-    throw error;
-  }
+  return modifyDataWithPrompt(promptData, generationData);
 }
 
 // Handler for upload image processing
@@ -401,6 +350,8 @@ async function processUploadTask(taskId, file, config) {
         imageUrl: imageUrl,
         name: generationData.name || file.originalname.replace(ext, ''),
         description: generationData.description || 'Uploaded image',
+        summary: generationData.summary || '',
+        tags: generationData.tags || '',
         workflow: 'Uploaded Image',
         inpaint: false,
         inpaintArea: null,
@@ -416,6 +367,8 @@ async function processUploadTask(taskId, file, config) {
     emitTaskCompletion(taskId, {
       imageUrl: imageUrl,
       description: generationData.description || 'Uploaded image',
+      summary: generationData.summary || '',
+      tags: generationData.tags || '',
       prompt: generationData.prompt || '',
       seed: 0,
       name: generationData.name || file.originalname.replace(ext, ''),
@@ -791,6 +744,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         imageUrl: imageUrl,
         name: generationData.name,
         description: generationData.description || '',
+        summary: generationData.summary || '',
+        tags: generationData.tags || '',
         workflow: workflow,
         inpaint: inpaint || false,
         inpaintArea: inpaintArea || null,
@@ -805,6 +760,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     emitTaskCompletion(promptId, {
       imageUrl: imageUrl,
       description: generationData.description || '',
+      summary: generationData.summary || '',
+      tags: generationData.tags || '',
       prompt: generationData.prompt,
       seed: generationData.seed,
       name: generationData.name,
