@@ -58,7 +58,7 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 5. Remove `postGenerationTasks` from `server/config.json`
 6. Remove `postGenerationTasks` from `server/config.default.json`
 
-[] Change the output shape at the end of the generation task so it sends the entire generationData object regardless of what is in it.
+[x] Change the output shape at the end of the generation task so it sends the entire generationData object regardless of what is in it.
 
 > Fields that originally exist outside of generation data, and conditionals that assigns default values to certain generation data fields, should be added to generationData before it's written in the image database. Remove code that has to name specific fields to send to and from the client for generation data.
 

@@ -339,44 +339,30 @@ async function processUploadTask(taskId, file, config) {
     const startTime = taskTimers.get(taskId);
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     
-    // Create database entry
-    const imageUrl = `/image/${filename}`;
-    let uid = null;
+    // Add all fields to generationData before saving
+    generationData.imageUrl = `/image/${filename}`;
+    generationData.workflow = 'Uploaded Image';
+    generationData.inpaint = false;
+    generationData.inpaintArea = null;
+    generationData.timeTaken = timeTaken;
+    generationData.seed = 0;
     
+    // Ensure defaults for optional fields
+    if (!generationData.prompt) generationData.prompt = '';
+    if (!generationData.name) generationData.name = file.originalname.replace(ext, '');
+    if (!generationData.description) generationData.description = 'Uploaded image';
+    if (!generationData.summary) generationData.summary = '';
+    if (!generationData.tags) generationData.tags = '';
+    
+    // Save to database
     if (addImageDataEntry) {
-      const imageDataEntry = {
-        prompt: generationData.prompt || '',
-        seed: 0,
-        imageUrl: imageUrl,
-        name: generationData.name || file.originalname.replace(ext, ''),
-        description: generationData.description || 'Uploaded image',
-        summary: generationData.summary || '',
-        tags: generationData.tags || '',
-        workflow: 'Uploaded Image',
-        inpaint: false,
-        inpaintArea: null,
-        timeTaken: timeTaken
-      };
-      
-      addImageDataEntry(imageDataEntry);
-      uid = imageDataEntry.uid;
-      console.log('Image data entry saved with UID:', uid);
+      addImageDataEntry(generationData);
+      console.log('Image data entry saved with UID:', generationData.uid);
     }
     
-    // Emit completion event
+    // Emit completion event with entire generationData
     emitTaskCompletion(taskId, {
-      imageUrl: imageUrl,
-      description: generationData.description || 'Uploaded image',
-      summary: generationData.summary || '',
-      tags: generationData.tags || '',
-      prompt: generationData.prompt || '',
-      seed: 0,
-      name: generationData.name || file.originalname.replace(ext, ''),
-      workflow: 'Uploaded Image',
-      inpaint: false,
-      inpaintArea: null,
-      uid: uid,
-      timeTaken: timeTaken,
+      ...generationData,
       maxValue: 4
     });
     
@@ -738,41 +724,27 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     console.log(`Generation completed in ${timeTaken} seconds`);
 
-    // Save image data to database using generationData fields
-    let uid = null;
+    // Add all fields to generationData before saving
+    generationData.imageUrl = imageUrl;
+    generationData.workflow = workflow;
+    generationData.inpaint = inpaint || false;
+    generationData.inpaintArea = inpaintArea || null;
+    generationData.timeTaken = timeTaken;
+    
+    // Ensure defaults for optional fields
+    if (!generationData.description) generationData.description = '';
+    if (!generationData.summary) generationData.summary = '';
+    if (!generationData.tags) generationData.tags = '';
+
+    // Save image data to database using entire generationData object
     if (addImageDataEntry) {
-      const imageDataEntry = {
-        prompt: generationData.prompt,
-        seed: generationData.seed,
-        imageUrl: imageUrl,
-        name: generationData.name,
-        description: generationData.description || '',
-        summary: generationData.summary || '',
-        tags: generationData.tags || '',
-        workflow: workflow,
-        inpaint: inpaint || false,
-        inpaintArea: inpaintArea || null,
-        timeTaken: timeTaken
-      };
-      addImageDataEntry(imageDataEntry);
-      uid = imageDataEntry.uid; // Capture the UID after it's been added by addImageDataEntry
-      console.log('Image data entry saved to database with UID:', uid);
+      addImageDataEntry(generationData);
+      console.log('Image data entry saved to database with UID:', generationData.uid);
     }
 
-    // Emit completion event using generationData fields
+    // Emit completion event using entire generationData object
     emitTaskCompletion(promptId, {
-      imageUrl: imageUrl,
-      description: generationData.description || '',
-      summary: generationData.summary || '',
-      tags: generationData.tags || '',
-      prompt: generationData.prompt,
-      seed: generationData.seed,
-      name: generationData.name,
-      workflow: workflow,
-      inpaint: inpaint || false,
-      inpaintArea: inpaintArea || null,
-      uid: uid,
-      timeTaken: timeTaken,
+      ...generationData,
       maxValue: task.progress?.max || 1
     });
 

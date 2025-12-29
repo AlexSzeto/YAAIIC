@@ -39,27 +39,22 @@ function createProgressResponse(taskId, progress, currentStep) {
 }
 
 function createCompletionResponse(taskId, result) {
+  // Extract maxValue if present, otherwise default to 1
+  const maxValue = result.maxValue || 1;
+  
+  // Create a copy of result without maxValue for the result field
+  const { maxValue: _, ...resultData } = result;
+  
   return {
     taskId: taskId,
     status: 'completed',
     progress: {
       percentage: 100,
       currentStep: 'Complete',
-      currentValue: result.maxValue || 1,
-      maxValue: result.maxValue || 1
+      currentValue: maxValue,
+      maxValue: maxValue
     },
-    result: {
-      imageUrl: result.imageUrl,
-      description: result.description,
-      prompt: result.prompt,
-      seed: result.seed,
-      name: result.name,
-      workflow: result.workflow,
-      inpaint: result.inpaint || false,
-      inpaintArea: result.inpaintArea || null,
-      uid: result.uid,
-      timeTaken: result.timeTaken
-    },
+    result: resultData,
     timestamp: new Date().toISOString()
   };
 }
