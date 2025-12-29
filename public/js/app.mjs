@@ -133,10 +133,11 @@ function App() {
       } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
         // It's a file/blob - create preview URL
         const url = URL.createObjectURL(fileOrUrl);
-        newImages[index] = { blob: fileOrUrl, url };
+        // For uploads, we don't have server-side metadata yet, so imageData is empty
+        newImages[index] = { blob: fileOrUrl, url, imageData: {} };
       } else if (typeof fileOrUrl === 'string') {
         // It's a URL
-        newImages[index] = { url: fileOrUrl };
+        newImages[index] = { url: fileOrUrl, imageData: {} };
       }
       return newImages;
     });
@@ -182,10 +183,7 @@ function App() {
         newImages[targetIndex] = { 
           blob, 
           url: imageUrl, 
-          description: imageData.description || null,
-          summary: imageData.summary || null,
-          tags: imageData.tags || null,
-          name: imageData.name || null
+          imageData: imageData
         };
         return newImages;
       });
@@ -291,8 +289,10 @@ function App() {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
 
             imageTextFieldNames.forEach(fieldName => {
-              if (img[fieldName]) {
-                formData.append(`image_${index}_${fieldName}`, img[fieldName]);
+              // Check top-level (legacy/upload) or nested in imageData (selected)
+              const value = img.imageData?.[fieldName] || img[fieldName];
+              if (value) {
+                formData.append(`image_${index}_${fieldName}`, value);
               }
             });
           }
@@ -539,10 +539,7 @@ function App() {
                      newImages[gallerySelectionMode.index] = { 
                          blob, 
                          url: imageUrl, 
-                         description: item.description || null,
-                         summary: item.summary || null,
-                         tags: item.tags || null,
-                         name: item.name || null
+                         imageData: item
                      };
                      return newImages;
                  });
