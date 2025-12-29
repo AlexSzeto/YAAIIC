@@ -216,10 +216,18 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     }
   }
   
-  // Prepend step indicator if available
+  // Prepend step indicator and update global step values if available
+  let updatedProgress = { ...progress };
   if (nodeId && task.stepMap && task.stepMap.has(nodeId)) {
     const stepInfo = task.stepMap.get(nodeId);
     stepTitle = `${stepInfo.stepDisplayText} ${stepTitle}`;
+    
+    // Use global step counter if totalSteps is available
+    if (task.totalSteps) {
+      updatedProgress.value = stepInfo.stepNumber - 1; // -1 because we show (stepNumber/total) but value is 0-indexed
+      updatedProgress.max = task.totalSteps;
+      updatedProgress.percentage = Math.round(((stepInfo.stepNumber - 1) / task.totalSteps) * 100);
+    }
   }
   
   // Fall back to 'Processing...' if no title found
@@ -227,9 +235,9 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     stepTitle = 'Processing...';
   }
   
-  task.progress = { percentage: progress.percentage, currentStep: stepTitle };
+  task.progress = { percentage: updatedProgress.percentage, currentStep: stepTitle };
   
-  const message = createProgressResponse(taskId, progress, stepTitle);
+  const message = createProgressResponse(taskId, updatedProgress, stepTitle);
   emitSSEToTask(taskId, message);
 }
 

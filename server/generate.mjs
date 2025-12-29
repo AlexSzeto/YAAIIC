@@ -163,7 +163,7 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
 }
 
 // Function to calculate workflow steps based on node dependencies
-export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = false, hasPostGenPrompts = false) {
+export function calculateWorkflowSteps(workflow, finalNode, preGenTaskCount = 0, postGenTaskCount = 0) {
   // Map to store nodeId -> distance from final node
   const distanceMap = new Map();
   
@@ -207,16 +207,14 @@ export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = f
   }
   const baseWorkflowSteps = maxDistance + 1;
   
-  // Calculate total steps including pre-gen and post-gen prompts
-  let totalSteps = baseWorkflowSteps;
-  if (hasPreGenPrompts) totalSteps += 1;
-  if (hasPostGenPrompts) totalSteps += 1;
+  // Calculate total steps including all pre-gen and post-gen tasks
+  const totalSteps = preGenTaskCount + baseWorkflowSteps + postGenTaskCount;
   
-  console.log(`Base workflow steps: ${baseWorkflowSteps}, Total steps with prompts: ${totalSteps}`);
+  console.log(`Pre-gen tasks: ${preGenTaskCount}, Workflow steps: ${baseWorkflowSteps}, Post-gen tasks: ${postGenTaskCount}, Total: ${totalSteps}`);
   
   // Build step map with display text
-  // If pre-gen prompts exist, shift workflow step numbers to start at 2 instead of 1
-  const stepOffset = hasPreGenPrompts ? 1 : 0;
+  // Workflow steps start after pre-gen tasks
+  const stepOffset = preGenTaskCount;
   const stepMap = new Map();
   for (const [nodeId, distance] of distanceMap.entries()) {
     const stepNumber = baseWorkflowSteps - distance + stepOffset;
@@ -228,16 +226,7 @@ export function calculateWorkflowSteps(workflow, finalNode, hasPreGenPrompts = f
     });
   }
   
-  // Create step info for pre-gen and post-gen prompts
-  const preGenStepInfo = hasPreGenPrompts ? {
-    stepText: `(1/${totalSteps})`
-  } : null;
-  
-  const postGenStepInfo = hasPostGenPrompts ? {
-    stepText: `(${totalSteps}/${totalSteps})`
-  } : null;
-  
-  return { stepMap, totalSteps, preGenStepInfo, postGenStepInfo };
+  return { stepMap, totalSteps, baseWorkflowSteps, preGenTaskCount, postGenTaskCount };
 }
 
 // Function to modify generationData with a prompt (wrapper for backwards compatibility)
@@ -451,54 +440,6 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       }
     }
 
-    // Process pre-generation tasks if they exist
-    if (preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0) {
-      console.log(`Processing ${preGenerationTasks.length} pre-generation tasks...`);
-      
-      const task = getTask(taskId);
-      const preGenStepText = task?.preGenStepInfo?.stepText || '(1/1)';
-      
-      for (let i = 0; i < preGenerationTasks.length; i++) {
-        const promptConfig = preGenerationTasks[i];
-        
-        // Check if task has a condition
-        if (promptConfig.condition) {
-          const dataSources = {
-            generationData: generationData,
-            value: generationData
-          };
-          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
-          if (!shouldExecute) {
-            console.log(`Skipping pre-generation task for ${promptConfig.to} due to unmet condition`);
-            continue;
-          }
-        }
-        
-        try {
-          // Calculate percentage progress by dividing evenly among tasks
-          const startPercentage = Math.round((i / preGenerationTasks.length) * 100);
-          const endPercentage = Math.round(((i + 1) / preGenerationTasks.length) * 100);
-          
-          // Emit SSE progress update for start
-          const stepName = `${preGenStepText} Generating ${promptConfig.to}`;
-          emitProgressUpdate(taskId, { percentage: startPercentage, value: i, max: preGenerationTasks.length }, stepName + '...');
-          
-          await modifyGenerationDataWithPrompt(promptConfig, generationData);
-          
-          // Emit SSE progress update for completion
-          emitProgressUpdate(taskId, { percentage: endPercentage, value: i + 1, max: preGenerationTasks.length }, stepName + ' complete');
-        } catch (error) {
-          console.warn(`Failed to process pre-generation task for ${promptConfig.to}:`, error.message);
-          // Set a fallback value if the task fails and field is empty
-          if (!generationData[promptConfig.to]) {
-            generationData[promptConfig.to] = promptConfig.to === 'prompt' 
-              ? 'Dynamic motion and camera movement' 
-              : 'Generated Content';
-          }
-        }
-      }
-    }
-
     // Load the ComfyUI workflow
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     // Fix Windows path issue by removing leading slash
@@ -515,27 +456,81 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
 
     // Store the workflow JSON in the task for node title lookups
     updateTask(taskId, { workflowData });
-    
-    // Calculate workflow steps if finalNode is specified
+
+    // Initialize step tracking variables and calculate workflow steps
+    let currentStep = 0;
+    let totalSteps = 1;
     let stepMap = null;
-    let totalSteps = null;
-    let preGenStepInfo = null;
-    let postGenStepInfo = null;
+    
     if (workflowConfig.finalNode) {
-      const hasPreGenPrompts = preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0;
-      const hasPostGenPrompts = postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video' && postGenerationTasks.length > 0;
+      const preGenTaskCount = preGenerationTasks && Array.isArray(preGenerationTasks) ? preGenerationTasks.length : 0;
+      const postGenTaskCount = (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') ? postGenerationTasks.length : 0;
       
-      const stepInfo = calculateWorkflowSteps(workflowData, workflowConfig.finalNode, hasPreGenPrompts, hasPostGenPrompts);
+      const stepInfo = calculateWorkflowSteps(workflowData, workflowConfig.finalNode, preGenTaskCount, postGenTaskCount);
       stepMap = stepInfo.stepMap;
       totalSteps = stepInfo.totalSteps;
-      preGenStepInfo = stepInfo.preGenStepInfo;
-      postGenStepInfo = stepInfo.postGenStepInfo;
       console.log(`Calculated workflow steps: ${totalSteps} total steps`);
       
-      // Store step map and step info in the task for use in progress updates
-      updateTask(taskId, { stepMap, totalSteps, preGenStepInfo, postGenStepInfo });
+      // Store step map and total steps in the task for use in progress updates
+      updateTask(taskId, { stepMap, totalSteps, currentStep });
     }
-    
+
+    // Process pre-generation tasks if they exist
+    if (preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0) {
+      console.log(`Processing ${preGenerationTasks.length} pre-generation tasks...`);
+      
+      for (let i = 0; i < preGenerationTasks.length; i++) {
+        const promptConfig = preGenerationTasks[i];
+        
+        // Check if task has a condition
+        if (promptConfig.condition) {
+          const dataSources = {
+            generationData: generationData,
+            value: generationData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping pre-generation task for ${promptConfig.to} due to unmet condition`);
+            // Increment step counter for skipped task
+            currentStep++;
+            continue;
+          }
+        }
+        
+        try {
+          // Use global step counter for progress
+          const stepNumber = currentStep + 1;
+          const stepName = `(${stepNumber}/${totalSteps}) Generating ${promptConfig.to}`;
+          const percentage = Math.round((currentStep / totalSteps) * 100);
+          
+          // Emit SSE progress update for start
+          emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+          
+          await modifyGenerationDataWithPrompt(promptConfig, generationData);
+          
+          // Increment step counter after completion
+          currentStep++;
+          const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+          
+          // Emit SSE progress update for completion
+          emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+        } catch (error) {
+          console.warn(`Failed to process pre-generation task for ${promptConfig.to}:`, error.message);
+          // Set a fallback value if the task fails and field is empty
+          if (!generationData[promptConfig.to]) {
+            generationData[promptConfig.to] = promptConfig.to === 'prompt' 
+              ? 'Dynamic motion and camera movement' 
+              : 'Generated Content';
+          }
+          // Increment step counter even if task failed
+          currentStep++;
+        }
+      }
+      
+      // Update task with current step after pre-generation
+      updateTask(taskId, { currentStep });
+    }
+
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
       modifications.forEach(mod => {
@@ -670,8 +665,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     if (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') {
       console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
       
+      // Retrieve current step from task
       const task = getTask(taskId);
-      const postGenStepText = task?.postGenStepInfo?.stepText || '(1/1)';
+      let currentStep = task?.currentStep || 0;
+      const totalSteps = task?.totalSteps || 1;
       
       for (let i = 0; i < postGenerationTasks.length; i++) {
         const promptConfig = postGenerationTasks[i];
@@ -685,23 +682,31 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
           const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
           if (!shouldExecute) {
             console.log(`Skipping post-generation task for ${promptConfig.to} due to unmet condition`);
+            // Increment step counter for skipped task
+            currentStep++;
             continue;
           }
         }
         
         try {
-          // Calculate percentage progress by dividing evenly among tasks
-          const startPercentage = Math.round((i / postGenerationTasks.length) * 100);
-          const endPercentage = Math.round(((i + 1) / postGenerationTasks.length) * 100);
+          // Use global step counter for progress
+          const stepNumber = currentStep + 1;
+          const stepName = promptConfig.to === 'description' 
+            ? `(${stepNumber}/${totalSteps}) Analyzing image` 
+            : `(${stepNumber}/${totalSteps}) Generating ${promptConfig.to}`;
+          const percentage = Math.round((currentStep / totalSteps) * 100);
           
           // Emit SSE progress update for start
-          const stepName = promptConfig.to === 'description' ? `${postGenStepText} Analyzing image` : `${postGenStepText} Generating ${promptConfig.to}`;
-          emitProgressUpdate(promptId, { percentage: startPercentage, value: i, max: postGenerationTasks.length }, stepName + '...');
+          emitProgressUpdate(promptId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
           
           await modifyGenerationDataWithPrompt(promptConfig, generationData);
           
+          // Increment step counter after completion
+          currentStep++;
+          const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+          
           // Emit SSE progress update for completion
-          emitProgressUpdate(promptId, { percentage: endPercentage, value: i + 1, max: postGenerationTasks.length }, stepName + ' complete');
+          emitProgressUpdate(promptId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the prompt fails
@@ -710,6 +715,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
               ? 'Image analysis unavailable' 
               : 'Generated Content';
           }
+          // Increment step counter even if task failed
+          currentStep++;
         }
       }
     } else if (type === 'video') {

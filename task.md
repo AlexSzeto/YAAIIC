@@ -150,7 +150,7 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 5. Update the completion handler to hide the progress banner
 6. Update the error handler to show errors in the progress banner
 
-[] Fix the total step number resetting between the pre-generate, generate, and post-generate phases.
+[x] Fix the total step number resetting between the pre-generate, generate, and post-generate phases.
 
 > Here is a sample of what the event data looks like:
 ```

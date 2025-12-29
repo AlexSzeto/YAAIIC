@@ -151,10 +151,9 @@ function handleExecutionStart(data) {
     startTime: Date.now()
   });
   
-  // Emit progress update via SSE
-  if (emitProgressUpdate) {
-    emitProgressUpdate(prompt_id, { percentage: 0, value: 0, max: 0 }, 'Starting generation...');
-  }
+  // Note: We don't emit a progress update here anymore since the step counter
+  // should continue from where pre-generation left off, and the first 'executing'
+  // message will trigger a proper progress update with the correct step number
 }
 
 // Handle executing message
