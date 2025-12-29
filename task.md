@@ -1,98 +1,69 @@
-# Looping Animation Frames Blending
+# SSE Bug Fixes and Progress Event Logging
 
 ## Goals
-Blends the first frame into the end of a looping animation sequence.
+Fix remaining SSE-related bugs affecting the progress UI and add comprehensive progress event logging for debugging.
 
-## Tasks
-[x] Add this loop fade function to a new library file, `image-utils.mjs`, on the server side:
-```js
-const sharp = require('sharp');
-const fs = require('fs').promises;
-const path = require('path');
+## Task 1: Fix Page Title Stuck at Final Progress Message
+[ ] Clear `taskId` and `regenerateTaskId` state to `null` after generation/regeneration completes
 
-/**
- * Blends the first frame into the last N frames of a WebP animation
- * and overwrites the file.
- * * @param {string} filePath - Local path to the .webp file
- * @param {number} [blendFrames=4] - Number of frames at the end to blend (default: 4)
- */
-async function createLoopFade(filePath, blendFrames = 4) {
-    try {
-        // 1. Load Metadata
-        const meta = await sharp(filePath).metadata();
-        
-        if (!meta.pages || meta.pages <= blendFrames) {
-            console.log(`Skipping: Image has ${meta.pages || 1} frames, but needs more than ${blendFrames} to blend.`);
-            return;
-        }
+> **Root Cause**: In `app.mjs`, after `handleGenerationComplete` runs, `taskId` is never set to `null`. Since `taskId` is still truthy, the ProgressBanner component remains in the render tree. When the component unmounts via `isVisible: false`, the PageTitleManager's cleanup effect runs, but on re-renders (e.g., from form state changes), a NEW ProgressBanner is instantiated with the same `taskId`, causing it to attempt to re-subscribe to an already-deleted task on the server.
 
-        console.log(`Processing ${path.basename(filePath)} (${meta.pages} frames) with ${blendFrames} blend frames...`);
+1. In `public/js/app.mjs`, modify `handleGenerationComplete` to call `setTaskId(null)` after processing
+2. Modify `handleGenerationError` to call `setTaskId(null)` after processing
+3. Modify `handleRegenerateComplete` to ensure `setRegenerateTaskId(null)` is called (already exists but verify timing)
+4. Modify `handleRegenerateError` to ensure `setRegenerateTaskId(null)` is called (already exists but verify timing)
+5. The conditional render `${taskId ? html\`<ProgressBanner ...>\` : null}` will then correctly unmount the banner completely
 
-        // 2. Extract the First Frame (Source for the overlay)
-        const firstFrameBuffer = await sharp(filePath, { page: 0 }).toBuffer();
+## Task 2: Fix Client Constantly Re-subscribing on Key Input
+[ ] Prevent SSE re-subscription after task completion by clearing taskId
 
-        const newFrames = [];
+> **Root Cause**: Same as Task 1. Since `taskId` persists after completion, every re-render of the App component (triggered by form input changes) causes React's reconciliation to potentially remount the ProgressBanner. The `key={taskId}` prop forces a new instance if the key changes, but since `taskId` remains constant, it's the same instance being unmounted/remounted due to the parent re-rendering while the banner's internal `isVisible` is false.
 
-        // 3. Iterate through all frames
-        for (let i = 0; i < meta.pages; i++) {
-            const currentFrame = sharp(filePath, { page: i });
-            
-            // Calculate position from the end (0 = last frame, 1 = second to last, etc.)
-            const distFromEnd = meta.pages - 1 - i;
+Once Task 1 is implemented, this issue should be resolved automatically since `taskId` will be `null` after completion, preventing the ProgressBanner from rendering entirely.
 
-            // Check if we are in the "blend zone"
-            if (distFromEnd < blendFrames) {
-                // Calculate dynamic opacity based on blendFrames.
-                // Logic: We divide 100% by (blendFrames + 1) to get even steps.
-                // Ex: If duration is 4, we step by 0.2 (20%). 
-                //     Last frame (dist 0) = (4 - 0) * 0.2 = 0.8 (80%)
-                const stepSize = 1 / (blendFrames + 1);
-                const opacity = (blendFrames - distFromEnd) * stepSize;
+## Task 3: Add Progress Event Logging
+[ ] Create a logging system for SSE progress events similar to `sent-prompt.json`
 
-                // Create semi-transparent overlay of the first frame
-                const fadedFirstFrame = await sharp(firstFrameBuffer)
-                    .ensureAlpha()
-                    .composite([{
-                        input: Buffer.from([0, 0, 0, Math.round(255 * opacity)]),
-                        raw: { width: 1, height: 1, channels: 4 },
-                        tile: true,
-                        blend: 'dest-in' // "Multiplies" the alpha channel
-                    }])
-                    .toBuffer();
+> Log all progress events from both ComfyUI websocket and events sent to clients for debugging purposes.
 
-                // Composite the faded first frame OVER the current frame
-                const blendedBuffer = await currentFrame
-                    .composite([{ input: fadedFirstFrame, blend: 'over' }])
-                    .toBuffer();
-                
-                newFrames.push(blendedBuffer);
-            } else {
-                newFrames.push(await currentFrame.toBuffer());
-            }
-        }
+1. In `server/sse.mjs`, create logging utilities:
+   - Create `resetProgressLog()` to clear/create `logs/sent-progress.json` with empty array at task start
+   - Create `logProgressEvent(eventData, source)` to append events to the log file
+   - `source` should indicate origin: `'comfyui-ws'`, `'emit-progress'`, `'emit-complete'`, `'emit-error'`
 
-        // 4. Reassemble and Write
-        const tempPath = filePath + '.tmp';
-
-        await sharp(newFrames, { animated: true })
-            .webp({ 
-                delay: meta.delay, 
-                loop: meta.loop
-            })
-            .toFile(tempPath);
-
-        // 5. Replace original file
-        await fs.rename(tempPath, filePath);
-        console.log(`Successfully updated ${path.basename(filePath)}`);
-
-    } catch (error) {
-        console.error("Error processing animation:", error);
-    }
-}
-
-// Example Usage:
-// createLoopFade('./animation.webp');      // Defaults to 4 frames
-// createLoopFade('./animation.webp', 10);  // Blends over the last 10 frames
+2. Log format for `sent-progress.json`:
+```json
+[
+  {
+    "timestamp": "2025-12-29T10:30:00.000Z",
+    "source": "comfyui-ws",
+    "type": "progress",
+    "promptId": "abc-123",
+    "taskId": "task_123_xyz",
+    "data": { "node": "5", "value": 10, "max": 20, "percentage": 50 }
+  },
+  {
+    "timestamp": "2025-12-29T10:30:01.000Z",
+    "source": "emit-progress",
+    "taskId": "task_123_xyz",
+    "data": { "percentage": 50, "currentStep": "Sampling image...", "currentValue": 2, "maxValue": 5 }
+  }
+]
 ```
 
-[x] Add an optional parameter, `blendLoopFrames`, to the workflow data object for `comfyui-workflows.json`. If set to `true`, the `createLoopFade` function will be called with the default value of 4 frames after the webp is transferred to the storage folder. The only workflow with this currently should be wan5b-image-to-video-loop. There should be no need to send this back to the client in the workflow list.
+3. In `server/comfyui-websocket.mjs`, add logging calls in:
+   - `handleProgress()` - log ComfyUI progress events
+   - `handleExecuting()` - log node execution events
+   - `handleExecutionStart()` - log execution start
+
+4. In `server/sse.mjs`, add logging calls in:
+   - `emitProgressUpdate()` - log events being sent to clients
+   - `emitTaskCompletion()` - log completion events
+   - `emitTaskError()` - log error events
+
+5. In `server/generate.mjs` and `server/server.mjs`:
+   - Call `resetProgressLog()` at the start of generation/regeneration tasks (similar to `resetPromptLog()`)
+
+6. Also verify/add reset progress calls to regenerate and inpaint processes.
+
+7. Export `resetProgressLog` from `sse.mjs` and import in `generate.mjs` and `server.mjs`
