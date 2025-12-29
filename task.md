@@ -81,17 +81,18 @@ Address the accumulated non essential bugs and tech debts from the most recent r
 4. Ensure the orientation value is sent in the generation request body
 5. Update the form state management to remove orientation as a user-editable field
 
-[] Refactor all workflow data sent to the client from the workflow list, other than "name", to go inside an "options" object.
+[x] Refactor all workflow data sent to the client from the workflow list, other than "name", to go inside an "options" object.
 
 > Modify the structure in `comfyui-workflow.json` directly, and modify the server code to accommodate the shape change. For future feature implementations, it would be implied that anything added to the "options" section of the workflow data would be sent to the client without additional code.
 
 1. Restructure each workflow in `server/resource/comfyui-workflows.json` to nest client-facing fields inside an "options" object
-2. Keep server-only fields (`base`, `format`, `finalNode`, `replace`, `upload`, `extractOutputPathFromTextFile`, `preGenerationTasks`) at the root level
-3. Move client-facing fields (`type`, `autocomplete`, `inputImages`, `optionalPrompt`, `nameRequired`, `orientation`, and future `postGenerationTasks`) into the "options" object
+2. Keep server-only fields (`base`, `format`, `finalNode`, `replace`, `upload`, `extractOutputPathFromTextFile`) at the root level
+3. Move client-facing fields (`type`, `autocomplete`, `inputImages`, `optionalPrompt`, `nameRequired`, `orientation`, `preGenerationTasks`) into the "options" object
 4. Update the `/generate/workflows` endpoint in `server/server.mjs` to send `workflow.options` to the client along with `name`
 5. Modify the workflow lookup logic in `server/server.mjs` to access fields from `workflow.options` when needed
 6. Update client-side code in `public/js/app.mjs` to access workflow properties from `workflow.options`
 7. Update `public/js/app-ui/generation-form.mjs` to access workflow properties from `workflow.options`
+8. Update `public/js/inpaint-page.mjs` and `public/js/app-ui/inpaint-form.mjs` to access workflow properties from `workflow.options`
 
 ```json
 // New workflow data structure in comfyui-workflows.json

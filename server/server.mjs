@@ -279,7 +279,7 @@ app.post('/generate/image', upload.any(), async (req, res) => {
     
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
-    const requiredImages = workflowData.inputImages || 0;
+    const requiredImages = workflowData.options?.inputImages || 0;
     const uploadedImages = req.files ? req.files.length : 0;
     
     if (requiredImages > 0 && uploadedImages < requiredImages) {
@@ -681,12 +681,7 @@ app.get('/generate/workflows', (req, res) => {
   try {
     const workflows = comfyuiWorkflows.workflows.map(workflow => ({
       name: workflow.name,
-      type: workflow.type,
-      autocomplete: workflow.autocomplete,
-      inputImages: workflow.inputImages || 0,
-      optionalPrompt: workflow.optionalPrompt || false,
-      nameRequired: workflow.nameRequired || false,
-      orientation: workflow.orientation
+      ...workflow.options
     }));
     res.json(workflows);
   } catch (error) {
