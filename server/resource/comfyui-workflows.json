@@ -408,6 +408,7 @@
           }
         ]
       },
+      "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
       "finalNode": "119",

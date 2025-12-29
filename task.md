@@ -4,7 +4,7 @@
 Blends the first frame into the end of a looping animation sequence.
 
 ## Tasks
-[] Add this loop fade function to a new library file, `image-utils.mjs`, on the server side:
+[x] Add this loop fade function to a new library file, `image-utils.mjs`, on the server side:
 ```js
 const sharp = require('sharp');
 const fs = require('fs').promises;
@@ -95,4 +95,4 @@ async function createLoopFade(filePath, blendFrames = 4) {
 // createLoopFade('./animation.webp', 10);  // Blends over the last 10 frames
 ```
 
-[] Add an optional parameter, `blendLoopFrames`, to the workflow data object for `comfyui-workflows.json`. If set to `true`, the `createLoopFade` function will be called with the default value of 4 frames after the webp is transferred to the storage folder. The only workflow with this currently should be wan5b-image-to-video-loop. There should be no need to send this back to the client in the workflow list.
+[x] Add an optional parameter, `blendLoopFrames`, to the workflow data object for `comfyui-workflows.json`. If set to `true`, the `createLoopFade` function will be called with the default value of 4 frames after the webp is transferred to the storage folder. The only workflow with this currently should be wan5b-image-to-video-loop. There should be no need to send this back to the client in the workflow list.
