@@ -25,7 +25,7 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         setLoading(true);
         setError(null);
         
-        const data = await fetchJson('/generate/workflows', {}, {
+        const data = await fetchJson('/workflows', {}, {
           maxRetries: 3,
           retryDelay: 1000,
           showUserFeedback: true,

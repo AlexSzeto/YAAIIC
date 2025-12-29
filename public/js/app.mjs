@@ -86,7 +86,7 @@ function App() {
         }, 100);
 
         // Load workflows for lookup
-        const workflowData = await fetchJson('/generate/workflows');
+        const workflowData = await fetchJson('/workflows');
         if (Array.isArray(workflowData)) {
           const imageVideoWorkflows = workflowData.filter(
             w => w.type === 'image' || w.type === 'video'
@@ -291,7 +291,7 @@ function App() {
           }
         });
         
-        response = await fetchJson('/generate/image', {
+        response = await fetchJson('/generate', {
           method: 'POST',
           body: formData
         });
@@ -308,7 +308,7 @@ function App() {
           orientation: orientation
         };
 
-        response = await fetchJson('/generate/image', {
+        response = await fetchJson('/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
@@ -572,7 +572,7 @@ function App() {
       const formData = new FormData();
       formData.append('image', file);
       
-      const result = await fetchJson('/api/upload-image', {
+      const result = await fetchJson('/upload/image', {
         method: 'POST',
         body: formData
       });
