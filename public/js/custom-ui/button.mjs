@@ -32,6 +32,8 @@ export function Button({
       case 'icon': return 'info-btn'; // Small square
       case 'icon-danger': return 'info-btn btn-icon-danger'; // Small square, red hover
       case 'icon-nav': return 'btn-icon-nav'; // Medium square
+      case 'primary-small-text': return 'btn-tag btn-tag-primary'; // Tag button - primary color
+      case 'small-text': return 'btn-tag'; // Tag button - gray/default
       default: return 'btn-with-icon';
     }
   };

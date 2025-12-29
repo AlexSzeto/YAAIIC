@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tags Component Test</title>
+    <!-- Preact and HTM via CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://esm.sh/preact@10.19.2",
+          "preact/": "https://esm.sh/preact@10.19.2/",
+          "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
+          "@preact/signals": "https://esm.sh/@preact/signals@1.2.2?external=preact",
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+        }
+      }
+    </script>
+    <!-- Boxicons for icons -->
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+    <!-- Dark Mode CSS -->
+    <link rel="stylesheet" href="/css/custom-ui.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+      body {
+        background-color: var(--dark-background-primary);
+        color: var(--dark-text-primary);
+        font-family: Arial, sans-serif;
+        padding: 40px;
+      }
+
+      .test-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background-color: var(--dark-background-secondary);
+        border: 1px solid var(--dark-border-secondary);
+        border-radius: 8px;
+      }
+
+      .test-section h2 {
+        margin-top: 0;
+        color: var(--primary-background);
+      }
+
+      .test-section p {
+        color: var(--dark-text-secondary);
+        margin-bottom: 15px;
+      }
+
+      .selected-display {
+        margin-top: 15px;
+        padding: 10px;
+        background-color: var(--dark-background-card);
+        border-radius: 4px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Root App Container -->
+    <div id="app"></div>
+
+    <!-- Main Test Script -->
+    <script type="module">
+      import { html, render, Component } from 'htm/preact';
+      import { Tags } from '/js/custom-ui/tags.mjs';
+
+      // Sample tag data with various label lengths
+      const sampleTags = [
+        { id: 'short', name: 'Short' },
+        { id: 'medium', name: 'Medium Tag' },
+        { id: 'longer', name: 'A Longer Tag Name' },
+        { id: 'verylong', name: 'This is a Very Long Tag Label' },
+        { id: 'compact', name: 'Tag' },
+        { id: 'multi', name: 'Multi-Word Tag Label' },
+      ];
+
+      // Test 1: Single Selection Mode
+      class SingleSelectionTest extends Component {
+        constructor() {
+          super();
+          this.state = { selected: ['short'] };
+        }
+
+        handleSelect = (id) => {
+          // Only one tag selected at a time
+          this.setState({ selected: [id] });
+        };
+
+        render() {
+          return html`
+            <div class="test-section">
+              <h2>Test 1: Single Selection Mode</h2>
+              <p>Click tags to select. Only one tag can be selected at a time.</p>
+              <${Tags}
+                items=${sampleTags}
+                selected=${this.state.selected}
+                onSelect=${this.handleSelect}
+              />
+              <div class="selected-display">
+                Selected: ${this.state.selected.join(', ')}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Test 2: Toggle Mode (Multiple Selection)
+      class ToggleSelectionTest extends Component {
+        constructor() {
+          super();
+          this.state = { selected: ['short', 'medium'] };
+        }
+
+        handleSelect = (id) => {
+          // Toggle selection - add if not present, remove if present
+          this.setState((prevState) => {
+            const newSelected = prevState.selected.includes(id)
+              ? prevState.selected.filter((item) => item !== id)
+              : [...prevState.selected, id];
+            return { selected: newSelected };
+          });
+        };
+
+        render() {
+          return html`
+            <div class="test-section">
+              <h2>Test 2: Toggle Mode (Multiple Selection)</h2>
+              <p>Click tags to toggle selection. Multiple tags can be selected.</p>
+              <${Tags}
+                items=${sampleTags}
+                selected=${this.state.selected}
+                onSelect=${this.handleSelect}
+              />
+              <div class="selected-display">
+                Selected: ${this.state.selected.length > 0 ? this.state.selected.join(', ') : '(none)'}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Test 3: Empty State
+      class EmptyStateTest extends Component {
+        constructor() {
+          super();
+          this.state = { selected: [] };
+        }
+
+        handleSelect = (id) => {
+          this.setState({ selected: [id] });
+        };
+
+        render() {
+          return html`
+            <div class="test-section">
+              <h2>Test 3: Starting with No Selection</h2>
+              <p>No tags selected initially.</p>
+              <${Tags}
+                items=${sampleTags}
+                selected=${this.state.selected}
+                onSelect=${this.handleSelect}
+              />
+              <div class="selected-display">
+                Selected: ${this.state.selected.length > 0 ? this.state.selected.join(', ') : '(none)'}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // App Component
+      class App extends Component {
+        render() {
+          return html`
+            <div>
+              <h1>Tags Component Test Page</h1>
+              <${SingleSelectionTest} />
+              <${ToggleSelectionTest} />
+              <${EmptyStateTest} />
+            </div>
+          `;
+        }
+      }
+
+      // Render the app
+      render(html`<${App} />`, document.getElementById('app'));
+    </script>
+  </body>
+</html>

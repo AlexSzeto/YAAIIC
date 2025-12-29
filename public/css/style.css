@@ -560,6 +560,69 @@ body:has(.inpaint-main-layout) {
   background-color: var(--dark-background-tertiary);
 }
 
+/* Tag Button Styling */
+.btn-tag {
+  background-color: var(--secondary-background);
+  color: var(--dark-text-primary);
+  border: 1px solid var(--dark-border-focus);
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-tag:hover {
+  background-color: var(--secondary-hover);
+}
+
+.btn-tag:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--secondary-focus);
+}
+
+.btn-tag-primary {
+  background-color: var(--primary-background);
+  color: white;
+  border-color: var(--primary-background);
+}
+
+.btn-tag-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-tag-primary:focus {
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+.btn-tag:disabled,
+.btn-tag-primary:disabled {
+  background-color: var(--dark-background-tertiary);
+  border-color: var(--dark-border-secondary);
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-tag:disabled:hover,
+.btn-tag-primary:disabled:hover {
+  background-color: var(--dark-background-tertiary);
+}
+
+/* Tags container */
+.tags-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .info-label {
   color: var(--dark-text-primary);
   font-size: 14px;

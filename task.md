@@ -4,7 +4,7 @@
 Create one more type of textual content for the generated images (summary, which is an objective inventory of objects in the picture, versus the more verbose, subjective, imaginative description). improve the UI by putting all paragraph length displays inside a tagged UI, powered by a new, tag selection UI
 
 ## Tasks
-[] Create a new custom-ui component, tags.mjs, that displays a row of tags as clickable mini buttons.
+[x] Create a new custom-ui component, tags.mjs, that displays a row of tags as clickable mini buttons.
 
 > The tags component takes two sets of properties: items, an array of objects with a name and id property, both strings, to describe the selectagle tag buttons. The second property, selected, is a list of ids describing the currently selected items. For the buttons: its height should be the same as the smaller icon buttons, scaling down font size to fit, and its width should be variable depending on the label length. It should be blue (primary color) when selected and gray (default color) when deselected. Augment the existing custom button component with this button variation. The component should not be keeping state of which items are currently selected, but would emit an event whenever a tag (one of the buttons) is clicked and the implementation surrounding the tags would decide how the tags update. Create a test page, tag-test.html, to test the appearance of this component, with two sample implemetation where one would only allow one tag selected at a time and the other allow the tags to be toggled.
 
