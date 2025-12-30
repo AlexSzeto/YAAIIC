@@ -5,7 +5,7 @@ import csv from 'csv-parser';
 import multer from 'multer';
 import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
-import { createTask, deleteTask, getTask } from './sse.mjs';
+import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
@@ -98,7 +98,7 @@ try {
   setAddImageDataEntry(addImageDataEntry);
   
   // Set up emit functions for WebSocket handlers
-  setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError });
+  setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
   
   // Initialize generate module with ComfyUI API path
   initializeGenerateModule(config.comfyuiAPIPath);
@@ -221,6 +221,7 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
     
     // Initialize sent-prompt.json logging
     resetPromptLog();
+    resetProgressLog();
     
     console.log('Received image upload:', req.file.originalname);
     
@@ -559,6 +560,7 @@ app.post('/regenerate', async (req, res) => {
     
     // Initialize sent-prompt.json logging
     resetPromptLog();
+    resetProgressLog();
     
     console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
     

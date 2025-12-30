@@ -133,10 +133,11 @@ function App() {
       } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
         // It's a file/blob - create preview URL
         const url = URL.createObjectURL(fileOrUrl);
-        newImages[index] = { blob: fileOrUrl, url };
+        // For uploads, we don't have server-side metadata yet, so imageData is empty
+        newImages[index] = { blob: fileOrUrl, url, imageData: {} };
       } else if (typeof fileOrUrl === 'string') {
         // It's a URL
-        newImages[index] = { url: fileOrUrl };
+        newImages[index] = { url: fileOrUrl, imageData: {} };
       }
       return newImages;
     });
@@ -182,7 +183,7 @@ function App() {
         newImages[targetIndex] = { 
           blob, 
           url: imageUrl, 
-          description: imageData.description || null 
+          imageData: imageData
         };
         return newImages;
       });
@@ -282,12 +283,18 @@ function App() {
         }
         
         // Append images
+        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
-            if (img.description) {
-              formData.append(`image_${index}_description`, img.description);
-            }
+
+            imageTextFieldNames.forEach(fieldName => {
+              // Check top-level (legacy/upload) or nested in imageData (selected)
+              const value = img.imageData?.[fieldName] || img[fieldName];
+              if (value) {
+                formData.append(`image_${index}_${fieldName}`, value);
+              }
+            });
           }
         });
         
@@ -331,6 +338,7 @@ function App() {
   
   const handleGenerationComplete = async (data) => {
     setIsGenerating(false);
+    setTaskId(null);
     console.log('Generation complete:', data);
     
     if (data.result && data.result.uid) {
@@ -355,6 +363,7 @@ function App() {
   
   const handleGenerationError = (data) => {
     setIsGenerating(false);
+    setTaskId(null);
     console.error('Generation error:', data);
   };
   
@@ -530,7 +539,7 @@ function App() {
                      newImages[gallerySelectionMode.index] = { 
                          blob, 
                          url: imageUrl, 
-                         description: item.description || null 
+                         imageData: item
                      };
                      return newImages;
                  });

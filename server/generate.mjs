@@ -4,6 +4,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
+import { createCrossFade } from './image-utils.mjs';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
 import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
 import {
@@ -16,7 +17,8 @@ import {
   emitTaskCompletion,
   emitTaskError,
   emitTaskErrorByTaskId,
-  handleSSEConnection
+  handleSSEConnection,
+  resetProgressLog
 } from './sse.mjs';
 
 // Store ComfyUI API path locally
@@ -411,8 +413,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, options } = workflowConfig;
-    const { preGenerationTasks, type } = options || {};
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
+    const { type } = options || {};
     const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     
     // Create generationData as a copy of requestData
@@ -426,6 +428,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     
     // Initialize sent-prompt.json logging
     resetPromptLog();
+    resetProgressLog();
     
     console.log('Using seed:', seed);
     console.log('Using savePath:', savePath);
@@ -662,6 +665,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         if (fs.existsSync(actualOutputPath)) {
           fs.copyFileSync(actualOutputPath, savePath);
           console.log(`Successfully copied file from ${actualOutputPath} to ${savePath}`);
+          
+          // Apply loop fade blending if enabled in workflow options
+          if (workflowConfig.blendLoopFrames) {
+            console.log('Applying loop fade blending to animation...');
+            await createCrossFade(savePath);
+          }
         } else {
           throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
         }
@@ -713,7 +722,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
             : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for start
-          emitProgressUpdate(promptId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+          emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
           
           await modifyGenerationDataWithPrompt(promptConfig, generationData);
           
@@ -725,7 +734,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
             : `Generating ${promptConfig.to}`;
           
           // Emit SSE progress update for completion
-          emitProgressUpdate(promptId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
+          emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
           // Set a fallback value if the prompt fails
@@ -770,9 +779,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     }
 
     // Emit completion event using entire generationData object
-    emitTaskCompletion(promptId, {
+    emitTaskCompletion(taskId, {
       ...generationData,
-      maxValue: task.progress?.max || 1
+      maxValue: totalSteps
     });
 
     // Clean up timer

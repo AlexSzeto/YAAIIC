@@ -3,7 +3,64 @@
  * Handles task tracking, client connections, message buffering, and event emission
  */
 
+import fs from 'fs';
+import path from 'path';
+
 const SSE_HEARTBEAT_INTERVAL = 30000; // 30 seconds
+
+// Progress logging utilities
+const LOGS_DIR = path.join(process.cwd(), 'server', 'logs');
+const PROGRESS_LOG_PATH = path.join(LOGS_DIR, 'sent-progress.json');
+
+/**
+ * Reset the sent-progress.json log file at the start of a task
+ */
+export function resetProgressLog() {
+  try {
+    // Create logs directory if it doesn't exist
+    if (!fs.existsSync(LOGS_DIR)) {
+      fs.mkdirSync(LOGS_DIR, { recursive: true });
+    }
+    
+    // Clear or create sent-progress.json with empty array
+    fs.writeFileSync(PROGRESS_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error resetting progress log:', error);
+  }
+}
+
+/**
+ * Log a progress event to sent-progress.json
+ * @param {Object} eventData - The event data to log
+ * @param {string} source - Source of event: 'comfyui-ws', 'emit-progress', 'emit-complete', 'emit-error'
+ * @param {string} promptId - Optional ComfyUI prompt ID
+ * @param {string} taskId - Optional task ID
+ */
+export function logProgressEvent(eventData, source, promptId = null, taskId = null) {
+  try {
+    // Read existing log
+    let log = [];
+    if (fs.existsSync(PROGRESS_LOG_PATH)) {
+      const content = fs.readFileSync(PROGRESS_LOG_PATH, 'utf-8');
+      log = JSON.parse(content);
+    }
+    
+    // Add new entry
+    log.push({
+      timestamp: new Date().toISOString(),
+      source,
+      promptId,
+      taskId,
+      data: eventData
+    });
+    
+    // Write back
+    fs.writeFileSync(PROGRESS_LOG_PATH, JSON.stringify(log, null, 2), 'utf-8');
+  } catch (error) {
+    // Silently fail - logging should not interrupt main functionality
+    console.error('Error logging progress event:', error);
+  }
+}
 
 // Task tracking system
 const activeTasks = new Map();
@@ -247,6 +304,10 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
   task.progress = { percentage: updatedProgress.percentage, currentStep: stepTitle };
   
   const message = createProgressResponse(taskId, updatedProgress, stepTitle);
+  
+  // Log progress event
+  logProgressEvent(message.progress, 'emit-progress', task.promptId, taskId);
+  
   emitSSEToTask(taskId, message);
 }
 
@@ -266,6 +327,10 @@ export function emitTaskCompletion(promptIdOrTaskId, result) {
   if (!task) return;
   
   const message = createCompletionResponse(taskId, result);
+  
+  // Log completion event
+  logProgressEvent({ result: message.result }, 'emit-complete', task.promptId, taskId);
+  
   emitSSEToTask(taskId, message);
   
   scheduleTaskCleanup(taskId);
@@ -292,6 +357,10 @@ export function emitTaskErrorByTaskId(taskId, errorMessage, errorDetails) {
   if (!task) return;
   
   const message = createErrorResponse(taskId, errorMessage, errorDetails);
+  
+  // Log error event
+  logProgressEvent({ error: message.error }, 'emit-error', task.promptId, taskId);
+  
   emitSSEToTask(taskId, message);
   
   scheduleTaskCleanup(taskId);

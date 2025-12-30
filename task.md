@@ -1,3 +1,0 @@
-# Untitled
-## Goals
-## Tasks
