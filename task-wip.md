@@ -2,11 +2,12 @@
 - tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 
 # Features
+- Memory management: use comfyui /free on first generate, and on every generate that swaps workflows
 - Deprecate tag feature, add "folders". Add "folder" attribute to image data. Put buttons next to gallery to show and allow user to change folder. Save inpaint image back to the same folder as the source image. Generated image should go to the current folder. Allow user to move selected items to destination folder in the gallery.
 - Export to destination (customizable)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
-- Add camera stability verbiage (all videos) and no limb movement verbiage (looping videos)
+- Add status endpoint and allow client to poll it to see if ollama/comfyui is running
 - Move generation options (requireName, optionalPrompt, etc.) into an options object and only pass that to the client
 - Use a solution other than freezeframe.js to freeze animations in gallery preview
 - Auto download models from Hugging Face
