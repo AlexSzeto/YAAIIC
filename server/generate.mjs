@@ -413,8 +413,8 @@ export async function handleImageGeneration(req, res, workflowConfig) {
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, options } = workflowConfig;
-    const { preGenerationTasks, type } = options || {};
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
+    const { type } = options || {};
     const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     
     // Create generationData as a copy of requestData

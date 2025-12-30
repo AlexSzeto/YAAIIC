@@ -1,8 +1,6 @@
-# Task: Update Image Selection Data Tracking
+# Task: Refactor preGenerationTasks Structure
 
-- [x] Refactor `app.mjs` to track full `imageData` in `inputImages` state <!-- id: 3 -->
-    - [x] Update `handleSelectAsInput` <!-- id: 4 -->
-    - [x] Update `handleGallerySelect` <!-- id: 5 -->
-    - [x] Update `handleImageChange` (file upload) <!-- id: 6 -->
-    - [x] Update `handleGenerate` to access fields from `imageData` <!-- id: 7 -->
-- [ ] Verify metadata transmission in generation request <!-- id: 8 -->
+- [x] Search for `preGenerationTasks` usage in server code <!-- id: 9 -->
+- [x] Move `preGenerationTasks` out of `options` in `comfyui-workflows.json` <!-- id: 10 -->
+- [x] Update server code to read `preGenerationTasks` from the new location <!-- id: 11 -->
+- [x] Verify the changes <!-- id: 12 -->

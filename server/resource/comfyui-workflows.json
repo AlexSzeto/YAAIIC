@@ -291,20 +291,24 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect",
-        "preGenerationTasks": [
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
           {
             "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the description of the first frame of a video: [image_0_description]\n\nWrite a single paragraph description to describe the dynamic motion that would carry the scenery one second forward. Include as much minor details as possible, but do not create anything that isn't already in the original description. Only include the description, do not include any other text. The description is:",
+            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
             "to": "prompt",
             "replaceBlankFieldOnly": true
           },
           {
-            "template": "First frame description:\n[image_0_description]\n\nLast frame description:\n[image_1_description]",
+            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
             "to": "description"
+          },
+          {
+            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
+            "to": "summary"
           }
-        ]
-      },
+        ],
       "base": "wan-image-to-video.json",
       "format": "webp",
       "finalNode": "76",
@@ -394,8 +398,9 @@
         "inputImages": 1,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect",
-        "preGenerationTasks": [
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
           {
             "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
             "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
@@ -410,9 +415,7 @@
             "template": "[image_0_summary]",
             "to": "summary"
           }
-        ]
-
-      },
+        ],
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
       "format": "webp",
@@ -483,11 +486,12 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect",
-        "preGenerationTasks": [
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
           {
             "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
             "to": "prompt",
             "replaceBlankFieldOnly": true
           },
@@ -499,8 +503,7 @@
             "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
             "to": "summary"
           }
-        ]
-      },
+        ],
       "base": "wan5b-image-to-video.json",
       "format": "webp",
       "finalNode": "119",
@@ -533,7 +536,8 @@
         },
         {
           "from": "prompt",
-          "to": ["6", "inputs", "text"]
+          "to": ["6", "inputs", "text"],
+          "prefix": "Prevent extreme camera movement, and always use smooth camera motion. "
         },
         {
           "from": "seed",
