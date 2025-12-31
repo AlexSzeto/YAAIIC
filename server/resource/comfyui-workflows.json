@@ -168,7 +168,7 @@
         {
           "from" : "prompt",
           "to": ["6", "inputs", "text"],
-          "prefix": "Magnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic perspective, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background\n\nfantasy illustration of\n\n",
+          "prefix": "Magnificent, painterly, epic, majestic, naturalistic, fantasy art, cover art, impressionist, highly detailed, sharp focus, cinematic light, finely detailed, intricate, dynamic perspective, perfect, aesthetic, deep background fantasy illustration of \n\n",
           "postfix": "\n\nThe composition heavily relies on off center, golden ratio to create an aesthetically pleasing, dynamic layout."
         },
         {
