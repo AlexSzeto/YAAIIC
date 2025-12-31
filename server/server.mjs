@@ -226,7 +226,7 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
     console.log('Received image upload:', req.file.originalname);
     
     // Create upload task and get task ID
-    const taskId = await handleImageUpload(req.file, config);
+    const taskId = await handleImageUpload(req.file, comfyuiWorkflows);
     
     // Return task ID immediately
     res.json({
