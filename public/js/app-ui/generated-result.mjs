@@ -267,7 +267,7 @@ class TabbedInfoField extends Component {
               <${Button}
                 variant="icon"
                 icon="copy"
-                onClick=${() => onCopy(activeTab.name, activeTab.value)}
+                onClick=${() => onCopy(activeTab.value, activeTab.name)}
                 title="Copy ${activeTab.name}"
                 disabled=${!onCopy || !activeTab.value}
               />

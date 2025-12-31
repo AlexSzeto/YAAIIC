@@ -113,3 +113,11 @@ export function getConfig() {
   }
   return config;
 }
+
+// Get the ollamaUseCPU config value
+export function getOllamaUseCPU() {
+  if (!config) {
+    throw new Error('Services module not initialized - config not available');
+  }
+  return config.ollamaUseCPU || false;
+}

@@ -237,7 +237,7 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
 }
 
 // Handler for upload image processing
-export async function handleImageUpload(file, config) {
+export async function handleImageUpload(file, workflowsConfig) {
   // Generate unique task ID
   const taskId = generateTaskId();
   
@@ -255,7 +255,7 @@ export async function handleImageUpload(file, config) {
   console.log(`Created upload task ${taskId}`);
   
   // Process upload task asynchronously
-  processUploadTask(taskId, file, config).catch(error => {
+  processUploadTask(taskId, file, workflowsConfig).catch(error => {
     console.error(`Error in upload task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
   });
@@ -264,7 +264,7 @@ export async function handleImageUpload(file, config) {
 }
 
 // Process upload task asynchronously
-async function processUploadTask(taskId, file, config) {
+async function processUploadTask(taskId, file, workflowsConfig) {
   try {
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
@@ -298,11 +298,11 @@ async function processUploadTask(taskId, file, config) {
     };
     
     // Process post-generation tasks to generate description and name
-    if (config.postGenerationTasks && Array.isArray(config.postGenerationTasks)) {
+    if (workflowsConfig.postGenerationTasks && Array.isArray(workflowsConfig.postGenerationTasks)) {
       console.log('Processing post-generation tasks for uploaded image...');
       
       let promptIndex = 0;
-      for (const promptConfig of config.postGenerationTasks) {
+      for (const promptConfig of workflowsConfig.postGenerationTasks) {
         try {
           promptIndex++;
           // Emit progress for each prompt

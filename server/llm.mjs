@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getOllamaAPIPath } from './services.mjs';
+import { getOllamaAPIPath, getOllamaUseCPU } from './services.mjs';
 
 /**
  * Reset the sent-prompt.json log file at the start of a task
@@ -84,6 +84,15 @@ export async function sendTextPrompt(prompt, model = 'gemma3:4b', to = null) {
       prompt,
       stream: false
     };
+
+    // Add CPU-only option if configured
+    const useCPU = getOllamaUseCPU();
+    if (useCPU) {
+      payload.options = {
+        num_gpu: 0
+      };
+      console.log('Forcing CPU-only mode for Ollama (num_gpu: 0)');
+    }
 
     console.log('Sending text prompt to model...');
 
@@ -170,6 +179,15 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = n
       images: [encodedImage],
       stream: false
     };
+
+    // Add CPU-only option if configured
+    const useCPU = getOllamaUseCPU();
+    if (useCPU) {
+      payload.options = {
+        num_gpu: 0
+      };
+      console.log('Forcing CPU-only mode for Ollama (num_gpu: 0)');
+    }
 
     console.log(`Sending image analysis request to ${model}...`);
 
