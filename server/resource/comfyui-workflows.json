@@ -152,6 +152,65 @@
       ]
     },
     {
+      "name": "Text to Image (ZImage Fantasy Landscape)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "landscape"
+      },
+      "base": "zimage-fantasy-landscape.json",
+      "format": "jpg",
+      "finalNode": "43",
+      "replace": [
+        {
+          "from" : "prompt",
+          "to": ["6", "inputs", "text"],
+          "prefix": "Magnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic perspective, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background\n\nfantasy illustration of\n\n",
+          "postfix": "\n\nThe composition heavily relies on off center, golden ratio to create an aesthetically pleasing, dynamic layout."
+        },
+        {
+          "from": "seed",
+          "to": ["39", "inputs", "seed"]
+        },
+        {
+          "from": "savePath",
+          "to": ["43", "inputs", "path"]
+        }
+      ]
+    },
+    {
+      "name": "Text to Image (ZImage Fantasy Portrait)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
+      "base": "zimage-fantasy-portrait.json",
+      "format": "jpg",
+      "finalNode": "43",
+      "replace": [
+        {
+          "from" : "prompt",
+          "to": ["6", "inputs", "text"],
+          "prefix": "a highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n"
+        },
+        {
+          "from": "seed",
+          "to": ["39", "inputs", "seed"]
+        },
+        {
+          "from": "savePath",
+          "to": ["43", "inputs", "path"]
+        }
+      ]
+    },
+    {
       "name": "Inpaint (Realistic Vision Fantasy)",
       "options": {
         "type": "inpaint",

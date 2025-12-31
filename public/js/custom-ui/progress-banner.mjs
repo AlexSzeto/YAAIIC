@@ -56,7 +56,10 @@ export function ProgressBanner({
   useEffect(() => {
     if (!sseManager || !taskId) return;
 
-    const pageTitleManager = new PageTitleManager(defaultTitle || document.title);
+    // Capture the current document title before creating PageTitleManager
+    // This ensures we reset to the actual page title, not a potentially modified defaultTitle prop
+    const originalTitle = document.title;
+    const pageTitleManager = new PageTitleManager(originalTitle);
 
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;

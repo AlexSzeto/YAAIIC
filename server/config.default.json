@@ -1,6 +1,7 @@
 {
   "ollamaAPIPath": "http://localhost:11434",
   "ollamaLaunchPath": "H:\\start_ollama.bat",
+  "ollamaUseCPU": false,
   "comfyuiAPIPath": "http://localhost:8188",
   "comfyuiLaunchPath": "H:\\start_comfyui.bat"
 }

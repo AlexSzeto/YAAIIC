@@ -629,7 +629,6 @@ function App() {
           sseManager=${sseManager}
           onComplete=${handleRegenerateComplete}
           onError=${handleRegenerateError}
-          defaultTitle="Regenerating..."
         />
       ` : null}
       

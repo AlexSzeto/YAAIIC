@@ -1,0 +1,225 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 859216660220159,
+      "steps": 9,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "42",
+        0
+      ],
+      "positive": [
+        "39",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "a highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\nAn extreme close up character portrait:\n\nA male ashling (a variant of underground elves with albino skin and red eyes) scholar sits on the stone floor of a dungeon, his lifeless body slumping against the cold wall of rough cut stone bricks. He has long, pale violet hair tied in a topknot with rough hemp ropes. He is wearing a pair of thin perfectly round wire metal glasses, which frames his delicate facial features. His eyes are closed, and a thin trail of blood runs down his lips. He is wearing loose clerical robes with gold and blue trims, wavy, celtic like circular patterns adorn his robe as the religious symbol of a water goddess. His right hand, resting on the floor but clutching a magical potion swirling with cloudy but glowing white liquid, sealed with a cork on top. Three more vials of similar looking potion all lies sealed but scatterd near the body.\n\nThe lighting is dark, with the figure illuminated by mysterious blue light from beyond the frame of the picture, giving off a somber, eerie atmosphere.",
+      "clip": [
+        "42",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "blurry ugly bad",
+      "clip": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "13": {
+    "inputs": {
+      "width": 768,
+      "height": 960,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "16": {
+    "inputs": {
+      "unet_name": "z_image_turbo_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "17": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "18": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "lumina2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "31": {
+    "inputs": {
+      "lora_name": "ZIT_DC Vivid Dark Fantasy Painting [Z-ImageTurbo.JoyCaptionBetaOne][Trigger=dcdrkfntsy.] v1_000005750.safetensors",
+      "strength_model": 0.12,
+      "strength_clip": 1,
+      "model": [
+        "37",
+        0
+      ],
+      "clip": [
+        "37",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "37": {
+    "inputs": {
+      "lora_name": "zit_fine_art_fantasy_v1.safetensors",
+      "strength_model": 0.4,
+      "strength_clip": 1,
+      "model": [
+        "16",
+        0
+      ],
+      "clip": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "38": {
+    "inputs": {
+      "lora_name": "ZIT_Painterly01b_CE_ZIMGT_AIT5k.safetensors",
+      "strength_model": 0.5,
+      "strength_clip": 1,
+      "model": [
+        "31",
+        0
+      ],
+      "clip": [
+        "31",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "39": {
+    "inputs": {
+      "randomize_percent": 50,
+      "strength": 20,
+      "noise_insert": "noise on beginning steps",
+      "steps_switchover_percent": 20,
+      "seed": 1077491120247564,
+      "mask_starts_at": "beginning",
+      "mask_percent": 0,
+      "log_to_console": false,
+      "conditioning": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "SeedVarianceEnhancer",
+    "_meta": {
+      "title": "SeedVarianceEnhancer"
+    }
+  },
+  "42": {
+    "inputs": {
+      "lora_name": "ZIT_Impressionist-painting-Z-v1.safetensors",
+      "strength_model": 0.3,
+      "strength_clip": 1,
+      "model": [
+        "38",
+        0
+      ],
+      "clip": [
+        "38",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "43": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  }
+}
