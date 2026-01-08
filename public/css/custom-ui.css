@@ -1065,7 +1065,6 @@
 
 .folder-select-header {
   padding: 20px 20px 0 20px;
-  border-bottom: 1px solid var(--dark-border-primary);
 }
 
 .folder-select-title {
@@ -1102,7 +1101,6 @@
   padding: 12px 20px;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  border-bottom: 1px solid var(--dark-border-primary);
 }
 
 .folder-item:hover {
@@ -1121,10 +1119,6 @@
   flex: 1;
 }
 
-.folder-icon {
-  font-size: 18px;
-}
-
 .folder-name {
   color: var(--dark-text-primary);
   font-size: 14px;
@@ -1134,30 +1128,7 @@
 .folder-actions {
   display: flex;
   gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.folder-item:hover .folder-actions {
-  opacity: 1;
-}
-
-.folder-action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.folder-action-btn:hover {
-  background-color: var(--dark-background-tertiary);
-}
-
-.folder-action-btn:active {
-  transform: scale(0.95);
+  align-items: center;
 }
 
 .folder-select-footer {
@@ -1165,7 +1136,6 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 15px 20px;
-  border-top: 1px solid var(--dark-border-primary);
 }
 
 .folder-btn {

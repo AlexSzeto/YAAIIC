@@ -2,6 +2,7 @@
 import { render, Component } from 'preact';
 import { html } from 'htm/preact';
 import { showTextPrompt, showDialog } from './dialog.mjs';
+import { Button } from './button.mjs';
 
 // FolderItem component - renders a single folder row
 function FolderItem({ folder, isSelected, onSelect, onRename, onDelete }) {
@@ -15,29 +16,29 @@ function FolderItem({ folder, isSelected, onSelect, onRename, onDelete }) {
     onDelete(folder);
   };
 
+  const isUnsorted = folder.uid === '';
+
   return html`
     <div class="folder-item ${isSelected ? 'selected' : ''}" onClick=${() => onSelect(folder.uid)}>
       <div class="folder-label">
-        <span class="folder-icon">📁</span>
+        <box-icon name='folder' type='solid' color='var(--dark-text-secondary)' size='20px'></box-icon>
         <span class="folder-name">${folder.label}</span>
       </div>
       <div class="folder-actions">
-        ${folder.uid !== '' && html`
-          <button
-            class="folder-action-btn rename-btn"
-            onClick=${handleRenameClick}
-            title="Rename folder"
-          >
-            ✏️
-          </button>
-          <button
-            class="folder-action-btn delete-btn"
-            onClick=${handleDeleteClick}
-            title="Delete folder"
-          >
-            🗑️
-          </button>
-        `}
+        <${Button}
+          variant="icon"
+          icon="edit"
+          onClick=${handleRenameClick}
+          disabled=${isUnsorted}
+          title=${isUnsorted ? 'Cannot rename Unsorted folder' : 'Rename folder'}
+        />
+        <${Button}
+          variant="icon"
+          icon="trash"
+          onClick=${handleDeleteClick}
+          disabled=${isUnsorted}
+          title=${isUnsorted ? 'Cannot delete Unsorted folder' : 'Delete folder'}
+        />
       </div>
     </div>
   `;
@@ -78,7 +79,7 @@ class FolderSelectModal extends Component {
       const data = await response.json();
       this.setState({
         folders: data.list,
-        currentFolder: data.current,
+        // Don't update currentFolder from API - keep the prop value or existing state
         isLoading: false
       });
     } catch (error) {
@@ -100,6 +101,9 @@ class FolderSelectModal extends Component {
   }
 
   handleFolderSelect = async (uid) => {
+    // Update local state to show selection
+    this.setState({ currentFolder: uid });
+    
     if (this.props.onSelectFolder) {
       await this.props.onSelectFolder(uid);
     }
