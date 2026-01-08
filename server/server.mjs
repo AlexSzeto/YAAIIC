@@ -75,6 +75,10 @@ export function addImageDataEntry(entry) {
   const now = new Date();
   entry.timestamp = now.toISOString();
   entry.uid = now.getTime(); // Generate UID using Date.getTime()
+  
+  // Add current folder to the entry
+  entry.folder = imageData.currentFolder || '';
+  
   imageData.imageData.push(entry);
   saveImageData();
 }
@@ -358,13 +362,27 @@ app.get('/image-data', (req, res) => {
     const sort = req.query.sort || 'descending';
     const limit = parseInt(req.query.limit) || 10;
     
+    // Get folder parameter, default to currentFolder if not provided
+    const folderParam = req.query.folder !== undefined ? req.query.folder : imageData.currentFolder;
+    const folderId = folderParam || '';
+    
     // Parse tags from comma-separated string
     const tags = tagsParam ? tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [];
     
-    console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], sort="${sort}", limit=${limit}`);
+    console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], folder="${folderId}", sort="${sort}", limit=${limit}`);
     
-    // Filter by query and tags
+    // Filter by query, tags, and folder
     let filteredData = imageData.imageData.filter(item => {
+      // Folder match - check if item belongs to the requested folder
+      let folderMatch = true;
+      if (folderId === '') {
+        // Unsorted folder - include items with no folder, empty string, null, or undefined
+        folderMatch = !item.folder || item.folder === '';
+      } else {
+        // Specific folder - must match exactly
+        folderMatch = item.folder === folderId;
+      }
+      
       // Query match (search in name, description, prompt, and timestamp formatted as yyyy-mm-dd)
       let queryMatch = true;
       if (query) {
@@ -394,8 +412,8 @@ app.get('/image-data', (req, res) => {
           );
       }
       
-      // Both conditions must be true
-      return queryMatch && tagMatch;
+      // All conditions must be true
+      return folderMatch && queryMatch && tagMatch;
     });
     
     // Sort by timestamp

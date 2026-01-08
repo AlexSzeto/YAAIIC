@@ -49,13 +49,13 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
    - Update all image data entries with this folder uid to have no folder attribute (empty string "")
    - Save image data, return updated folder list
 
-[] Update the generation so the current folder id is always added to a new generation.
+[x] Update the generation so the current folder id is always added to a new generation.
 1. In `server/server.mjs`, add current folder id to new image data
 2. Add `folder` property to generated image data object in `/generate` endpoint
 3. Add `folder` property to generated image data object in `/generate/inpaint` endpoint
 4. Ensure folder value is set to currentFolder
 
-[] Update the gallery retrieval endpoint to take a folder uid query parameter. If this parameter is omitted, set the folder uid to the current folder. Change the gallery retrival so that 
+[x] Update the gallery retrieval endpoint to take a folder uid query parameter. If this parameter is omitted, set the folder uid to the current folder. Change the gallery retrival so that 
 1. Modify GET `/image-data` endpoint in `server/server.mjs` to accept `folder` query parameter
 2. If `folder` query parameter is omitted, use currentFolder as the folder filter
 3. Filter returned image data to only include items where `item.folder === folderId`
