@@ -527,38 +527,59 @@ app.delete('/image-data/delete', (req, res) => {
 // POST endpoint for editing image data
 app.post('/edit', (req, res) => {
   try {
-    const updatedData = req.body;
+    const requestData = req.body;
     
-    // Validate that uid is present
-    if (!updatedData.uid) {
-      return res.status(400).json({ error: 'Missing required field: uid' });
+    // Check if request is an array or single object
+    const isArray = Array.isArray(requestData);
+    const dataToUpdate = isArray ? requestData : [requestData];
+    
+    // Validate all items
+    for (const item of dataToUpdate) {
+      if (!item.uid) {
+        return res.status(400).json({ error: 'Missing required field: uid in one or more items' });
+      }
+      if (typeof item.uid !== 'number' || !Number.isInteger(item.uid)) {
+        return res.status(400).json({ error: `UID must be an integer, got ${typeof item.uid} for uid ${item.uid}` });
+      }
     }
     
-    // Validate that uid is a number
-    if (typeof updatedData.uid !== 'number' || !Number.isInteger(updatedData.uid)) {
-      return res.status(400).json({ error: 'UID must be an integer' });
+    console.log(`Edit request for ${dataToUpdate.length} item(s)`);
+    
+    const updatedItems = [];
+    const notFoundUids = [];
+    
+    // Process each item
+    for (const updatedData of dataToUpdate) {
+      const imageIndex = imageData.imageData.findIndex(item => item.uid === updatedData.uid);
+      
+      if (imageIndex === -1) {
+        notFoundUids.push(updatedData.uid);
+        continue;
+      }
+      
+      // Replace the entire object in place with the new data
+      imageData.imageData[imageIndex] = updatedData;
+      updatedItems.push(updatedData);
     }
     
-    console.log(`Edit request for UID: ${updatedData.uid}`);
-    
-    // Search for the image with matching UID
-    const imageIndex = imageData.imageData.findIndex(item => item.uid === updatedData.uid);
-    
-    if (imageIndex === -1) {
-      console.log(`No image found with UID: ${updatedData.uid}`);
-      return res.status(404).json({ error: `Image with uid ${updatedData.uid} not found` });
+    // Check if any items were not found
+    if (notFoundUids.length > 0) {
+      console.log(`Images not found for UIDs: ${notFoundUids.join(', ')}`);
+      return res.status(404).json({ 
+        error: `Images not found for UIDs: ${notFoundUids.join(', ')}`,
+        notFoundUids 
+      });
     }
-    
-    // Replace the entire object in place with the new data
-    imageData.imageData[imageIndex] = updatedData;
     
     // Save changes to file
     try {
       saveImageData();
-      console.log(`Successfully updated image data for UID: ${updatedData.uid}`);
+      console.log(`Successfully updated ${updatedItems.length} image data item(s)`);
+      
+      // Return array or single item based on input
       res.json({ 
         success: true, 
-        data: updatedData
+        data: isArray ? updatedItems : updatedItems[0]
       });
     } catch (saveError) {
       console.error('Failed to save after edit:', saveError);
@@ -740,11 +761,15 @@ app.get('/folder', (req, res) => {
 // POST endpoint to create/set current folder
 app.post('/folder', (req, res) => {
   try {
-    const { label } = req.body;
+    const { uid, label } = req.body;
     
-    // Validate label
-    if (!label || typeof label !== 'string' || label.trim().length === 0) {
-      return res.status(400).json({ error: 'Missing or invalid folder label' });
+    // Determine what parameters were provided
+    const hasUid = uid !== undefined && uid !== null;
+    const hasLabel = label !== undefined && label !== null && typeof label === 'string' && label.trim().length > 0;
+    
+    // Validate that at least one parameter is provided
+    if (!hasUid && !hasLabel) {
+      return res.status(400).json({ error: 'Must provide either uid or label' });
     }
     
     // Initialize folders array if needed
@@ -752,21 +777,68 @@ app.post('/folder', (req, res) => {
       imageData.folders = [];
     }
     
-    // Check if folder with this label already exists
-    let folder = imageData.folders.find(f => f.label === label.trim());
+    let folder;
     
-    if (!folder) {
-      // Create new folder with unique uid
-      const uid = `folder-${Date.now()}`;
-      folder = { uid, label: label.trim() };
-      imageData.folders.push(folder);
-      console.log(`Created new folder: ${folder.label} (${folder.uid})`);
-    } else {
-      console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
+    // Case 1: Only uid provided - select existing folder
+    if (hasUid && !hasLabel) {
+      if (uid === '' || uid === null) {
+        // Selecting Unsorted
+        imageData.currentFolder = '';
+        console.log('Selected Unsorted folder');
+      } else {
+        folder = imageData.folders.find(f => f.uid === uid);
+        if (!folder) {
+          return res.status(404).json({ error: `Folder with uid ${uid} not found` });
+        }
+        imageData.currentFolder = folder.uid;
+        console.log(`Selected folder: ${folder.label} (${folder.uid})`);
+      }
     }
-    
-    // Set as current folder
-    imageData.currentFolder = folder.uid;
+    // Case 2: Only label provided - create new folder and select
+    else if (!hasUid && hasLabel) {
+      if (typeof label !== 'string' || label.trim().length === 0) {
+        return res.status(400).json({ error: 'Invalid folder label' });
+      }
+      
+      // Check if folder with this label already exists
+      folder = imageData.folders.find(f => f.label === label.trim());
+      
+      if (!folder) {
+        // Create new folder with unique uid
+        const newUid = `folder-${Date.now()}`;
+        folder = { uid: newUid, label: label.trim() };
+        imageData.folders.push(folder);
+        console.log(`Created new folder: ${folder.label} (${folder.uid})`);
+      } else {
+        console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
+      }
+      
+      imageData.currentFolder = folder.uid;
+    }
+    // Case 3: Both uid and label provided
+    else {
+      if (typeof label !== 'string' || label.trim().length === 0) {
+        return res.status(400).json({ error: 'Invalid folder label' });
+      }
+      
+      folder = imageData.folders.find(f => f.uid === uid);
+      
+      if (!folder) {
+        // Create folder with specified uid and label
+        folder = { uid, label: label.trim() };
+        imageData.folders.push(folder);
+        console.log(`Created new folder: ${folder.label} (${folder.uid})`);
+      } else if (folder.label !== label.trim()) {
+        // Rename existing folder
+        const oldLabel = folder.label;
+        folder.label = label.trim();
+        console.log(`Renamed folder from "${oldLabel}" to "${folder.label}" (${folder.uid})`);
+      } else {
+        console.log(`Folder already exists with matching label: ${folder.label} (${folder.uid})`);
+      }
+      
+      imageData.currentFolder = folder.uid;
+    }
     
     // Save changes
     saveImageData();

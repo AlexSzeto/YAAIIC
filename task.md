@@ -115,7 +115,7 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 8. Repeat steps 1-7 for `public/inpaint.html` or its associated script file
 9. Ensure folder button is positioned correctly in both pages
 
-[] Update the edit endpoint so it accept an array of generation data objects. Update client calls to the edit endpoint to conform to the new format.
+[x] Update the edit endpoint so it accept an array of generation data objects. Update client calls to the edit endpoint to conform to the new format.
 1. Modify POST `/edit` endpoint in `server/server.mjs` to accept both single object and array:
 ```javascript
 // New request format:
@@ -126,7 +126,7 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 5. Return array of updated items or single item based on input
 6. Update client call in `public/js/app.mjs` to send array format when updating multiple items
 
-[] In the gallery, add a "Move" button to the right of the delete button. Only enable this when there are items selected in the gallery, and hide this when the gallery is in select mode. When the move button is clicked, open the select folder modal. When a folder is selected, use the updated edit endpoint to update the folder id for all selected items.
+[x] In the gallery, add a "Move" button to the right of the delete button. Only enable this when there are items selected in the gallery, and hide this when the gallery is in select mode. When the move button is clicked, open the select folder modal. When a folder is selected, use the updated edit endpoint to update the folder id for all selected items.
 1. In `public/js/custom-ui/gallery.mjs`, import `FolderSelectModal`
 2. Add "Move" button next to delete button in gallery toolbar
 3. Add state to control folder modal visibility

@@ -538,8 +538,18 @@ function App() {
   const handleOpenFolderSelect = () => {
     showFolderSelect(async (selectedUid) => {
       try {
-        // Fetch folder list to get the label for the selected uid
-        const folderData = await fetchJson('/folder');
+        // Call POST /folder to select the folder on the server
+        const response = await fetch('/folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: selectedUid })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to select folder');
+        }
+        
+        const folderData = await response.json();
         const selectedFolder = folderData.list.find(f => f.uid === selectedUid) || { uid: '', label: 'Unsorted' };
         
         // Update current folder state
