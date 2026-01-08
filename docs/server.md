@@ -85,6 +85,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 - **Payload**:
   - `query` (query, string): Search term (matches name, description, prompt, or date in yyyy-mm-dd format).
   - `tags` (query, string): Comma-separated list of tags. Results must contain ALL specified tags.
+  - `folder` (query, string): Filter by folder UID. If omitted, uses the current folder. Use empty string "" for unsorted items.
   - `sort` (query, enum): 'ascending' or 'descending' (default).
   - `limit` (query, integer): Max number of results. Default: 10.
 - **Output**: Array of image data objects.
@@ -109,6 +110,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "seed": 12345,
     "inpaint": false,
     "inpaintArea": null,
+    "folder": "folder-123",
     "timeTaken": 45000,
     "timestamp": "2025-12-28T00:00:00.000Z"
   }
@@ -141,29 +143,147 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 
 ### Edit Image Data
 - **Endpoint**: `POST /edit`
-- **Use Case**: Update metadata for an existing image entry.
-- **Payload**: JSON body with complete image data object.
+- **Use Case**: Update metadata for one or multiple existing image entries.
+- **Payload**: JSON body with a single image data object or an array of image data objects.
+  
+  **Single object**:
   ```json
   {
     "uid": 1234567890,
     "name": "Updated Name",
     "description": "Updated description...",
     "tags": ["updated", "tags"],
+    "folder": "folder-456",
     ...
   }
+  ```
+  
+  **Array of objects** (for bulk updates like moving to folder):
+  ```json
+  [
+    {
+      "uid": 1234567890,
+      "folder": "folder-456",
+      ...
+    },
+    {
+      "uid": 9876543210,
+      "folder": "folder-456",
+      ...
+    }
+  ]
   ```
   - `uid` (integer, required): The unique ID of the image to update.
   - All other fields will replace the existing entry.
 - **Output**:
+  
+  **Single object response**:
   ```json
   {
     "success": true,
     "data": { ... updated image object ... }
   }
   ```
+  
+  **Array response**:
+  ```json
+  {
+    "success": true,
+    "data": [ { ... updated image object ... }, { ... } ]
+  }
+  ```
 - **Error State**:
-  - 400 if `uid` is missing or not an integer.
-  - 404 if image with specified UID not found.
+  - 400 if input is not an object or array, or if any `uid` is missing or not an integer.
+  - 404 if any image with specified UID not found.
+  - 500 if saving changes fails.
+
+## Folder Management
+
+### Get Folders
+- **Endpoint**: `GET /folder`
+- **Use Case**: Retrieve the list of all folders and the current active folder.
+- **Payload**: None
+- **Output**:
+  ```json
+  {
+    "list": [
+      { "uid": "", "label": "Unsorted" },
+      { "uid": "folder-123", "label": "Fantasy Landscapes" },
+      { "uid": "folder-456", "label": "Character Portraits" }
+    ],
+    "current": "folder-123"
+  }
+  ```
+  - `list`: Array of folder objects. The "Unsorted" folder (uid: "") represents items without a folder.
+  - `current`: UID of the currently active folder.
+- **Error State**: 500 on internal error.
+
+### Set Current Folder
+- **Endpoint**: `POST /folder`
+- **Use Case**: Set the current folder and create it if it doesn't exist.
+- **Payload**: JSON body.
+  ```json
+  {
+    "label": "New Folder Name"
+  }
+  ```
+  - `label` (string, required): The name/label for the folder.
+  - If a folder with this label doesn't exist, a new folder is created with a unique UID.
+  - The folder is set as the current active folder.
+- **Output**:
+  ```json
+  {
+    "success": true,
+    "list": [ ... array of all folders ... ],
+    "current": "folder-123"
+  }
+  ```
+- **Error State**:
+  - 400 if `label` is missing.
+  - 500 if saving changes fails.
+
+### Rename Folder
+- **Endpoint**: `PUT /folder`
+- **Use Case**: Rename an existing folder.
+- **Payload**: JSON body.
+  ```json
+  {
+    "uid": "folder-123",
+    "label": "Updated Folder Name"
+  }
+  ```
+  - `uid` (string, required): The unique ID of the folder to rename.
+  - `label` (string, required): The new name/label for the folder.
+- **Output**:
+  ```json
+  {
+    "success": true,
+    "list": [ ... array of all folders with updated name ... ],
+    "current": "folder-123"
+  }
+  ```
+- **Error State**:
+  - 400 if `uid` or `label` is missing.
+  - 404 if folder with specified UID not found.
+  - 500 if saving changes fails.
+
+### Delete Folder
+- **Endpoint**: `DELETE /folder/:uid`
+- **Use Case**: Delete a folder and move all its contents to "Unsorted".
+- **Payload**: `uid` path parameter (string).
+- **Output**:
+  ```json
+  {
+    "success": true,
+    "list": [ ... array of remaining folders ... ],
+    "current": ""
+  }
+  ```
+  - All images that were in the deleted folder have their `folder` attribute removed (set to empty string).
+  - If the deleted folder was the current folder, the current folder is reset to "" (Unsorted).
+- **Error State**:
+  - 400 if attempting to delete the "Unsorted" folder (uid: "").
+  - 404 if folder with specified UID not found.
   - 500 if saving changes fails.
 
 ### Regenerate Text Fields
@@ -343,6 +463,7 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
           "type": "image",
           "inpaint": false,
           "inpaintArea": null,
+          "folder": "folder-123",
           "uid": 1715000000000,
           "timeTaken": 45000
         },
