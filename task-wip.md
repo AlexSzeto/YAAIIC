@@ -2,6 +2,7 @@
 - tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 
 # Features
+- Customizable post generation processing
 - Audio workflows
 - Export to destination (customizable)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
