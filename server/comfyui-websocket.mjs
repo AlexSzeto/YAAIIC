@@ -40,9 +40,26 @@ const promptExecutionState = new Map();
 // });
 
 // Initialize WebSocket connection to ComfyUI
-function connectToComfyUI() {
+export function connectToComfyUI(forceReconnect = false) {
   if (!comfyUIAPIPath) {
     console.error('ComfyUI API path not initialized. Call initComfyUIWebSocket first.');
+    return;
+  }
+  
+  if (forceReconnect && comfyUIWebSocket) {
+    console.log('Forcing ComfyUI WebSocket reconnection...');
+    try {
+      // Remove all listeners to prevent 'close' event triggering auto-reconnect logic immediately
+      comfyUIWebSocket.removeAllListeners();
+      comfyUIWebSocket.terminate();
+      comfyUIWebSocket = null;
+    } catch (e) {
+      console.warn('Error terminating existing WebSocket connection:', e);
+    }
+  }
+
+  // If already connected and not forcing, do nothing
+  if (comfyUIWebSocket && comfyUIWebSocket.readyState === WebSocket.OPEN) {
     return;
   }
   
@@ -287,6 +304,5 @@ function handleExecuted(data) {
 // Export functions and constants
 export {
   CLIENT_ID,
-  promptExecutionState,
-  connectToComfyUI
+  promptExecutionState
 };

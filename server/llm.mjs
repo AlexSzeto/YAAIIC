@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { getOllamaAPIPath, getOllamaUseCPU } from './services.mjs';
 
+// Track the last used model to manage VRAM
+let lastUsedModel = null;
+
 /**
  * Reset the sent-prompt.json log file at the start of a task
  */
@@ -62,6 +65,37 @@ export function encodeImageToBase64(imagePath) {
 }
 
 /**
+ * Unload an Ollama model to free VRAM
+ * @param {string} modelName - Name of the model to unload
+ */
+async function unloadOllamaModel(modelName) {
+  try {
+    const ollamaAPIPath = getOllamaAPIPath();
+    console.log(`Unloading Ollama model: ${modelName}...`);
+    
+    // Send request with keep_alive: 0 to unload the model immediately
+    const response = await fetch(`${ollamaAPIPath}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        keep_alive: 0
+      })
+    });
+
+    if (!response.ok) {
+      console.warn(`Failed to unload model ${modelName}: ${response.status} ${response.statusText}`);
+    } else {
+      console.log(`Model ${modelName} unloaded successfully`);
+    }
+  } catch (error) {
+    console.error(`Error unloading model ${modelName}:`, error);
+  }
+}
+
+/**
  * Send a text prompt to the language model via Ollama
  * @param {string} prompt - Text prompt to send to the model
  * @param {string} model - Model to use for generation (default: 'gemma3:4b')
@@ -93,6 +127,19 @@ export async function sendTextPrompt(prompt, model = 'gemma3:4b', to = null) {
       };
       console.log('Forcing CPU-only mode for Ollama (num_gpu: 0)');
     }
+
+
+
+    // Check if model has changed and unload previous model if needed
+    if (lastUsedModel && lastUsedModel !== model) {
+      console.log(`Model changed from ${lastUsedModel} to ${model}. Unloading previous model...`);
+      // Don't await this to avoid delaying the current request? 
+      // Actually, we should probably await to ensure VRAM is freed before loading new model if VRAM is tight.
+      await unloadOllamaModel(lastUsedModel);
+    }
+    
+    // Update last used model
+    lastUsedModel = model;
 
     console.log('Sending text prompt to model...');
 
@@ -188,6 +235,17 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = n
       };
       console.log('Forcing CPU-only mode for Ollama (num_gpu: 0)');
     }
+
+
+
+    // Check if model has changed and unload previous model if needed
+    if (lastUsedModel && lastUsedModel !== model) {
+      console.log(`Model changed from ${lastUsedModel} to ${model}. Unloading previous model...`);
+      await unloadOllamaModel(lastUsedModel);
+    }
+    
+    // Update last used model
+    lastUsedModel = model;
 
     console.log(`Sending image analysis request to ${model}...`);
 
