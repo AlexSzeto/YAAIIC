@@ -7,12 +7,12 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 
 ## Tasks
 
-[] Add "folder" attribute to image data, storing its folder's uid. Each folder has a uid and a label (its displayed name). Existing data without the attribute are considered to be in the "unsorted" folder.
+[x] Add "folder" attribute to image data, storing its folder's uid. Each folder has a uid and a label (its displayed name). Existing data without the attribute are considered to be in the "unsorted" folder.
 1. Add optional `folder` property to image data objects in `server/database/image-data.json` (string, stores folder uid)
 2. Update image data type handling in `server/server.mjs` to accept the optional `folder` field
 3. When reading image data without a folder attribute, treat it as belonging to the special "unsorted" folder (represented by empty string or null)
 
-[] On the server, add a current folder attribute (storing the current uid) to the config in config.json. Add parts of CRUD support for the folder name value: POST `/folder` to add/change current folder name (create folder if it doesn't exist already), UPDATE `/folder` to rename a folder, DELETE `/folder` to "delete" a folder, GET `/folder` to retrieve a json object with two attributes: `list`, an array of uid/name objects, and `current`, the current folder name.
+[x] On the server, add a current folder attribute (storing the current uid) to the config in config.json. Add parts of CRUD support for the folder name value: POST `/folder` to add/change current folder name (create folder if it doesn't exist already), UPDATE `/folder` to rename a folder, DELETE `/folder` to "delete" a folder, GET `/folder` to retrieve a json object with two attributes: `list`, an array of uid/name objects, and `current`, the current folder name.
 1. Add `currentFolder` property to `server/database/image-data.json` (string, stores current folder uid)
 2. Add `folders` property to `server/database/image-data.json` to store folder definitions
 ```json

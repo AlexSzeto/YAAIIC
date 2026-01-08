@@ -19,7 +19,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
 
 // Global imageData object
-let imageData = { imageData: [] };
+let imageData = { imageData: [], folders: [], currentFolder: '' };
 
 // Load image data from JSON file
 function loadImageData() {
@@ -28,14 +28,26 @@ function loadImageData() {
     if (fs.existsSync(imageDataPath)) {
       const data = fs.readFileSync(imageDataPath, 'utf8');
       imageData = JSON.parse(data);
-      console.log('Image data loaded:', imageData.imageData.length, 'entries');
+      
+      // Ensure folders and currentFolder exist
+      if (!imageData.folders) {
+        imageData.folders = [];
+      }
+      if (!imageData.currentFolder && imageData.currentFolder !== '') {
+        imageData.currentFolder = '';
+      }
+      if (!imageData.imageData) {
+        imageData.imageData = [];
+      }
+      
+      console.log('Image data loaded:', imageData.imageData.length, 'entries,', imageData.folders.length, 'folders');
     } else {
       console.log('Image data file not found, starting with empty data');
-      imageData = { imageData: [] };
+      imageData = { imageData: [], folders: [], currentFolder: '' };
     }
   } catch (error) {
     console.error('Failed to load image data:', error);
-    imageData = { imageData: [] };
+    imageData = { imageData: [], folders: [], currentFolder: '' };
   }
 }
 
@@ -675,6 +687,211 @@ app.post('/regenerate', async (req, res) => {
   } catch (error) {
     console.error('Error in regenerate endpoint:', error);
     res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
+  }
+});
+
+// GET endpoint for folder data
+app.get('/folder', (req, res) => {
+  try {
+    // Ensure folders and currentFolder exist
+    if (!imageData.folders) {
+      imageData.folders = [];
+    }
+    if (!imageData.currentFolder && imageData.currentFolder !== '') {
+      imageData.currentFolder = '';
+    }
+    
+    // Build folder list with "Unsorted" as first item
+    const folderList = [
+      { uid: '', label: 'Unsorted' },
+      ...imageData.folders
+    ];
+    
+    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${imageData.currentFolder}"`);
+    
+    res.json({
+      list: folderList,
+      current: imageData.currentFolder
+    });
+  } catch (error) {
+    console.error('Error in GET /folder endpoint:', error);
+    res.status(500).json({ error: 'Failed to retrieve folder data' });
+  }
+});
+
+// POST endpoint to create/set current folder
+app.post('/folder', (req, res) => {
+  try {
+    const { label } = req.body;
+    
+    // Validate label
+    if (!label || typeof label !== 'string' || label.trim().length === 0) {
+      return res.status(400).json({ error: 'Missing or invalid folder label' });
+    }
+    
+    // Initialize folders array if needed
+    if (!imageData.folders) {
+      imageData.folders = [];
+    }
+    
+    // Check if folder with this label already exists
+    let folder = imageData.folders.find(f => f.label === label.trim());
+    
+    if (!folder) {
+      // Create new folder with unique uid
+      const uid = `folder-${Date.now()}`;
+      folder = { uid, label: label.trim() };
+      imageData.folders.push(folder);
+      console.log(`Created new folder: ${folder.label} (${folder.uid})`);
+    } else {
+      console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
+    }
+    
+    // Set as current folder
+    imageData.currentFolder = folder.uid;
+    
+    // Save changes
+    saveImageData();
+    
+    // Return updated folder list
+    const folderList = [
+      { uid: '', label: 'Unsorted' },
+      ...imageData.folders
+    ];
+    
+    res.json({
+      list: folderList,
+      current: imageData.currentFolder
+    });
+  } catch (error) {
+    console.error('Error in POST /folder endpoint:', error);
+    res.status(500).json({ error: 'Failed to create/set folder' });
+  }
+});
+
+// PUT endpoint to rename a folder
+app.put('/folder', (req, res) => {
+  try {
+    const { uid, label } = req.body;
+    
+    // Validate input
+    if (!uid || typeof uid !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid folder uid' });
+    }
+    
+    if (!label || typeof label !== 'string' || label.trim().length === 0) {
+      return res.status(400).json({ error: 'Missing or invalid folder label' });
+    }
+    
+    // Cannot rename the unsorted folder
+    if (uid === '') {
+      return res.status(400).json({ error: 'Cannot rename the Unsorted folder' });
+    }
+    
+    // Initialize folders array if needed
+    if (!imageData.folders) {
+      imageData.folders = [];
+    }
+    
+    // Find folder by uid
+    const folder = imageData.folders.find(f => f.uid === uid);
+    
+    if (!folder) {
+      console.log(`Folder not found: ${uid}`);
+      return res.status(404).json({ error: `Folder with uid ${uid} not found` });
+    }
+    
+    // Update label
+    const oldLabel = folder.label;
+    folder.label = label.trim();
+    console.log(`Renamed folder from "${oldLabel}" to "${folder.label}" (${folder.uid})`);
+    
+    // Save changes
+    saveImageData();
+    
+    // Return updated folder list
+    const folderList = [
+      { uid: '', label: 'Unsorted' },
+      ...imageData.folders
+    ];
+    
+    res.json({
+      list: folderList,
+      current: imageData.currentFolder
+    });
+  } catch (error) {
+    console.error('Error in PUT /folder endpoint:', error);
+    res.status(500).json({ error: 'Failed to rename folder' });
+  }
+});
+
+// DELETE endpoint to delete a folder
+app.delete('/folder/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    
+    // Validate uid
+    if (!uid || typeof uid !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid folder uid' });
+    }
+    
+    // Cannot delete the unsorted folder
+    if (uid === '') {
+      return res.status(400).json({ error: 'Cannot delete the Unsorted folder' });
+    }
+    
+    // Initialize folders array if needed
+    if (!imageData.folders) {
+      imageData.folders = [];
+    }
+    
+    // Find and remove folder
+    const folderIndex = imageData.folders.findIndex(f => f.uid === uid);
+    
+    if (folderIndex === -1) {
+      console.log(`Folder not found: ${uid}`);
+      return res.status(404).json({ error: `Folder with uid ${uid} not found` });
+    }
+    
+    const deletedFolder = imageData.folders[folderIndex];
+    imageData.folders.splice(folderIndex, 1);
+    console.log(`Deleted folder: ${deletedFolder.label} (${deletedFolder.uid})`);
+    
+    // If deleted folder was current, set current to unsorted
+    if (imageData.currentFolder === uid) {
+      imageData.currentFolder = '';
+      console.log('Deleted folder was current, set current to Unsorted');
+    }
+    
+    // Update all image data entries with this folder uid to have empty string
+    let updatedCount = 0;
+    imageData.imageData.forEach(item => {
+      if (item.folder === uid) {
+        item.folder = '';
+        updatedCount++;
+      }
+    });
+    
+    if (updatedCount > 0) {
+      console.log(`Moved ${updatedCount} images from deleted folder to Unsorted`);
+    }
+    
+    // Save changes
+    saveImageData();
+    
+    // Return updated folder list
+    const folderList = [
+      { uid: '', label: 'Unsorted' },
+      ...imageData.folders
+    ];
+    
+    res.json({
+      list: folderList,
+      current: imageData.currentFolder
+    });
+  } catch (error) {
+    console.error('Error in DELETE /folder/:uid endpoint:', error);
+    res.status(500).json({ error: 'Failed to delete folder' });
   }
 });
 
