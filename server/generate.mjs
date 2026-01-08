@@ -6,7 +6,7 @@ import http from 'http';
 import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createCrossFade } from './image-utils.mjs';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
-import { CLIENT_ID, promptExecutionState } from './comfyui-websocket.mjs';
+import { CLIENT_ID, promptExecutionState, connectToComfyUI } from './comfyui-websocket.mjs';
 import {
   generateTaskId,
   createTask,
@@ -23,6 +23,9 @@ import {
 
 // Store ComfyUI API path locally
 let comfyUIAPIPath = null;
+
+// Track the last used workflow to manage VRAM
+let lastUsedWorkflow = null;
 
 // Function to add image data entry (will be set by server.mjs)
 let addImageDataEntry = null;
@@ -115,6 +118,33 @@ export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "i
       reject(new Error(`Upload failed for ${filename}: ${error.message}`));
     }
   });
+}
+
+// Function to free ComfyUI memory
+async function freeComfyUIMemory() {
+  if (!comfyUIAPIPath) return;
+
+  try {
+    console.log('Freeing ComfyUI memory...');
+    const response = await fetch(`${comfyUIAPIPath}/free`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        unload_models: true,
+        free_memory: true
+      })
+    });
+
+    if (!response.ok) {
+      console.warn(`Failed to free ComfyUI memory: ${response.status} ${response.statusText}`);
+    } else {
+      console.log('ComfyUI memory freed successfully');
+    }
+  } catch (error) {
+    console.error('Error freeing ComfyUI memory:', error);
+  }
 }
 
 // Reusable function to check ComfyUI prompt status
@@ -420,6 +450,13 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     // Create generationData as a copy of requestData
     const generationData = { ...requestData };
     
+    // Ensure ComfyUI WebSocket connection is fresh/active
+    console.log(`Refreshing ComfyUI WebSocket connection for task ${taskId}...`);
+    connectToComfyUI(true);
+    
+    // Small delay to allow connection to simple stabilize
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const task = getTask(taskId);
     if (!task) {
       console.error(`Task ${taskId} not found during processing`);
@@ -442,6 +479,16 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         console.log('Using inpaintArea:', inpaintArea);
       }
     }
+
+    // Check if workflow has changed and free memory if needed
+    // Use workflowBasePath as the identifier since it represents the file being used
+    if (lastUsedWorkflow && lastUsedWorkflow !== workflowBasePath) {
+      console.log(`Workflow changed from ${lastUsedWorkflow} to ${workflowBasePath}. Freeing memory...`);
+      await freeComfyUIMemory();
+    }
+    
+    // Update last used workflow
+    lastUsedWorkflow = workflowBasePath;
 
     // Load the ComfyUI workflow
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
