@@ -62,7 +62,7 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 4. For "unsorted" folder (empty string or null uid), return items where folder is null, undefined, or empty string
 5. Ensure backward compatibility with existing gallery queries
 
-[] Create a text prompt dialog in custom-ui (if possible, place it in `dialog.mjs`) that has a title, text input, confirm, and cancel buttons.
+[x] Create a text prompt dialog in custom-ui (if possible, place it in `dialog.mjs`) that has a title, text input, confirm, and cancel buttons.
 1. In `public/js/custom-ui/dialog.mjs`, create `TextPromptDialog` component class extending Component:
 ```javascript
 // TextPromptDialog
@@ -81,7 +81,7 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 4. Promise resolves with input value on confirm, null on cancel
 5. Add additional CSS styling for text input in `public/css/custom-ui.css`
 
-[] Create a select folder modal, consisting of a vertical list of items, each containing the following columns: a label that can be clicked to select the folder, a button to rename the folder using the text prompt, and a button to delete the folder. When a folder is deleted, the folder attribute is deleted so all of its content are reassigned back to "unsorted". At the bottom right of the modal add an insert button (use the text prompt, and add and select the folder after the insert action) and a cancel button. the blank/unsorted option should always be available and on top of the list. Leave the handling of the select folder event to be implemented outside of the component.
+[x] Create a select folder modal, consisting of a vertical list of items, each containing the following columns: a label that can be clicked to select the folder, a button to rename the folder using the text prompt, and a button to delete the folder. When a folder is deleted, the folder attribute is deleted so all of its content are reassigned back to "unsorted". At the bottom right of the modal add an insert button (use the text prompt, and add and select the folder after the insert action) and a cancel button. the blank/unsorted option should always be available and on top of the list. Leave the handling of the select folder event to be implemented outside of the component.
 1. Create new file `public/js/custom-ui/folder-select.mjs` with `FolderSelectModal` component:
 ```javascript
 // FolderSelectModal component
@@ -104,7 +104,7 @@ add "folders". Add "folder" attribute to image data. Put buttons next to gallery
 7. Use `showDialog` with options for delete confirmation
 8. Style the modal in `public/css/custom-ui.css` with proper layout
 
-[] Add a folder button to the left of the gallery button in the main page, and left of the home button in the inpaint page, with the folder icon and the name of the current folder as the button's label. Clicking the button opens the select folder modal. When a folder is selected, change the current folder to the selected folder.
+[x] Add a folder button to the left of the gallery button in the main page, and left of the home button in the inpaint page, with the folder icon and the name of the current folder as the button's label. Clicking the button opens the select folder modal. When a folder is selected, change the current folder to the selected folder.
 1. In `public/js/app.mjs` (main page), import `FolderSelectModal` from custom-ui
 2. Add state to track current folder label
 3. Fetch current folder on app load using GET `/folder`

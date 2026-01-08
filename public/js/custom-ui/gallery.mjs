@@ -20,7 +20,8 @@ export function Gallery({
   onSelect,    // Callback for selection mode (single item)
   selectionMode = false,
   fileTypeFilter = null,
-  onSelectAsInput = null  // Callback for "Use as Input" action from gallery preview
+  onSelectAsInput = null,  // Callback for "Use as Input" action from gallery preview
+  folder = undefined  // Optional folder filter (uid)
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +58,11 @@ export function Gallery({
       // Get all matching data for client-side pagination
       url.searchParams.set('limit', '320');
       
+      // Add folder filter if provided
+      if (folder !== undefined) {
+        url.searchParams.set('folder', folder);
+      }
+      
       console.log('Fetching gallery data:', url.toString());
       
       const data = await fetchJson(url.toString(), {}, {
@@ -74,7 +80,7 @@ export function Gallery({
     } finally {
       setLoading(false);
     }
-  }, [queryPath, searchQuery]);
+  }, [queryPath, searchQuery, folder]);
 
   // -- Effects --
 

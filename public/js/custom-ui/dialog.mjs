@@ -99,6 +99,100 @@ class Dialog extends Component {
     `;
   }
 }
+
+// TextPromptDialog component
+class TextPromptDialog extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      inputValue: props.initialValue || ''
+    };
+    this.inputRef = null;
+  }
+
+  componentDidMount() {
+    // Focus input after render
+    if (this.inputRef) {
+      setTimeout(() => this.inputRef.focus(), 0);
+    }
+    // Set up keyboard listeners
+    document.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  componentWillUnmount() {
+    // Clean up event listener
+    document.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      this.handleCancel();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      this.handleConfirm();
+    }
+  }
+
+  handleOverlayClick = (e) => {
+    if (e.target.classList.contains('dialog-overlay')) {
+      this.handleCancel();
+    }
+  }
+
+  handleInputChange = (e) => {
+    this.setState({ inputValue: e.target.value });
+  }
+
+  handleConfirm = () => {
+    if (this.props.onConfirm) {
+      this.props.onConfirm(this.state.inputValue);
+    }
+  }
+
+  handleCancel = () => {
+    if (this.props.onCancel) {
+      this.props.onCancel();
+    }
+  }
+
+  render() {
+    const { title, placeholder } = this.props;
+    const { inputValue } = this.state;
+
+    return html`
+      <div class="dialog-overlay" onClick=${this.handleOverlayClick}>
+        <div class="dialog-box text-prompt-dialog">
+          <h3 class="dialog-title">${title}</h3>
+          <div class="dialog-content">
+            <input
+              type="text"
+              class="text-prompt-input"
+              value=${inputValue}
+              placeholder=${placeholder || ''}
+              onInput=${this.handleInputChange}
+              ref=${(el) => { this.inputRef = el; }}
+            />
+          </div>
+          <div class="dialog-buttons">
+            <button
+              class="dialog-option-button cancel-button"
+              onClick=${this.handleCancel}
+            >
+              Cancel
+            </button>
+            <button
+              class="dialog-option-button confirm-button"
+              onClick=${this.handleConfirm}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
 /**
  * Displays a custom modal dialog with the provided text and title.
  * The dialog is automatically centered on screen with an overlay background.
@@ -174,4 +268,56 @@ export function showDialog(text, title = 'Generate Image', options = null) {
     
     return undefined;
   }
+}
+
+/**
+ * Displays a text prompt dialog with an input field.
+ * 
+ * @param {string} title - The title to display in the dialog header
+ * @param {string} [initialValue=''] - Initial value for the text input
+ * @param {string} [placeholder=''] - Placeholder text for the input field
+ * 
+ * @returns {Promise<string|null>} - Promise that resolves with the input value on confirm, or null on cancel
+ * 
+ * @example
+ * const folderName = await showTextPrompt('Enter folder name', '', 'My Folder');
+ * if (folderName) {
+ *   // User confirmed with folderName
+ * } else {
+ *   // User cancelled
+ * }
+ */
+export function showTextPrompt(title, initialValue = '', placeholder = '') {
+  console.log('showTextPrompt called with:', { title, initialValue, placeholder });
+
+  // Create container element
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  // Function to clean up dialog
+  const cleanup = () => {
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
+  };
+
+  return new Promise((resolve) => {
+    const handleConfirm = (value) => {
+      cleanup();
+      resolve(value);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    render(html`<${TextPromptDialog} 
+      title=${title}
+      initialValue=${initialValue}
+      placeholder=${placeholder}
+      onConfirm=${handleConfirm}
+      onCancel=${handleCancel}
+    />`, container);
+  });
 }
