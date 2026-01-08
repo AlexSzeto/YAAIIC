@@ -18,6 +18,7 @@ import { Gallery } from './custom-ui/gallery.mjs';
 import { ImageCarousel } from './custom-ui/image-carousel.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
 import { Button } from './custom-ui/button.mjs';
+import { showFolderSelect } from './custom-ui/folder-select.mjs';
 
 /**
  * Helper function to generate random seed
@@ -74,6 +75,9 @@ function App() {
   
   // Gallery selection state
   const [gallerySelectionMode, setGallerySelectionMode] = useState({ active: false, index: -1 });
+  
+  // Folder state
+  const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
 
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
@@ -92,6 +96,13 @@ function App() {
             w => w.type === 'image' || w.type === 'video'
           );
           setWorkflows(imageVideoWorkflows);
+        }
+
+        // Load current folder
+        const folderData = await fetchJson('/folder');
+        if (folderData && folderData.current !== undefined) {
+          const currentFolderObj = folderData.list.find(f => f.uid === folderData.current) || { uid: '', label: 'Unsorted' };
+          setCurrentFolder(currentFolderObj);
         }
 
         // Load recent history
@@ -523,6 +534,46 @@ function App() {
     toast.error(data.error?.message || 'Regeneration failed');
   };
 
+  // Folder handlers
+  const handleOpenFolderSelect = () => {
+    showFolderSelect(async (selectedUid) => {
+      try {
+        // Call POST /folder to select the folder on the server
+        const response = await fetch('/folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: selectedUid })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to select folder');
+        }
+        
+        const folderData = await response.json();
+        const selectedFolder = folderData.list.find(f => f.uid === selectedUid) || { uid: '', label: 'Unsorted' };
+        
+        // Update current folder state
+        setCurrentFolder(selectedFolder);
+        
+        // Refresh gallery to show images from the new folder
+        const recent = await fetchJson(`/image-data?limit=10&folder=${selectedUid}`);
+        if (Array.isArray(recent)) {
+          setHistory(recent);
+          if (recent.length > 0) {
+            setGeneratedImage(recent[0]);
+          } else {
+            setGeneratedImage(null);
+          }
+        }
+        
+        toast.success(`Switched to folder: ${selectedFolder.label}`);
+      } catch (err) {
+        console.error('Failed to switch folder:', err);
+        toast.error('Failed to switch folder');
+      }
+    }, null, null, null, currentFolder.uid);
+  };
+
   // Gallery handlers
   const handleGallerySelect = async (item) => {
      if (gallerySelectionMode.active) {
@@ -603,13 +654,22 @@ function App() {
     <div className="app-container">
       <div className="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">V2</small></h1>
-        <${Button} 
-          id="gallery-btn"
-          onClick=${() => setIsGalleryOpen(true)}
-          icon="images"
-        >
-          Gallery
-        <//>
+        <div style="display: flex; gap: 10px;">
+          <${Button} 
+            id="folder-btn"
+            onClick=${handleOpenFolderSelect}
+            icon="folder"
+          >
+            ${currentFolder.label}
+          </>
+          <${Button} 
+            id="gallery-btn"
+            onClick=${() => setIsGalleryOpen(true)}
+            icon="images"
+          >
+            Gallery
+          </>
+        </div>
       </div>
       
       ${taskId ? html`
@@ -700,6 +760,7 @@ function App() {
             setGallerySelectionMode({ active: false, index: -1 });
         }}
         queryPath="/image-data"
+        folder=${currentFolder.uid}
         previewFactory=${createGalleryPreview}
         onSelect=${handleGallerySelect}
         onLoad=${(items) => {

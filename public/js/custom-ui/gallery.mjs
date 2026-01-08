@@ -6,6 +6,7 @@ import { usePagination } from './use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
 import { showDialog } from './dialog.mjs';
 import { createImageModal } from './modal.mjs';
+import { showFolderSelect } from './folder-select.mjs';
 
 /**
  * Gallery Component
@@ -20,7 +21,8 @@ export function Gallery({
   onSelect,    // Callback for selection mode (single item)
   selectionMode = false,
   fileTypeFilter = null,
-  onSelectAsInput = null  // Callback for "Use as Input" action from gallery preview
+  onSelectAsInput = null,  // Callback for "Use as Input" action from gallery preview
+  folder = undefined  // Optional folder filter (uid)
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +59,11 @@ export function Gallery({
       // Get all matching data for client-side pagination
       url.searchParams.set('limit', '320');
       
+      // Add folder filter if provided
+      if (folder !== undefined) {
+        url.searchParams.set('folder', folder);
+      }
+      
       console.log('Fetching gallery data:', url.toString());
       
       const data = await fetchJson(url.toString(), {}, {
@@ -74,7 +81,7 @@ export function Gallery({
     } finally {
       setLoading(false);
     }
-  }, [queryPath, searchQuery]);
+  }, [queryPath, searchQuery, folder]);
 
   // -- Effects --
 
@@ -212,6 +219,66 @@ export function Gallery({
     }
   };
 
+  // -- Move Selected Items --
+  const moveSelectedItems = async () => {
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    showFolderSelect(async (selectedFolderId) => {
+      try {
+        // Prepare array of updated items with new folder
+        const updates = selectedItems.map(uid => {
+          const fullItem = galleryData.find(data => data.uid === uid);
+          if (!fullItem) {
+            console.error(`Could not find item with uid: ${uid}`);
+            return null;
+          }
+          return {
+            ...fullItem,
+            folder: selectedFolderId
+          };
+        }).filter(item => item !== null); // Remove any null entries
+
+        if (updates.length === 0) {
+          if (window.showToast) {
+            window.showToast('No valid items to move');
+          }
+          return;
+        }
+
+        console.log('Moving items:', updates.map(u => ({ uid: u.uid, folder: u.folder })));
+
+        // Call edit endpoint with array
+        const response = await fetchJson('/edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+
+        if (response.success) {
+          const movedText = selectedItems.length === 1 ? 'item' : 'items';
+          if (window.showToast) {
+            window.showToast(`Successfully moved ${selectedItems.length} ${movedText}`);
+          }
+          
+          // Clear selection
+          setSelectedItems([]);
+          
+          // Refresh gallery data
+          await fetchGalleryData();
+        }
+      } catch (error) {
+        console.error('Failed to move items:', error);
+        if (window.showToast) {
+          const itemText = selectedItems.length === 1 ? 'item' : 'items';
+          const msg = error instanceof FetchError && error.data?.message 
+            ? error.data.message 
+            : `Failed to move selected ${itemText}.`;
+          window.showToast(msg);
+        }
+      }
+    });
+  };
+
   const handleLoadClick = () => {
     if (!onLoad) return;
     
@@ -293,6 +360,16 @@ export function Gallery({
               >
                 <box-icon name="trash" color="#ffffff"></box-icon>
                 Delete
+              </button>
+              <button 
+                class="btn-with-icon btn-primary"
+                onClick=${moveSelectedItems}
+                disabled=${!hasSelectedItems}
+                title=${hasSelectedItems ? `Move ${selectedItems.length} selected ${selectedText} to folder` : 'No items selected'}
+                style="margin-left: 10px;"
+              >
+                <box-icon name="folder" color="#ffffff"></box-icon>
+                Move
               </button>
             </div>
           `}

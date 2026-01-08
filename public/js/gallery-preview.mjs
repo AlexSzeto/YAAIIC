@@ -9,8 +9,46 @@ export class GalleryPreview extends Component {
     super(props);
     
     this.state = {
-      imageError: false
+      imageError: false,
+      isHovering: false
     };
+    
+    this.containerRef = null;
+  }
+
+  componentDidMount() {
+    // Add keyboard listener for spacebar
+    document.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  componentWillUnmount() {
+    // Clean up keyboard listener
+    document.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  handleKeyDown = (e) => {
+    // Check if spacebar is pressed, component is hovering, and selection is enabled
+    if (e.code === 'Space' && this.state.isHovering && this.props.onSelect && !this.props.disableCheckbox) {
+      e.preventDefault(); // Prevent page scroll
+      this.toggleSelection();
+    }
+  }
+
+  handleMouseEnter = () => {
+    this.setState({ isHovering: true });
+  }
+
+  handleMouseLeave = () => {
+    this.setState({ isHovering: false });
+  }
+
+  toggleSelection = () => {
+    const { item, onSelect, isSelected } = this.props;
+    
+    // Toggle the current selection state
+    if (onSelect) {
+      onSelect(item, !isSelected);
+    }
   }
 
   handleImageError = () => {
@@ -71,7 +109,12 @@ export class GalleryPreview extends Component {
     const { imageError } = this.state;
 
     return html`
-      <div class="gallery-item ${disabled ? 'disabled' : ''}" style=${{ position: 'relative' }}>
+      <div 
+        class="gallery-item ${disabled ? 'disabled' : ''}" 
+        style=${{ position: 'relative' }}
+        onMouseEnter=${this.handleMouseEnter}
+        onMouseLeave=${this.handleMouseLeave}
+      >
         ${onSelect && html`
           <div class="gallery-item-checkbox-container" onClick=${(e) => e.stopPropagation()}>
             <${Checkbox}

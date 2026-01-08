@@ -13,6 +13,7 @@ import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
 import { Button } from './custom-ui/button.mjs';
+import { showFolderSelect } from './custom-ui/folder-select.mjs';
 
 /**
  * Helper function to generate random seed
@@ -105,6 +106,9 @@ function InpaintApp() {
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   
+  // Folder state
+  const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
+  
   const [formState, setFormState] = useState({
     name: '',
     description: '',
@@ -121,8 +125,13 @@ function InpaintApp() {
         setTimeout(() => {
           initAutoComplete();
           console.log('Autocomplete initialized in Inpaint page');
-        }, 100);
-        
+        }, 100);        
+        // Load current folder
+        const folderData = await fetchJson('/folder');
+        if (folderData && folderData.current !== undefined) {
+          const currentFolderObj = folderData.list.find(f => f.uid === folderData.current) || { uid: '', label: 'Unsorted' };
+          setCurrentFolder(currentFolderObj);
+        }        
         // Get UID from query parameter
         const uid = getQueryParam('uid');
         
@@ -330,6 +339,35 @@ function InpaintApp() {
     toast.error(data.error?.message || 'Inpaint generation failed');
   };
 
+  // Handle folder selection
+  const handleOpenFolderSelect = () => {
+    showFolderSelect(async (selectedUid) => {
+      try {
+        // Call POST /folder to select the folder on the server
+        const response = await fetch('/folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: selectedUid })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to select folder');
+        }
+        
+        const folderData = await response.json();
+        const selectedFolder = folderData.list.find(f => f.uid === selectedUid) || { uid: '', label: 'Unsorted' };
+        
+        // Update current folder state
+        setCurrentFolder(selectedFolder);
+        
+        toast.success(`Switched to folder: ${selectedFolder.label}`);
+      } catch (err) {
+        console.error('Failed to switch folder:', err);
+        toast.error('Failed to switch folder');
+      }
+    }, null, null, null, currentFolder.uid);
+  };
+
   // Handle done button
   const handleDone = () => {
     console.log('Navigating back to main page');
@@ -364,13 +402,22 @@ function InpaintApp() {
     <div class="app-container">
       <div class="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">Inpaint V2</small></h1>
-        <${Button}
-          icon="home"
-          onClick=${handleDone}
-          title="Return to main page"
-        >
-          Home
-        <//>
+        <div style="display: flex; gap: 10px;">
+          <${Button}
+            icon="folder"
+            onClick=${handleOpenFolderSelect}
+            title="Select folder"
+          >
+            ${currentFolder.label}
+          </>
+          <${Button}
+            icon="home"
+            onClick=${handleDone}
+            title="Return to main page"
+          >
+            Home
+          </>
+        </div>
       </div>
       
       ${taskId ? html`
