@@ -404,9 +404,10 @@ async function processUploadTask(taskId, file, workflowsConfig) {
 }
 
 // Main image generation handler
-export async function handleMediaGeneration(req, res, workflowConfig) {
+export async function handleMediaGeneration(req, res, workflowConfig, serverConfig) {
   const { base: workflowBasePath } = workflowConfig;
   const { workflow } = req.body;
+  const { ollamaAPIPath } = serverConfig;
   
   console.log('Using workflow:', workflowBasePath);
   
@@ -434,21 +435,27 @@ export async function handleMediaGeneration(req, res, workflowConfig) {
   });
   
   // Process generation in background
-  processGenerationTask(taskId, req.body, workflowConfig).catch(error => {
+  processGenerationTask(taskId, req.body, workflowConfig, serverConfig).catch(error => {
     console.error(`Error in background task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Generation failed', error.message);
   });
 }
 
 // Background processing function
-async function processGenerationTask(taskId, requestData, workflowConfig) {
+async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
     const { seed, saveImagePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    const { ollamaAPIPath } = serverConfig;
     
     // Create generationData as a copy of requestData
     const generationData = { ...requestData };
+    
+    // Add ollamaAPIPath to generation data
+    if (ollamaAPIPath) {
+      generationData.ollamaAPIPath = ollamaAPIPath;
+    }
     
     // Extract savePath as local working variable for file operations
     const savePath = saveImagePath;

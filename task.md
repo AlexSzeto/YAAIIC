@@ -52,17 +52,15 @@ New input types:
    5. Test that template replacement still works correctly with the new syntax
    6. Verify that existing generation and regeneration tasks using templates continue to function
 
-[] Implement audio file type support in workflows configuration
+[x] Implement audio file type support in workflows configuration
    1. In `server/resource/comfyui-workflows.json`, add new workflow option property `type` with values: "image", "video", or "audio"
    2. Update existing image workflows to explicitly set `"type": "image"`
    3. Update existing video workflows to have `"type": "video"`
    4. Add two example audio workflows with `"type": "audio"` (mp3 and ogg)
    5. For audio workflows, specify `audioFormat` (for audio file: "mp3" or "ogg") and hardcoded `imageFormat` (for album cover: "png" or "jpg")
    6. Audio workflows will require an additional set of output path attributes to be defined: `saveAudioPath` and `saveAudioFilename`
-   7. Update workflow schema to support `audioOutputNode` in addition to `finalNode` for dual outputs
-   8. Create sample ComfyUI workflow JSON files for audio generation in `server/resource/`
    
-[] Inject `ollamaAPIPath` into generation data
+[x] Inject `ollamaAPIPath` into generation data
    1. In `server/server.mjs`, pass `config.ollamaAPIPath` to the `handleMediaGeneration()` function
    2. In `server/generate.mjs`, update `handleMediaGeneration()` to accept `ollamaAPIPath` parameter
    3. Add `ollamaAPIPath` to the generation data object that gets passed to workflow processing

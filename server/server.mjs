@@ -342,7 +342,7 @@ app.post('/generate', upload.any(), async (req, res) => {
     }
     
     // Call handleImageGeneration with workflow data and modifications
-    handleMediaGeneration(req, res, workflowData);
+    handleMediaGeneration(req, res, workflowData, config);
   } catch (error) {
     console.error('Error in image endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -1110,7 +1110,7 @@ app.post('/generate/inpaint', upload.fields([
       delete req.body.uploads;
       
       // Call handleImageGeneration with workflow data and modifications
-      handleMediaGeneration(req, res, workflowData);
+      handleMediaGeneration(req, res, workflowData, config);
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);

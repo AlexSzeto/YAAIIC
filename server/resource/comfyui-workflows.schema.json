@@ -151,7 +151,7 @@
         "type": {
           "type": "string",
           "description": "The generation mode",
-          "enum": ["image", "video", "inpaint"]
+          "enum": ["image", "video", "audio", "inpaint"]
         },
         "autocomplete": {
           "type": "boolean",
@@ -211,7 +211,7 @@
       "properties": {
         "from": {
           "type": "string",
-          "description": "Source variable name (e.g., 'prompt', 'seed', 'saveImagePath', 'imagePath', 'firstFramePath')"
+          "description": "Source variable name (e.g., 'prompt', 'seed', 'saveImagePath', 'imagePath', 'firstFramePath', 'ollamaAPIPath', 'saveAudioPath')"
         },
         "to": {
           "type": "array",
