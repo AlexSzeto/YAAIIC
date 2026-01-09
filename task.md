@@ -111,10 +111,11 @@ New input types:
 
 [] Implement extra inputs system for workflows
    1. In `server/resource/comfyui-workflows.json`, add new optional property `extraInputs` array to workflow options
-   2. Each extra input object should have: `id` (string), `label` (string), `type` (text/select/checkbox/textarea), `default` (any), and `options` (array, for select type)
-   3. Update workflow specification to document the new extra inputs format
-   4. Add GET endpoint `/workflows` in `server/server.mjs` to serve workflow configuration to client
-   5. Ensure workflow configuration includes extra inputs information
+   2. Each extra input object should have: `id` (string), `label` (string), `type` (text/number/select/checkbox/textarea), `default` (any), and `options` (array of `label` and `value` objects, for select type)
+   3. Update workflow specification and schema to document the new extra inputs format
+   1. Update video workflows in `comfyui-workflows.json` to remove hardcoded `length` and `frames` fields
+   2. Add `extraInputs` to video workflows with `length` (text type, default value) and `framerate` (text type, default value)
+
 
 [] Render extra inputs in client UI
    1. In `public/js/app.mjs`, fetch workflow configuration when workflow is selected
@@ -128,8 +129,6 @@ New input types:
    8. Apply consistent styling to match existing form controls
 
 [] Refactor video workflows to use extra inputs
-   1. Update video workflows in `comfyui-workflows.json` to remove hardcoded `length` and `frames` fields
-   2. Add `extraInputs` to video workflows with `length` (text type, default value) and `framerate` (text type, default value)
    3. Update `server/generate.mjs` to read these values from request body as extra input values
    4. Update video workflow `replace` mappings to use new extra input field names
    5. Test that video generation still works with new extra input system
