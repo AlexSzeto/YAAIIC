@@ -119,9 +119,10 @@ New input types:
 [] Render extra inputs in client UI
    1. In `public/js/app.mjs`, fetch workflow configuration when workflow is selected
    2. Create function `renderExtraInputs()` to dynamically generate form fields based on workflow's `extraInputs`
+   3. For "number" type: render number input
    3. For "text" type: render single-line text input
    4. For "textarea" type: render multi-line textarea (similar to prompt field)
-   5. For "select" type: render dropdown with provided options
+   5. For "select" type: render dropdown with provided options (label, value)
    6. For "checkbox" type: render checkbox input
    7. Position extra inputs in the UI between existing controls (suggested: where video length/frames currently appear)
    8. Apply consistent styling to match existing form controls

@@ -8,16 +8,16 @@ The configuration file has the following root-level properties:
 
 ```json
 {
-  "postGenerationTasks": [...],
+  "defaultImageGenerationTasks": [...],
   "workflows": [...]
 }
 ```
 
-### Global Post-Generation Tasks
+### Default Image Generation Tasks
 
-**`postGenerationTasks`** (array, optional)
-- LLM-based analysis tasks that run after every generation.
-- Applied automatically to all workflows.
+**`defaultImageGenerationTasks`** (array, optional)
+- LLM-based analysis tasks that run after image generation by default.
+
 - See [LLM Task Object](#llm-task-object) for structure.
 
 ### Workflows Array
@@ -43,7 +43,7 @@ Each workflow object supports the following parameters:
   - The filename of the underlying ComfyUI workflow JSON file.
   - Must exist in the `server/resource/` directory.
 
-- **`format`** (string, optional)
+- **`imageFormat`** (string, optional)
   - The output file format. Default: `"png"`.
   - Common values: `"png"`, `"jpg"`, `"webp"`.
 
@@ -86,8 +86,14 @@ The `options` object controls UI behavior and input validation:
     - `"detect"`: Auto-detect from input image or user selection.
 
 - **`preGenerationTasks`** (array, optional)
-  - LLM tasks to run before generation starts.
-  - Useful for auto-generating prompts from input images.
+  - LLM tasks or template tasks to run before generation starts.
+  - Useful for auto-generating prompts from input images or combining descriptions.
+  - Common in video workflows to generate motion descriptions.
+  - See [LLM Task Object](#llm-task-object).
+
+- **`postGenerationTasks`** (array, optional)
+  - LLM tasks or template tasks to run after generation completes.
+  - Overrides `defaultImageGenerationTasks` if specified.
   - See [LLM Task Object](#llm-task-object).
 
 ### Upload Handling
@@ -119,7 +125,7 @@ Maps request data or internal variables to workflow nodes:
 
 - **`from`** (string): Source variable name.
   - Request fields: `"prompt"`, `"seed"`, `"name"`
-  - Internal paths: `"savePath"`, `"saveFilename"`, `"storagePath"`
+  - Internal paths: `"saveImagePath"`, `"saveImageFilename"`, `"storagePath"`
   - Upload variables: `"imagePath"`, `"maskPath"`, `"firstFramePath"`, `"lastFramePath"`
   - Video settings: `"frames"`, `"framerate"`
 - **`to`** (array): Target path in workflow JSON: `["NodeID", "inputs", "keyName"]`.
@@ -162,7 +168,7 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 ```json
 {
   "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-  "imagePath": "savePath",
+  "imagePath": "saveImagePath",
   "prompt": "Describe this image...",
   "to": "description",
   "replaceBlankFieldOnly": true
@@ -173,21 +179,24 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 - **`model`** (string, required for LLM tasks)
   - Ollama model name to use for inference.
+  - Mutually exclusive with `template`.
 
 - **`imagePath`** (string, optional)
   - Variable name containing the image path for vision tasks.
-  - Common: `"savePath"` (output image), `"image_0"` (input image).
+  - Common: `"saveImagePath"` (output image), `"image_0"` (input image).
 
 - **`prompt`** (string, required for LLM tasks)
   - The prompt text sent to the LLM.
-  - Supports placeholder syntax: `[fieldName]` is replaced with the value of that field.
+  - Supports placeholder syntax: `{{fieldName}}` is replaced with the value of that field.
   - Examples:
-    - `"[description]"` - inserts the description field
-    - `"[image_0_description]"` - inserts description of first input image
+    - `"{{description}}"` - inserts the description field
+    - `"{{image_0_description}}"` - inserts description of first input image
 
 - **`template`** (string, optional)
   - For non-LLM text generation, a template string with placeholders.
   - Alternative to `model` + `prompt` for simple string formatting.
+  - Uses same placeholder syntax: `{{variableName}}`.
+  - Mutually exclusive with `model`.
 
 - **`to`** (string, required)
   - Target field name to store the result.
@@ -203,16 +212,16 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 ```json
 {
-  "postGenerationTasks": [
+  "defaultImageGenerationTasks": [
     {
-      "model": "qwen3-vl:8b",
-      "imagePath": "savePath",
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "imagePath": "saveImagePath",
       "prompt": "Write a paragraph describing the image...",
       "to": "description"
     },
     {
-      "model": "qwen3-vl:8b",
-      "prompt": "Write a short name for this image. Description: [description]",
+      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "prompt": "Write a short name for this image. Description: {{description}}",
       "to": "name",
       "replaceBlankFieldOnly": true
     }
@@ -228,8 +237,14 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
         "nameRequired": false,
         "orientation": "portrait"
       },
+      "postGenerationTasks": [
+        {
+          "template": "(description not generated by default)",
+          "to": "description"
+        }
+      ],
       "base": "example-workflow.json",
-      "format": "png",
+      "imageFormat": "png",
       "finalNode": "10",
       "replace": [
         {
@@ -242,7 +257,7 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["10", "inputs", "path"]
         }
       ]
@@ -255,18 +270,22 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect",
-        "preGenerationTasks": [
-          {
-            "model": "qwen3-vl:8b",
-            "prompt": "Describe motion from: [image_0_description]",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          }
-        ]
+        "orientation": "detect"
       },
+      "preGenerationTasks": [
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame: {{image_0_description}}\nLast frame: {{image_1_description}}\nDescribe the motion:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "First frame: {{image_0_description}}\nLast frame: {{image_1_description}}",
+          "to": "description"
+        }
+      ],
       "base": "video-workflow.json",
-      "format": "webp",
+      "imageFormat": "webp",
       "finalNode": "76",
       "upload": [
         { "from": "image_0", "storePathAs": "firstFramePath" },
@@ -288,6 +307,14 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
         {
           "from": "firstFramePath",
           "to": ["52", "inputs", "image"]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": ["63", "inputs", "filename_prefix"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["76", "inputs", "output_file_path"]
         }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"

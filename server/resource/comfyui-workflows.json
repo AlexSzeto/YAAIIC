@@ -26,6 +26,52 @@
   ],
   "workflows": [
     {
+      "name": "Text to Image (Album Cover)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
+      "postGenerationTasks": [
+        {
+          "template": "(description unavailable for uploaded audio)",
+          "to": "description"
+        },
+        {
+          "template": "(summary unavailable for uploaded audio)",
+          "to": "summary"
+        },
+        {
+          "template": "(tags unavailable for uploaded audio)",
+          "to": "tags"
+        }
+      ],
+      "base": "text-to-image-album.json",
+      "imageFormat": "jpg",
+      "finalNode": "18",
+      "replace": [
+        {
+          "from": "ollamaAPIPath",
+          "to": ["20", "inputs", "url"]
+        },
+        {
+          "from": "name",
+          "to": ["22", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["3", "inputs", "seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["18", "inputs", "path"]
+        }
+      ]
+    },
+    {
       "name": "Text to Image (Illustrious Characters)",
       "options": {
         "type": "image",
@@ -815,6 +861,108 @@
         }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
+    },
+    {
+      "name": "Text to Music (ACE-Step)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudio": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "lyrics",
+            "type": "textarea",
+            "label": "Lyrics"
+          },
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)"
+          }
+        ]
+      },
+      "base": "acestep-text-to-music.json",
+      "imageFormat": "jpg",
+      "audioFormat": "mp3",
+      "finalNode": "90",
+      "preGenerationTasks": [
+        {
+          "template": "[inst]",
+          "to": "lyrics",
+          "replaceBlankFieldOnly": true
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["75", "inputs", "value"]
+        },
+        {
+          "from": "lyrics",
+          "to": ["87", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["52", "inputs", "seed"]
+        },
+        {
+          "from": "length",
+          "to": ["17", "inputs", "seconds"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["90", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["88", "inputs", "path"]
+        }
+      ]
+    },
+    {
+      "name": "Text to Speech (Chatterbox)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudio": 1,
+        "optionalPrompt": false,
+        "nameRequired": true
+      },
+      "base": "chatterbox-text-to-speech.json",
+      "imageFormat": "jpg",
+      "audioFormat": "mp3",
+      "finalNode": "21",
+      "upload": [
+        {
+          "from": "audio_0",
+          "storePathAs": "referenceAudioPath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["15", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["14", "inputs", "seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["21", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["20", "inputs", "path"]
+        },
+        {
+          "from": "referenceAudioPath",
+          "to": ["5", "inputs", "audio"]
+        }
+      ]
+
     }
   ]
 }

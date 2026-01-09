@@ -90,19 +90,6 @@
       "title": "VAE Decode"
     }
   },
-  "10": {
-    "inputs": {
-      "filename_prefix": "ComfyUI",
-      "images": [
-        "9",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Save Image"
-    }
-  },
   "11": {
     "inputs": {
       "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
@@ -254,6 +241,34 @@
     "class_type": "OllamaGenerateV2",
     "_meta": {
       "title": "Ollama Generate"
+    }
+  },
+  "20": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "21": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
     }
   }
 }
