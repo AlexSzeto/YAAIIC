@@ -32,7 +32,7 @@ New input types:
    3. Rename `uploadImageToComfyUI()` to `uploadFileToComfyUI()` and update to accept file type parameter
    4. Update references server side for import statements and function calls
 
-[] Rename image-specific variables and endpoints to media-specific equivalents (batch 5)   
+[x] Rename image-specific variables and endpoints to media-specific equivalents (batch 5)   
    1. Rename static route `/image` to `/media` for serving files from storage folder
    2. Update `public/js/app.mjs` to use `/media` route for file URLs
    3. Update `public/js/gallery-preview.mjs` to use new endpoint names

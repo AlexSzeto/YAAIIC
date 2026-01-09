@@ -160,7 +160,7 @@ app.get('/', (req, res) => {
 app.get('/progress/:taskId', handleSSEConnection);
 
 // Serve images from storage folder
-app.use('/image', express.static(path.join(actualDirname, 'storage')));
+app.use('/media', express.static(path.join(actualDirname, 'storage')));
 
 app.get('/tags', (req, res) => {
   // Parse query parameters with defaults

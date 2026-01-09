@@ -361,7 +361,7 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     
     // Add all fields to generationData before saving
-    generationData.imageUrl = `/image/${filename}`;
+    generationData.imageUrl = `/media/${filename}`;
     generationData.workflow = 'Uploaded Image';
     generationData.inpaint = false;
     generationData.inpaintArea = null;
@@ -798,9 +798,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
       console.log('Skipping post-generation prompts for video workflow');
     }
 
-    // Return the image URL path (relative to /image/ endpoint)
+    // Return the image URL path (relative to /media/ endpoint)
     const filename = path.basename(savePath);
-    const imageUrl = `/image/${filename}`;
+    const imageUrl = `/media/${filename}`;
 
     // Calculate time taken in seconds
     const startTime = taskTimers.get(taskId);

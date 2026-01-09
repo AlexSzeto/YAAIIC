@@ -100,7 +100,7 @@ function InpaintApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [workflow, setWorkflow] = useState(null);
-  const [imageData, setImageData] = useState(null);
+  const [mediaData, setMediaData] = useState(null);
   const [inpaintArea, setInpaintArea] = useState(null);
   const [history, setHistory] = useState([]);
   const [taskId, setTaskId] = useState(null);
@@ -157,7 +157,7 @@ function InpaintApp() {
         });
         
         console.log('Image data loaded:', data);
-        setImageData(data);
+        setMediaData(data);
         setHistory([data]);
         
         // Populate form with image data
@@ -216,7 +216,7 @@ function InpaintApp() {
       return;
     }
     
-    if (!imageData?.imageUrl) {
+    if (!mediaData?.imageUrl) {
       toast.error('No image loaded');
       return;
     }
@@ -226,7 +226,7 @@ function InpaintApp() {
       toast.show('Preparing inpaint request...');
       
       // Get the original image canvas
-      const imageCanvas = await createOriginalImageCanvas(imageData.imageUrl);
+      const imageCanvas = await createOriginalImageCanvas(mediaData.imageUrl);
       
       // Determine orientation from image dimensions - default to "detect" if undefined
       let orientation = workflow.orientation || 'detect';
@@ -296,7 +296,7 @@ function InpaintApp() {
       try {
         // Load the new image data
         const newImageData = await fetchJson(`/media-data/${data.result.uid}`);
-        setImageData(newImageData);
+        setMediaData(newImageData);
         
         // Add to history
         setHistory(prev => [newImageData, ...prev]);
@@ -444,15 +444,15 @@ function InpaintApp() {
             <p>${error}</p>
           `}
           
-          ${!loading && !error && imageData?.imageUrl && html`
+          ${!loading && !error && mediaData?.imageUrl && html`
             <${InpaintCanvas}
-              imageUrl=${imageData.imageUrl}
+              imageUrl=${mediaData.imageUrl}
               inpaintArea=${inpaintArea}
               onChangeInpaintArea=${handleInpaintAreaChange}
             />
           `}
           
-          ${!loading && !error && !imageData?.imageUrl && html`
+          ${!loading && !error && !mediaData?.imageUrl && html`
             <p>No image loaded for inpainting</p>
           `}
         </div>
@@ -485,7 +485,7 @@ function InpaintApp() {
           <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Session History</h3>
           <${ImageCarousel} 
             items=${history} 
-            selectedItem=${imageData}
+            selectedItem=${mediaData}
             onSelect=${handleCarouselSelect}
           />
         </div>

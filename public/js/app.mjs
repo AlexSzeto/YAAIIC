@@ -144,11 +144,11 @@ function App() {
       } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
         // It's a file/blob - create preview URL
         const url = URL.createObjectURL(fileOrUrl);
-        // For uploads, we don't have server-side metadata yet, so imageData is empty
-        newImages[index] = { blob: fileOrUrl, url, imageData: {} };
+        // For uploads, we don't have server-side metadata yet, so mediaData is empty
+        newImages[index] = { blob: fileOrUrl, url, mediaData: {} };
       } else if (typeof fileOrUrl === 'string') {
         // It's a URL
-        newImages[index] = { url: fileOrUrl, imageData: {} };
+        newImages[index] = { url: fileOrUrl, mediaData: {} };
       }
       return newImages;
     });
@@ -161,7 +161,7 @@ function App() {
   };
   
   // Handle "Select as Input" from generated result or gallery
-  const handleSelectAsInput = async (imageData) => {
+  const handleSelectAsInput = async (mediaData) => {
     // Find first empty slot
     const requiredSlots = workflow?.inputImages || 0;
     let targetIndex = -1;
@@ -180,7 +180,7 @@ function App() {
     
     try {
       // Fetch the image as a blob if we have a URL
-      const imageUrl = imageData.imageUrl || imageData.url;
+      const imageUrl = mediaData.imageUrl || mediaData.url;
       if (!imageUrl) {
         toast.error('No image URL available');
         return;
@@ -194,7 +194,7 @@ function App() {
         newImages[targetIndex] = { 
           blob, 
           url: imageUrl, 
-          imageData: imageData
+          mediaData: mediaData
         };
         return newImages;
       });
@@ -300,8 +300,8 @@ function App() {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
 
             imageTextFieldNames.forEach(fieldName => {
-              // Check top-level (legacy/upload) or nested in imageData (selected)
-              const value = img.imageData?.[fieldName] || img[fieldName];
+              // Check top-level (legacy/upload) or nested in mediaData (selected)
+              const value = img.mediaData?.[fieldName] || img[fieldName];
               if (value) {
                 formData.append(`image_${index}_${fieldName}`, value);
               }
@@ -515,13 +515,13 @@ function App() {
     console.log('Regenerate complete:', data);
     setRegenerateTaskId(null);
     
-    if (data.imageData) {
+    if (data.mediaData) {
       // Update the generated image display with complete data
-      setGeneratedImage(data.imageData);
+      setGeneratedImage(data.mediaData);
       
       // Update history item by uid
       setHistory(prev => prev.map(item => 
-        item.uid === data.imageData.uid ? data.imageData : item
+        item.uid === data.mediaData.uid ? data.mediaData : item
       ));
       
       toast.success('Regeneration complete');
@@ -590,7 +590,7 @@ function App() {
                      newImages[gallerySelectionMode.index] = { 
                          blob, 
                          url: imageUrl, 
-                         imageData: item
+                         mediaData: item
                      };
                      return newImages;
                  });
