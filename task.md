@@ -11,21 +11,32 @@ New input types:
 
 ## Tasks
 
-[] Rename image-specific variables and endpoints to media-specific equivalents
+[] Rename image-specific variables and endpoints to media-specific equivalents (batch 1)
    1. In `server/server.mjs`, rename `imageData` object to `mediaData`
-   2. Rename `loadImageData()` function to `loadMediaData()`
-   3. Rename `saveImageData()` function to `saveMediaData()`
-   4. Rename `addImageDataEntry()` function to `addMediaDataEntry()`
-   5. Rename database file `database/image-data.json` references to `database/media-data.json`
-   6. Update server route `/image-data` to `/media-data` and all its variants (`/media-data/:uid`, `/media-data/delete`)
-   7. In `server/generate.mjs`, rename `handleImageGeneration()` to `handleMediaGeneration()`
-   8. Rename `handleImageUpload()` to `handleMediaUpload()`
-   9. Rename `uploadImageToComfyUI()` to `uploadFileToComfyUI()` and update to accept file type parameter
-   10. Update references in `server/server.mjs` import statements and function calls
-   11. Rename static route `/image` to `/media` for serving files from storage folder
-   12. Update all client-side JavaScript files in `public/js/` to use new `/media-data` endpoint
-   13. Update `public/js/app.mjs` to use `/media` route for file URLs
-   14. Update `public/js/gallery-preview.mjs` to use new endpoint names
+
+[] Rename image-specific variables and endpoints to media-specific equivalents (batch 2)
+   1. Rename `loadImageData()` function to `loadMediaData()`
+   2. Rename `saveImageData()` function to `saveMediaData()`
+   3. Rename `addImageDataEntry()` function to `addMediaDataEntry()`
+   4. Update references server side for import statements and function calls
+
+[] Rename image-specific variables and endpoints to media-specific equivalents (batch 3)
+   1. Rename database file `database/image-data.json` references to `database/media-data.json`
+   2. Update server route `/image-data` to `/media-data` and all its variants (`/media-data/:uid`, `/media-data/delete`)
+   3. Update references server side for import statements and function calls
+   4. Update all client-side JavaScript files in `public/js/` to use new `/media-data` endpoint
+
+[] Rename image-specific variables and endpoints to media-specific equivalents (batch 4)
+   1. In `server/generate.mjs`, rename `handleImageGeneration()` to `handleMediaGeneration()`
+   2. Rename `handleImageUpload()` to `handleMediaUpload()`
+   3. Rename `uploadImageToComfyUI()` to `uploadFileToComfyUI()` and update to accept file type parameter
+   4. Update references server side for import statements and function calls
+
+[] Rename image-specific variables and endpoints to media-specific equivalents (batch 5)   
+   1. Rename static route `/image` to `/media` for serving files from storage folder
+   2. Update `public/js/app.mjs` to use `/media` route for file URLs
+   3. Update `public/js/gallery-preview.mjs` to use new endpoint names
+   4. Update references server side for import statements and function calls
 
 [] Rename media data attributes
    1. Rename media data attribute `savePath` to `saveImagePath`
