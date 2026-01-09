@@ -328,11 +328,11 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     };
     
     // Process post-generation tasks to generate description and name
-    if (workflowsConfig.postGenerationTasks && Array.isArray(workflowsConfig.postGenerationTasks)) {
+    if (workflowsConfig.defaultImageGenerationTasks && Array.isArray(workflowsConfig.defaultImageGenerationTasks)) {
       console.log('Processing post-generation tasks for uploaded image...');
       
       let promptIndex = 0;
-      for (const promptConfig of workflowsConfig.postGenerationTasks) {
+      for (const promptConfig of workflowsConfig.defaultImageGenerationTasks) {
         try {
           promptIndex++;
           // Emit progress for each prompt

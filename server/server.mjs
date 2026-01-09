@@ -273,11 +273,6 @@ app.post('/generate', upload.any(), async (req, res) => {
       return res.status(400).json({ error: `Workflow '${workflow}' not found` });
     }
     
-    // Add postGenerationTasks from comfyui-workflows to workflowData
-    if (comfyuiWorkflows.postGenerationTasks) {
-      workflowData.postGenerationTasks = comfyuiWorkflows.postGenerationTasks;
-    }
-    
     // Generate random seed if not provided
     if (!req.body.seed) {
       req.body.seed = Math.floor(Math.random() * 4294967295);
@@ -648,7 +643,7 @@ app.post('/regenerate', async (req, res) => {
     
     try {
       // Get postGenerationTasks from comfyui-workflows
-      const postGenTasks = comfyuiWorkflows.postGenerationTasks || [];
+      const postGenTasks = comfyuiWorkflows.defaultImageGenerationTasks || [];
       
       let completedFields = 0;
       const totalFields = fields.length;
