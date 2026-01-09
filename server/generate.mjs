@@ -283,8 +283,99 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
   return modifyDataWithPrompt(promptData, generationData);
 }
 
+// Helper function to generate album cover for audio uploads
+// TODO: Refactor duplicate code with main generation function into helper functions
+async function generateAlbumCover(taskId, requestData, workflowConfig, workflowsConfig) {
+  const { base: workflowBasePath, replace: modifications, postGenerationTasks, options } = workflowConfig;
+  const { seed, saveImagePath, prompt } = requestData;
+  
+  console.log(`Generating album cover with workflow: ${workflowBasePath}`);
+  
+  // Create generationData for the album cover
+  const generationData = { ...requestData };
+  
+  // Initialize progress for album cover generation
+  // (We won't emit progress updates here to avoid conflicting with main task progress)
+  
+  // Load the ComfyUI workflow
+  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+  const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
+  let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
+  
+  // Set up generationData fields
+  if (saveImagePath) {
+    generationData.saveImageFilename = path.basename(saveImagePath, path.extname(saveImagePath));
+  }
+  generationData.storagePath = path.join(actualDirname, 'storage');
+  
+  // Apply modifications to the workflow
+  if (modifications && Array.isArray(modifications)) {
+    modifications.forEach(({ from, to, prefix, postfix }) => {
+      let value = generationData[from];
+      
+      if (prefix) value = `${prefix} ${value}`;
+      if (postfix) value = `${value} ${postfix}`;
+      
+      if (value !== undefined && to && Array.isArray(to)) {
+        workflowData = setObjectPathValue(workflowData, to, value);
+      }
+    });
+  }
+  
+  // Send request to ComfyUI
+  const comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: workflowData,
+      client_id: CLIENT_ID
+    })
+  });
+  
+  if (!comfyResponse.ok) {
+    throw new Error(`ComfyUI request failed: ${comfyResponse.status} ${comfyResponse.statusText}`);
+  }
+  
+  const comfyResult = await comfyResponse.json();
+  const promptId = comfyResult.prompt_id;
+  
+  if (!promptId) {
+    throw new Error('No prompt_id received from ComfyUI');
+  }
+  
+  console.log(`Album cover generation prompt ${promptId} submitted, waiting for completion...`);
+  
+  // Wait for the prompt to complete
+  const statusResult = await checkPromptStatus(promptId);
+  
+  if (statusResult.error) {
+    throw new Error('Album cover generation failed');
+  }
+  
+  // Get the generated image URL
+  const ext = path.extname(saveImagePath);
+  const filename = path.basename(saveImagePath);
+  generationData.imageUrl = `/media/${filename}`;
+  
+  // Run post-generation tasks if configured
+  if (postGenerationTasks && Array.isArray(postGenerationTasks)) {
+    for (const promptConfig of postGenerationTasks) {
+      try {
+        await modifyGenerationDataWithPrompt(promptConfig, generationData);
+      } catch (error) {
+        console.warn(`Failed to process album cover post-gen task for ${promptConfig.to}:`, error.message);
+      }
+    }
+  }
+  
+  return generationData;
+}
+
 // Handler for upload image processing
-export async function handleMediaUpload(file, workflowsConfig) {
+export async function handleMediaUpload(file, workflowsConfig, extractedName = null) {
   // Generate unique task ID
   const taskId = generateTaskId();
   
@@ -302,7 +393,7 @@ export async function handleMediaUpload(file, workflowsConfig) {
   console.log(`Created upload task ${taskId}`);
   
   // Process upload task asynchronously
-  processUploadTask(taskId, file, workflowsConfig).catch(error => {
+  processUploadTask(taskId, file, workflowsConfig, extractedName).catch(error => {
     console.error(`Error in upload task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
   });
@@ -311,7 +402,7 @@ export async function handleMediaUpload(file, workflowsConfig) {
 }
 
 // Process upload task asynchronously
-async function processUploadTask(taskId, file, workflowsConfig) {
+async function processUploadTask(taskId, file, workflowsConfig, extractedName = null) {
   try {
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
@@ -345,53 +436,83 @@ async function processUploadTask(taskId, file, workflowsConfig) {
         throw new Error('No default audio generation workflow configured');
       }
       
-      // Extract name from filename (will be implemented in next task)
-      const baseName = file.originalname.replace(ext, '');
+      // Use extracted name if provided, otherwise use filename
+      const baseName = extractedName || file.originalname.replace(ext, '');
       
-      // TODO: Generate album cover using the defaultAudioGenerationWorkflow
-      // For now, create a placeholder entry
-      const generationData = {
-        saveAudioPath: savePath,
-        audioUrl: `/media/${filename}`,
-        audioFormat: ext.substring(1), // Remove leading dot
-        saveImagePath: '', // Will be populated after album cover generation
-        imageUrl: '', // Will be populated after album cover generation
-        prompt: '',
-        seed: 0,
-        workflow: 'Uploaded Audio',
-        name: baseName,
-        description: '(description unavailable for uploaded audio)',
-        summary: '(summary unavailable for uploaded audio)',
-        tags: '(tags unavailable for uploaded audio)',
-        inpaint: false,
-        inpaintArea: null,
-        timeTaken: 0
-      };
+      // Generate album cover using the defaultAudioGenerationWorkflow
+      emitProgressUpdate(taskId, { percentage: 40, value: 2, max: 4 }, 'Generating album cover...');
       
-      // Emit progress: Saving to database
-      emitProgressUpdate(taskId, { percentage: 90, value: 3, max: 4 }, 'Saving to database...');
+      const albumWorkflowName = workflowsConfig.defaultAudioGenerationWorkflow;
+      const albumWorkflow = workflowsConfig.workflows.find(w => w.name === albumWorkflowName);
       
-      // Calculate time taken
-      const startTime = taskTimers.get(taskId);
-      const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
-      generationData.timeTaken = timeTaken;
-      
-      // Save to database
-      if (addMediaDataEntry) {
-        addMediaDataEntry(generationData);
-        console.log('Audio data entry saved with UID:', generationData.uid);
+      if (!albumWorkflow) {
+        throw new Error(`Album cover workflow '${albumWorkflowName}' not found`);
       }
       
-      // Emit completion
-      emitTaskCompletion(taskId, {
-        ...generationData,
-        maxValue: 4
-      });
+      // Prepare request data for album cover generation
+        // TODO: Create global const to remove magic number 4294967295      
+      const albumRequestData = {
+        workflow: albumWorkflowName,
+        name: baseName,
+        seed: Math.floor(Math.random() * 4294967295),
+        saveImagePath: path.join(actualDirname, 'storage', `album_${timestamp}.png`),
+        saveImageFilename: `album_${timestamp}`
+      };
       
-      // Clean up timer
-      taskTimers.delete(taskId);
+      // Generate the album cover
+      try {
+        const albumResult = await generateAlbumCover(taskId, albumRequestData, albumWorkflow, workflowsConfig);
+        
+        // TODO: Start with a copy albumResult and add audio info fields
+
+        // Create generationData with both audio and image info
+        const generationData = {
+          saveAudioPath: savePath,
+          audioUrl: `/media/${filename}`,
+          audioFormat: ext.substring(1), // Remove leading dot
+          saveImagePath: albumResult.saveImagePath,
+          imageUrl: albumResult.imageUrl,
+          prompt: albumRequestData.prompt,
+          seed: albumRequestData.seed,
+          workflow: 'Uploaded Audio',
+          name: baseName,
+          description: albumResult.description || '(description unavailable for uploaded audio)',
+          summary: albumResult.summary || '(summary unavailable for uploaded audio)',
+          tags: albumResult.tags || '(tags unavailable for uploaded audio)',
+          inpaint: false,
+          inpaintArea: null,
+          timeTaken: 0
+        };
+        
+        // Emit progress: Saving to database
+        emitProgressUpdate(taskId, { percentage: 90, value: 3, max: 4 }, 'Saving to database...');
+        
+        // Calculate time taken
+        const startTime = taskTimers.get(taskId);
+        const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+        generationData.timeTaken = timeTaken;
+        
+        // Save to database
+        if (addMediaDataEntry) {
+          addMediaDataEntry(generationData);
+          console.log('Audio data entry saved with UID:', generationData.uid);
+        }
+        
+        // Emit completion
+        emitTaskCompletion(taskId, {
+          ...generationData,
+          maxValue: 4
+        });
+        
+        // Clean up timer
+        taskTimers.delete(taskId);
+        
+        console.log(`Audio upload task ${taskId} completed successfully`);
+      } catch (albumError) {
+        console.error('Failed to generate album cover:', albumError);
+        throw new Error(`Album cover generation failed: ${albumError.message}`);
+      }
       
-      console.log(`Audio upload task ${taskId} completed successfully`);
       return;
     }
     
@@ -403,7 +524,7 @@ async function processUploadTask(taskId, file, workflowsConfig) {
       prompt: '',
       seed: 0,
       workflow: 'Uploaded Image',
-      name: '',
+      name: extractedName || '',
       description: ''
     };
     

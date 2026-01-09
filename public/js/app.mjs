@@ -10,7 +10,7 @@ import { GeneratedResult } from './app-ui/generated-result.mjs';
 
 import { ProgressBanner } from './custom-ui/progress-banner.mjs';
 import { sseManager } from './sse-manager.mjs';
-import { fetchJson } from './util.mjs';
+import { fetchJson, extractNameFromFilename } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
 
@@ -631,6 +631,12 @@ function App() {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      
+      // Extract name from filename
+      const extractedName = extractNameFromFilename(file.name);
+      if (extractedName) {
+        formData.append('name', extractedName);
+      }
       
       const result = await fetchJson('/upload/image', {
         method: 'POST',

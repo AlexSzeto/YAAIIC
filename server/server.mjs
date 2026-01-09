@@ -241,8 +241,11 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
     
     console.log('Received image upload:', req.file.originalname);
     
+    // Extract optional name field from request body
+    const extractedName = req.body.name || null;
+    
     // Create upload task and get task ID
-    const taskId = await handleImageUpload(req.file, comfyuiWorkflows);
+    const taskId = await handleMediaUpload(req.file, comfyuiWorkflows, extractedName);
     
     // Return task ID immediately
     res.json({
@@ -499,7 +502,7 @@ app.delete('/media-data/delete', (req, res) => {
     
     // Save changes to file
     try {
-      saveImageData();
+      saveMediaData();
       console.log(`Successfully deleted ${deletedCount} entries`);
       res.json({ 
         success: true, 
@@ -568,7 +571,7 @@ app.post('/edit', (req, res) => {
     
     // Save changes to file
     try {
-      saveImageData();
+      saveMediaData();
       console.log(`Successfully updated ${updatedItems.length} image data item(s)`);
       
       // Return array or single item based on input
