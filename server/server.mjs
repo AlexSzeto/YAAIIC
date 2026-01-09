@@ -279,15 +279,15 @@ app.post('/generate', upload.any(), async (req, res) => {
       console.log('Generated random seed:', req.body.seed);
     }
     
-    // Create savePath similar to how handleMediaGeneration creates fullPath
+    // Create saveImagePath similar to how handleMediaGeneration creates fullPath
     const storageFolder = path.join(actualDirname, 'storage');
     if (!fs.existsSync(storageFolder)) {
       fs.mkdirSync(storageFolder, { recursive: true });
     }
     
     const nextIndex = findNextIndex('image', storageFolder);
-    const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
-    req.body.savePath = path.join(storageFolder, filename);
+    const filename = `image_${nextIndex}.${workflowData.imageFormat || 'png'}`;
+    req.body.saveImagePath = path.join(storageFolder, filename);
     
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
@@ -620,12 +620,12 @@ app.post('/regenerate', async (req, res) => {
     
     const imageEntry = mediaData.imageData[imageIndex];
     
-    // Reconstruct savePath from imageUrl
-    // imageUrl format: /image/filename.ext -> storage/filename.ext
+    // Reconstruct saveImagePath from imageUrl
+    // imageUrl format: /media/filename.ext -> storage/filename.ext
     if (imageEntry.imageUrl) {
-      const filename = imageEntry.imageUrl.replace(/^\/image\//, '');
-      imageEntry.savePath = path.join(actualDirname, 'storage', filename);
-      console.log(`Reconstructed savePath: ${imageEntry.savePath}`);
+      const filename = imageEntry.imageUrl.replace(/^\/media\//, '');
+      imageEntry.saveImagePath = path.join(actualDirname, 'storage', filename);
+      console.log(`Reconstructed saveImagePath: ${imageEntry.saveImagePath}`);
     }
     
     // Create a task ID for progress tracking
@@ -675,8 +675,8 @@ app.post('/regenerate', async (req, res) => {
       // Save updated image data
       saveMediaData();
       
-      // Remove temporary savePath field before sending to client
-      const { savePath, ...imageDataForClient } = imageEntry;
+      // Remove temporary saveImagePath field before sending to client
+      const { saveImagePath, ...imageDataForClient } = imageEntry;
       
       // Send custom completion message with full image data
       const task = getTask(taskId);
@@ -1093,8 +1093,8 @@ app.post('/generate/inpaint', upload.fields([
       }
       
       const nextIndex = findNextIndex('image', storageFolder);
-      const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
-      req.body.savePath = path.join(storageFolder, filename);
+      const filename = `image_${nextIndex}.${workflowData.imageFormat || 'png'}`;
+      req.body.saveImagePath = path.join(storageFolder, filename);
       
       // Prepare request body with imagePath and maskPath from uploaded filenames
       req.body.imagePath = imageUploadResult.filename;

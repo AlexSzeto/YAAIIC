@@ -39,7 +39,7 @@ New input types:
    4. Update references server side for import statements and function calls
    5. On all client side mjs files, rename `imageData` variables to `mediaData`
 
-[] Rename media data attributes
+[x] Rename media data attributes
    1. Rename media data attribute `savePath` to `saveImagePath`
    2. Rename media data attribute `saveFilename` to `saveImageFilename`
    3. Rename media data attribute `format` to `imageFormat`

@@ -2,16 +2,16 @@
   "defaultImageGenerationTasks": [
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "imagePath": "savePath",
+      "imagePath": "saveImagePath",
       "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
       "to": "description"
     },
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "imagePath": "savePath",
+      "imagePath": "saveImagePath",
       "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
       "to": "summary"
-    },  
+    },
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
       "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -42,10 +42,10 @@
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -59,7 +59,7 @@
         }
       ],
       "base": "illustrious-text-to-image.json",
-      "format": "png",
+      "imageFormat": "png",
       "finalNode": "10",
       "replace": [
         {
@@ -72,7 +72,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["10", "inputs", "path"]
         }
       ]
@@ -94,10 +94,10 @@
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -111,14 +111,14 @@
         }
       ],
       "base": "illustrious-image-style.json",
-      "format": "png",
+      "imageFormat": "png",
       "finalNode": "11",
       "upload": [
         {
           "from": "image_0",
           "storePathAs": "imagePath"
         }
-      ],      
+      ],
       "replace": [
         {
           "from": "prompt",
@@ -130,7 +130,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["11", "inputs", "path"]
         },
         {
@@ -152,16 +152,16 @@
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -175,11 +175,11 @@
         }
       ],
       "base": "flux-fantasy-text-to-landscape.json",
-      "format": "jpg",
+      "imageFormat": "jpg",
       "finalNode": "9",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "The image is a painting from Carl Spitzweg inbetween \nIn the style of chargen_concept_art image of\n\nmagnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background, professional, winning\n\nFantasy illustration of\n\n"
         },
@@ -188,7 +188,7 @@
           "to": ["31", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         }
       ]
@@ -206,16 +206,16 @@
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -229,11 +229,11 @@
         }
       ],
       "base": "flux-fantasy-text-to-portrait.json",
-      "format": "jpg",
+      "imageFormat": "jpg",
       "finalNode": "44",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "In the style of chargen_concept_art image of\n\na highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n"
         },
@@ -242,7 +242,7 @@
           "to": ["31", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["44", "inputs", "path"]
         }
       ]
@@ -260,16 +260,16 @@
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -283,11 +283,11 @@
         }
       ],
       "base": "zimage-fantasy-landscape.json",
-      "format": "jpg",
+      "imageFormat": "jpg",
       "finalNode": "43",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "Magnificent, painterly, epic, majestic, naturalistic, fantasy art, cover art, impressionist, highly detailed, sharp focus, cinematic light, finely detailed, intricate, dynamic perspective, perfect, aesthetic, deep background fantasy illustration of \n\n",
           "postfix": "\n\nThe composition heavily relies on off center, golden ratio to create an aesthetically pleasing, dynamic layout."
@@ -297,7 +297,7 @@
           "to": ["39", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["43", "inputs", "path"]
         }
       ]
@@ -315,16 +315,16 @@
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -338,11 +338,11 @@
         }
       ],
       "base": "zimage-fantasy-portrait.json",
-      "format": "jpg",
+      "imageFormat": "jpg",
       "finalNode": "43",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "a highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n"
         },
@@ -351,7 +351,7 @@
           "to": ["39", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["43", "inputs", "path"]
         }
       ]
@@ -377,7 +377,7 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "format": "jpg",
+      "imageFormat": "jpg",
       "finalNode": "9",
       "upload": [
         {
@@ -400,7 +400,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         },
         {
@@ -434,7 +434,7 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "format": "png",
+      "imageFormat": "png",
       "finalNode": "9",
       "upload": [
         {
@@ -457,7 +457,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         },
         {
@@ -483,16 +483,16 @@
       "postGenerationTasks": [
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
@@ -506,7 +506,7 @@
         }
       ],
       "base": "qwen-image-to-image.json",
-      "format": "png",
+      "imageFormat": "png",
       "finalNode": "229",
       "upload": [
         {
@@ -524,7 +524,7 @@
           "to": ["228", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["229", "inputs", "path"]
         },
         {
@@ -544,23 +544,23 @@
         "orientation": "detect"
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
-            "to": "description"
-          },
-          {
-            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
+          "to": "description"
+        },
+        {
+          "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
+          "to": "summary"
+        }
+      ],
       "base": "wan-image-to-video.json",
-      "format": "webp",
+      "imageFormat": "webp",
       "finalNode": "76",
       "upload": [
         {
@@ -614,7 +614,7 @@
           "to": ["57", "inputs", "noise_seed"]
         },
         {
-          "from": "saveFilename",
+          "from": "saveImageFilename",
           "to": ["63", "inputs", "filename_prefix"]
         },
         {
@@ -651,24 +651,24 @@
         "orientation": "detect"
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "[image_0_description]",
-            "to": "description"
-          },
-          {
-            "template": "[image_0_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "[image_0_description]",
+          "to": "description"
+        },
+        {
+          "template": "[image_0_summary]",
+          "to": "summary"
+        }
+      ],
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
-      "format": "webp",
+      "imageFormat": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -706,7 +706,7 @@
           "to": ["109", "inputs", "noise_seed"]
         },
         {
-          "from": "saveFilename",
+          "from": "saveImageFilename",
           "to": ["106", "inputs", "filename_prefix"]
         },
         {
@@ -724,10 +724,10 @@
         {
           "from": "framerate",
           "to": ["106", "inputs", "frame_rate"]
-        }        
+        }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
-    },    
+    },
     {
       "name": "Image to Video (WAN5b)",
       "options": {
@@ -739,23 +739,23 @@
         "orientation": "detect"
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
-            "to": "description"
-          },
-          {
-            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
+          "to": "description"
+        },
+        {
+          "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
+          "to": "summary"
+        }
+      ],
       "base": "wan5b-image-to-video.json",
-      "format": "webp",
+      "imageFormat": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -812,9 +812,10 @@
         {
           "from": "framerate",
           "to": ["106", "inputs", "frame_rate"]
-        }        
+        }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
     }
   ]
 }
+  

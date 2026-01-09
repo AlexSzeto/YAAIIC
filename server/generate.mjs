@@ -319,7 +319,7 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     
     // Create generationData object with the saved path
     const generationData = {
-      savePath: savePath,
+      saveImagePath: savePath,
       prompt: '',
       seed: 0,
       workflow: 'Uploaded Image',
@@ -445,10 +445,13 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
   try {
     const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
-    const { seed, savePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    const { seed, saveImagePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     
     // Create generationData as a copy of requestData
     const generationData = { ...requestData };
+    
+    // Extract savePath as local working variable for file operations
+    const savePath = saveImagePath;
     
     // Ensure ComfyUI WebSocket connection is fresh/active
     console.log(`Refreshing ComfyUI WebSocket connection for task ${taskId}...`);
@@ -468,7 +471,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     resetProgressLog();
     
     console.log('Using seed:', seed);
-    console.log('Using savePath:', savePath);
+    console.log('Using saveImagePath:', saveImagePath);
     
     // Log inpaint-specific parameters for debugging purposes
     if (inpaint) {
@@ -497,9 +500,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
-    // saveFilename: filename portion of savePath, no folder or extension
-    if (savePath) {
-      generationData.saveFilename = path.basename(savePath, path.extname(savePath));
+    // saveImageFilename: filename portion of saveImagePath, no folder or extension
+    if (saveImagePath) {
+      generationData.saveImageFilename = path.basename(saveImagePath, path.extname(saveImagePath));
     }
     // storagePath: absolute path to /storage folder
     generationData.storagePath = path.join(actualDirname, 'storage');
@@ -699,9 +702,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
         console.log(`Extracted output path: ${actualOutputPath}`);
         
         // Replace extension based on format parameter if provided
-        if (workflowConfig.format) {
+        if (workflowConfig.imageFormat) {
           // Extract extension from format (e.g., "image/webp" -> "webp")
-          const formatExtension = workflowConfig.format;
+          const formatExtension = workflowConfig.imageFormat;
           const extractedDir = path.dirname(actualOutputPath);
           const extractedBasename = path.basename(actualOutputPath, path.extname(actualOutputPath));
           actualOutputPath = path.join(extractedDir, `${extractedBasename}.${formatExtension}`);
