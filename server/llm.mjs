@@ -321,8 +321,8 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     // Extract prompt text from promptData.prompt or promptData.template
     let processedPrompt = prompt || template;
     
-    // Replace bracketed placeholders (e.g., [description]) with values from dataObject
-    const bracketPattern = /\[(\w+)\]/g;
+    // Replace double curly brace placeholders (e.g., {{description}}) with values from dataObject
+    const bracketPattern = /\{\{(\w+)\}\}/g;
     processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
       return dataObject[key] || match;
     });

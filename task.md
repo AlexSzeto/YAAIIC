@@ -44,6 +44,14 @@ New input types:
    2. Rename media data attribute `saveFilename` to `saveImageFilename`
    3. Rename media data attribute `format` to `imageFormat`
 
+[x] Refactor template format to support music generation lyric prompts (change brackets [] to double curly braces {{}})
+   1. In `server/llm.mjs`, update template parsing logic to use double curly braces `{{}}` instead of square brackets `[]`
+   2. Update the regex pattern that matches template variable placeholders from `\[variable\]` to `{{variable}}`
+   3. In `server/resource/comfyui-workflows.json`, update all template strings in `preGenerationTasks` and `postGenerationTasks` to use `{{}}` syntax
+   4. Update any template strings that reference variables like `[description]`, `[summary]`, `[image_0_summary]` to use `{{description}}`, `{{summary}}`, `{{image_0_summary}}` etc.
+   5. Test that template replacement still works correctly with the new syntax
+   6. Verify that existing generation and regeneration tasks using templates continue to function
+
 [] Implement audio file type support in workflows configuration
    1. In `server/resource/comfyui-workflows.json`, add new workflow option property `type` with values: "image", "video", or "audio"
    2. Update existing image workflows to explicitly set `"type": "image"`
@@ -53,14 +61,6 @@ New input types:
    6. Audio workflows will require an additional set of output path attributes to be defined: `saveAudioPath` and `saveAudioFilename`
    7. Update workflow schema to support `audioOutputNode` in addition to `finalNode` for dual outputs
    8. Create sample ComfyUI workflow JSON files for audio generation in `server/resource/`
-
-[] Refactor template format to support music generation lyric prompts (change brackets [] to double curly braces {{}})
-   1. In `server/llm.mjs`, update template parsing logic to use double curly braces `{{}}` instead of square brackets `[]`
-   2. Update the regex pattern that matches template variable placeholders from `\[variable\]` to `{{variable}}`
-   3. In `server/resource/comfyui-workflows.json`, update all template strings in `preGenerationTasks` and `postGenerationTasks` to use `{{}}` syntax
-   4. Update any template strings that reference variables like `[description]`, `[summary]`, `[image_0_summary]` to use `{{description}}`, `{{summary}}`, `{{image_0_summary}}` etc.
-   5. Test that template replacement still works correctly with the new syntax
-   6. Verify that existing generation and regeneration tasks using templates continue to function
    
 [] Inject `ollamaAPIPath` into generation data
    1. In `server/server.mjs`, pass `config.ollamaAPIPath` to the `handleMediaGeneration()` function
