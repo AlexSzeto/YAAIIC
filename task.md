@@ -97,7 +97,7 @@ New input types:
    4. Use appropriate form field name ('audio' or 'image') based on file type
    5. Update validation messages to reference "image or audio file"
 
-[] Add audio player component overlay for generation view
+[x] Add audio player component overlay for generation view
    1. Create new component `public/js/custom-ui/audio-player.mjs` for audio playback
    2. Audio player should have play/pause button, progress bar, current time and duration display
    3. Style audio player as an overlay that sits on top of the album image

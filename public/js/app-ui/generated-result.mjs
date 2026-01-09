@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { html, Component } from 'htm/preact';
 import { Button } from '../custom-ui/button.mjs';
 import { Tags } from '../custom-ui/tags.mjs';
+import { AudioPlayer } from '../custom-ui/audio-player.mjs';
 import { sendToClipboard } from '../util.mjs';
 import { createImageModal } from '../custom-ui/modal.mjs';
 
@@ -50,7 +51,7 @@ export function GeneratedResult({
       <h3 className="generated-result-title">Generated Result</h3>
       
       <div className="generated-image-content">
-        <div className="generated-image-left">
+        <div className="generated-image-left" style="position: relative;">
           <img 
             src=${image.imageUrl} 
             alt=${image.name || 'Generated Image'} 
@@ -58,6 +59,9 @@ export function GeneratedResult({
             style="cursor: pointer;"
             onClick=${() => createImageModal(image.imageUrl, true)}
           />
+          ${image.audioUrl ? html`
+            <${AudioPlayer} audioUrl=${image.audioUrl} />
+          ` : null}
         </div>
 
         <div className="generated-image-right">
