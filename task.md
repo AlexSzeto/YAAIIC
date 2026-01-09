@@ -11,7 +11,7 @@ New input types:
 
 ## Tasks
 
-[] Rename image-specific variables and endpoints to media-specific equivalents (batch 1)
+[x] Rename image-specific variables and endpoints to media-specific equivalents (batch 1)
    1. In `server/server.mjs`, rename `imageData` object to `mediaData`
 
 [] Rename image-specific variables and endpoints to media-specific equivalents (batch 2)
@@ -37,6 +37,7 @@ New input types:
    2. Update `public/js/app.mjs` to use `/media` route for file URLs
    3. Update `public/js/gallery-preview.mjs` to use new endpoint names
    4. Update references server side for import statements and function calls
+   5. On all client side mjs files, rename `imageData` variables to `mediaData`
 
 [] Rename media data attributes
    1. Rename media data attribute `savePath` to `saveImagePath`
