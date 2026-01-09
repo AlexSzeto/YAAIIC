@@ -134,15 +134,15 @@ app.use(express.json());
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 2 // Allow up to 2 files (image + mask)
+    fileSize: 100 * 1024 * 1024, // 100MB limit for audio files
+    files: 2 // Allow up to 2 files (image + mask, or audio + reference)
   },
   fileFilter: (req, file, cb) => {
-    // Accept image files only
-    if (file.mimetype.startsWith('image/')) {
+    // Accept image and audio files
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('audio/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('Only image and audio files are allowed'), false);
     }
   }
 });

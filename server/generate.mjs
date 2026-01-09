@@ -53,7 +53,7 @@ export {
 };
 
 // Function to upload image to ComfyUI
-export async function uploadFileToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
+export async function uploadFileToComfyUI(fileBuffer, filename, fileType = "image", storageType = "input", overwrite = false) {
   if (!comfyUIAPIPath) {
     throw new Error('Generate module not initialized - ComfyUI API path not available');
   }
@@ -63,18 +63,35 @@ export async function uploadFileToComfyUI(imageBuffer, filename, imageType = "in
       // Create FormData using the form-data package
       const formData = new FormData();
       
-      // Append the image buffer as a stream
-      formData.append('image', imageBuffer, {
+      // Determine content type and field name based on file type
+      let contentType, fieldName, uploadEndpoint;
+      if (fileType === 'audio') {
+        // For audio files, determine content type from filename extension
+        const ext = filename.split('.').pop().toLowerCase();
+        contentType = ext === 'mp3' ? 'audio/mpeg' : 
+                     ext === 'ogg' ? 'audio/ogg' :
+                     ext === 'wav' ? 'audio/wav' :
+                     ext === 'flac' ? 'audio/flac' : 'audio/mpeg';
+        fieldName = 'audio';
+        uploadEndpoint = '/upload/audio';
+      } else {
+        contentType = 'image/png';
+        fieldName = 'image';
+        uploadEndpoint = '/upload/image';
+      }
+      
+      // Append the file buffer as a stream
+      formData.append(fieldName, fileBuffer, {
         filename: filename,
-        contentType: 'image/png'
+        contentType: contentType
       });
-      formData.append('type', imageType);
+      formData.append('type', storageType);
       formData.append('overwrite', overwrite.toString().toLowerCase());
       
-      console.log(`Uploading image to ComfyUI: ${filename} (type: ${imageType})`);
+      console.log(`Uploading ${fileType} to ComfyUI: ${filename} (type: ${storageType})`);
       
       // Parse the URL to determine if it's HTTP or HTTPS
-      const url = new URL(`${comfyUIAPIPath}/upload/image`);
+      const url = new URL(`${comfyUIAPIPath}${uploadEndpoint}`);
       const httpModule = url.protocol === 'https:' ? https : http;
       
       // Create the request
@@ -299,12 +316,16 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
     
+    // Detect file type
+    const isAudio = file.mimetype.startsWith('audio/');
+    const fileTypeLabel = isAudio ? 'Audio' : 'Media';
+    
     // Emit progress: Uploading file
-    emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, 'Uploading file...');
+    emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, `Uploading ${fileTypeLabel.toLowerCase()}...`);
     
     // Generate unique filename with timestamp
     const timestamp = Date.now();
-    const ext = path.extname(file.originalname) || '.png';
+    const ext = path.extname(file.originalname) || (isAudio ? '.mp3' : '.png');
     const filename = `upload_${timestamp}${ext}`;
     
     // Save file to storage directory
@@ -315,7 +336,66 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     
     const savePath = path.join(storageFolder, filename);
     fs.writeFileSync(savePath, file.buffer);
-    console.log(`Image saved to: ${savePath}`);
+    console.log(`${fileTypeLabel} saved to: ${savePath}`);
+    
+    // Handle audio files differently
+    if (isAudio) {
+      // For audio files, generate album cover using defaultAudioGenerationWorkflow
+      if (!workflowsConfig.defaultAudioGenerationWorkflow) {
+        throw new Error('No default audio generation workflow configured');
+      }
+      
+      // Extract name from filename (will be implemented in next task)
+      const baseName = file.originalname.replace(ext, '');
+      
+      // TODO: Generate album cover using the defaultAudioGenerationWorkflow
+      // For now, create a placeholder entry
+      const generationData = {
+        saveAudioPath: savePath,
+        audioUrl: `/media/${filename}`,
+        audioFormat: ext.substring(1), // Remove leading dot
+        saveImagePath: '', // Will be populated after album cover generation
+        imageUrl: '', // Will be populated after album cover generation
+        prompt: '',
+        seed: 0,
+        workflow: 'Uploaded Audio',
+        name: baseName,
+        description: '(description unavailable for uploaded audio)',
+        summary: '(summary unavailable for uploaded audio)',
+        tags: '(tags unavailable for uploaded audio)',
+        inpaint: false,
+        inpaintArea: null,
+        timeTaken: 0
+      };
+      
+      // Emit progress: Saving to database
+      emitProgressUpdate(taskId, { percentage: 90, value: 3, max: 4 }, 'Saving to database...');
+      
+      // Calculate time taken
+      const startTime = taskTimers.get(taskId);
+      const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+      generationData.timeTaken = timeTaken;
+      
+      // Save to database
+      if (addMediaDataEntry) {
+        addMediaDataEntry(generationData);
+        console.log('Audio data entry saved with UID:', generationData.uid);
+      }
+      
+      // Emit completion
+      emitTaskCompletion(taskId, {
+        ...generationData,
+        maxValue: 4
+      });
+      
+      // Clean up timer
+      taskTimers.delete(taskId);
+      
+      console.log(`Audio upload task ${taskId} completed successfully`);
+      return;
+    }
+    
+    // For image files, continue with existing logic
     
     // Create generationData object with the saved path
     const generationData = {
@@ -399,7 +479,7 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     taskTimers.delete(taskId);
     
     // Emit error
-    emitTaskErrorByTaskId(taskId, 'Failed to process uploaded image', error.message);
+    emitTaskErrorByTaskId(taskId, 'Failed to process uploaded media', error.message);
   }
 }
 

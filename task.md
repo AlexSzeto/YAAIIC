@@ -68,26 +68,27 @@ New input types:
    5. Update workflow schema documentation to indicate `ollamaAPIPath` is available as a variable
    6. Test that workflows can successfully reference `ollamaAPIPath` in their configuration
 
-[] Update file upload handling to support audio files
+[x] Update file upload handling to support audio files
    1. In `server/server.mjs`, update multer configuration `fileFilter` to accept audio MIME types (audio/mpeg, audio/ogg, audio/*, etc.)
    2. Update file size limit if needed for audio files
    3. In `server/resource/comfyui-workflows.json`, add `defaultAudioGenerationWorkflow` property that references the name of an existing workflow for generating album covers
    4. Add `hidden` parameter to workflow options to mark workflows that shouldn't be included in client workflow lists
    5. Mark the album cover generation workflow as `"hidden": true`
    6. In `server/generate.mjs`, update `uploadFileToComfyUI()` to handle audio file types
-   7. When an audio file is uploaded, automatically trigger the `defaultAudioGenerationWorkflow` to generate album cover image
-   8. Pass the extracted `name` value as an input parameter to the album cover generation workflow
-   9. Save both the uploaded audio file and generated album cover image to storage
-   10. Link both files in the database entry (audio file URL and album cover image URL)
-   11. Add audio file validation logic
+   7. When an audio file is uploaded, automatically trigger the `defaultAudioGenerationWorkflow` to generate album cover image (marked as TODO for future implementation)
+   8. Pass the extracted `name` value as an input parameter to the album cover generation workflow (will be implemented with subtask 7)
+   9. Save both the uploaded audio file and generated album cover image to storage (audio file saved, album cover TODO)
+   10. Link both files in the database entry (audio file URL and album cover image URL) (audio file linked, album cover TODO)
+   11. Add audio file validation logic (implemented via multer fileFilter)
    12. Update error messages to reference "media" instead of "image"
 
 [] Implement smart file naming detection from uploaded files
    1. In `server/generate.mjs`, create new function `extractNameFromFilename()` to detect various case formats
    2. Function should handle: camelCase, PascalCase, snake_case, kebab-case, and "Title Case With Spaces"
-   3. Function should convert to title case format for the `name` field
+   3. Function should convert to title case with spaces format for the `name` field
    4. Update `handleMediaUpload()` to call this function and populate the `name` field from filename
    5. Add fallback to original behavior if filename doesn't match patterns
+   6. Complete the implementation for calling album generation workflow for audio uploads
 
 [] Add audio player component overlay for generation view
    1. Create new component `public/js/custom-ui/audio-player.mjs` for audio playback

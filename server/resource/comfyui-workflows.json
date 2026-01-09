@@ -24,6 +24,7 @@
       "to": "tags"
     }
   ],
+  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
   "workflows": [
     {
       "name": "Text to Image (Album Cover)",
@@ -33,7 +34,8 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "hidden": true
       },
       "postGenerationTasks": [
         {

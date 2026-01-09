@@ -184,6 +184,11 @@
           "type": "string",
           "description": "Output orientation handling",
           "enum": ["portrait", "landscape", "detect"]
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Whether to hide this workflow from client workflow lists",
+          "default": false
         }
       },
       "required": ["type"],
