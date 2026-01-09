@@ -43,7 +43,20 @@ New input types:
    8. Create sample ComfyUI workflow JSON files for audio generation in `server/resource/`
 
 [] Refactor template format to support music generation lyric prompts (change brackets [] to double curly braces {{}})
+   1. In `server/llm.mjs`, update template parsing logic to use double curly braces `{{}}` instead of square brackets `[]`
+   2. Update the regex pattern that matches template variable placeholders from `\[variable\]` to `{{variable}}`
+   3. In `server/resource/comfyui-workflows.json`, update all template strings in `preGenerationTasks` and `postGenerationTasks` to use `{{}}` syntax
+   4. Update any template strings that reference variables like `[description]`, `[summary]`, `[image_0_summary]` to use `{{description}}`, `{{summary}}`, `{{image_0_summary}}` etc.
+   5. Test that template replacement still works correctly with the new syntax
+   6. Verify that existing generation and regeneration tasks using templates continue to function
+   
 [] Inject `ollamaAPIPath` into generation data
+   1. In `server/server.mjs`, pass `config.ollamaAPIPath` to the `handleMediaGeneration()` function
+   2. In `server/generate.mjs`, update `handleMediaGeneration()` to accept `ollamaAPIPath` parameter
+   3. Add `ollamaAPIPath` to the generation data object that gets passed to workflow processing
+   4. Ensure `ollamaAPIPath` is available for use in workflow `replace` mappings
+   5. Update workflow schema documentation to indicate `ollamaAPIPath` is available as a variable
+   6. Test that workflows can successfully reference `ollamaAPIPath` in their configuration
 
 [] Update file upload handling to support audio files
    1. In `server/server.mjs`, update multer configuration `fileFilter` to accept audio MIME types (audio/mpeg, audio/ogg, audio/*, etc.)
