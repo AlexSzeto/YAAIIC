@@ -28,7 +28,7 @@ let comfyUIAPIPath = null;
 let lastUsedWorkflow = null;
 
 // Function to add image data entry (will be set by server.mjs)
-let addImageDataEntry = null;
+let addMediaDataEntry = null;
 
 // Timer map to track start times for each task
 const taskTimers = new Map(); // taskId -> startTime
@@ -39,8 +39,8 @@ export function initializeGenerateModule(apiPath) {
   console.log('Generate module initialized with ComfyUI API path:', apiPath);
 }
 
-export function setAddImageDataEntry(func) {
-  addImageDataEntry = func;
+export function setAddMediaDataEntry(func) {
+  addMediaDataEntry = func;
 }
 
 // Re-export SSE functions for backwards compatibility
@@ -376,8 +376,8 @@ async function processUploadTask(taskId, file, workflowsConfig) {
     if (!generationData.tags) generationData.tags = '';
     
     // Save to database
-    if (addImageDataEntry) {
-      addImageDataEntry(generationData);
+    if (addMediaDataEntry) {
+      addMediaDataEntry(generationData);
       console.log('Image data entry saved with UID:', generationData.uid);
     }
     
@@ -820,8 +820,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig) {
     if (!generationData.tags) generationData.tags = '';
 
     // Save image data to database using entire generationData object
-    if (addImageDataEntry) {
-      addImageDataEntry(generationData);
+    if (addMediaDataEntry) {
+      addMediaDataEntry(generationData);
       console.log('Image data entry saved to database with UID:', generationData.uid);
     }
 

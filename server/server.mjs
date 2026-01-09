@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
+import { handleImageGeneration, setAddMediaDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
@@ -22,7 +22,7 @@ const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') 
 let mediaData = { imageData: [], folders: [], currentFolder: '' };
 
 // Load image data from JSON file
-function loadImageData() {
+function loadMediaData() {
   try {
     const imageDataPath = path.join(actualDirname, 'database', 'image-data.json');
     if (fs.existsSync(imageDataPath)) {
@@ -52,7 +52,7 @@ function loadImageData() {
 }
 
 // Save image data to JSON file
-function saveImageData() {
+function saveMediaData() {
   try {
     const databaseDir = path.join(actualDirname, 'database');
     const imageDataPath = path.join(databaseDir, 'image-data.json');
@@ -71,7 +71,7 @@ function saveImageData() {
 }
 
 // Add image data entry
-export function addImageDataEntry(entry) {
+export function addMediaDataEntry(entry) {
   const now = new Date();
   entry.timestamp = now.toISOString();
   entry.uid = now.getTime(); // Generate UID using Date.getTime()
@@ -80,7 +80,7 @@ export function addImageDataEntry(entry) {
   entry.folder = mediaData.currentFolder || '';
   
   mediaData.imageData.push(entry);
-  saveImageData();
+  saveMediaData();
 }
 
 // Load configuration
@@ -111,7 +111,7 @@ try {
   initializeServices(config);
   
   // Set up the image data entry function for generate.mjs
-  setAddImageDataEntry(addImageDataEntry);
+  setAddMediaDataEntry(addMediaDataEntry);
   
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -673,7 +673,7 @@ app.post('/regenerate', async (req, res) => {
       }
       
       // Save updated image data
-      saveImageData();
+      saveMediaData();
       
       // Remove temporary savePath field before sending to client
       const { savePath, ...imageDataForClient } = imageEntry;
@@ -836,7 +836,7 @@ app.post('/folder', (req, res) => {
     }
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
@@ -892,7 +892,7 @@ app.put('/folder', (req, res) => {
     console.log(`Renamed folder from "${oldLabel}" to "${folder.label}" (${folder.uid})`);
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
@@ -962,7 +962,7 @@ app.delete('/folder/:uid', (req, res) => {
     }
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
@@ -1132,7 +1132,7 @@ app.post('/generate/inpaint', upload.fields([
 // Initialize services and start server
 async function startServer() {
   // Load image data on server initialization
-  loadImageData();
+  loadMediaData();
   
   await checkAndStartServices();
   

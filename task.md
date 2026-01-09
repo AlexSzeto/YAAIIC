@@ -14,7 +14,7 @@ New input types:
 [x] Rename image-specific variables and endpoints to media-specific equivalents (batch 1)
    1. In `server/server.mjs`, rename `imageData` object to `mediaData`
 
-[] Rename image-specific variables and endpoints to media-specific equivalents (batch 2)
+[x] Rename image-specific variables and endpoints to media-specific equivalents (batch 2)
    1. Rename `loadImageData()` function to `loadMediaData()`
    2. Rename `saveImageData()` function to `saveMediaData()`
    3. Rename `addImageDataEntry()` function to `addMediaDataEntry()`
