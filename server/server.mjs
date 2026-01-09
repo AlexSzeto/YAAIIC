@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddMediaDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
+import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
@@ -279,7 +279,7 @@ app.post('/generate', upload.any(), async (req, res) => {
       console.log('Generated random seed:', req.body.seed);
     }
     
-    // Create savePath similar to how handleImageGeneration creates fullPath
+    // Create savePath similar to how handleMediaGeneration creates fullPath
     const storageFolder = path.join(actualDirname, 'storage');
     if (!fs.existsSync(storageFolder)) {
       fs.mkdirSync(storageFolder, { recursive: true });
@@ -324,7 +324,7 @@ app.post('/generate', upload.any(), async (req, res) => {
             const uploadFilename = `image_${from}_${timestamp}.png`;
             
             // Upload image to ComfyUI
-            const uploadResult = await uploadImageToComfyUI(imageFile.buffer, uploadFilename, "input", true);
+            const uploadResult = await uploadFileToComfyUI(imageFile.buffer, uploadFilename, "input", true);
             console.log(`Image uploaded successfully: ${uploadFilename}`);
             
             // Store the filename in request body using the specified variable name
@@ -333,7 +333,7 @@ app.post('/generate', upload.any(), async (req, res) => {
           }
         }
         
-        // Remove files from request body before calling handleImageGeneration
+        // Remove files from request body before calling handleMediaGeneration
         delete req.files;
       } catch (uploadError) {
         console.error('Failed to upload images to ComfyUI:', uploadError);
@@ -342,7 +342,7 @@ app.post('/generate', upload.any(), async (req, res) => {
     }
     
     // Call handleImageGeneration with workflow data and modifications
-    handleImageGeneration(req, res, workflowData);
+    handleMediaGeneration(req, res, workflowData);
   } catch (error) {
     console.error('Error in image endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -1063,8 +1063,8 @@ app.post('/generate/inpaint', upload.fields([
       console.log('Uploading images to ComfyUI...');
       
       const [imageUploadResult, maskUploadResult] = await Promise.all([
-        uploadImageToComfyUI(imageFile.buffer, imageFilename, "input", true),
-        uploadImageToComfyUI(maskFile.buffer, maskFilename, "input", true)
+        uploadFileToComfyUI(imageFile.buffer, imageFilename, "input", true),
+        uploadFileToComfyUI(maskFile.buffer, maskFilename, "input", true)
       ]);
       
       console.log('Both images uploaded successfully to ComfyUI');
@@ -1106,11 +1106,11 @@ app.post('/generate/inpaint', upload.fields([
         req.body.inpaintArea = parsedInpaintArea;
       }
       
-      // Remove uploads data from request body before calling handleImageGeneration
+      // Remove uploads data from request body before calling handleMediaGeneration
       delete req.body.uploads;
       
       // Call handleImageGeneration with workflow data and modifications
-      handleImageGeneration(req, res, workflowData);
+      handleMediaGeneration(req, res, workflowData);
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);

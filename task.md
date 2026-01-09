@@ -26,7 +26,7 @@ New input types:
    3. Update references server side for import statements and function calls
    4. Update all client-side JavaScript files in `public/js/` to use new `/media-data` endpoint
 
-[] Rename image-specific variables and endpoints to media-specific equivalents (batch 4)
+[x] Rename image-specific variables and endpoints to media-specific equivalents (batch 4)
    1. In `server/generate.mjs`, rename `handleImageGeneration()` to `handleMediaGeneration()`
    2. Rename `handleImageUpload()` to `handleMediaUpload()`
    3. Rename `uploadImageToComfyUI()` to `uploadFileToComfyUI()` and update to accept file type parameter

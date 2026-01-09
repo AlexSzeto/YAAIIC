@@ -53,7 +53,7 @@ export {
 };
 
 // Function to upload image to ComfyUI
-export async function uploadImageToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
+export async function uploadFileToComfyUI(imageBuffer, filename, imageType = "input", overwrite = false) {
   if (!comfyUIAPIPath) {
     throw new Error('Generate module not initialized - ComfyUI API path not available');
   }
@@ -267,7 +267,7 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
 }
 
 // Handler for upload image processing
-export async function handleImageUpload(file, workflowsConfig) {
+export async function handleMediaUpload(file, workflowsConfig) {
   // Generate unique task ID
   const taskId = generateTaskId();
   
@@ -404,7 +404,7 @@ async function processUploadTask(taskId, file, workflowsConfig) {
 }
 
 // Main image generation handler
-export async function handleImageGeneration(req, res, workflowConfig) {
+export async function handleMediaGeneration(req, res, workflowConfig) {
   const { base: workflowBasePath } = workflowConfig;
   const { workflow } = req.body;
   
