@@ -151,7 +151,7 @@ export function GenerationForm({
         <${Button} 
           variant="primary"
           icon="upload"
-          title="Upload Image"
+          title="Upload Media"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
           disabled=${isGenerating}
         >

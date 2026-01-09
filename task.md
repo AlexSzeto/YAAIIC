@@ -90,6 +90,13 @@ New input types:
    [x] 5. Add processing for the name field in the upload endpoint. If `name` is provided, add it to the `generationData` before starting `defaultImageGenerationTasks` or running `defaultAudioGenerationWorkflow`
    [x] 6. Complete the implementation for calling album generation workflow for audio uploads
 
+[x] Update client upload button to support audio formats
+   1. Update `accept` attribute in main upload input to accept both image and audio files
+   2. Update `handleUploadFile` to detect file type (image vs audio)
+   3. Route audio files to `/upload/audio` endpoint and images to `/upload/image` endpoint
+   4. Use appropriate form field name ('audio' or 'image') based on file type
+   5. Update validation messages to reference "image or audio file"
+
 [] Add audio player component overlay for generation view
    1. Create new component `public/js/custom-ui/audio-player.mjs` for audio playback
    2. Audio player should have play/pause button, progress bar, current time and duration display

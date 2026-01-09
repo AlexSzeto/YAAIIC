@@ -260,6 +260,38 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
   }
 });
 
+// POST endpoint for uploading audio files
+app.post('/upload/audio', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file provided' });
+    }
+    
+    // Initialize sent-prompt.json logging
+    resetPromptLog();
+    resetProgressLog();
+    
+    console.log('Received audio upload:', req.file.originalname);
+    
+    // Extract optional name field from request body
+    const extractedName = req.body.name || null;
+    
+    // Create upload task and get task ID
+    const taskId = await handleMediaUpload(req.file, comfyuiWorkflows, extractedName);
+    
+    // Return task ID immediately
+    res.json({
+      success: true,
+      taskId: taskId,
+      message: 'Upload task created'
+    });
+    
+  } catch (error) {
+    console.error('Error uploading audio:', error);
+    res.status(500).json({ error: 'Failed to upload audio', details: error.message });
+  }
+});
+
 // POST endpoint for ComfyUI image generation
 app.post('/generate', upload.any(), async (req, res) => {
   try {

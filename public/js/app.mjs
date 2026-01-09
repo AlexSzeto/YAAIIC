@@ -623,14 +623,21 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    // Determine file type
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/');
+    
+    if (!isImage && !isAudio) {
+      toast.error('Please select an image or audio file');
       return;
     }
     
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      
+      // Use appropriate form field name based on file type
+      const fieldName = isAudio ? 'audio' : 'image';
+      formData.append(fieldName, file);
       
       // Extract name from filename
       const extractedName = extractNameFromFilename(file.name);
@@ -638,7 +645,10 @@ function App() {
         formData.append('name', extractedName);
       }
       
-      const result = await fetchJson('/upload/image', {
+      // Use appropriate endpoint based on file type
+      const endpoint = isAudio ? '/upload/audio' : '/upload/image';
+      
+      const result = await fetchJson(endpoint, {
         method: 'POST',
         body: formData
       });
@@ -785,7 +795,7 @@ function App() {
         type="file" 
         id="upload-file-input" 
         style="display: none" 
-        accept="image/*"
+        accept="image/*,audio/*"
         onChange=${handleUploadFile}
       />
       
