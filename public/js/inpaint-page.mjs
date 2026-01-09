@@ -149,7 +149,7 @@ function InpaintApp() {
         }
         
         // Load image data
-        const data = await fetchJson(`/image-data/${numericUID}`, {}, {
+        const data = await fetchJson(`/media-data/${numericUID}`, {}, {
           maxRetries: 2,
           retryDelay: 1000,
           showUserFeedback: true,
@@ -295,7 +295,7 @@ function InpaintApp() {
     if (data.result && data.result.uid) {
       try {
         // Load the new image data
-        const newImageData = await fetchJson(`/image-data/${data.result.uid}`);
+        const newImageData = await fetchJson(`/media-data/${data.result.uid}`);
         setImageData(newImageData);
         
         // Add to history

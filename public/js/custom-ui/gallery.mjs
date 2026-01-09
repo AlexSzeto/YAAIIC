@@ -191,7 +191,7 @@ export function Gallery({
     try {
       if (window.showToast) window.showToast(`Deleting ${selectedItems.length} ${itemText}...`);
 
-      const response = await fetchJson('/image-data/delete', {
+      const response = await fetchJson('/media-data/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uids: selectedItems })

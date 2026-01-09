@@ -24,7 +24,7 @@ let mediaData = { imageData: [], folders: [], currentFolder: '' };
 // Load image data from JSON file
 function loadMediaData() {
   try {
-    const imageDataPath = path.join(actualDirname, 'database', 'image-data.json');
+    const imageDataPath = path.join(actualDirname, 'database', 'media-data.json');
     if (fs.existsSync(imageDataPath)) {
       const data = fs.readFileSync(imageDataPath, 'utf8');
       mediaData = JSON.parse(data);
@@ -55,7 +55,7 @@ function loadMediaData() {
 function saveMediaData() {
   try {
     const databaseDir = path.join(actualDirname, 'database');
-    const imageDataPath = path.join(databaseDir, 'image-data.json');
+    const imageDataPath = path.join(databaseDir, 'media-data.json');
     
     // Create database directory if it doesn't exist
     if (!fs.existsSync(databaseDir)) {
@@ -350,7 +350,7 @@ app.post('/generate', upload.any(), async (req, res) => {
 });
 
 // GET endpoint for image data search
-app.get('/image-data', (req, res) => {
+app.get('/media-data', (req, res) => {
   try {
     const query = req.query.query || '';
     const tagsParam = req.query.tags || '';
@@ -437,7 +437,7 @@ app.get('/image-data', (req, res) => {
 });
 
 // GET endpoint for single image data by UID
-app.get('/image-data/:uid', (req, res) => {
+app.get('/media-data/:uid', (req, res) => {
   try {
     const uid = parseInt(req.params.uid);
     
@@ -467,7 +467,7 @@ app.get('/image-data/:uid', (req, res) => {
 });
 
 // DELETE endpoint for image data deletion
-app.delete('/image-data/delete', (req, res) => {
+app.delete('/media-data/delete', (req, res) => {
   try {
     const { uids } = req.body;
     

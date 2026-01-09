@@ -20,7 +20,7 @@ New input types:
    3. Rename `addImageDataEntry()` function to `addMediaDataEntry()`
    4. Update references server side for import statements and function calls
 
-[] Rename image-specific variables and endpoints to media-specific equivalents (batch 3)
+[x] Rename image-specific variables and endpoints to media-specific equivalents (batch 3)
    1. Rename database file `database/image-data.json` references to `database/media-data.json`
    2. Update server route `/image-data` to `/media-data` and all its variants (`/media-data/:uid`, `/media-data/delete`)
    3. Update references server side for import statements and function calls

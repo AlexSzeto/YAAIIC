@@ -106,7 +106,7 @@ function App() {
         }
 
         // Load recent history
-        const recent = await fetchJson('/image-data?limit=10');
+        const recent = await fetchJson('/media-data?limit=10');
         if (Array.isArray(recent)) {
           setHistory(recent);
           // Optionally set the first image as current
@@ -354,7 +354,7 @@ function App() {
     
     if (data.result && data.result.uid) {
       try {
-        const img = await fetchJson(`/image-data/${data.result.uid}`);
+        const img = await fetchJson(`/media-data/${data.result.uid}`);
         setGeneratedImage(img);
         
         // Add to history
@@ -422,7 +422,7 @@ function App() {
     if (!image) return;
 
     try {
-      await fetchJson('/image-data/delete', {
+      await fetchJson('/media-data/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uids: [image.uid] })
@@ -556,7 +556,7 @@ function App() {
         setCurrentFolder(selectedFolder);
         
         // Refresh gallery to show images from the new folder
-        const recent = await fetchJson(`/image-data?limit=10&folder=${selectedUid}`);
+        const recent = await fetchJson(`/media-data?limit=10&folder=${selectedUid}`);
         if (Array.isArray(recent)) {
           setHistory(recent);
           if (recent.length > 0) {
@@ -759,7 +759,7 @@ function App() {
             setIsGalleryOpen(false);
             setGallerySelectionMode({ active: false, index: -1 });
         }}
-        queryPath="/image-data"
+        queryPath="/media-data"
         folder=${currentFolder.uid}
         previewFactory=${createGalleryPreview}
         onSelect=${handleGallerySelect}
