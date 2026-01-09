@@ -83,11 +83,11 @@ New input types:
    12. Update error messages to reference "media" instead of "image"
 
 [] Implement smart file naming detection from uploaded files
-   1. In `server/generate.mjs`, create new function `extractNameFromFilename()` to detect various case formats
+   1. On the client `util.mjs`, create new function `extractNameFromFilename()` to detect various case formats
    2. Function should handle: camelCase, PascalCase, snake_case, kebab-case, and "Title Case With Spaces"
    3. Function should convert to title case with spaces format for the `name` field
-   4. Update `handleMediaUpload()` to call this function and populate the `name` field from filename
-   5. Add fallback to original behavior if filename doesn't match patterns
+   4. Update client handling before calling upload request to call this function and populate a new form field, `name`, or pass `null` if name detection is unsuccessful
+   5. Add processing for the name field in the upload endpoint. If `name` is provided, add it to the `generationData` before starting `defaultImageGenerationTasks` or running `defaultAudioGenerationWorkflow`
    6. Complete the implementation for calling album generation workflow for audio uploads
 
 [] Add audio player component overlay for generation view
