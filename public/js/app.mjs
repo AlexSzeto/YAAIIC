@@ -350,7 +350,8 @@ function App() {
         }
         
         // Append images
-        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageUrl', 'imageFormat'];
+        const mediaTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'uid'];
+        const imageTextFieldNames = [...mediaTextFieldNames, 'imageFormat'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
@@ -365,17 +366,21 @@ function App() {
           }
         });
         
+        const audioTextFieldNames = [...mediaTextFieldNames, 'audioFormat'];
         // Append audio files as blobs (from gallery selection)
         inputAudios.forEach((audio, index) => {
           if (audio && audio.blob) {
-            // Get the original filename extension from the audio URL
-            const ext = audio.url ? audio.url.split('.').pop() : 'mp3';
-            formData.append(`audio_${index}`, audio.blob, `audio_${index}.${ext}`);
+            // Extract the original filename from the audio URL (e.g., "/media/audio_123.mp3" -> "audio_123.mp3")
+            const originalFilename = audio.url ? audio.url.split('/').pop() : `audio_${index}.mp3`;
+            formData.append(`audio_${index}`, audio.blob, originalFilename);
             
-            // Also send the full media data UID if available
-            if (audio.mediaData && audio.mediaData.uid) {
-              formData.append(`audio_${index}_uid`, audio.mediaData.uid);
-            }
+            audioTextFieldNames.forEach(fieldName => {
+              // Check top-level (legacy/upload) or nested in mediaData (selected)
+              const value = audio.mediaData?.[fieldName] || audio[fieldName];
+              if (value) {
+                formData.append(`audio_${index}_${fieldName}`, value);
+              }
+            });
           }
         });
         

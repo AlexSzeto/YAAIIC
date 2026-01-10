@@ -72,8 +72,8 @@ export async function uploadFileToComfyUI(fileBuffer, filename, fileType = "imag
                      ext === 'ogg' ? 'audio/ogg' :
                      ext === 'wav' ? 'audio/wav' :
                      ext === 'flac' ? 'audio/flac' : 'audio/mpeg';
-        fieldName = 'audio';
-        uploadEndpoint = '/upload/audio';
+        fieldName = 'image'; // ComfyUI uses 'image' field for all file uploads
+        uploadEndpoint = '/upload/image'; // ComfyUI uses /upload/image for all file types
       } else {
         contentType = 'image/png';
         fieldName = 'image';
