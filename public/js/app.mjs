@@ -785,13 +785,22 @@ function App() {
         isSelectDisabled=${(() => {
           // Disable if no workflow or workflow doesn't need images
           if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-          // Disable if the image is a video file
-          const imageUrl = generatedImage?.imageUrl || '';
-          const isNotImage = /\.(jpg|png)$/i.test(imageUrl);
-          if (isNotImage) return true;
+          // Disable if the media type doesn't match the workflow type
+          const workflowType = workflow.type || 'image';
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== workflowType) return true;
           // Disable if all slots are filled
           const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
           if (filledCount >= workflow.inputImages) return true;
+          // TODO: account for inputAudio slots when implementing input audios
+          return false;
+        })()}
+        isInpaintDisabled=${(() => {
+          // Disable inpaint if no UID or handler
+          // if (!generatedImage?.uid || !handleInpaint) return true;
+          // Disable if the media type is not an image
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== 'image') return true;
           return false;
         })()}
       />

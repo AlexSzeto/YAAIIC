@@ -36,11 +36,6 @@ let updatedCount = 0;
 
 // Process each entry
 mediaData.forEach((entry, index) => {
-  // Skip entries that already have a type
-  if (entry.type) {
-    return;
-  }
-  
   let detectedType = null;
   
   // Check if entry has audio files
@@ -50,10 +45,7 @@ mediaData.forEach((entry, index) => {
   // Check if entry is video based on filename extension (webp for video) or workflow name
   else if (
     entry.saveImageFilename?.endsWith('.webp') ||
-    entry.workflow?.toLowerCase().includes('video') ||
-    entry.frames ||
-    entry.framerate ||
-    entry.length
+    entry.workflow?.toLowerCase().includes('video')
   ) {
     detectedType = 'video';
   }

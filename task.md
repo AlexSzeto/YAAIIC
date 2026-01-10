@@ -212,17 +212,8 @@ New input types:
 
 [x] On the workflow selector, add a dropdown select to the left of the current workflow select with the label "Workflow Type" and a list of type options. Filter the workflows available for selection for the existing, full width select component by the currently selected type. Allow the options to be passed in as parameters with `label` and `value`, and if only one item is passed in, hide the workflow type select. Pass in "Image", "Video", "Audio" for the index page and just "Inpaint" for the inpaint page.
 
-[] Update the generation display "select" action button to filter based on the `type` attribute.
-   1. In `public/js/app.mjs`, locate the generation view where the "select" action button is rendered
-   2. Find the handler function that opens the gallery in selection mode (likely `handleSelectImage()` or similar)
-   3. Determine the required media type based on the current workflow configuration (check if workflow has `imageInputs`, `audioInputs`, or video-specific properties)
-   4. Pass the required media type as a filter parameter when opening the gallery in selection mode
-   5. Update gallery opening logic to accept a `filterType` parameter (e.g., "image", "audio", "video")
-   6. In `public/js/gallery-preview.mjs` or relevant gallery code, implement filtering logic to show only media entries matching the filter type
-   7. Check each media entry's `type` property against the filter and hide non-matching entries
-   8. Update the gallery UI to show an indicator when filtering is active (e.g., "Showing: Images only")
-   9. Test that clicking "select" from an image workflow only shows image entries in the gallery
-   10. Test that video and audio workflows (when implemented) filter correctly as well
+[x] Rewrite `isSelectDisabled` property for `GeneratedResult` to base the required image type on the current workflow's `type` attribute.
+[x] Insert `isInpaintDisabled` property for `GeneratedResult` and move the logic into `app.mjs`. Rewrite the type detection logic using the media data's `type` attribute.
 
 [] Update the gallery select mode to filter for specific generation types (image/audio/video), hiding unfit formats similar to how it currently behaves (which is to disable entries not matching the desired format). Refactor the image select component to use the filter.
    1. In `public/js/gallery-preview.mjs`, locate the code that handles selection mode rendering and disabling logic

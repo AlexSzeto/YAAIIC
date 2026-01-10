@@ -18,7 +18,8 @@ export function GeneratedResult({
   onSelectAsInput,
   onEdit,
   onRegenerate,
-  isSelectDisabled = false
+  isSelectDisabled = false,
+  isInpaintDisabled = false
 }) {
   if (!image) return null;
 
@@ -159,7 +160,7 @@ export function GeneratedResult({
           variant="primary" 
           icon="image"
           onClick=${() => onInpaint && onInpaint(image)}
-          disabled=${!image.uid || !onInpaint || /\.(webm|mp4|webp|gif)$/i.test(image.imageUrl || '')}
+          disabled=${isInpaintDisabled}
           title="Inpaint this image"
         >
           Inpaint
