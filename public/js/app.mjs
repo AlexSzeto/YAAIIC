@@ -307,11 +307,17 @@ function App() {
           formData.append('name', formState.name.trim());
         }
         
-        // Video params
-        if (workflow.type === 'video') {
-          formData.append('frames', normalizeFrameCount(formState.length));
-          formData.append('framerate', formState.framerate);
-          formData.append('orientation', orientation);
+        // Add orientation for workflows that need it
+        formData.append('orientation', orientation);
+        
+        // Add all extra inputs from workflow configuration
+        if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+          workflow.extraInputs.forEach(input => {
+            const value = formState[input.id];
+            if (value !== undefined && value !== null && value !== '') {
+              formData.append(input.id, value);
+            }
+          });
         }
         
         // Append images
@@ -342,10 +348,18 @@ function App() {
           description: formState.description,
           prompt: formState.description,
           seed: formState.seed,
-          length: normalizeFrameCount(formState.length),
-          framerate: formState.framerate,
           orientation: orientation
         };
+        
+        // Add all extra inputs from workflow configuration
+        if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+          workflow.extraInputs.forEach(input => {
+            const value = formState[input.id];
+            if (value !== undefined && value !== null && value !== '') {
+              requestBody[input.id] = value;
+            }
+          });
+        }
 
         response = await fetchJson('/generate', {
           method: 'POST',

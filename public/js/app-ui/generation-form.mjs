@@ -170,36 +170,11 @@ export function GenerationForm({
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
           disabled=${isGenerating}
         />
-      </div>
 
-      <!-- Row 2: Video Controls (Conditional - legacy) or Extra Inputs -->
-      ${(isVideoWorkflow && !workflow.extraInputs) ? html`
-        <div class="form-row video-controls" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-          <${Input}
-            label="Length (frames)"
-            type="number"
-            min="1"
-            value=${formState.length || 25}
-            onChange=${handleChange('length')}
-            disabled=${isGenerating}
-          />
-          
-          <${Input}
-            label="Frame Rate"
-            type="number"
-            min="1"
-            max="60"
-            step="1"
-            value=${formState.framerate || 20}
-            onChange=${handleChange('framerate')}
-            disabled=${isGenerating}
-          />
-        </div>
-      ` : workflow?.extraInputs ? html`
-        <div class="form-row extra-inputs" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+        ${workflow?.extraInputs ? html`
           ${renderExtraInputs(workflow.extraInputs, 'standard')}
-        </div>
       ` : null}
+      </div>
 
       <!-- Prompt -->
       <${Textarea}

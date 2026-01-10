@@ -37,6 +37,12 @@
         "orientation": "portrait",
         "hidden": true
       },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
       "postGenerationTasks": [
         {
           "template": "(prompt unavailable for uploaded audio)",
@@ -56,7 +62,6 @@
         }
       ],
       "base": "text-to-image-album.json",
-      "imageFormat": "jpg",
       "finalNode": "18",
       "replace": [
         {
@@ -85,7 +90,20 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -111,7 +129,6 @@
         }
       ],
       "base": "illustrious-text-to-image.json",
-      "imageFormat": "png",
       "finalNode": "10",
       "replace": [
         {
@@ -137,7 +154,20 @@
         "inputImages": 1,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -163,7 +193,6 @@
         }
       ],
       "base": "illustrious-image-style.json",
-      "imageFormat": "png",
       "finalNode": "11",
       "upload": [
         {
@@ -199,7 +228,20 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -227,7 +269,6 @@
         }
       ],
       "base": "flux-fantasy-text-to-landscape.json",
-      "imageFormat": "jpg",
       "finalNode": "9",
       "replace": [
         {
@@ -253,7 +294,20 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -281,7 +335,6 @@
         }
       ],
       "base": "flux-fantasy-text-to-portrait.json",
-      "imageFormat": "jpg",
       "finalNode": "44",
       "replace": [
         {
@@ -307,7 +360,20 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -335,7 +401,6 @@
         }
       ],
       "base": "zimage-fantasy-landscape.json",
-      "imageFormat": "jpg",
       "finalNode": "43",
       "replace": [
         {
@@ -362,7 +427,20 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -390,7 +468,6 @@
         }
       ],
       "base": "zimage-fantasy-portrait.json",
-      "imageFormat": "jpg",
       "finalNode": "43",
       "replace": [
         {
@@ -418,6 +495,12 @@
         "nameRequired": false,
         "orientation": "detect"
       },
+      "preGenerationTasks": [
+        {
+          "from": "image_0_imageFormat",
+          "to": "imageFormat"
+        }
+      ],
       "postGenerationTasks": [
         {
           "template": "(description not generated by default)",
@@ -429,7 +512,6 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "imageFormat": "jpg",
       "finalNode": "9",
       "upload": [
         {
@@ -475,6 +557,12 @@
         "nameRequired": false,
         "orientation": "detect"
       },
+      "preGenerationTasks": [
+        {
+          "from": "image_0_imageFormat",
+          "to": "imageFormat"
+        }
+      ],
       "postGenerationTasks": [
         {
           "template": "(description not generated by default)",
@@ -486,7 +574,6 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "imageFormat": "png",
       "finalNode": "9",
       "upload": [
         {
@@ -530,7 +617,20 @@
         "inputImages": 1,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" },
+              { "label": "WEBP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -558,7 +658,6 @@
         }
       ],
       "base": "qwen-image-to-image.json",
-      "imageFormat": "png",
       "finalNode": "229",
       "upload": [
         {
@@ -596,6 +695,16 @@
         "orientation": "detect",
         "extraInputs": [
           {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Video Format",
+            "default": "webp",
+            "options": [
+              { "label": "WEBP", "value": "webp" },
+              { "label": "MP4", "value": "mp4" }
+            ]
+          },
+          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -606,35 +715,6 @@
             "type": "number",
             "label": "Frame Rate",
             "default": 20
-          },
-          {
-            "id": "testtext",
-            "type": "text",
-            "label": "Test Text",
-            "default": "default value"
-          },
-          {
-            "id": "testfield",
-            "type":"textarea",
-            "label": "Test Field",
-            "default": "default value"
-          },
-          {
-            "id": "testselect",
-            "type":"select",
-            "label": "Test Select",
-            "default": "option2",
-            "options": [
-              { "label": "Option 1", "value": "option1" },
-              { "label": "Option 2", "value": "option2" },
-              { "label": "Option 3", "value": "option3" }
-            ]
-          },
-          {
-            "id": "testcheck",
-            "type":"checkbox",
-            "label": "Test Check",
-            "default": true
           }
         ]
       },
@@ -655,7 +735,6 @@
         }
       ],
       "base": "wan-image-to-video.json",
-      "imageFormat": "webp",
       "finalNode": "76",
       "upload": [
         {
@@ -746,6 +825,16 @@
         "orientation": "detect",
         "extraInputs": [
           {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Video Format",
+            "default": "webp",
+            "options": [
+              { "label": "WEBP", "value": "webp" },
+              { "label": "MP4", "value": "mp4" }
+            ]
+          },
+          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -777,7 +866,6 @@
       ],
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
-      "imageFormat": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -848,6 +936,16 @@
         "orientation": "detect",
         "extraInputs": [
           {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Video Format",
+            "default": "webp",
+            "options": [
+              { "label": "WEBP", "value": "webp" },
+              { "label": "MP4", "value": "mp4" }
+            ]
+          },
+          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -878,7 +976,6 @@
         }
       ],
       "base": "wan5b-image-to-video.json",
-      "imageFormat": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -957,14 +1054,28 @@
             "id": "length",
             "type": "number",
             "label": "Length (seconds)"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
           }
         ]
       },
       "base": "acestep-text-to-music.json",
-      "imageFormat": "jpg",
-      "audioFormat": "mp3",
       "finalNode": "90",
       "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        },
         {
           "template": "[inst]",
           "to": "lyrics",
@@ -1005,11 +1116,29 @@
         "inputImages": 0,
         "inputAudio": 1,
         "optionalPrompt": false,
-        "nameRequired": true
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
       },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
       "base": "chatterbox-text-to-speech.json",
-      "imageFormat": "jpg",
-      "audioFormat": "mp3",
       "finalNode": "21",
       "upload": [
         {

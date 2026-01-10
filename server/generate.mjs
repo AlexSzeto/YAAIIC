@@ -5,7 +5,7 @@ import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createCrossFade } from './image-utils.mjs';
-import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition } from './util.mjs';
+import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition, findNextIndex } from './util.mjs';
 import { CLIENT_ID, promptExecutionState, connectToComfyUI } from './comfyui-websocket.mjs';
 import {
   generateTaskId,
@@ -658,7 +658,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
   try {
     const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
-    const { seed, saveImagePath, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
+    const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
     
     // Create generationData as a copy of requestData
@@ -669,8 +669,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       generationData.ollamaAPIPath = ollamaAPIPath;
     }
     
-    // Extract savePath as local working variable for file operations
-    const savePath = saveImagePath;
+    // savePath will be set after preGenerationTasks when saveImagePath is created
     
     // Ensure ComfyUI WebSocket connection is fresh/active
     console.log(`Refreshing ComfyUI WebSocket connection for task ${taskId}...`);
@@ -690,7 +689,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     resetProgressLog();
     
     console.log('Using seed:', seed);
-    console.log('Using saveImagePath:', saveImagePath);
+    // saveImagePath will be logged after it's created
     
     // Log inpaint-specific parameters for debugging purposes
     if (inpaint) {
@@ -719,11 +718,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
-    // saveImageFilename: filename portion of saveImagePath, no folder or extension
-    if (saveImagePath) {
-      generationData.saveImageFilename = path.basename(saveImagePath, path.extname(saveImagePath));
-    }
-    // storagePath: absolute path to /storage folder
+    // storagePath: absolute path to /storage folder (needed before file creation)
     generationData.storagePath = path.join(actualDirname, 'storage');
 
     // Store the workflow JSON in the task for node title lookups
@@ -802,6 +797,54 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       // Update task with current step after pre-generation
       updateTask(taskId, { currentStep });
     }
+
+    // Create output filenames after preGenerationTasks (so format from extra inputs is available)
+    const __dirname2 = path.dirname(new URL(import.meta.url).pathname);
+    const actualDirname2 = process.platform === 'win32' && __dirname2.startsWith('/') ? __dirname2.slice(1) : __dirname2;
+    const storageFolder = path.join(actualDirname2, 'storage');
+    if (!fs.existsSync(storageFolder)) {
+      fs.mkdirSync(storageFolder, { recursive: true });
+    }
+    
+    // Determine if this is an audio, video, or image workflow
+    const isAudio = type === 'audio';
+    const isVideo = type === 'video';
+    
+    // Get format from generationData (set by preGenerationTasks or extra inputs)
+    const imageFormat = generationData.imageFormat;
+    const audioFormat = generationData.audioFormat;
+    
+    // Validate required formats
+    if (!imageFormat) {
+      throw new Error('imageFormat is required but not found in generation data. Check workflow configuration and extra inputs.');
+    }
+    
+    if (isAudio && !audioFormat) {
+      throw new Error('audioFormat is required for audio workflows but not found in generation data. Check workflow configuration and extra inputs.');
+    }
+    
+    // Create saveImagePath if not already set
+    if (!generationData.saveImagePath) {
+      const nextIndex = findNextIndex('image', storageFolder);
+      const imageFilename = `image_${nextIndex}.${imageFormat}`;
+      generationData.saveImagePath = path.join(storageFolder, imageFilename);
+      console.log('Created saveImagePath:', generationData.saveImagePath);
+    }
+    
+    // Create saveImageFilename from saveImagePath
+    generationData.saveImageFilename = path.basename(generationData.saveImagePath, path.extname(generationData.saveImagePath));
+    console.log('Using saveImagePath:', generationData.saveImagePath);
+    
+    // For audio workflows, also create saveAudioPath
+    if (isAudio) {
+      const nextAudioIndex = findNextIndex('audio', storageFolder);
+      const audioFilename = `audio_${nextAudioIndex}.${audioFormat}`;
+      generationData.saveAudioPath = path.join(storageFolder, audioFilename);
+      console.log('Created saveAudioPath:', generationData.saveAudioPath);
+    }
+    
+    // Update savePath variable for compatibility
+    const savePath = generationData.saveImagePath;
 
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {

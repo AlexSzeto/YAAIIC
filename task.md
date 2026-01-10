@@ -139,7 +139,7 @@ New input types:
    4. Update video workflow `replace` mappings to use new extra input field names
    5. Test that video generation still works with new extra input system
 
-[] Enable format customization for workflows
+[x] Enable format customization for workflows
    1. Add `imageFormat` as an extra input for all workflows that currently have hardcoded `imageFormat` field (label "Image Format")
    1. Add `audioFormat` as an extra input for all workflows that currently have hardcoded `audioFormat` field (label "Audio Format")
    2. Extra input should be select type with options: ["png", "jpg", "webp"] or ["mp3", "wav", "flac", "ogg"]
@@ -160,7 +160,7 @@ New input types:
    ```
    5. Ensure filename generation uses the extra input instead of the workflow values. Fail gracefully if a required value is missing (imageFormat for image/videos, plus audioFormat for audios). compute the output filename after pre generation tasks.
 
-[] Submit extra input values during generation
+[x] Submit extra input values during generation
    1. In `public/js/app.mjs`, collect values from all extra input fields on form submit
    2. Include extra input values in the request body when calling `/generate` endpoint
    3. Ensure proper serialization of different input types (text, boolean, etc.)

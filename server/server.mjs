@@ -314,15 +314,8 @@ app.post('/generate', upload.any(), async (req, res) => {
       console.log('Generated random seed:', req.body.seed);
     }
     
-    // Create saveImagePath similar to how handleMediaGeneration creates fullPath
-    const storageFolder = path.join(actualDirname, 'storage');
-    if (!fs.existsSync(storageFolder)) {
-      fs.mkdirSync(storageFolder, { recursive: true });
-    }
-    
-    const nextIndex = findNextIndex('image', storageFolder);
-    const filename = `image_${nextIndex}.${workflowData.imageFormat || 'png'}`;
-    req.body.saveImagePath = path.join(storageFolder, filename);
+    // Don't create saveImagePath here - it will be created after preGenerationTasks
+    // so that the format can be determined from extra inputs
     
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
@@ -1121,15 +1114,8 @@ app.post('/generate/inpaint', upload.fields([
         console.log('Generated random seed:', req.body.seed);
       }
       
-      // Create storage path for the generated inpaint result image
-      const storageFolder = path.join(actualDirname, 'storage');
-      if (!fs.existsSync(storageFolder)) {
-        fs.mkdirSync(storageFolder, { recursive: true });
-      }
-      
-      const nextIndex = findNextIndex('image', storageFolder);
-      const filename = `image_${nextIndex}.${workflowData.imageFormat || 'png'}`;
-      req.body.saveImagePath = path.join(storageFolder, filename);
+      // Don't create saveImagePath here - it will be created after preGenerationTasks
+      // so that the format can be determined from extra inputs
       
       // Prepare request body with imagePath and maskPath from uploaded filenames
       req.body.imagePath = imageUploadResult.filename;
