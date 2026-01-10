@@ -669,6 +669,11 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       generationData.ollamaAPIPath = ollamaAPIPath;
     }
     
+    // Add workflow type to generation data
+    if (type) {
+      generationData.type = type;
+    }
+    
     // savePath will be set after preGenerationTasks when saveImagePath is created
     
     // Ensure ComfyUI WebSocket connection is fresh/active

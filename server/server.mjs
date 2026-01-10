@@ -18,8 +18,8 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 // Fix Windows path issue by removing leading slash
 const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
 
-// Global mediaData object
-let mediaData = { imageData: [], folders: [], currentFolder: '' };
+// Global database object
+let globalData = { mediaData: [], folders: [], currentFolder: '' };
 
 // Load image data from JSON file
 function loadMediaData() {
@@ -27,27 +27,27 @@ function loadMediaData() {
     const imageDataPath = path.join(actualDirname, 'database', 'media-data.json');
     if (fs.existsSync(imageDataPath)) {
       const data = fs.readFileSync(imageDataPath, 'utf8');
-      mediaData = JSON.parse(data);
+      globalData = JSON.parse(data);
       
       // Ensure folders and currentFolder exist
-      if (!mediaData.folders) {
-        mediaData.folders = [];
+      if (!globalData.folders) {
+        globalData.folders = [];
       }
-      if (!mediaData.currentFolder && mediaData.currentFolder !== '') {
-        mediaData.currentFolder = '';
+      if (!globalData.currentFolder && globalData.currentFolder !== '') {
+        globalData.currentFolder = '';
       }
-      if (!mediaData.imageData) {
-        mediaData.imageData = [];
+      if (!globalData.mediaData) {
+        globalData.mediaData = [];
       }
       
-      console.log('Image data loaded:', mediaData.imageData.length, 'entries,', mediaData.folders.length, 'folders');
+      console.log('Image data loaded:', globalData.mediaData.length, 'entries,', globalData.folders.length, 'folders');
     } else {
       console.log('Image data file not found, starting with empty data');
-      mediaData = { imageData: [], folders: [], currentFolder: '' };
+      globalData = { mediaData: [], folders: [], currentFolder: '' };
     }
   } catch (error) {
     console.error('Failed to load image data:', error);
-    mediaData = { imageData: [], folders: [], currentFolder: '' };
+    globalData = { mediaData: [], folders: [], currentFolder: '' };
   }
 }
 
@@ -63,7 +63,7 @@ function saveMediaData() {
       console.log('Created database directory');
     }
     
-    fs.writeFileSync(imageDataPath, JSON.stringify(mediaData, null, 2));
+    fs.writeFileSync(imageDataPath, JSON.stringify(globalData, null, 2));
     console.log('Image data saved successfully');
   } catch (error) {
     console.error('Failed to save image data:', error);
@@ -77,9 +77,9 @@ export function addMediaDataEntry(entry) {
   entry.uid = now.getTime(); // Generate UID using Date.getTime()
   
   // Add current folder to the entry
-  entry.folder = mediaData.currentFolder || '';
+  entry.folder = globalData.currentFolder || '';
   
-  mediaData.imageData.push(entry);
+  globalData.imageData.push(entry);
   saveMediaData();
 }
 
@@ -386,7 +386,7 @@ app.get('/media-data', (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     // Get folder parameter, default to currentFolder if not provided
-    const folderParam = req.query.folder !== undefined ? req.query.folder : mediaData.currentFolder;
+    const folderParam = req.query.folder !== undefined ? req.query.folder : globalData.currentFolder;
     const folderId = folderParam || '';
     
     // Parse tags from comma-separated string
@@ -395,7 +395,7 @@ app.get('/media-data', (req, res) => {
     console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], folder="${folderId}", sort="${sort}", limit=${limit}`);
     
     // Filter by query, tags, and folder
-    let filteredData = mediaData.imageData.filter(item => {
+    let filteredData = globalData.mediaData.filter(item => {
       // Folder match - check if item belongs to the requested folder
       let folderMatch = true;
       if (folderId === '') {
@@ -455,7 +455,7 @@ app.get('/media-data', (req, res) => {
     // Apply limit
     const limitedData = filteredData.slice(0, limit);
     
-    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${mediaData.imageData.length} total`);
+    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${globalData.mediaData.length} total`);
     
     res.json(limitedData);
   } catch (error) {
@@ -478,7 +478,7 @@ app.get('/media-data/:uid', (req, res) => {
     console.log(`Image data by UID endpoint called with uid=${uid}`);
     
     // Search through imageData array to find matching UID
-    const matchingImage = mediaData.imageData.find(item => item.uid === uid);
+    const matchingImage = globalData.mediaData.find(item => item.uid === uid);
     
     if (!matchingImage) {
       console.log(`No image found with UID: ${uid}`);
@@ -517,13 +517,13 @@ app.delete('/media-data/delete', (req, res) => {
     console.log(`Delete request for UIDs: ${uids.join(', ')}`);
     
     // Count entries before deletion
-    const originalCount = mediaData.imageData.length;
+    const originalCount = globalData.imageData.length;
     
     // Remove entries with matching UIDs
-    mediaData.imageData = mediaData.imageData.filter(item => !uids.includes(item.uid));
+    globalData.imageData = globalData.imageData.filter(item => !uids.includes(item.uid));
     
     // Count entries after deletion
-    const deletedCount = originalCount - mediaData.imageData.length;
+    const deletedCount = originalCount - globalData.imageData.length;
     
     // Save changes to file
     try {
@@ -573,7 +573,7 @@ app.post('/edit', (req, res) => {
     
     // Process each item
     for (const updatedData of dataToUpdate) {
-      const imageIndex = mediaData.imageData.findIndex(item => item.uid === updatedData.uid);
+      const imageIndex = globalData.mediaData.findIndex(item => item.uid === updatedData.uid);
       
       if (imageIndex === -1) {
         notFoundUids.push(updatedData.uid);
@@ -581,7 +581,7 @@ app.post('/edit', (req, res) => {
       }
       
       // Replace the entire object in place with the new data
-      mediaData.imageData[imageIndex] = updatedData;
+      globalData.mediaData[imageIndex] = updatedData;
       updatedItems.push(updatedData);
     }
     
@@ -639,14 +639,14 @@ app.post('/regenerate', async (req, res) => {
     console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
     
     // Find the image data
-    const imageIndex = mediaData.imageData.findIndex(item => item.uid === uid);
+    const imageIndex = globalData.mediaData.findIndex(item => item.uid === uid);
     
     if (imageIndex === -1) {
       console.log(`No image found with UID: ${uid}`);
       return res.status(404).json({ error: `Image with uid ${uid} not found` });
     }
     
-    const imageEntry = mediaData.imageData[imageIndex];
+    const imageEntry = globalData.mediaData[imageIndex];
     
     // Reconstruct saveImagePath from imageUrl
     // imageUrl format: /media/filename.ext -> storage/filename.ext
@@ -756,24 +756,24 @@ app.post('/regenerate', async (req, res) => {
 app.get('/folder', (req, res) => {
   try {
     // Ensure folders and currentFolder exist
-    if (!mediaData.folders) {
-      mediaData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
-    if (!mediaData.currentFolder && mediaData.currentFolder !== '') {
-      mediaData.currentFolder = '';
+    if (!globalData.currentFolder && globalData.currentFolder !== '') {
+      globalData.currentFolder = '';
     }
     
     // Build folder list with "Unsorted" as first item
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...mediaData.folders
+      ...globalData.folders
     ];
     
-    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${mediaData.currentFolder}"`);
+    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${globalData.currentFolder}"`);
     
     res.json({
       list: folderList,
-      current: mediaData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in GET /folder endpoint:', error);
@@ -796,8 +796,8 @@ app.post('/folder', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!mediaData.folders) {
-      mediaData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     let folder;
@@ -806,14 +806,14 @@ app.post('/folder', (req, res) => {
     if (hasUid && !hasLabel) {
       if (uid === '' || uid === null) {
         // Selecting Unsorted
-        mediaData.currentFolder = '';
+        globalData.currentFolder = '';
         console.log('Selected Unsorted folder');
       } else {
-        folder = mediaData.folders.find(f => f.uid === uid);
+        folder = globalData.folders.find(f => f.uid === uid);
         if (!folder) {
           return res.status(404).json({ error: `Folder with uid ${uid} not found` });
         }
-        mediaData.currentFolder = folder.uid;
+        globalData.currentFolder = folder.uid;
         console.log(`Selected folder: ${folder.label} (${folder.uid})`);
       }
     }
@@ -824,19 +824,19 @@ app.post('/folder', (req, res) => {
       }
       
       // Check if folder with this label already exists
-      folder = mediaData.folders.find(f => f.label === label.trim());
+      folder = globalData.folders.find(f => f.label === label.trim());
       
       if (!folder) {
         // Create new folder with unique uid
         const newUid = `folder-${Date.now()}`;
         folder = { uid: newUid, label: label.trim() };
-        mediaData.folders.push(folder);
+        globalData.folders.push(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else {
         console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
       }
       
-      mediaData.currentFolder = folder.uid;
+      globalData.currentFolder = folder.uid;
     }
     // Case 3: Both uid and label provided
     else {
@@ -844,12 +844,12 @@ app.post('/folder', (req, res) => {
         return res.status(400).json({ error: 'Invalid folder label' });
       }
       
-      folder = mediaData.folders.find(f => f.uid === uid);
+      folder = globalData.folders.find(f => f.uid === uid);
       
       if (!folder) {
         // Create folder with specified uid and label
         folder = { uid, label: label.trim() };
-        mediaData.folders.push(folder);
+        globalData.folders.push(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else if (folder.label !== label.trim()) {
         // Rename existing folder
@@ -860,7 +860,7 @@ app.post('/folder', (req, res) => {
         console.log(`Folder already exists with matching label: ${folder.label} (${folder.uid})`);
       }
       
-      mediaData.currentFolder = folder.uid;
+      globalData.currentFolder = folder.uid;
     }
     
     // Save changes
@@ -869,12 +869,12 @@ app.post('/folder', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...mediaData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: mediaData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in POST /folder endpoint:', error);
@@ -902,12 +902,12 @@ app.put('/folder', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!mediaData.folders) {
-      mediaData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     // Find folder by uid
-    const folder = mediaData.folders.find(f => f.uid === uid);
+    const folder = globalData.folders.find(f => f.uid === uid);
     
     if (!folder) {
       console.log(`Folder not found: ${uid}`);
@@ -925,12 +925,12 @@ app.put('/folder', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...mediaData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: mediaData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in PUT /folder endpoint:', error);
@@ -954,31 +954,31 @@ app.delete('/folder/:uid', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!mediaData.folders) {
-      mediaData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     // Find and remove folder
-    const folderIndex = mediaData.folders.findIndex(f => f.uid === uid);
+    const folderIndex = globalData.folders.findIndex(f => f.uid === uid);
     
     if (folderIndex === -1) {
       console.log(`Folder not found: ${uid}`);
       return res.status(404).json({ error: `Folder with uid ${uid} not found` });
     }
     
-    const deletedFolder = mediaData.folders[folderIndex];
-    mediaData.folders.splice(folderIndex, 1);
+    const deletedFolder = globalData.folders[folderIndex];
+    globalData.folders.splice(folderIndex, 1);
     console.log(`Deleted folder: ${deletedFolder.label} (${deletedFolder.uid})`);
     
     // If deleted folder was current, set current to unsorted
-    if (mediaData.currentFolder === uid) {
-      mediaData.currentFolder = '';
+    if (globalData.currentFolder === uid) {
+      globalData.currentFolder = '';
       console.log('Deleted folder was current, set current to Unsorted');
     }
     
     // Update all image data entries with this folder uid to have empty string
     let updatedCount = 0;
-    mediaData.imageData.forEach(item => {
+    globalData.mediaData.forEach(item => {
       if (item.folder === uid) {
         item.folder = '';
         updatedCount++;
@@ -995,12 +995,12 @@ app.delete('/folder/:uid', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...mediaData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: mediaData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in DELETE /folder/:uid endpoint:', error);

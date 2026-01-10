@@ -191,7 +191,7 @@ New input types:
    14. In `server/server.mjs`, update the inpaint endpoint to accept and pass extra inputs to the generation logic
    15. Test that inpaint page correctly renders and submits extra inputs
 
-[] Add `type` from the workflow definition to `generationData` at the start of the generation. Create a migration utilility script, `/migrate/add-workflow-types-to-db.mjs`, to determine the workflow type using the output file format and write it back to existing entries missing this data. Run the util script to backfill the database entries.
+[x] Add `type` from the workflow definition to `generationData` at the start of the generation. Create a migration utilility script, `/migrate/add-workflow-types-to-db.mjs`, to determine the workflow type using the output file format and write it back to existing entries missing this data. Run the util script to backfill the database entries.
    1. In `server/generate.mjs`, locate the `handleMediaGeneration()` function
    2. After loading workflow configuration, add the workflow's `type` property to `generationData` object (e.g., `generationData.type = workflow.options.type`)
    3. Ensure the `type` value is saved to the database when `addMediaDataEntry()` is called
@@ -203,10 +203,11 @@ New input types:
       - If `saveAudioPath` or `saveAudioFilename` exists, set `type` to "audio"
       - Else if entry has video indicators (e.g., workflow name contains "video", or duration/frames metadata, filename contains `webp`), set `type` to "video"
       - Otherwise, set `type` to "image"
-   9. Write updated media data back to the database file
+   9. Write updated media data back to the database file, in a new property in root: `mediaData`
    10. Add logging to show how many entries were updated
    11. Run the migration script using `node migrate/add_workflow_types_to_db.mjs`
    12. Verify database entries now have `type` property populated correctly
+   13. Modify the server to reference `mediaData` when it tries to access `imageData`
    13. Test that newly generated media automatically includes the correct `type` value
 
 [] On the workflow selector, add a dropdown select to the left of the current workflow select with the label "Workflow Type" and a list of type options. Filter the workflows available for selection for the existing, full width select component by the currently selected type. Allow the options to be passed in as parameters with `label` and `value`, and if only one item is passed in, hide the workflow type select. Pass in "Image", "Video", "Audio" for the index page and just "Inpaint" for the inpaint page.
