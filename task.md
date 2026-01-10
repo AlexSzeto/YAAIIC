@@ -215,7 +215,7 @@ New input types:
 [x] Rewrite `isSelectDisabled` property for `GeneratedResult` to base the required image type on the current workflow's `type` attribute.
 [x] Insert `isInpaintDisabled` property for `GeneratedResult` and move the logic into `app.mjs`. Rewrite the type detection logic using the media data's `type` attribute.
 
-[] Update the gallery select mode to filter for specific generation types (image/audio/video), hiding unfit formats similar to how it currently behaves (which is to disable entries not matching the desired format). Refactor the image select component to use the filter.
+[x] Update the gallery select mode to filter for specific generation types (image/audio/video), hiding unfit formats similar to how it currently behaves (which is to disable entries not matching the desired format). Refactor the image select component to use the filter.
    1. In `public/js/gallery-preview.mjs`, locate the code that handles selection mode rendering and disabling logic
    2. Identify where media entries are currently being disabled based on format compatibility
    3. Create new function `shouldDisableMediaForSelection(mediaEntry, allowedTypes)` that checks if media type matches allowed types
