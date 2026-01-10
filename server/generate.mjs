@@ -845,7 +845,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       const nextAudioIndex = findNextIndex('audio', storageFolder);
       const audioFilename = `audio_${nextAudioIndex}.${audioFormat}`;
       generationData.saveAudioPath = path.join(storageFolder, audioFilename);
+      generationData.audioUrl = `/media/${audioFilename}`;
       console.log('Created saveAudioPath:', generationData.saveAudioPath);
+      console.log('Created audioUrl:', generationData.audioUrl);
     }
     
     // Update savePath variable for compatibility
@@ -1003,6 +1005,14 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     }
 
     console.log(`Image generated successfully`);
+    
+    // For audio workflows, also check if audio file was created
+    if (isAudio && generationData.saveAudioPath) {
+      if (!fs.existsSync(generationData.saveAudioPath)) {
+        throw new Error(`Generated audio file not found at: ${generationData.saveAudioPath}`);
+      }
+      console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
+    }
 
     // Process post-generation tasks from config if workflow type is not video
     if (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') {

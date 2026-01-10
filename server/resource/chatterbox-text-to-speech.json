@@ -10,7 +10,7 @@
     },
     "class_type": "ChatterBoxEngineNode",
     "_meta": {
-      "title": "⚙️ ChatterBox TTS Engine"
+      "title": "ChatterBox TTS Engine"
     }
   },
   "2": {
@@ -24,7 +24,7 @@
     },
     "class_type": "CharacterVoicesNode",
     "_meta": {
-      "title": "🎭 Character Voices"
+      "title": "Character Voices"
     }
   },
   "3": {
@@ -52,7 +52,7 @@
     },
     "class_type": "UnifiedTTSTextNode",
     "_meta": {
-      "title": "🎤 TTS Text"
+      "title": "TTS Text"
     }
   },
   "5": {

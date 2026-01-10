@@ -232,7 +232,18 @@ New input types:
 
 [x] Create audio-select component, replicating the general layout of the image-select component with the following differences: use speaker icon instead of picture icon, and add a play/pause icon button between the clear and replace button that uses the global audio player to play back the currently selected audio. Add copies of this component after the image select components depending on the number of audio files required, and send these audio files to the generation workflow in the same way that the image files are being added to the form.
 
-[] Update the logic for choosing a filename for generation upload files so that the name from the storage folder is reused, meaning if the same file is uploaded twice into ComfyUI it should overwrite an existing file instead of creating a new file. This applies to inpaint as well - except for the mask image, which should be named as `mask_${imageWidth}_${imageHeight}_${x1}_${y1}_${x2}_${y2}` so masks covering an identical area should 
+[x] Ensure that an audioUrl is created, saved to the database, and passed back to the client at the end of the audio workflow.
+   1. Added `audioUrl` creation when `saveAudioPath` is generated (in `server/generate.mjs`)
+   2. Added verification that audio file exists after workflow execution for audio workflows
+   3. Confirmed that `audioUrl` is included in database save and SSE completion event
+   4. Verified client code properly receives and uses `audioUrl` from the result
+   5. Confirmed existing audio entries in database already have `audioUrl` properly saved
+
+[] Implement the logic to upload audio files to comfyUI, with the expected input having a similar format to uploaded images (using `audio_X`). Update the logic for choosing a filename for comfyUI uploads so that the name from the storage folder is reused (including the file extension - currently, the upload incorrectly hard codes the file type to png), meaning if the same file is uploaded twice into ComfyUI it should overwrite an existing file instead of creating a new file. This applies to inpaint as well - except for the mask image, which should be named as `mask_${imageWidth}_${imageHeight}_${x1}_${y1}_${x2}_${y2}` so masks covering an identical area should end up having the same filename.
+
+[] Update the logic for the media upload `upload/image` and `upload/audio` such that the filename in `/storage` would be replaced using the same algorithm as generated media files (`${type}$_${latestIndex}`), while keeping its original extension.
+
+[] in the image modal overlay, when an action button is present, move that button to its own area below the image to the bottom right, and expand the modal vertically to fit the button.
 
 [] Test audio workflows end-to-end
    1. Manually test generating audio with first example audio workflow (mp3)
