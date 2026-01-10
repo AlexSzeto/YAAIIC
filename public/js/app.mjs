@@ -321,7 +321,7 @@ function App() {
         }
         
         // Append images
-        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name'];
+        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);

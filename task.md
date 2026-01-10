@@ -167,6 +167,12 @@ New input types:
    4. Update `server/server.mjs` generate endpoint to accept and validate extra input values
    5. Pass extra inputs to workflow generation logic in `server/generate.mjs`
 
+[] Move the hidden parameter outside of the options object in the workflow schema, and implement not sending these parameters on workflow list requests.
+
+[] Refactor the `renderExtraInputs` function outside of `app.mjs` and reuse it to generate extra inputs for the inpaint form. send these extra inputs for the inpaint requests.
+
+[] Create audio-select component, replicating the general layout of the image-select component with the following differences: use speaker icon instead of picture icon, and add a play/pause icon button between the clear and replace button that uses the global audio player to play back the currently selected audio. Add copies of this component after the image select components depending on the number of audio files required, and send these audio files to the generation workflow in the same way that the image files are being added to the form.
+
 [] Test audio workflows end-to-end
    1. Manually test generating audio with first example audio workflow
    2. Verify both audio file and album image are saved with correct formats
