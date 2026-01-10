@@ -356,10 +356,10 @@ app.post('/generate', upload.any(), async (req, res) => {
             
             // Generate unique filename for ComfyUI upload
             const timestamp = Date.now();
-            const uploadFilename = `image_${from}_${timestamp}.png`;
+            const uploadFilename = `image_${timestamp}.png`;
             
             // Upload image to ComfyUI
-            const uploadResult = await uploadFileToComfyUI(imageFile.buffer, uploadFilename, "input", true);
+            const uploadResult = await uploadFileToComfyUI(imageFile.buffer, uploadFilename, "image", "input", true);
             console.log(`Image uploaded successfully: ${uploadFilename}`);
             
             // Store the filename in request body using the specified variable name

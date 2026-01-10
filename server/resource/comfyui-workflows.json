@@ -39,6 +39,10 @@
       },
       "postGenerationTasks": [
         {
+          "template": "(prompt unavailable for uploaded audio)",
+          "to": "prompt"
+        },
+        {
           "template": "(description unavailable for uploaded audio)",
           "to": "description"
         },

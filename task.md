@@ -134,17 +134,31 @@ New input types:
    7. Position extra inputs in the UI between existing controls (where video length/frames currently appear) except for textarea types, which would be placed below the prompt input
    8. Apply consistent styling to match existing form controls (number to the frames/framerate input, text to name, textarea to prompt, etc)
 
-[] Refactor video workflows to use extra inputs
+[x] Refactor video workflows to use extra inputs
    3. Update `server/generate.mjs` to read these values from request body as extra input values
    4. Update video workflow `replace` mappings to use new extra input field names
    5. Test that video generation still works with new extra input system
 
-[] Enable format customization for image workflows
-   1. Add `format` as an extra input for all image workflows that currently have hardcoded `format` field
-   2. Extra input should be select type with options: ["png", "jpg", "webp"]
-   3. Remove hardcoded `format` property from image workflow definitions
-   4. Update `server/server.mjs` generate endpoint to use format from extra inputs or default to "png"
-   5. Ensure filename generation uses the selected format
+[] Enable format customization for workflows
+   1. Add `imageFormat` as an extra input for all workflows that currently have hardcoded `imageFormat` field (label "Image Format")
+   1. Add `audioFormat` as an extra input for all workflows that currently have hardcoded `audioFormat` field (label "Audio Format")
+   2. Extra input should be select type with options: ["png", "jpg", "webp"] or ["mp3", "wav", "flac", "ogg"]
+   3. Remove hardcoded `imageFormat` and `audioFormat` property from workflow definitions
+   4. Update `server/server.mjs` generate endpoint to use format from extra inputs. for all audio workflows and the album workflow, add the following preGenerationTask:
+   ```
+   {
+      "template": "jpg",
+      "to": "imageFormat"
+   }
+   ```
+   For video workflows, add:
+   ```
+   {
+      "template": "webp",
+      "to": "imageFormat"
+   }
+   ```
+   5. Ensure filename generation uses the extra input instead of the workflow values. Fail gracefully if a required value is missing (imageFormat for image/videos, plus audioFormat for audios). compute the output filename after pre generation tasks.
 
 [] Submit extra input values during generation
    1. In `public/js/app.mjs`, collect values from all extra input fields on form submit

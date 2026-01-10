@@ -109,26 +109,37 @@ export async function uploadFileToComfyUI(fileBuffer, filename, fileType = "imag
         });
         
         res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(`Successfully uploaded ${filename} to ComfyUI:`, responseData);
-            resolve({
-              success: true,
-              filename: filename,
-              type: imageType,
-              response: responseData
-            });
-          } else {
-            reject(new Error(`ComfyUI upload failed: ${res.statusCode} ${res.statusMessage} - ${responseData}`));
+          try {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log(`Successfully uploaded ${filename} to ComfyUI:`, responseData);
+              resolve({
+                success: true,
+                filename: filename,
+                type: fileType,
+                response: responseData
+              });
+            } else {
+              reject(new Error(`ComfyUI upload failed: ${res.statusCode} ${res.statusMessage} - ${responseData}`));
+            }
+          } catch (endError) {
+            console.error(`Error processing upload response for ${filename}:`, endError);
+            reject(new Error(`Failed to process upload response for ${filename}: ${endError.message}`));
           }
         });
       });
       
       req.on('error', (error) => {
+        console.error(`Upload request error for ${filename}:`, error);
         reject(new Error(`Request failed for ${filename}: ${error.message}`));
       });
       
       // Pipe the form data to the request
-      formData.pipe(req);
+      try {
+        formData.pipe(req);
+      } catch (pipeError) {
+        console.error(`Error piping form data for ${filename}:`, pipeError);
+        reject(new Error(`Failed to send upload data for ${filename}: ${pipeError.message}`));
+      }
       
     } catch (error) {
       console.error(`Failed to upload ${filename} to ComfyUI:`, error);
