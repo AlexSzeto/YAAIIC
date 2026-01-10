@@ -72,7 +72,7 @@ p {
   background-color: var(--dark-background-secondary);
   border: 2px solid var(--dark-border-primary);
   border-radius: 8px;
-  align-items: end;
+  align-items: start;
 }
 
 .workflow-selector-container {

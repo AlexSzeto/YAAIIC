@@ -416,7 +416,7 @@ function InpaintApp() {
 
   // Handle carousel selection
   const handleCarouselSelect = (item) => {
-    setImageData(item);
+    setMediaData(item);
     
     // Update form with selected image's data
     setFormState(prev => ({

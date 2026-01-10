@@ -262,3 +262,5 @@ New input types:
 [x] in the image modal overlay, when an action button is present, move that button to its own area below the image to the bottom right, and expand the modal vertically to fit the button.
 
 [x] The inpaint file name is currently being generated incorrectly, since `imageWidth` and `imageHeight` doesn't exist. There should be a section of code used to detect orientation on the client side, which uses the input image's width and height. Let the client create the filename and send it to the server by attaching it to the blob that represents the mask image.
+
+[] Fix inpaint page workflow select width not full
