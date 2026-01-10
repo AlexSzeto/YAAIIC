@@ -1104,10 +1104,8 @@ app.post('/generate/inpaint', upload.fields([
     const imageUrl = req.body.imageUrl;
     const imageFilename = imageUrl ? imageUrl.replace('/media/', '') : `inpaint_image_${Date.now()}.png`;
     
-    // For mask: use dimensions-based naming so identical masks reuse the same file
-    const maskFilename = parsedInpaintArea ? 
-      `mask_${Math.round(parsedInpaintArea.imageWidth)}_${Math.round(parsedInpaintArea.imageHeight)}_${Math.round(parsedInpaintArea.x1)}_${Math.round(parsedInpaintArea.y1)}_${Math.round(parsedInpaintArea.x2)}_${Math.round(parsedInpaintArea.y2)}.png` :
-      `inpaint_mask_${Date.now()}.png`;
+    // For mask: use filename provided by client (includes dimensions and area for deduplication)
+    const maskFilename = req.body.maskFilename || `mask_${Date.now()}.png`;
     
     try {
       // Upload both images to ComfyUI

@@ -64,6 +64,11 @@ export function GenerationForm({
       const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
       if (filledCount < workflow.inputImages) return true;
     }
+    // Disabled if audios are required but not all provided
+    if (workflow.inputAudios && workflow.inputAudios > 0) {
+      const filledCount = inputAudios.filter(audio => audio && (audio.blob || audio.url)).length;
+      if (filledCount < workflow.inputAudios) return true;
+    }
     return false;
   })();
 

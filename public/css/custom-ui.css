@@ -5,13 +5,10 @@
 
 .image-modal-title {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
-  background: rgba(40, 40, 40, 0.8);
-  backdrop-filter: blur(4px);
+  left: 0;
+  bottom: 0;
   color: #fff;
   padding: 6px 16px;
-  border-radius: 12px;
   font-weight: bold;
   font-size: 1rem;
   pointer-events: none;
@@ -700,8 +697,30 @@
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 40px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.image-modal-container.has-action-button {
+  padding-bottom: 60px;
+}
+
+.image-modal-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-modal-action-area {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 10px;
 }
 
 .image-modal-autoscale,
@@ -749,10 +768,7 @@
 }
 
 .image-modal-select {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  z-index: 10001;
+  /* Button is now positioned in the action area instead of absolutely on the image */
 }
 
 .image-modal-error {

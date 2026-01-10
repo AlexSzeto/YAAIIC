@@ -673,8 +673,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     }
     
     // Add workflow type to generation data
+    // For inpaint workflows, the output type should be "image" not "inpaint"
     if (type) {
-      generationData.type = type;
+      generationData.type = (type === 'inpaint') ? 'image' : type;
     }
     
     // savePath will be set after preGenerationTasks when saveImagePath is created

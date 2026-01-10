@@ -252,39 +252,13 @@ New input types:
    3. Preserves original file extension from uploaded file
    4. Applies to both image and audio uploads
 
-[] in the image modal overlay, when an action button is present, move that button to its own area below the image to the bottom right, and expand the modal vertically to fit the button.
+[x] When `inputAudio` is non-zero, disable generation when the number of selected audios is less than the required inputs.
+   1. Added validation logic in `GenerationForm` component (generation-form.mjs)
+   2. Check if `workflow.inputAudios > 0` to determine if audio is required
+   3. Count filled audio slots by filtering `inputAudios` for entries with `blob` or `url`
+   4. Disable generate button when filled count is less than required `inputAudios`
+   5. Logic mirrors existing image validation pattern
 
-[] Test audio workflows end-to-end
-   1. Manually test generating audio with first example audio workflow (mp3)
-   2. Verify both audio file (mp3) and album image are saved with correct formats to storage folder
-   3. Verify database entry includes both `saveAudioPath`/`saveAudioFilename` and `saveImagePath`/`saveImageFilename` 
-   4. Verify media data entry has correct workflow type set to "audio"
-   5. Open generation view and verify album image displays correctly
-   6. Verify audio player overlay renders correctly positioned on top of album image
-   7. Verify audio player controls (play/pause button, progress bar, time display) work correctly
-   8. Verify audio playback starts and stops properly in generation view
-   9. Test seeking in audio player progress bar
-   10. Manually test second example audio workflow (ogg format)
-   11. Verify ogg audio file generation and album image work correctly
-   12. Navigate to gallery and verify audio entries appear with album image thumbnails
-   13. Verify speaker icon overlay appears on audio file thumbnails in gallery
-   14. Click play button on audio thumbnail in gallery and verify global audio player starts playback
-   15. Click play on different audio thumbnail and verify previous audio stops, new one plays
-   16. Verify clicking audio thumbnail in gallery does NOT open full viewer (audio playback only)
-   17. Test that clicking the thumbnail image area (not the play button) opens the generation viewer
-   18. In generation viewer for audio, verify audio player overlay is present and functional
-   19. Test regenerating metadata fields (name, prompt, tags) for audio entries
-   20. Verify regeneration maintains both audio and image file associations
-   21. Test uploading an audio file via upload button
-   22. Verify upload accepts mp3, ogg, wav, and other common audio formats
-   23. Verify filename-based name detection works for uploaded audio files (camelCase, snake_case, etc.)
-   24. Verify uploaded audio triggers automatic album cover generation
-   25. Verify database entry is created with both uploaded audio path and generated album image path
-   26. Test that uploaded audio entries appear correctly in gallery with speaker icon
-   27. Test extra inputs with audio workflows (if applicable - format selection, duration, etc.)
-   28. Verify audio format extra input allows selecting between mp3, ogg, wav, flac
-   29. Test generating audio with different format selections and verify correct file extensions
-   30. Test error handling: invalid audio workflow, missing audio file, playback errors
-   31. Test that hidden album cover generation workflow does not appear in workflow selection dropdown
-   32. Verify console logs show no errors during audio generation, upload, or playback
-   33. Test audio functionality across different browsers (Chrome, Firefox, Edge) if possible
+[x] in the image modal overlay, when an action button is present, move that button to its own area below the image to the bottom right, and expand the modal vertically to fit the button.
+
+[x] The inpaint file name is currently being generated incorrectly, since `imageWidth` and `imageHeight` doesn't exist. There should be a section of code used to detect orientation on the client side, which uses the input image's width and height. Let the client create the filename and send it to the server by attaching it to the blob that represents the mask image.

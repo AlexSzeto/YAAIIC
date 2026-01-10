@@ -263,6 +263,9 @@ function InpaintApp() {
       const imageBlob = await canvasToBlob(imageCanvas, 'image/png');
       const maskBlob = await canvasToBlob(maskCanvas, 'image/png');
       
+      // Generate mask filename based on dimensions and area
+      const maskFilename = `mask_${Math.round(imageCanvas.width)}_${Math.round(imageCanvas.height)}_${Math.round(inpaintArea.x1)}_${Math.round(inpaintArea.y1)}_${Math.round(inpaintArea.x2)}_${Math.round(inpaintArea.y2)}.png`;
+      
       // Prepare form data
       const formData = new FormData();
       formData.append('workflow', workflow.name);
@@ -271,6 +274,7 @@ function InpaintApp() {
       formData.append('prompt', formState.description.trim());
       formData.append('orientation', orientation);
       formData.append('inpaintArea', JSON.stringify(inpaintArea));
+      formData.append('maskFilename', maskFilename);
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
       
