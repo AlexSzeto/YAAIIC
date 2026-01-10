@@ -1011,10 +1011,12 @@ app.delete('/folder/:uid', (req, res) => {
 // GET endpoint for workflow list
 app.get('/workflows', (req, res) => {
   try {
-    const workflows = comfyuiWorkflows.workflows.map(workflow => ({
-      name: workflow.name,
-      ...workflow.options
-    }));
+    const workflows = comfyuiWorkflows.workflows
+      .filter(workflow => !workflow.hidden)
+      .map(workflow => ({
+        name: workflow.name,
+        ...workflow.options
+      }));
     res.json(workflows);
   } catch (error) {
     console.error('Error getting workflows:', error);
@@ -1091,8 +1093,8 @@ app.post('/generate/inpaint', upload.fields([
       console.log('Uploading images to ComfyUI...');
       
       const [imageUploadResult, maskUploadResult] = await Promise.all([
-        uploadFileToComfyUI(imageFile.buffer, imageFilename, "input", true),
-        uploadFileToComfyUI(maskFile.buffer, maskFilename, "input", true)
+        uploadFileToComfyUI(imageFile.buffer, imageFilename, "image", "input", true),
+        uploadFileToComfyUI(maskFile.buffer, maskFilename, "image", "input", true)
       ]);
       
       console.log('Both images uploaded successfully to ComfyUI');

@@ -4,6 +4,7 @@ import { Textarea } from '../custom-ui/textarea.mjs';
 import { Input } from '../custom-ui/input.mjs';
 import { Button } from '../custom-ui/button.mjs';
 import { SeedControl } from './seed-control.mjs';
+import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
 
 /**
  * InpaintForm Component
@@ -28,6 +29,9 @@ export function InpaintForm({
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
   };
+  
+  // Create renderExtraInputs function using the reusable renderer
+  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
   
   // Compute whether inpaint button should be disabled
   const isInpaintDisabled = (() => {
@@ -67,6 +71,9 @@ export function InpaintForm({
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
           disabled=${isGenerating}
         />
+        
+        <!-- Extra Inputs (standard types: text, number, select, checkbox) -->
+        ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'standard') : null}
       </div>
 
       <!-- Prompt -->
@@ -79,6 +86,9 @@ export function InpaintForm({
         onChange=${handleChange('description')}
         disabled=${isGenerating}
       />
+
+      <!-- Extra Textarea Inputs (after description) -->
+      ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'textarea') : null}
 
       <!-- Action Buttons -->
       <div class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-start;">

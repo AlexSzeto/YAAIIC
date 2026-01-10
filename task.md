@@ -167,7 +167,7 @@ New input types:
    4. Update `server/server.mjs` generate endpoint to accept and validate extra input values
    5. Pass extra inputs to workflow generation logic in `server/generate.mjs`
 
-[] Move the hidden parameter outside of the options object in the workflow schema, and implement not sending these parameters on workflow list requests.
+[x] Move the hidden parameter outside of the options object in the workflow schema, and implement not sending these parameters on workflow list requests.
    1. In `server/resource/comfyui-workflows.json`, move the `hidden` property from nested within `options` to the top level of each workflow object
    2. Update workflow schema documentation to reflect that `hidden` is a top-level property
    3. In `server/server.mjs`, locate the endpoint that serves the workflow list (GET `/workflows` or similar)
@@ -176,7 +176,7 @@ New input types:
    6. Test that hidden workflows do not appear in client workflow selection dropdown
    7. Test that generation still works with hidden workflows when they are referenced programmatically
 
-[] Refactor the `renderExtraInputs` function outside of `app.mjs` and reuse it to generate extra inputs for the inpaint form. send these extra inputs for the inpaint requests.
+[x] Refactor the `renderExtraInputs` function outside of `app.mjs` and reuse it to generate extra inputs for the inpaint form. send these extra inputs for the inpaint requests.
    1. Create new utility file `public/js/app-ui/extra-inputs-renderer.mjs` to house the reusable extra inputs rendering logic
    2. Move `renderExtraInputs()` function from `app.mjs` to the new file
    5. Update `public/js/app.mjs` to import and use the refactored `createExtraInputsRenderer()`
@@ -208,6 +208,8 @@ New input types:
    11. Run the migration script using `node migrate/add_workflow_types_to_db.mjs`
    12. Verify database entries now have `type` property populated correctly
    13. Test that newly generated media automatically includes the correct `type` value
+
+[] On the workflow selector, add a dropdown select to the left of the current workflow select with the label "Workflow Type" and a list of type options. Filter the workflows available for selection for the existing, full width select component by the currently selected type. Allow the options to be passed in as parameters with `label` and `value`, and if only one item is passed in, hide the workflow type select. Pass in "Image", "Video", "Audio" for the index page and just "Inpaint" for the inpaint page.
 
 [] Update the generation display "select" action button to filter based on the `type` attribute.
    1. In `public/js/app.mjs`, locate the generation view where the "select" action button is rendered

@@ -28,14 +28,14 @@
   "workflows": [
     {
       "name": "Text to Image (Album Cover)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait",
-        "hidden": true
+        "orientation": "portrait"
       },
       "preGenerationTasks": [
         {
@@ -147,6 +147,7 @@
     },
     {
       "name": "Image Style Transfer (Illustrious)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": true,
@@ -165,8 +166,7 @@
               { "label": "JPG", "value": "jpg" }
             ]
           }
-        ],
-        "hidden": true
+        ]
       },
       "postGenerationTasks": [
         {
@@ -221,6 +221,7 @@
     },
     {
       "name": "Text to Image (Flux Fantasy Landscape)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
@@ -239,8 +240,7 @@
               { "label": "JPG", "value": "jpg" }
             ]
           }
-        ],
-        "hidden": true
+        ]
       },
       "postGenerationTasks": [
         {
@@ -287,6 +287,7 @@
     },
     {
       "name": "Text to Image (Flux Fantasy Portrait)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
@@ -305,8 +306,7 @@
               { "label": "JPG", "value": "jpg" }
             ]
           }
-        ],
-        "hidden": true
+        ]
       },
       "postGenerationTasks": [
         {
@@ -490,7 +490,21 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "test",
+            "type": "textarea",
+            "label": "Test",
+            "default": "2342sdf"
+          },
+          {
+            "id": "test2",
+            "type": "text",
+            "label": "Test2",
+            "default": "asdfasdfsadf"
+          }
+        ]
       },
       "preGenerationTasks": [
         {

@@ -197,6 +197,23 @@ function InpaintApp() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
+    
+    // Initialize extraInputs in formState with default values
+    if (newWorkflow && newWorkflow.extraInputs && Array.isArray(newWorkflow.extraInputs)) {
+      const extraInputDefaults = {};
+      newWorkflow.extraInputs.forEach(input => {
+        if (input.default !== undefined) {
+          extraInputDefaults[input.id] = input.default;
+        }
+      });
+      
+      // Update formState with new defaults
+      setFormState(prev => {
+        const newState = { ...prev };
+        Object.assign(newState, extraInputDefaults);
+        return newState;
+      });
+    }
   };
 
   // Handle inpaint area change
@@ -256,6 +273,25 @@ function InpaintApp() {
       formData.append('inpaintArea', JSON.stringify(inpaintArea));
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
+      
+      // Append image field names from the source mediaData
+      const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
+      imageTextFieldNames.forEach(fieldName => {
+        const value = mediaData[fieldName];
+        if (value) {
+          formData.append(`image_0_${fieldName}`, value);
+        }
+      });
+      
+      // Add all extra inputs from workflow configuration
+      if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+        workflow.extraInputs.forEach(input => {
+          const value = formState[input.id];
+          if (value !== undefined && value !== null && value !== '') {
+            formData.append(input.id, value);
+          }
+        });
+      }
       
       toast.show('Sending inpaint request...');
       
