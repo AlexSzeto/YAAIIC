@@ -24,11 +24,11 @@
   "definitions": {
     "llmTask": {
       "type": "object",
-      "description": "An LLM task or template task for pre/post-generation processing",
+      "description": "An LLM task, template task, or value copy task for pre/post-generation processing",
       "properties": {
         "model": {
           "type": "string",
-          "description": "Ollama model name to use for inference (mutually exclusive with template)"
+          "description": "Ollama model name to use for inference (mutually exclusive with template and from)"
         },
         "imagePath": {
           "type": "string",
@@ -40,7 +40,11 @@
         },
         "template": {
           "type": "string",
-          "description": "Template string with {{variableName}} placeholders (mutually exclusive with model)"
+          "description": "Template string with {{variableName}} placeholders (mutually exclusive with model and from)"
+        },
+        "from": {
+          "type": "string",
+          "description": "Source field name to copy value from (mutually exclusive with model and template)"
         },
         "to": {
           "type": "string",
@@ -50,6 +54,10 @@
           "type": "boolean",
           "description": "If true, only runs the task if the target field is empty",
           "default": false
+        },
+        "condition": {
+          "type": "object",
+          "description": "Optional condition that must be met for the task to execute"
         }
       },
       "required": ["to"],
@@ -57,13 +65,28 @@
         {
           "required": ["model"],
           "not": {
-            "required": ["template"]
+            "anyOf": [
+              { "required": ["template"] },
+              { "required": ["from"] }
+            ]
           }
         },
         {
           "required": ["template"],
           "not": {
-            "required": ["model"]
+            "anyOf": [
+              { "required": ["model"] },
+              { "required": ["from"] }
+            ]
+          }
+        },
+        {
+          "required": ["from"],
+          "not": {
+            "anyOf": [
+              { "required": ["model"] },
+              { "required": ["template"] }
+            ]
           }
         }
       ],

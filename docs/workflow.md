@@ -190,7 +190,7 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 - **`model`** (string, required for LLM tasks)
   - Ollama model name to use for inference.
-  - Mutually exclusive with `template`.
+  - Mutually exclusive with `template` and `from`.
 
 - **`imagePath`** (string, optional)
   - Variable name containing the image path for vision tasks.
@@ -202,20 +202,47 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
   - Examples:
     - `"{{description}}"` - inserts the description field
     - `"{{image_0_description}}"` - inserts description of first input image
+  - Missing placeholders will cause an error.
 
 - **`template`** (string, optional)
   - For non-LLM text generation, a template string with placeholders.
   - Alternative to `model` + `prompt` for simple string formatting.
   - Uses same placeholder syntax: `{{variableName}}`.
-  - Mutually exclusive with `model`.
+  - Mutually exclusive with `model` and `from`.
+  - Missing placeholders will cause an error.
+
+- **`from`** (string, optional)
+  - Source field name to copy value from.
+  - Used to copy values between fields without LLM processing.
+  - Example: `{"from": "image_0_imageFormat", "to": "imageFormat"}`
+  - Mutually exclusive with `model` and `template`.
+  - Will error if source field is missing or empty.
 
 - **`to`** (string, required)
   - Target field name to store the result.
-  - Common values: `"description"`, `"summary"`, `"name"`, `"tags"`, `"prompt"`.
+  - Common values: `"description"`, `"summary"`, `"name"`, `"tags"`, `"prompt"`, `"imageFormat"`.
 
 - **`replaceBlankFieldOnly`** (boolean, optional)
   - If `true`, only runs the task if the target field is empty.
   - Useful for auto-generating prompts only when user doesn't provide one.
+
+- **`condition`** (object, optional)
+  - Conditional execution check. Task only runs if condition is met.
+
+### Task Types
+
+The task behavior depends on which source field is provided:
+
+1. **LLM Task** - Uses `model` + `prompt`: Sends prompt to Ollama for inference
+2. **Template Task** - Uses `template`: Simple string substitution with placeholders
+3. **Copy Task** - Uses `from`: Copies value from one field to another
+
+Exactly one of `model`, `template`, or `from` must be provided. The task will error if:
+- None are provided
+- Multiple are provided
+- Required placeholders are missing
+- Source field (`from`) is missing or empty
+- LLM generation fails or returns empty response
 
 ---
 

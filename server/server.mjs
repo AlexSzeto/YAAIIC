@@ -1040,6 +1040,8 @@ app.post('/generate/inpaint', upload.fields([
     console.log('- seed:', seed);
     console.log('- prompt:', prompt);
     console.log('- inpaintArea:', inpaintArea);
+    console.log('- image_0_imageFormat:', req.body.image_0_imageFormat);
+    console.log('- All req.body keys:', Object.keys(req.body));
     
     // Validate required fields
     if (!workflow) {

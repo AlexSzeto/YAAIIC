@@ -310,11 +310,33 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = n
  */
 export async function modifyDataWithPrompt(promptData, dataObject) {
   try {
-    const { model, template, prompt, to, replaceBlankFieldOnly, imagePath } = promptData;
+    const { model, template, prompt, from, to, replaceBlankFieldOnly, imagePath } = promptData;
+    
+    // Validate that 'to' field is provided
+    if (!to) {
+      throw new Error('Generation task missing required "to" field');
+    }
+    
+    // Validate that at least one source is provided
+    if (!from && !template && !prompt) {
+      throw new Error(`Generation task for "${to}" must have one of: "from", "template", or "prompt"`);
+    }
     
     // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
     if (replaceBlankFieldOnly && dataObject[to] && dataObject[to].trim() !== '') {
       console.log(`Skipping prompt for ${to} - field already has a value`);
+      return dataObject;
+    }
+    
+    // Handle "from" parameter - copy value from one field to another
+    if (from) {
+      const sourceValue = dataObject[from];
+      if (sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
+        console.log(`Copying value from ${from} to ${to}: ${sourceValue}`);
+        dataObject[to] = sourceValue;
+      } else {
+        throw new Error(`Generation task for "${to}": source field "${from}" not found, empty, or undefined in dataObject`);
+      }
       return dataObject;
     }
     
@@ -323,9 +345,19 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     
     // Replace double curly brace placeholders (e.g., {{description}}) with values from dataObject
     const bracketPattern = /\{\{(\w+)\}\}/g;
+    const missingKeys = [];
     processedPrompt = processedPrompt.replace(bracketPattern, (match, key) => {
-      return dataObject[key] || match;
+      if (dataObject[key] === undefined || dataObject[key] === null || dataObject[key] === '') {
+        missingKeys.push(key);
+        return match; // Keep the placeholder if value is missing
+      }
+      return dataObject[key];
     });
+    
+    // Throw error if any required bracket replacements are missing
+    if (missingKeys.length > 0) {
+      throw new Error(`Generation task for "${to}": missing required data for placeholders: {{${missingKeys.join('}}, {{')}}}`);
+    }
     
     // If template is present instead of model, just do string replacement
     if (template) {
@@ -333,6 +365,11 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
       dataObject[to] = processedPrompt;
       console.log(`Stored template result in ${to}: ${processedPrompt}`);
       return dataObject;
+    }
+    
+    // Validate model is provided for prompt-based generation
+    if (!model) {
+      throw new Error(`Generation task for "${to}": "model" is required when using "prompt"`);
     }
     
     console.log(`Processing prompt for ${to} with model ${model}`);
@@ -344,12 +381,17 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     if (imagePath) {
       const actualImagePath = dataObject[imagePath];
       if (!actualImagePath) {
-        throw new Error(`Image path field '${imagePath}' not found in dataObject`);
+        throw new Error(`Generation task for "${to}": image path field '${imagePath}' not found in dataObject`);
       }
       console.log(`Using image path: ${actualImagePath}`);
       response = await sendImagePrompt(actualImagePath, processedPrompt, model, to);
     } else {
       response = await sendTextPrompt(processedPrompt, model, to);
+    }
+    
+    // Validate that response was received
+    if (!response || response.trim() === '') {
+      throw new Error(`Generation task for "${to}": received empty or invalid response from model "${model}"`);
     }
     
     // Store the response in dataObject[promptData.to]
