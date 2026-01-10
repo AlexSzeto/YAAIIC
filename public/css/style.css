@@ -90,12 +90,16 @@ p {
 .form-group {
   display: flex;
   flex-direction: column;
-  min-width: 120px;
+  min-width: 200px;
+  width: 200px;
+  flex: 0 0 200px;
 }
 
 .form-group.full-width {
   flex: 1 0 100%;
   min-width: 100%;
+  width: 100%;
+  width: 100%;
 }
 
 .form-group label {

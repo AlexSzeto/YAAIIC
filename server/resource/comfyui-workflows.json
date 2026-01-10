@@ -589,7 +589,50 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          },
+          {
+            "id": "testtext",
+            "type": "text",
+            "label": "Test Text",
+            "default": "default value"
+          },
+          {
+            "id": "testfield",
+            "type":"textarea",
+            "label": "Test Field",
+            "default": "default value"
+          },
+          {
+            "id": "testselect",
+            "type":"select",
+            "label": "Test Select",
+            "default": "option2",
+            "options": [
+              { "label": "Option 1", "value": "option1" },
+              { "label": "Option 2", "value": "option2" },
+              { "label": "Option 3", "value": "option3" }
+            ]
+          },
+          {
+            "id": "testcheck",
+            "type":"checkbox",
+            "label": "Test Check",
+            "default": true
+          }
+        ]
       },
       "preGenerationTasks": [
         {
@@ -696,7 +739,21 @@
         "inputImages": 1,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
         {
@@ -784,7 +841,21 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
         {

@@ -132,6 +132,27 @@ function App() {
     setWorkflow(newWorkflow);
     // Reset input images when workflow changes
     setInputImages([]);
+    
+    // Initialize extraInputs in formState with default values
+    if (newWorkflow && newWorkflow.extraInputs && Array.isArray(newWorkflow.extraInputs)) {
+      const extraInputDefaults = {};
+      newWorkflow.extraInputs.forEach(input => {
+        if (input.default !== undefined) {
+          extraInputDefaults[input.id] = input.default;
+        }
+      });
+      
+      // Update formState with new defaults, preserving existing values not from extraInputs
+      setFormState(prev => {
+        // Remove old extraInput values that are no longer in the new workflow
+        const newState = { ...prev };
+        
+        // Add new extraInput defaults
+        Object.assign(newState, extraInputDefaults);
+        
+        return newState;
+      });
+    }
   };
   
   // Handle image change for a specific slot

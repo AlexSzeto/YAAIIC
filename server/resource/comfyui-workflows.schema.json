@@ -189,9 +189,58 @@
           "type": "boolean",
           "description": "Whether to hide this workflow from client workflow lists",
           "default": false
+        },
+        "extraInputs": {
+          "type": "array",
+          "description": "Additional input fields to render in the UI for this workflow",
+          "items": {
+            "$ref": "#/definitions/extraInput"
+          }
         }
       },
       "required": ["type"],
+      "additionalProperties": false
+    },
+    "extraInput": {
+      "type": "object",
+      "description": "Defines an additional input field for the workflow",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this input (used as field name in generation data)"
+        },
+        "type": {
+          "type": "string",
+          "description": "Input type",
+          "enum": ["text", "number", "select", "checkbox", "textarea"]
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label for the input field"
+        },
+        "default": {
+          "description": "Default value for the input (type depends on input type)"
+        },
+        "options": {
+          "type": "array",
+          "description": "Available options for select type inputs",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "description": "Display text for the option"
+              },
+              "value": {
+                "description": "Value to use when this option is selected"
+              }
+            },
+            "required": ["label", "value"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["id", "type", "label"],
       "additionalProperties": false
     },
     "uploadMapping": {

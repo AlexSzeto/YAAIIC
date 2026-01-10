@@ -115,7 +115,7 @@ New input types:
    5. Keep a global audio player at the app level. When a new audio is sent to the player, the previous audio stops. Use the currently playing audio path to allow the buttons to track which audio is playing without needing the gallery to pass anything into the preview component.
    6. Disable preview click handler for audio files in gallery mode
 
-[] Implement extra inputs system for workflows
+[x] Implement extra inputs system for workflows
    1. In `server/resource/comfyui-workflows.json`, add new optional property `extraInputs` array to workflow options
    2. Each extra input object should have: `id` (string), `label` (string), `type` (text/number/select/checkbox/textarea), `default` (any), and `options` (array of `label` and `value` objects, for select type)
    3. Update workflow specification and schema to document the new extra inputs format
@@ -123,7 +123,7 @@ New input types:
    2. Add `extraInputs` to video workflows with `length` (text type, default value) and `framerate` (text type, default value)
 
 
-[] Render extra inputs in client UI
+[x] Render extra inputs in client UI
    1. In `public/js/app.mjs`, fetch workflow configuration when workflow is selected
    2. Create function `renderExtraInputs()` to dynamically generate form fields based on workflow's `extraInputs`
    3. For "number" type: render number input
@@ -131,8 +131,8 @@ New input types:
    4. For "textarea" type: render multi-line textarea (similar to prompt field)
    5. For "select" type: render dropdown with provided options (label, value)
    6. For "checkbox" type: render checkbox input
-   7. Position extra inputs in the UI between existing controls (suggested: where video length/frames currently appear)
-   8. Apply consistent styling to match existing form controls
+   7. Position extra inputs in the UI between existing controls (where video length/frames currently appear) except for textarea types, which would be placed below the prompt input
+   8. Apply consistent styling to match existing form controls (number to the frames/framerate input, text to name, textarea to prompt, etc)
 
 [] Refactor video workflows to use extra inputs
    3. Update `server/generate.mjs` to read these values from request body as extra input values

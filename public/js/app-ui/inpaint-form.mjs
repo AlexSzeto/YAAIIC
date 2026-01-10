@@ -69,9 +69,9 @@ export function InpaintForm({
         />
       </div>
 
-      <!-- Description -->
+      <!-- Prompt -->
       <${Textarea}
-        label="Description"
+        label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}
         placeholder="Enter your text here..."

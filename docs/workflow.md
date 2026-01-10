@@ -85,6 +85,15 @@ The `options` object controls UI behavior and input validation:
     - `"landscape"`: Fixed landscape dimensions.
     - `"detect"`: Auto-detect from input image or user selection.
 
+- **`hidden`** (boolean, optional)
+  - Whether to hide this workflow from client workflow lists. Default: `false`.
+  - Useful for internal workflows like album cover generation.
+
+- **`extraInputs`** (array, optional)
+  - Additional input fields to render in the UI for this workflow.
+  - Each input defines a custom field that users can set before generation.
+  - See [Extra Input Object](#extra-input-object) for structure.
+
 - **`preGenerationTasks`** (array, optional)
   - LLM tasks or template tasks to run before generation starts.
   - Useful for auto-generating prompts from input images or combining descriptions.
@@ -128,6 +137,8 @@ Maps request data or internal variables to workflow nodes:
   - Internal paths: `"saveImagePath"`, `"saveImageFilename"`, `"storagePath"`
   - Upload variables: `"imagePath"`, `"maskPath"`, `"firstFramePath"`, `"lastFramePath"`
   - Video settings: `"frames"`, `"framerate"`
+  - Extra inputs: Any `id` from the workflow's `extraInputs` array
+  - Special variables: `"ollamaAPIPath"` (server configuration)
 - **`to`** (array): Target path in workflow JSON: `["NodeID", "inputs", "keyName"]`.
 - **`prefix`** (string, optional): Text to prepend.
 - **`postfix`** (string, optional): Text to append.
@@ -208,6 +219,95 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 ---
 
+## Extra Input Object
+
+Used in the `extraInputs` array to define additional UI input fields for a workflow:
+
+```json
+{
+  "id": "frames",
+  "type": "number",
+  "label": "Frames",
+  "default": 25
+}
+```
+
+### Properties
+
+- **`id`** (string, required)
+  - Unique identifier for this input.
+  - Used as the field name in generation data (e.g., accessible as `{{frames}}` in templates).
+  - Must be a valid variable name.
+
+- **`type`** (string, required)
+  - Input type.
+  - Values:
+    - `"text"`: Single-line text input
+    - `"number"`: Numeric input
+    - `"textarea"`: Multi-line text input
+    - `"select"`: Dropdown selection
+    - `"checkbox"`: Boolean checkbox
+
+- **`label`** (string, required)
+  - Display label for the input field in the UI.
+
+- **`default`** (any, optional)
+  - Default value for the input.
+  - Type depends on input type:
+    - `text`/`textarea`: string
+    - `number`: number
+    - `select`: should match one of the option values
+    - `checkbox`: boolean
+
+- **`options`** (array, required for `select` type)
+  - Available options for select type inputs.
+  - Each option object:
+    - **`label`** (string): Display text for the option
+    - **`value`** (any): Value to use when this option is selected
+
+### Example Extra Inputs
+
+```json
+"extraInputs": [
+  {
+    "id": "frames",
+    "type": "number",
+    "label": "Frames",
+    "default": 25
+  },
+  {
+    "id": "framerate",
+    "type": "number",
+    "label": "Frame Rate",
+    "default": 20
+  },
+  {
+    "id": "format",
+    "type": "select",
+    "label": "Output Format",
+    "default": "png",
+    "options": [
+      { "label": "PNG", "value": "png" },
+      { "label": "JPEG", "value": "jpg" },
+      { "label": "WebP", "value": "webp" }
+    ]
+  },
+  {
+    "id": "lyrics",
+    "type": "textarea",
+    "label": "Lyrics"
+  },
+  {
+    "id": "highQuality",
+    "type": "checkbox",
+    "label": "High Quality Mode",
+    "default": false
+  }
+]
+```
+
+---
+
 ## Complete Example
 
 ```json
@@ -270,7 +370,21 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Frames",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
         {
