@@ -230,62 +230,9 @@ New input types:
    13. Test that attempting to click disabled entries does not trigger selection
    14. Verify visual styling clearly indicates which entries are selectable vs disabled
 
-[] Create audio-select component, replicating the general layout of the image-select component with the following differences: use speaker icon instead of picture icon, and add a play/pause icon button between the clear and replace button that uses the global audio player to play back the currently selected audio. Add copies of this component after the image select components depending on the number of audio files required, and send these audio files to the generation workflow in the same way that the image files are being added to the form.
-   1. Create new file `public/js/custom-ui/audio-select.mjs` for the audio selection component
-   2. Define AudioSelect component extending preact Component class with following structure:
-   ```javascript
-   // AudioSelect component class
-   export class AudioSelect extends Component {
-     constructor(props) // Accept props: id, label, onSelect, onClear
-     
-     // State management
-     state = {
-       selectedAudioUrl: null,
-       selectedAudioName: null,
-       isPlaying: false
-     }
-     
-     // Lifecycle methods
-     componentDidMount() // Set up global audio player listeners
-     componentWillUnmount() // Clean up listeners
-     
-     // Private methods
-     handleBrowseClick() // Opens gallery in selection mode for audio
-     handleClearClick() // Clears selected audio
-     handleReplaceClick() // Opens gallery to replace current selection
-     handlePlayPauseClick() // Toggles playback via global audio player
-     updatePlayingState() // Updates isPlaying based on global player state
-     
-     // Render method
-     render() // Returns preact/htm structure similar to image-select with audio-specific UI
-   }
-   ```
-   3. Component UI should include:
-      - Speaker icon (instead of picture icon)
-      - Audio name display when audio is selected
-      - Browse button (when no audio selected)
-      - Clear button (when audio is selected)
-      - Replace button (when audio is selected)
-      - Play/Pause button (positioned between Clear and Replace, when audio is selected)
-   4. Style the component to match image-select component layout in `public/css/custom-ui.css`
-   5. Integrate with global audio player from `public/js/global-audio-player.mjs`
-   6. Update play/pause button icon based on whether this audio is currently playing
-   7. In `server/resource/comfyui-workflows.json`, add support for workflows to specify `audioInputs` count (similar to `imageInputs`)
-   8. Add `audioInputs` property to workflows that require audio file inputs (e.g., voice-to-voice conversion, audio mashup, etc.)
-   9. In `public/js/app.mjs`, import AudioSelect component
-   10. Add logic to detect `audioInputs` count from selected workflow configuration
-   11. Dynamically render AudioSelect components after image select components based on `audioInputs` count
-   12. Create array to track selected audio file UIDs
-   13. Update form submission handler to collect audio file UIDs
-   14. Include audio file paths in generation request payload (format: `audio_0`, `audio_1`, etc., similar to images)
-   15. In `server/generate.mjs`, update workflow generation logic to handle audio input files
-   16. Map audio file paths to workflow parameters (similar to how image inputs are mapped)
-   17. Ensure audio files are properly passed to ComfyUI workflow execution
-   18. Test component rendering when workflow has audioInputs defined
-   19. Test selecting audio from gallery and verifying selection persists
-   20. Test play/pause functionality with global audio player
-   21. Test clearing and replacing audio selections
-   22. Test form submission includes correct audio file paths
+[x] Create audio-select component, replicating the general layout of the image-select component with the following differences: use speaker icon instead of picture icon, and add a play/pause icon button between the clear and replace button that uses the global audio player to play back the currently selected audio. Add copies of this component after the image select components depending on the number of audio files required, and send these audio files to the generation workflow in the same way that the image files are being added to the form.
+
+[] Update the logic for choosing a filename for generation upload files so that the name from the storage folder is reused, meaning if the same file is uploaded twice into ComfyUI it should overwrite an existing file instead of creating a new file. This applies to inpaint as well - except for the mask image, which should be named as `mask_${imageWidth}_${imageHeight}_${x1}_${y1}_${x2}_${y2}` so masks covering an identical area should 
 
 [] Test audio workflows end-to-end
    1. Manually test generating audio with first example audio workflow (mp3)

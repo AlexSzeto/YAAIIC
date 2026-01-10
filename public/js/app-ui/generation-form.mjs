@@ -4,6 +4,7 @@ import { Input } from '../custom-ui/input.mjs';
 import { Button } from '../custom-ui/button.mjs';
 import { SeedControl } from './seed-control.mjs';
 import { ImageSelect } from '../custom-ui/image-select.mjs';
+import { AudioSelect } from '../custom-ui/audio-select.mjs';
 import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
 
 /**
@@ -29,7 +30,10 @@ export function GenerationForm({
   onUploadClick,
   inputImages = [],
   onImageChange,
-  onSelectFromGallery
+  onSelectFromGallery,
+  inputAudios = [],
+  onAudioChange,
+  onSelectAudioFromGallery
 }) {
   
   const handleChange = (fieldName) => (e) => {
@@ -116,6 +120,22 @@ export function GenerationForm({
               value=${inputImages[i]?.url || inputImages[i]?.blob || null}
               onChange=${(fileOrUrl) => onImageChange && onImageChange(i, fileOrUrl)}
               onSelectFromGallery=${() => onSelectFromGallery && onSelectFromGallery(i)}
+              disabled=${isGenerating}
+            />
+          `)}
+        </div>
+      `}
+
+      <!-- Row 3.5: Audio Upload -->
+      ${workflow?.inputAudios > 0 && html`
+        <div id="audio-upload-container" class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+          ${Array.from({ length: workflow.inputAudios }, (_, i) => html`
+            <${AudioSelect}
+              key=${i}
+              label=${workflow.inputAudios > 1 ? `Audio ${i + 1}` : 'Input Audio'}
+              value=${inputAudios[i]?.mediaData || inputAudios[i]?.url || null}
+              onChange=${(audioUrlOrData) => onAudioChange && onAudioChange(i, audioUrlOrData)}
+              onSelectFromGallery=${() => onSelectAudioFromGallery && onSelectAudioFromGallery(i)}
               disabled=${isGenerating}
             />
           `)}

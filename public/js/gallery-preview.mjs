@@ -182,7 +182,7 @@ export class GalleryPreview extends Component {
         >
           ${imageError && 'No image'}
         </img>
-        <div class="gallery-item-info ${hasAudio ? 'has-audio' : ''}">
+        <div class="gallery-item-info overlay-panel ${hasAudio ? 'has-audio' : ''}">
           ${hasAudio && html`
             <div class="gallery-audio-button" onClick=${this.handleAudioToggle}>
               <${Button}

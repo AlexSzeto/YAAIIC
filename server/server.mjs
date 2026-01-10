@@ -369,6 +369,22 @@ app.post('/generate', upload.any(), async (req, res) => {
       }
     }
     
+    // Process audio inputs from gallery selections (audio_0, audio_1, etc.)
+    // Audio files are already stored, we just need to extract the paths from URLs
+    const audioKeys = Object.keys(req.body).filter(key => key.startsWith('audio_') && !key.endsWith('_uid'));
+    if (audioKeys.length > 0) {
+      console.log(`Processing ${audioKeys.length} audio input(s)...`);
+      audioKeys.forEach(key => {
+        const audioUrl = req.body[key];
+        if (audioUrl && typeof audioUrl === 'string') {
+          // Extract filename from URL (e.g., "/media/audio_1.mp3" -> "audio_1.mp3")
+          const filename = audioUrl.split('/').pop();
+          req.body[key] = filename;
+          console.log(`Processed audio input '${key}': ${filename}`);
+        }
+      });
+    }
+    
     // Call handleImageGeneration with workflow data and modifications
     handleMediaGeneration(req, res, workflowData, config);
   } catch (error) {

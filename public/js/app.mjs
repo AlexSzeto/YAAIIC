@@ -70,6 +70,9 @@ function App() {
   // Input images for img2img workflows (array of {blob, url, description})
   const [inputImages, setInputImages] = useState([]);
   
+  // Input audio files for audio workflows (array of {url, mediaData})
+  const [inputAudios, setInputAudios] = useState([]);
+  
   // All available workflows (for lookup)
   const [workflows, setWorkflows] = useState([]);
   
@@ -130,8 +133,9 @@ function App() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
-    // Reset input images when workflow changes
+    // Reset input images and audio when workflow changes
     setInputImages([]);
+    setInputAudios([]);
     
     // Initialize extraInputs in formState with default values
     if (newWorkflow && newWorkflow.extraInputs && Array.isArray(newWorkflow.extraInputs)) {
@@ -177,7 +181,31 @@ function App() {
   
   // Handle gallery selection for a specific image slot
   const handleSelectFromGallery = (targetIndex) => {
-    setGallerySelectionMode({ active: true, index: targetIndex });
+    setGallerySelectionMode({ active: true, index: targetIndex, type: 'image' });
+    setIsGalleryOpen(true);
+  };
+  
+  // Handle audio change for a specific slot
+  const handleAudioChange = (index, audioUrlOrData) => {
+    setInputAudios(prev => {
+      const newAudios = [...prev];
+      if (audioUrlOrData === null) {
+        // Clear the slot
+        newAudios[index] = null;
+      } else if (typeof audioUrlOrData === 'string') {
+        // It's a URL
+        newAudios[index] = { url: audioUrlOrData, mediaData: {} };
+      } else if (audioUrlOrData && typeof audioUrlOrData === 'object') {
+        // It's media data object
+        newAudios[index] = { url: audioUrlOrData.audioUrl, mediaData: audioUrlOrData };
+      }
+      return newAudios;
+    });
+  };
+  
+  // Handle gallery selection for a specific audio slot
+  const handleSelectAudioFromGallery = (targetIndex) => {
+    setGallerySelectionMode({ active: true, index: targetIndex, type: 'audio' });
     setIsGalleryOpen(true);
   };
   
@@ -291,13 +319,14 @@ function App() {
         }
       }
       
-      // Check if we have images to send
+      // Check if we have images or audio to send
       const hasImages = inputImages.some(img => img && img.blob);
+      const hasAudios = inputAudios.some(audio => audio && audio.url);
       
       let response;
       
-      if (hasImages) {
-        // Build multipart form data with uploaded images
+      if (hasImages || hasAudios) {
+        // Build multipart form data with uploaded images/audio
         const formData = new FormData();
         formData.append('prompt', formState.description);
         formData.append('workflow', workflow.name);
@@ -333,6 +362,18 @@ function App() {
                 formData.append(`image_${index}_${fieldName}`, value);
               }
             });
+          }
+        });
+        
+        // Append audio file paths (from gallery selection)
+        inputAudios.forEach((audio, index) => {
+          if (audio && audio.url) {
+            formData.append(`audio_${index}`, audio.url);
+            
+            // Also send the full media data UID if available
+            if (audio.mediaData && audio.mediaData.uid) {
+              formData.append(`audio_${index}_uid`, audio.mediaData.uid);
+            }
           }
         });
         
@@ -612,32 +653,50 @@ function App() {
   // Gallery handlers
   const handleGallerySelect = async (item) => {
      if (gallerySelectionMode.active) {
-         // Selection mode: Use image as input
-         const imageUrl = item.imageUrl || item.url;
-         if (imageUrl) {
-             try {
-                 // Fetch the image as a blob so it can be sent to the server
-                 const response = await fetch(imageUrl);
-                 const blob = await response.blob();
-                 
-                 setInputImages(prev => {
-                     const newImages = [...prev];
-                     newImages[gallerySelectionMode.index] = { 
-                         blob, 
-                         url: imageUrl, 
+         // Selection mode: Use media as input
+         if (gallerySelectionMode.type === 'audio') {
+             // Audio selection
+             const audioUrl = item.audioUrl;
+             if (audioUrl) {
+                 setInputAudios(prev => {
+                     const newAudios = [...prev];
+                     newAudios[gallerySelectionMode.index] = { 
+                         url: audioUrl, 
                          mediaData: item
                      };
-                     return newImages;
+                     return newAudios;
                  });
                  
-                 toast.success('Image selected from gallery');
-             } catch (err) {
-                 console.error('Failed to fetch image from gallery:', err);
-                 toast.error('Failed to select image from gallery');
+                 toast.success('Audio selected from gallery');
+             }
+         } else {
+             // Image selection
+             const imageUrl = item.imageUrl || item.url;
+             if (imageUrl) {
+                 try {
+                     // Fetch the image as a blob so it can be sent to the server
+                     const response = await fetch(imageUrl);
+                     const blob = await response.blob();
+                     
+                     setInputImages(prev => {
+                         const newImages = [...prev];
+                         newImages[gallerySelectionMode.index] = { 
+                             blob, 
+                             url: imageUrl, 
+                             mediaData: item
+                         };
+                         return newImages;
+                     });
+                     
+                     toast.success('Image selected from gallery');
+                 } catch (err) {
+                     console.error('Failed to fetch image from gallery:', err);
+                     toast.error('Failed to select image from gallery');
+                 }
              }
          }
          setIsGalleryOpen(false);
-         setGallerySelectionMode({ active: false, index: -1 });
+         setGallerySelectionMode({ active: false, index: -1, type: null });
      } else {
          // View mode: View generated result
          setGeneratedImage(item);
@@ -766,6 +825,9 @@ function App() {
           inputImages=${inputImages}
           onImageChange=${handleImageChange}
           onSelectFromGallery=${handleSelectFromGallery}
+          inputAudios=${inputAudios}
+          onAudioChange=${handleAudioChange}
+          onSelectAudioFromGallery=${handleSelectAudioFromGallery}
         />
         <!-- Note: Passed onUploadClick logic to decouple, though implementation of upload button in Form relies on ID or prop -->
       </div>
@@ -822,7 +884,7 @@ function App() {
         isOpen=${isGalleryOpen}
         onClose=${() => {
             setIsGalleryOpen(false);
-            setGallerySelectionMode({ active: false, index: -1 });
+            setGallerySelectionMode({ active: false, index: -1, type: null });
         }}
         queryPath="/media-data"
         folder=${currentFolder.uid}
@@ -836,7 +898,7 @@ function App() {
           }
         }}
         selectionMode=${gallerySelectionMode.active}
-        fileTypeFilter=${gallerySelectionMode.active ? ['image'] : null}
+        fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
         onSelectAsInput=${handleSelectAsInput}
       />
       

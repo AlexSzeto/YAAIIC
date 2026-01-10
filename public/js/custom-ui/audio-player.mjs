@@ -109,7 +109,7 @@ export class AudioPlayer extends Component {
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     return html`
-      <div class="audio-player-overlay">
+      <div class="audio-player-overlay overlay-panel">
         <audio 
           ref=${this.audioRef}
           src=${audioUrl}

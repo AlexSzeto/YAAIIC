@@ -1106,7 +1106,7 @@
       "options": {
         "type": "audio",
         "inputImages": 0,
-        "inputAudio": 1,
+        "inputAudios": 1,
         "optionalPrompt": false,
         "nameRequired": true,
         "extraInputs": [

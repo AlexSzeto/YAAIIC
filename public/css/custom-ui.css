@@ -35,6 +35,15 @@
 /* Import shared CSS variables */
 @import 'variables.css';
 
+/* ===== SHARED OVERLAY STYLES ===== */
+/* Generic semi-transparent overlay with blur effect */
+.overlay-panel {
+  background: rgba(40, 40, 40, 0.8);
+  backdrop-filter: blur(4px);
+  margin: 6px;
+  border-radius: 6px;
+}
+
 /* ===== SHARED BUTTON STYLES ===== */
 .btn-with-icon {
   width: 120px;
@@ -420,11 +429,7 @@
   bottom: 0;
   left: 0;
   padding: 8px 10px;
-  background: rgba(40, 40, 40, 0.8);
-  backdrop-filter: blur(4px);
-  margin: 6px;
   margin-right: 0;
-  border-radius: 6px;
   font-size: 12px;
   color: var(--dark-text-primary);
   display: flex;
@@ -1026,6 +1031,104 @@
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
 
+/* ===== AUDIO SELECT COMPONENT ===== */
+
+.audio-select-component {
+  display: inline-block;
+}
+
+.audio-select-area {
+  width: 150px;
+  height: 150px;
+  border: 2px dashed var(--dark-border-focus);
+  border-radius: 8px;
+  background-color: var(--dark-background-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-select-area:hover {
+  border-color: var(--dark-border-highlight);
+  background-color: var(--dark-background-hover);
+}
+
+.audio-select-area.has-audio {
+  border-style: solid;
+  border-color: var(--dark-border-secondary);
+  cursor: default;
+  padding: 0;
+}
+
+.audio-select-area.has-audio:hover {
+  border-color: var(--dark-border-highlight);
+}
+
+.audio-select-area.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Empty State */
+.audio-select-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.audio-select-text {
+  color: var(--dark-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Audio Header (top section with name and icon) */
+.audio-select-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  margin-bottom: 0;
+  max-width: 134px;
+}
+
+.audio-select-name {
+  color: var(--dark-text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Control Buttons Overlay (bottom centered) */
+.audio-select-overlay {
+  position: absolute;
+  bottom: 0;
+  width: min-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 0;
+}
+
 /* ===== CUSTOM CHECKBOX ===== */
 .custom-checkbox-visual {
   display: flex;
@@ -1198,12 +1301,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(40, 40, 40, 0.8);
-  backdrop-filter: blur(4px);
   padding: 12px;
   margin: 6px;
-  border-radius: 6px;
-  z-index: 10;
 }
 
 .audio-player-controls {
