@@ -75,6 +75,13 @@ p {
   align-items: end;
 }
 
+.workflow-selector-container {
+  display: flex;
+  gap: 15px;
+  flex: 1 1 auto;
+  align-items: end;
+}
+
 .video-controls-row {
   display: flex;
   flex: 1 0 100%;
@@ -96,9 +103,7 @@ p {
 }
 
 .form-group.full-width {
-  flex: 1 0 100%;
-  min-width: 100%;
-  width: 100%;
+  flex: 1 0 0;
   width: 100%;
 }
 
@@ -186,7 +191,7 @@ p {
   background-color: var(--dark-background-tertiary);
   color: var(--dark-text-primary);
   font-size: 14px;
-  resize: vertical;
+  resize: none;
   transition: border-color 0.3s ease;
   font-family: inherit;
 }
@@ -507,7 +512,6 @@ body:has(.inpaint-main-layout) {
 .tabbed-info-section {
   display: flex;
   flex-direction: column;
-  margin-bottom: 15px;
 }
 
 .tabbed-info-header {
@@ -678,7 +682,7 @@ body:has(.inpaint-main-layout) {
   background-color: var(--dark-background-card);
   color: var(--dark-text-primary);
   font-size: 12px;
-  resize: vertical;
+  resize: none;
   width: 100%;
   min-height: 160px;
 }

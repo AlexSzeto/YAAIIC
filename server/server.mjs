@@ -79,7 +79,7 @@ export function addMediaDataEntry(entry) {
   // Add current folder to the entry
   entry.folder = globalData.currentFolder || '';
   
-  globalData.imageData.push(entry);
+  globalData.mediaData.push(entry);
   saveMediaData();
 }
 
@@ -517,13 +517,13 @@ app.delete('/media-data/delete', (req, res) => {
     console.log(`Delete request for UIDs: ${uids.join(', ')}`);
     
     // Count entries before deletion
-    const originalCount = globalData.imageData.length;
+    const originalCount = globalData.mediaData.length;
     
     // Remove entries with matching UIDs
-    globalData.imageData = globalData.imageData.filter(item => !uids.includes(item.uid));
+    globalData.mediaData = globalData.mediaData.filter(item => !uids.includes(item.uid));
     
     // Count entries after deletion
-    const deletedCount = originalCount - globalData.imageData.length;
+    const deletedCount = originalCount - globalData.mediaData.length;
     
     // Save changes to file
     try {

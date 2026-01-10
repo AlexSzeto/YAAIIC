@@ -210,7 +210,7 @@ New input types:
    13. Modify the server to reference `mediaData` when it tries to access `imageData`
    13. Test that newly generated media automatically includes the correct `type` value
 
-[] On the workflow selector, add a dropdown select to the left of the current workflow select with the label "Workflow Type" and a list of type options. Filter the workflows available for selection for the existing, full width select component by the currently selected type. Allow the options to be passed in as parameters with `label` and `value`, and if only one item is passed in, hide the workflow type select. Pass in "Image", "Video", "Audio" for the index page and just "Inpaint" for the inpaint page.
+[x] On the workflow selector, add a dropdown select to the left of the current workflow select with the label "Workflow Type" and a list of type options. Filter the workflows available for selection for the existing, full width select component by the currently selected type. Allow the options to be passed in as parameters with `label` and `value`, and if only one item is passed in, hide the workflow type select. Pass in "Image", "Video", "Audio" for the index page and just "Inpaint" for the inpaint page.
 
 [] Update the generation display "select" action button to filter based on the `type` attribute.
    1. In `public/js/app.mjs`, locate the generation view where the "select" action button is rendered

@@ -500,7 +500,9 @@ function InpaintApp() {
               value=${workflow}
               onChange=${handleWorkflowChange}
               disabled=${isGenerating}
-              filterType="inpaint"
+              typeOptions=${[
+                { label: 'Inpaint', value: 'inpaint' }
+              ]}
             />
             
             <${InpaintForm}
