@@ -109,11 +109,11 @@ New input types:
 
 [] Update gallery preview to show speaker icon overlay for audio files
    1. In `public/js/gallery-preview.mjs`, detect media type from file extension or workflow type metadata
-   2. Add speaker icon (using boxicons or similar) as an overlay on audio file thumbnails
+   2. Add small play/stop icon button (using existing custom button) as an overlay on audio file thumbnails. link its click event to a global audio player object.
    3. Display album image as the thumbnail for audio files (same as regular images)
-   4. Position speaker icon overlay (bottom-left corner before name) to indicate audio content
-   5. Style speaker icon with contrasting background/border to ensure visibility on any album image
-   6. Update preview click handler to open viewer with audio player overlay for audio files
+   4. Position button left of name and date to indicate audio content
+   5. Keep a global audio player at the app level. When a new audio is sent to the player, the previous audio stops. Use the currently playing audio path to allow the buttons to track which audio is playing without needing the gallery to pass anything into the preview component.
+   6. Disable preview click handler for audio files in gallery mode
 
 [] Implement extra inputs system for workflows
    1. In `server/resource/comfyui-workflows.json`, add new optional property `extraInputs` array to workflow options
