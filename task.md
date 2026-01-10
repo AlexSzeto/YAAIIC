@@ -168,21 +168,162 @@ New input types:
    5. Pass extra inputs to workflow generation logic in `server/generate.mjs`
 
 [] Move the hidden parameter outside of the options object in the workflow schema, and implement not sending these parameters on workflow list requests.
+   1. In `server/resource/comfyui-workflows.json`, move the `hidden` property from nested within `options` to the top level of each workflow object
+   2. Update workflow schema documentation to reflect that `hidden` is a top-level property
+   3. In `server/server.mjs`, locate the endpoint that serves the workflow list (GET `/workflows` or similar)
+   4. Add filtering logic to exclude workflows where `hidden: true` from the response
+   5. Ensure internal server code can still access hidden workflows when needed (e.g., for `defaultAudioGenerationWorkflow`)
+   6. Test that hidden workflows do not appear in client workflow selection dropdown
+   7. Test that generation still works with hidden workflows when they are referenced programmatically
 
 [] Refactor the `renderExtraInputs` function outside of `app.mjs` and reuse it to generate extra inputs for the inpaint form. send these extra inputs for the inpaint requests.
+   1. Create new utility file `public/js/app-ui/extra-inputs-renderer.mjs` to house the reusable extra inputs rendering logic
+   2. Move `renderExtraInputs()` function from `app.mjs` to the new file
+   5. Update `public/js/app.mjs` to import and use the refactored `createExtraInputsRenderer()`
+   6. Test that main generation UI still works correctly with refactored function
+   7. In `public/js/inpaint-page.mjs`, import `createExtraInputsRenderer()`
+   8. Locate the inpaint form initialization code
+   9. Fetch the selected workflow configuration to get its `extraInputs` definition
+   10. Add a container element in the inpaint form HTML structure for extra inputs (between existing form controls)
+   11. Call `createExtraInputsRenderer()` with the container and workflow config when workflow is selected
+   12. Update form submission handler to collect extra input values
+   13. Include extra input values in the request body when calling the inpaint generation endpoint
+   14. In `server/server.mjs`, update the inpaint endpoint to accept and pass extra inputs to the generation logic
+   15. Test that inpaint page correctly renders and submits extra inputs
+
+[] Add `type` from the workflow definition to `generationData` at the start of the generation. Create a migration utilility script, `/migrate/add-workflow-types-to-db.mjs`, to determine the workflow type using the output file format and write it back to existing entries missing this data. Run the util script to backfill the database entries.
+   1. In `server/generate.mjs`, locate the `handleMediaGeneration()` function
+   2. After loading workflow configuration, add the workflow's `type` property to `generationData` object (e.g., `generationData.type = workflow.options.type`)
+   3. Ensure the `type` value is saved to the database when `addMediaDataEntry()` is called
+   4. Create new directory `migrate/` in the project root if it doesn't exist
+   5. Create new file `migrate/add_workflow-types-to-db.mjs` for the migration script
+   6. In the migration script, import necessary modules (`fs`, path utilities, and database functions)
+   7. Load all media data entries from `server/database/media-data.json`
+   8. For each entry that is missing the `type` property, determine type based on file extensions:
+      - If `saveAudioPath` or `saveAudioFilename` exists, set `type` to "audio"
+      - Else if entry has video indicators (e.g., workflow name contains "video", or duration/frames metadata, filename contains `webp`), set `type` to "video"
+      - Otherwise, set `type` to "image"
+   9. Write updated media data back to the database file
+   10. Add logging to show how many entries were updated
+   11. Run the migration script using `node migrate/add_workflow_types_to_db.mjs`
+   12. Verify database entries now have `type` property populated correctly
+   13. Test that newly generated media automatically includes the correct `type` value
+
+[] Update the generation display "select" action button to filter based on the `type` attribute.
+   1. In `public/js/app.mjs`, locate the generation view where the "select" action button is rendered
+   2. Find the handler function that opens the gallery in selection mode (likely `handleSelectImage()` or similar)
+   3. Determine the required media type based on the current workflow configuration (check if workflow has `imageInputs`, `audioInputs`, or video-specific properties)
+   4. Pass the required media type as a filter parameter when opening the gallery in selection mode
+   5. Update gallery opening logic to accept a `filterType` parameter (e.g., "image", "audio", "video")
+   6. In `public/js/gallery-preview.mjs` or relevant gallery code, implement filtering logic to show only media entries matching the filter type
+   7. Check each media entry's `type` property against the filter and hide non-matching entries
+   8. Update the gallery UI to show an indicator when filtering is active (e.g., "Showing: Images only")
+   9. Test that clicking "select" from an image workflow only shows image entries in the gallery
+   10. Test that video and audio workflows (when implemented) filter correctly as well
+
+[] Update the gallery select mode to filter for specific generation types (image/audio/video), hiding unfit formats similar to how it currently behaves (which is to disable entries not matching the desired format). Refactor the image select component to use the filter.
+   1. In `public/js/gallery-preview.mjs`, locate the code that handles selection mode rendering and disabling logic
+   2. Identify where media entries are currently being disabled based on format compatibility
+   3. Create new function `shouldDisableMediaForSelection(mediaEntry, allowedTypes)` that checks if media type matches allowed types
+   4. Function should accept a media entry object and an array of allowed types (e.g., `["image"]`, `["audio"]`, `["image", "video"]`)
+   5. Function should return `true` if media entry's `type` property is NOT in the allowedTypes array
+   6. Update the gallery preview component to use this function when rendering items in selection mode
+   7. Apply disabled state (greyed out, unclickable) to media entries that don't match the filter, reusing existing `gallery-item disabled` class
+   8. In `public/js/custom-ui/image-select.mjs`, locate where the component triggers gallery selection mode
+   9. Update the component to pass `allowedTypes: ["image"]` parameter when opening the gallery
+   10. Ensure disabled entries show visual feedback (reduced opacity, cursor not-allowed, etc.)
+   12. Test that image-select component disables all non-image media in the gallery
+   13. Test that attempting to click disabled entries does not trigger selection
+   14. Verify visual styling clearly indicates which entries are selectable vs disabled
 
 [] Create audio-select component, replicating the general layout of the image-select component with the following differences: use speaker icon instead of picture icon, and add a play/pause icon button between the clear and replace button that uses the global audio player to play back the currently selected audio. Add copies of this component after the image select components depending on the number of audio files required, and send these audio files to the generation workflow in the same way that the image files are being added to the form.
+   1. Create new file `public/js/custom-ui/audio-select.mjs` for the audio selection component
+   2. Define AudioSelect component extending preact Component class with following structure:
+   ```javascript
+   // AudioSelect component class
+   export class AudioSelect extends Component {
+     constructor(props) // Accept props: id, label, onSelect, onClear
+     
+     // State management
+     state = {
+       selectedAudioUrl: null,
+       selectedAudioName: null,
+       isPlaying: false
+     }
+     
+     // Lifecycle methods
+     componentDidMount() // Set up global audio player listeners
+     componentWillUnmount() // Clean up listeners
+     
+     // Private methods
+     handleBrowseClick() // Opens gallery in selection mode for audio
+     handleClearClick() // Clears selected audio
+     handleReplaceClick() // Opens gallery to replace current selection
+     handlePlayPauseClick() // Toggles playback via global audio player
+     updatePlayingState() // Updates isPlaying based on global player state
+     
+     // Render method
+     render() // Returns preact/htm structure similar to image-select with audio-specific UI
+   }
+   ```
+   3. Component UI should include:
+      - Speaker icon (instead of picture icon)
+      - Audio name display when audio is selected
+      - Browse button (when no audio selected)
+      - Clear button (when audio is selected)
+      - Replace button (when audio is selected)
+      - Play/Pause button (positioned between Clear and Replace, when audio is selected)
+   4. Style the component to match image-select component layout in `public/css/custom-ui.css`
+   5. Integrate with global audio player from `public/js/global-audio-player.mjs`
+   6. Update play/pause button icon based on whether this audio is currently playing
+   7. In `server/resource/comfyui-workflows.json`, add support for workflows to specify `audioInputs` count (similar to `imageInputs`)
+   8. Add `audioInputs` property to workflows that require audio file inputs (e.g., voice-to-voice conversion, audio mashup, etc.)
+   9. In `public/js/app.mjs`, import AudioSelect component
+   10. Add logic to detect `audioInputs` count from selected workflow configuration
+   11. Dynamically render AudioSelect components after image select components based on `audioInputs` count
+   12. Create array to track selected audio file UIDs
+   13. Update form submission handler to collect audio file UIDs
+   14. Include audio file paths in generation request payload (format: `audio_0`, `audio_1`, etc., similar to images)
+   15. In `server/generate.mjs`, update workflow generation logic to handle audio input files
+   16. Map audio file paths to workflow parameters (similar to how image inputs are mapped)
+   17. Ensure audio files are properly passed to ComfyUI workflow execution
+   18. Test component rendering when workflow has audioInputs defined
+   19. Test selecting audio from gallery and verifying selection persists
+   20. Test play/pause functionality with global audio player
+   21. Test clearing and replacing audio selections
+   22. Test form submission includes correct audio file paths
 
 [] Test audio workflows end-to-end
-   1. Manually test generating audio with first example audio workflow
-   2. Verify both audio file and album image are saved with correct formats
-   3. Verify album image displays in generation view with audio player overlay
-   4. Verify audio player overlay renders correctly on top of album image
-   5. Verify audio playback works in browser
-   6. Manually test second example audio workflow
-   7. Verify audio files appear with album image thumbnails and speaker icon overlay in gallery
-   8. Test clicking audio preview in gallery opens proper viewer with audio player
-   9. Verify database entry is created correctly with both image URL and audio URL in metadata
-   10. Test regenerating metadata fields for audio entries
-   11. Verify upload functionality works for audio files with proper name detection
-   12. Verify both files (image and audio) are properly linked in the database
+   1. Manually test generating audio with first example audio workflow (mp3)
+   2. Verify both audio file (mp3) and album image are saved with correct formats to storage folder
+   3. Verify database entry includes both `saveAudioPath`/`saveAudioFilename` and `saveImagePath`/`saveImageFilename` 
+   4. Verify media data entry has correct workflow type set to "audio"
+   5. Open generation view and verify album image displays correctly
+   6. Verify audio player overlay renders correctly positioned on top of album image
+   7. Verify audio player controls (play/pause button, progress bar, time display) work correctly
+   8. Verify audio playback starts and stops properly in generation view
+   9. Test seeking in audio player progress bar
+   10. Manually test second example audio workflow (ogg format)
+   11. Verify ogg audio file generation and album image work correctly
+   12. Navigate to gallery and verify audio entries appear with album image thumbnails
+   13. Verify speaker icon overlay appears on audio file thumbnails in gallery
+   14. Click play button on audio thumbnail in gallery and verify global audio player starts playback
+   15. Click play on different audio thumbnail and verify previous audio stops, new one plays
+   16. Verify clicking audio thumbnail in gallery does NOT open full viewer (audio playback only)
+   17. Test that clicking the thumbnail image area (not the play button) opens the generation viewer
+   18. In generation viewer for audio, verify audio player overlay is present and functional
+   19. Test regenerating metadata fields (name, prompt, tags) for audio entries
+   20. Verify regeneration maintains both audio and image file associations
+   21. Test uploading an audio file via upload button
+   22. Verify upload accepts mp3, ogg, wav, and other common audio formats
+   23. Verify filename-based name detection works for uploaded audio files (camelCase, snake_case, etc.)
+   24. Verify uploaded audio triggers automatic album cover generation
+   25. Verify database entry is created with both uploaded audio path and generated album image path
+   26. Test that uploaded audio entries appear correctly in gallery with speaker icon
+   27. Test extra inputs with audio workflows (if applicable - format selection, duration, etc.)
+   28. Verify audio format extra input allows selecting between mp3, ogg, wav, flac
+   29. Test generating audio with different format selections and verify correct file extensions
+   30. Test error handling: invalid audio workflow, missing audio file, playback errors
+   31. Test that hidden album cover generation workflow does not appear in workflow selection dropdown
+   32. Verify console logs show no errors during audio generation, upload, or playback
+   33. Test audio functionality across different browsers (Chrome, Firefox, Edge) if possible
