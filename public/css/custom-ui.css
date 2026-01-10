@@ -913,7 +913,7 @@
 
 .image-select-area {
   width: 150px;
-  height: 150px;
+  height: 64px;
   border: 2px dashed var(--dark-border-focus);
   border-radius: 8px;
   background-color: var(--dark-background-card);

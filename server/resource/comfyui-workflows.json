@@ -99,8 +99,7 @@
             "default": "png",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
         ]
@@ -163,11 +162,11 @@
             "default": "png",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
-        ]
+        ],
+        "hidden": true
       },
       "postGenerationTasks": [
         {
@@ -234,14 +233,14 @@
             "id": "imageFormat",
             "type": "select",
             "label": "Image Format",
-            "default": "png",
+            "default": "jpg",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
-        ]
+        ],
+        "hidden": true
       },
       "postGenerationTasks": [
         {
@@ -300,14 +299,14 @@
             "id": "imageFormat",
             "type": "select",
             "label": "Image Format",
-            "default": "png",
+            "default": "jpg",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
-        ]
+        ],
+        "hidden": true
       },
       "postGenerationTasks": [
         {
@@ -366,11 +365,10 @@
             "id": "imageFormat",
             "type": "select",
             "label": "Image Format",
-            "default": "png",
+            "default": "jpg",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
         ]
@@ -433,11 +431,10 @@
             "id": "imageFormat",
             "type": "select",
             "label": "Image Format",
-            "default": "png",
+            "default": "jpg",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
         ]
@@ -626,8 +623,7 @@
             "default": "png",
             "options": [
               { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" },
-              { "label": "WEBP", "value": "webp" }
+              { "label": "JPG", "value": "jpg" }
             ]
           }
         ]
@@ -695,16 +691,6 @@
         "orientation": "detect",
         "extraInputs": [
           {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Video Format",
-            "default": "webp",
-            "options": [
-              { "label": "WEBP", "value": "webp" },
-              { "label": "MP4", "value": "mp4" }
-            ]
-          },
-          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -719,6 +705,10 @@
         ]
       },
       "preGenerationTasks": [
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
@@ -825,16 +815,6 @@
         "orientation": "detect",
         "extraInputs": [
           {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Video Format",
-            "default": "webp",
-            "options": [
-              { "label": "WEBP", "value": "webp" },
-              { "label": "MP4", "value": "mp4" }
-            ]
-          },
-          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -849,6 +829,10 @@
         ]
       },
       "preGenerationTasks": [
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
@@ -936,16 +920,6 @@
         "orientation": "detect",
         "extraInputs": [
           {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Video Format",
-            "default": "webp",
-            "options": [
-              { "label": "WEBP", "value": "webp" },
-              { "label": "MP4", "value": "mp4" }
-            ]
-          },
-          {
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
@@ -960,6 +934,10 @@
         ]
       },
       "preGenerationTasks": [
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
