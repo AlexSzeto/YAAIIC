@@ -425,16 +425,19 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
     // Emit progress: Uploading file
     emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, `Uploading ${fileTypeLabel.toLowerCase()}...`);
     
-    // Generate unique filename with timestamp
-    const timestamp = Date.now();
+    // Determine file type and extension
     const ext = path.extname(file.originalname) || (isAudio ? '.mp3' : '.png');
-    const filename = `upload_${timestamp}${ext}`;
+    const fileType = isAudio ? 'audio' : 'image';
     
     // Save file to storage directory
     const storageFolder = path.join(actualDirname, 'storage');
     if (!fs.existsSync(storageFolder)) {
       fs.mkdirSync(storageFolder, { recursive: true });
     }
+    
+    // Generate filename using type_index format
+    const nextIndex = findNextIndex(fileType, storageFolder);
+    const filename = `${fileType}_${nextIndex}${ext}`;
     
     const savePath = path.join(storageFolder, filename);
     fs.writeFileSync(savePath, file.buffer);

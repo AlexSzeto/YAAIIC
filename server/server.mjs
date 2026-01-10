@@ -331,7 +331,7 @@ app.post('/generate', upload.any(), async (req, res) => {
     
     if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
       try {
-        console.log('Processing uploaded images for image workflow...');
+        console.log('Processing uploaded files for workflow...');
         
         // Create a map of uploaded files by field name
         const uploadedFilesByName = {};
@@ -344,45 +344,43 @@ app.post('/generate', upload.any(), async (req, res) => {
           const { from, storePathAs } = uploadSpec;
           
           if (uploadedFilesByName[from]) {
-            const imageFile = uploadedFilesByName[from];
-            console.log(`Processing uploaded image for field '${from}'...`);
+            const uploadedFile = uploadedFilesByName[from];
+            const isAudio = from.startsWith('audio_');
+            const fileType = isAudio ? 'audio' : 'image';
             
-            // Generate unique filename for ComfyUI upload
-            const timestamp = Date.now();
-            const uploadFilename = `image_${timestamp}.png`;
+            console.log(`Processing uploaded ${fileType} for field '${from}'...`);
             
-            // Upload image to ComfyUI
-            const uploadResult = await uploadFileToComfyUI(imageFile.buffer, uploadFilename, "image", "input", true);
-            console.log(`Image uploaded successfully: ${uploadFilename}`);
+            // Extract extension from the uploaded file's originalname (e.g., image_0.png, audio_0.mp3)
+            const fileExt = path.extname(uploadedFile.originalname) || (isAudio ? '.mp3' : '.png');
+            
+            // Use the storage filename with proper extension (extract from mediaData URL)
+            let uploadFilename;
+            if (isAudio) {
+              const audioUrl = req.body[`${from}_uid`] ? 
+                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.audioUrl : null;
+              uploadFilename = audioUrl ? audioUrl.replace('/media/', '') : `audio_${Date.now()}${fileExt}`;
+            } else {
+              const imageUrl = req.body[`${from}_uid`] ? 
+                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.imageUrl : null;
+              uploadFilename = imageUrl ? imageUrl.replace('/media/', '') : `image_${Date.now()}${fileExt}`;
+            }
+            
+            // Upload file to ComfyUI
+            const uploadResult = await uploadFileToComfyUI(uploadedFile.buffer, uploadFilename, fileType, "input", true);
+            console.log(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully: ${uploadFilename}`);
             
             // Store the filename in request body using the specified variable name
             req.body[storePathAs] = uploadResult.filename;
-            console.log(`Stored uploaded image path as '${storePathAs}': ${uploadResult.filename}`);
+            console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
           }
         }
         
         // Remove files from request body before calling handleMediaGeneration
         delete req.files;
       } catch (uploadError) {
-        console.error('Failed to upload images to ComfyUI:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload images', details: uploadError.message });
+        console.error('Failed to upload files to ComfyUI:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload files', details: uploadError.message });
       }
-    }
-    
-    // Process audio inputs from gallery selections (audio_0, audio_1, etc.)
-    // Audio files are already stored, we just need to extract the paths from URLs
-    const audioKeys = Object.keys(req.body).filter(key => key.startsWith('audio_') && !key.endsWith('_uid'));
-    if (audioKeys.length > 0) {
-      console.log(`Processing ${audioKeys.length} audio input(s)...`);
-      audioKeys.forEach(key => {
-        const audioUrl = req.body[key];
-        if (audioUrl && typeof audioUrl === 'string') {
-          // Extract filename from URL (e.g., "/media/audio_1.mp3" -> "audio_1.mp3")
-          const filename = audioUrl.split('/').pop();
-          req.body[key] = filename;
-          console.log(`Processed audio input '${key}': ${filename}`);
-        }
-      });
     }
     
     // Call handleImageGeneration with workflow data and modifications
@@ -1101,10 +1099,15 @@ app.post('/generate/inpaint', upload.fields([
     console.log('- image:', imageFile.originalname, 'size:', imageFile.size, 'type:', imageFile.mimetype);
     console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
     
-    // Generate unique filenames for ComfyUI upload
-    const timestamp = Date.now();
-    const imageFilename = `inpaint_image_${timestamp}.png`;
-    const maskFilename = `inpaint_mask_${timestamp}.png`;
+    // Generate filenames for ComfyUI upload
+    // For inpaint image: reuse storage filename if from gallery, otherwise use temp name
+    const imageUrl = req.body.imageUrl;
+    const imageFilename = imageUrl ? imageUrl.replace('/media/', '') : `inpaint_image_${Date.now()}.png`;
+    
+    // For mask: use dimensions-based naming so identical masks reuse the same file
+    const maskFilename = parsedInpaintArea ? 
+      `mask_${Math.round(parsedInpaintArea.imageWidth)}_${Math.round(parsedInpaintArea.imageHeight)}_${Math.round(parsedInpaintArea.x1)}_${Math.round(parsedInpaintArea.y1)}_${Math.round(parsedInpaintArea.x2)}_${Math.round(parsedInpaintArea.y2)}.png` :
+      `inpaint_mask_${Date.now()}.png`;
     
     try {
       // Upload both images to ComfyUI

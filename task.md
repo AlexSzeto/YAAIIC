@@ -239,9 +239,18 @@ New input types:
    4. Verified client code properly receives and uses `audioUrl` from the result
    5. Confirmed existing audio entries in database already have `audioUrl` properly saved
 
-[] Implement the logic to upload audio files to comfyUI, with the expected input having a similar format to uploaded images (using `audio_X`). Update the logic for choosing a filename for comfyUI uploads so that the name from the storage folder is reused (including the file extension - currently, the upload incorrectly hard codes the file type to png), meaning if the same file is uploaded twice into ComfyUI it should overwrite an existing file instead of creating a new file. This applies to inpaint as well - except for the mask image, which should be named as `mask_${imageWidth}_${imageHeight}_${x1}_${y1}_${x2}_${y2}` so masks covering an identical area should end up having the same filename.
+[x] Implement the logic to upload audio files to comfyUI, with the expected input having a similar format to uploaded images (using `audio_X`). Update the logic for choosing a filename for comfyUI uploads so that the name from the storage folder is reused (including the file extension - currently, the upload incorrectly hard codes the file type to png), meaning if the same file is uploaded twice into ComfyUI it should overwrite an existing file instead of creating a new file. This applies to inpaint as well - except for the mask image, which should be named as `mask_${imageWidth}_${imageHeight}_${x1}_${y1}_${x2}_${y2}` so masks covering an identical area should end up having the same filename.
+   1. Updated ComfyUI upload logic to reuse storage filenames with proper extensions instead of hardcoded `.png`
+   2. For image inputs from gallery: extract filename from mediaData URL to preserve extension
+   3. For audio inputs: implemented upload to ComfyUI using storage filename (with extension)
+   4. For inpaint mask: implemented dimension-based naming using `mask_${width}_${height}_${x1}_${y1}_${x2}_${y2}.png`
+   5. Audio files now properly upload to ComfyUI when workflow requires them (via `upload` spec)
 
-[] Update the logic for the media upload `upload/image` and `upload/audio` such that the filename in `/storage` would be replaced using the same algorithm as generated media files (`${type}$_${latestIndex}`), while keeping its original extension.
+[x] Update the logic for the media upload `upload/image` and `upload/audio` such that the filename in `/storage` would be replaced using the same algorithm as generated media files (`${type}_${latestIndex}`), while keeping its original extension.
+   1. Changed storage upload naming from `upload_${timestamp}${ext}` to `${type}_${latestIndex}${ext}`
+   2. Uses `findNextIndex()` function to get next available index for file type
+   3. Preserves original file extension from uploaded file
+   4. Applies to both image and audio uploads
 
 [] in the image modal overlay, when an action button is present, move that button to its own area below the image to the bottom right, and expand the modal vertically to fit the button.
 

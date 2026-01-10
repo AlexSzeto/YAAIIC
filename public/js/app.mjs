@@ -350,7 +350,7 @@ function App() {
         }
         
         // Append images
-        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
+        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageUrl', 'imageFormat'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
@@ -365,10 +365,12 @@ function App() {
           }
         });
         
-        // Append audio file paths (from gallery selection)
+        // Append audio files as blobs (from gallery selection)
         inputAudios.forEach((audio, index) => {
-          if (audio && audio.url) {
-            formData.append(`audio_${index}`, audio.url);
+          if (audio && audio.blob) {
+            // Get the original filename extension from the audio URL
+            const ext = audio.url ? audio.url.split('.').pop() : 'mp3';
+            formData.append(`audio_${index}`, audio.blob, `audio_${index}.${ext}`);
             
             // Also send the full media data UID if available
             if (audio.mediaData && audio.mediaData.uid) {
@@ -658,16 +660,26 @@ function App() {
              // Audio selection
              const audioUrl = item.audioUrl;
              if (audioUrl) {
-                 setInputAudios(prev => {
-                     const newAudios = [...prev];
-                     newAudios[gallerySelectionMode.index] = { 
-                         url: audioUrl, 
-                         mediaData: item
-                     };
-                     return newAudios;
-                 });
-                 
-                 toast.success('Audio selected from gallery');
+                 try {
+                     // Fetch the audio as a blob so it can be sent to the server
+                     const response = await fetch(audioUrl);
+                     const blob = await response.blob();
+                     
+                     setInputAudios(prev => {
+                         const newAudios = [...prev];
+                         newAudios[gallerySelectionMode.index] = { 
+                             blob,
+                             url: audioUrl, 
+                             mediaData: item
+                         };
+                         return newAudios;
+                     });
+                     
+                     toast.success('Audio selected from gallery');
+                 } catch (err) {
+                     console.error('Failed to fetch audio from gallery:', err);
+                     toast.error('Failed to select audio from gallery');
+                 }
              }
          } else {
              // Image selection
