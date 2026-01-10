@@ -107,7 +107,7 @@ New input types:
    7. Ensure audio player properly receives audio file URL and album image URL
    8. Handle loading states for both audio file and album image
 
-[] Update gallery preview to show speaker icon overlay for audio files
+[x] Update gallery preview to show speaker icon overlay for audio files
    1. In `public/js/gallery-preview.mjs`, detect media type from file extension or workflow type metadata
    2. Add small play/stop icon button (using existing custom button) as an overlay on audio file thumbnails. link its click event to a global audio player object.
    3. Display album image as the thumbnail for audio files (same as regular images)

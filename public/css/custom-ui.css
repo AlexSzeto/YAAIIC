@@ -435,6 +435,27 @@
   box-sizing: border-box;
 }
 
+/* Gallery item info with audio - horizontal layout */
+.gallery-item-info.has-audio {
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* Audio button container */
+.gallery-audio-button {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+/* Text content wrapper for audio items */
+.gallery-item-text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
 .gallery-item-name {
   font-weight: 600;
   font-size: 13px;
