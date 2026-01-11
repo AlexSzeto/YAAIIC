@@ -1,5 +1,4 @@
 # Bugs / Fixes
-- tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 
 # Features
 - Rename all generation variables ("savePath", etc.) to use snake_case. refactor prefix/postfix into using {{template}}. add pipes for templates. add math ops. send seed to ollama. client send seed even for uploads.
