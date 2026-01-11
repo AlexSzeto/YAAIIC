@@ -153,30 +153,33 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
         ref=${overlayRef}
         onClick=${handleOverlayClick}
       >
-        <div class="image-modal-container">
+        <div class="image-modal-container ${allowSelect && onSelect ? 'has-action-button' : ''}">
 
-
-           <img 
-             src=${imageUrl} 
-             alt=${title || 'Preview'} 
-             class="image-modal-preview"
-             style="max-width: 100%; max-height: calc(100vh - 60px); display: block; object-fit: contain;" 
-           />
-           
-           ${title && html`
-             <div class="image-modal-title">
-               ${title}
-             </div>
-           `}
+           <div class="image-modal-content">
+             <img 
+               src=${imageUrl} 
+               alt=${title || 'Preview'} 
+               class="image-modal-preview"
+               style="max-width: 100%; max-height: ${allowSelect && onSelect ? 'calc(100vh - 120px)' : 'calc(100vh - 60px)'}; display: block; object-fit: contain;" 
+             />
+             
+             ${title && html`
+               <div class="image-modal-title overlay-panel">
+                 ${title}
+               </div>
+             `}
+           </div>
 
            ${allowSelect && onSelect && html`
-             <${Button}
-               variant="secondary"
-               onClick=${handleSelect}
-               className="image-modal-select"
-             >
-               ${selectButtonText}
-             <//>
+             <div class="image-modal-action-area">
+               <${Button}
+                 variant="secondary"
+                 onClick=${handleSelect}
+                 className="image-modal-select"
+               >
+                 ${selectButtonText}
+               <//>
+             </div>
            `}
         </div>
       </div>

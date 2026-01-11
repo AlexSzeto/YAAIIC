@@ -34,7 +34,9 @@ export function Checkbox({
     userSelect: 'none',
     gap: hasLabel ? '8px' : '0', // Add spacing only if label exists
     minWidth: hasLabel ? undefined : 'auto', // Override .form-group min-width when no label
-    justifyContent: hasLabel ? 'flex-start' : 'center' // Center content if no label
+    justifyContent: hasLabel ? 'flex-start' : 'center', // Center content if no label
+    width: hasLabel ? undefined : 'min-content', // Shrink to fit content if no label
+    flex: hasLabel ? undefined : '0 0 auto' // Prevent stretching if no label
   };
 
   const checkboxVisual = html`

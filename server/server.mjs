@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleImageGeneration, setAddImageDataEntry, uploadImageToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleImageUpload } from './generate.mjs';
+import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
@@ -18,44 +18,44 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 // Fix Windows path issue by removing leading slash
 const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
 
-// Global imageData object
-let imageData = { imageData: [], folders: [], currentFolder: '' };
+// Global database object
+let globalData = { mediaData: [], folders: [], currentFolder: '' };
 
 // Load image data from JSON file
-function loadImageData() {
+function loadMediaData() {
   try {
-    const imageDataPath = path.join(actualDirname, 'database', 'image-data.json');
+    const imageDataPath = path.join(actualDirname, 'database', 'media-data.json');
     if (fs.existsSync(imageDataPath)) {
       const data = fs.readFileSync(imageDataPath, 'utf8');
-      imageData = JSON.parse(data);
+      globalData = JSON.parse(data);
       
       // Ensure folders and currentFolder exist
-      if (!imageData.folders) {
-        imageData.folders = [];
+      if (!globalData.folders) {
+        globalData.folders = [];
       }
-      if (!imageData.currentFolder && imageData.currentFolder !== '') {
-        imageData.currentFolder = '';
+      if (!globalData.currentFolder && globalData.currentFolder !== '') {
+        globalData.currentFolder = '';
       }
-      if (!imageData.imageData) {
-        imageData.imageData = [];
+      if (!globalData.mediaData) {
+        globalData.mediaData = [];
       }
       
-      console.log('Image data loaded:', imageData.imageData.length, 'entries,', imageData.folders.length, 'folders');
+      console.log('Image data loaded:', globalData.mediaData.length, 'entries,', globalData.folders.length, 'folders');
     } else {
       console.log('Image data file not found, starting with empty data');
-      imageData = { imageData: [], folders: [], currentFolder: '' };
+      globalData = { mediaData: [], folders: [], currentFolder: '' };
     }
   } catch (error) {
     console.error('Failed to load image data:', error);
-    imageData = { imageData: [], folders: [], currentFolder: '' };
+    globalData = { mediaData: [], folders: [], currentFolder: '' };
   }
 }
 
 // Save image data to JSON file
-function saveImageData() {
+function saveMediaData() {
   try {
     const databaseDir = path.join(actualDirname, 'database');
-    const imageDataPath = path.join(databaseDir, 'image-data.json');
+    const imageDataPath = path.join(databaseDir, 'media-data.json');
     
     // Create database directory if it doesn't exist
     if (!fs.existsSync(databaseDir)) {
@@ -63,7 +63,7 @@ function saveImageData() {
       console.log('Created database directory');
     }
     
-    fs.writeFileSync(imageDataPath, JSON.stringify(imageData, null, 2));
+    fs.writeFileSync(imageDataPath, JSON.stringify(globalData, null, 2));
     console.log('Image data saved successfully');
   } catch (error) {
     console.error('Failed to save image data:', error);
@@ -71,16 +71,16 @@ function saveImageData() {
 }
 
 // Add image data entry
-export function addImageDataEntry(entry) {
+export function addMediaDataEntry(entry) {
   const now = new Date();
   entry.timestamp = now.toISOString();
   entry.uid = now.getTime(); // Generate UID using Date.getTime()
   
   // Add current folder to the entry
-  entry.folder = imageData.currentFolder || '';
+  entry.folder = globalData.currentFolder || '';
   
-  imageData.imageData.push(entry);
-  saveImageData();
+  globalData.mediaData.push(entry);
+  saveMediaData();
 }
 
 // Load configuration
@@ -111,7 +111,7 @@ try {
   initializeServices(config);
   
   // Set up the image data entry function for generate.mjs
-  setAddImageDataEntry(addImageDataEntry);
+  setAddMediaDataEntry(addMediaDataEntry);
   
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -134,15 +134,15 @@ app.use(express.json());
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 2 // Allow up to 2 files (image + mask)
+    fileSize: 100 * 1024 * 1024, // 100MB limit for audio files
+    files: 2 // Allow up to 2 files (image + mask, or audio + reference)
   },
   fileFilter: (req, file, cb) => {
-    // Accept image files only
-    if (file.mimetype.startsWith('image/')) {
+    // Accept image and audio files
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('audio/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('Only image and audio files are allowed'), false);
     }
   }
 });
@@ -160,7 +160,7 @@ app.get('/', (req, res) => {
 app.get('/progress/:taskId', handleSSEConnection);
 
 // Serve images from storage folder
-app.use('/image', express.static(path.join(actualDirname, 'storage')));
+app.use('/media', express.static(path.join(actualDirname, 'storage')));
 
 app.get('/tags', (req, res) => {
   // Parse query parameters with defaults
@@ -241,8 +241,11 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
     
     console.log('Received image upload:', req.file.originalname);
     
+    // Extract optional name field from request body
+    const extractedName = req.body.name || null;
+    
     // Create upload task and get task ID
-    const taskId = await handleImageUpload(req.file, comfyuiWorkflows);
+    const taskId = await handleMediaUpload(req.file, comfyuiWorkflows, extractedName);
     
     // Return task ID immediately
     res.json({
@@ -254,6 +257,38 @@ app.post('/upload/image', upload.single('image'), async (req, res) => {
   } catch (error) {
     console.error('Error uploading image:', error);
     res.status(500).json({ error: 'Failed to upload image', details: error.message });
+  }
+});
+
+// POST endpoint for uploading audio files
+app.post('/upload/audio', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file provided' });
+    }
+    
+    // Initialize sent-prompt.json logging
+    resetPromptLog();
+    resetProgressLog();
+    
+    console.log('Received audio upload:', req.file.originalname);
+    
+    // Extract optional name field from request body
+    const extractedName = req.body.name || null;
+    
+    // Create upload task and get task ID
+    const taskId = await handleMediaUpload(req.file, comfyuiWorkflows, extractedName);
+    
+    // Return task ID immediately
+    res.json({
+      success: true,
+      taskId: taskId,
+      message: 'Upload task created'
+    });
+    
+  } catch (error) {
+    console.error('Error uploading audio:', error);
+    res.status(500).json({ error: 'Failed to upload audio', details: error.message });
   }
 });
 
@@ -279,15 +314,8 @@ app.post('/generate', upload.any(), async (req, res) => {
       console.log('Generated random seed:', req.body.seed);
     }
     
-    // Create savePath similar to how handleImageGeneration creates fullPath
-    const storageFolder = path.join(actualDirname, 'storage');
-    if (!fs.existsSync(storageFolder)) {
-      fs.mkdirSync(storageFolder, { recursive: true });
-    }
-    
-    const nextIndex = findNextIndex('image', storageFolder);
-    const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
-    req.body.savePath = path.join(storageFolder, filename);
+    // Don't create saveImagePath here - it will be created after preGenerationTasks
+    // so that the format can be determined from extra inputs
     
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
@@ -303,7 +331,7 @@ app.post('/generate', upload.any(), async (req, res) => {
     
     if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
       try {
-        console.log('Processing uploaded images for image workflow...');
+        console.log('Processing uploaded files for workflow...');
         
         // Create a map of uploaded files by field name
         const uploadedFilesByName = {};
@@ -316,33 +344,47 @@ app.post('/generate', upload.any(), async (req, res) => {
           const { from, storePathAs } = uploadSpec;
           
           if (uploadedFilesByName[from]) {
-            const imageFile = uploadedFilesByName[from];
-            console.log(`Processing uploaded image for field '${from}'...`);
+            const uploadedFile = uploadedFilesByName[from];
+            const isAudio = from.startsWith('audio_');
+            const fileType = isAudio ? 'audio' : 'image';
             
-            // Generate unique filename for ComfyUI upload
-            const timestamp = Date.now();
-            const uploadFilename = `image_${from}_${timestamp}.png`;
+            console.log(`Processing uploaded ${fileType} for field '${from}'...`);
             
-            // Upload image to ComfyUI
-            const uploadResult = await uploadImageToComfyUI(imageFile.buffer, uploadFilename, "input", true);
-            console.log(`Image uploaded successfully: ${uploadFilename}`);
+            // Extract extension from the uploaded file's originalname (e.g., image_0.png, audio_0.mp3)
+            const fileExt = path.extname(uploadedFile.originalname) || (isAudio ? '.mp3' : '.png');
+            
+            // Use the storage filename with proper extension (extract from mediaData URL)
+            let uploadFilename;
+            if (isAudio) {
+              const audioUrl = req.body[`${from}_uid`] ? 
+                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.audioUrl : null;
+              uploadFilename = audioUrl ? audioUrl.replace('/media/', '') : `audio_${Date.now()}${fileExt}`;
+            } else {
+              const imageUrl = req.body[`${from}_uid`] ? 
+                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.imageUrl : null;
+              uploadFilename = imageUrl ? imageUrl.replace('/media/', '') : `image_${Date.now()}${fileExt}`;
+            }
+            
+            // Upload file to ComfyUI
+            const uploadResult = await uploadFileToComfyUI(uploadedFile.buffer, uploadFilename, fileType, "input", true);
+            console.log(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully: ${uploadFilename}`);
             
             // Store the filename in request body using the specified variable name
             req.body[storePathAs] = uploadResult.filename;
-            console.log(`Stored uploaded image path as '${storePathAs}': ${uploadResult.filename}`);
+            console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
           }
         }
         
-        // Remove files from request body before calling handleImageGeneration
+        // Remove files from request body before calling handleMediaGeneration
         delete req.files;
       } catch (uploadError) {
-        console.error('Failed to upload images to ComfyUI:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload images', details: uploadError.message });
+        console.error('Failed to upload files to ComfyUI:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload files', details: uploadError.message });
       }
     }
     
     // Call handleImageGeneration with workflow data and modifications
-    handleImageGeneration(req, res, workflowData);
+    handleMediaGeneration(req, res, workflowData, config);
   } catch (error) {
     console.error('Error in image endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -350,7 +392,7 @@ app.post('/generate', upload.any(), async (req, res) => {
 });
 
 // GET endpoint for image data search
-app.get('/image-data', (req, res) => {
+app.get('/media-data', (req, res) => {
   try {
     const query = req.query.query || '';
     const tagsParam = req.query.tags || '';
@@ -358,7 +400,7 @@ app.get('/image-data', (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     // Get folder parameter, default to currentFolder if not provided
-    const folderParam = req.query.folder !== undefined ? req.query.folder : imageData.currentFolder;
+    const folderParam = req.query.folder !== undefined ? req.query.folder : globalData.currentFolder;
     const folderId = folderParam || '';
     
     // Parse tags from comma-separated string
@@ -367,7 +409,7 @@ app.get('/image-data', (req, res) => {
     console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], folder="${folderId}", sort="${sort}", limit=${limit}`);
     
     // Filter by query, tags, and folder
-    let filteredData = imageData.imageData.filter(item => {
+    let filteredData = globalData.mediaData.filter(item => {
       // Folder match - check if item belongs to the requested folder
       let folderMatch = true;
       if (folderId === '') {
@@ -427,7 +469,7 @@ app.get('/image-data', (req, res) => {
     // Apply limit
     const limitedData = filteredData.slice(0, limit);
     
-    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${imageData.imageData.length} total`);
+    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${globalData.mediaData.length} total`);
     
     res.json(limitedData);
   } catch (error) {
@@ -437,7 +479,7 @@ app.get('/image-data', (req, res) => {
 });
 
 // GET endpoint for single image data by UID
-app.get('/image-data/:uid', (req, res) => {
+app.get('/media-data/:uid', (req, res) => {
   try {
     const uid = parseInt(req.params.uid);
     
@@ -450,7 +492,7 @@ app.get('/image-data/:uid', (req, res) => {
     console.log(`Image data by UID endpoint called with uid=${uid}`);
     
     // Search through imageData array to find matching UID
-    const matchingImage = imageData.imageData.find(item => item.uid === uid);
+    const matchingImage = globalData.mediaData.find(item => item.uid === uid);
     
     if (!matchingImage) {
       console.log(`No image found with UID: ${uid}`);
@@ -467,7 +509,7 @@ app.get('/image-data/:uid', (req, res) => {
 });
 
 // DELETE endpoint for image data deletion
-app.delete('/image-data/delete', (req, res) => {
+app.delete('/media-data/delete', (req, res) => {
   try {
     const { uids } = req.body;
     
@@ -489,17 +531,17 @@ app.delete('/image-data/delete', (req, res) => {
     console.log(`Delete request for UIDs: ${uids.join(', ')}`);
     
     // Count entries before deletion
-    const originalCount = imageData.imageData.length;
+    const originalCount = globalData.mediaData.length;
     
     // Remove entries with matching UIDs
-    imageData.imageData = imageData.imageData.filter(item => !uids.includes(item.uid));
+    globalData.mediaData = globalData.mediaData.filter(item => !uids.includes(item.uid));
     
     // Count entries after deletion
-    const deletedCount = originalCount - imageData.imageData.length;
+    const deletedCount = originalCount - globalData.mediaData.length;
     
     // Save changes to file
     try {
-      saveImageData();
+      saveMediaData();
       console.log(`Successfully deleted ${deletedCount} entries`);
       res.json({ 
         success: true, 
@@ -545,7 +587,7 @@ app.post('/edit', (req, res) => {
     
     // Process each item
     for (const updatedData of dataToUpdate) {
-      const imageIndex = imageData.imageData.findIndex(item => item.uid === updatedData.uid);
+      const imageIndex = globalData.mediaData.findIndex(item => item.uid === updatedData.uid);
       
       if (imageIndex === -1) {
         notFoundUids.push(updatedData.uid);
@@ -553,7 +595,7 @@ app.post('/edit', (req, res) => {
       }
       
       // Replace the entire object in place with the new data
-      imageData.imageData[imageIndex] = updatedData;
+      globalData.mediaData[imageIndex] = updatedData;
       updatedItems.push(updatedData);
     }
     
@@ -568,7 +610,7 @@ app.post('/edit', (req, res) => {
     
     // Save changes to file
     try {
-      saveImageData();
+      saveMediaData();
       console.log(`Successfully updated ${updatedItems.length} image data item(s)`);
       
       // Return array or single item based on input
@@ -611,21 +653,21 @@ app.post('/regenerate', async (req, res) => {
     console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
     
     // Find the image data
-    const imageIndex = imageData.imageData.findIndex(item => item.uid === uid);
+    const imageIndex = globalData.mediaData.findIndex(item => item.uid === uid);
     
     if (imageIndex === -1) {
       console.log(`No image found with UID: ${uid}`);
       return res.status(404).json({ error: `Image with uid ${uid} not found` });
     }
     
-    const imageEntry = imageData.imageData[imageIndex];
+    const imageEntry = globalData.mediaData[imageIndex];
     
-    // Reconstruct savePath from imageUrl
-    // imageUrl format: /image/filename.ext -> storage/filename.ext
+    // Reconstruct saveImagePath from imageUrl
+    // imageUrl format: /media/filename.ext -> storage/filename.ext
     if (imageEntry.imageUrl) {
-      const filename = imageEntry.imageUrl.replace(/^\/image\//, '');
-      imageEntry.savePath = path.join(actualDirname, 'storage', filename);
-      console.log(`Reconstructed savePath: ${imageEntry.savePath}`);
+      const filename = imageEntry.imageUrl.replace(/^\/media\//, '');
+      imageEntry.saveImagePath = path.join(actualDirname, 'storage', filename);
+      console.log(`Reconstructed saveImagePath: ${imageEntry.saveImagePath}`);
     }
     
     // Create a task ID for progress tracking
@@ -673,10 +715,10 @@ app.post('/regenerate', async (req, res) => {
       }
       
       // Save updated image data
-      saveImageData();
+      saveMediaData();
       
-      // Remove temporary savePath field before sending to client
-      const { savePath, ...imageDataForClient } = imageEntry;
+      // Remove temporary saveImagePath field before sending to client
+      const { saveImagePath, ...imageDataForClient } = imageEntry;
       
       // Send custom completion message with full image data
       const task = getTask(taskId);
@@ -728,24 +770,24 @@ app.post('/regenerate', async (req, res) => {
 app.get('/folder', (req, res) => {
   try {
     // Ensure folders and currentFolder exist
-    if (!imageData.folders) {
-      imageData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
-    if (!imageData.currentFolder && imageData.currentFolder !== '') {
-      imageData.currentFolder = '';
+    if (!globalData.currentFolder && globalData.currentFolder !== '') {
+      globalData.currentFolder = '';
     }
     
     // Build folder list with "Unsorted" as first item
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...imageData.folders
+      ...globalData.folders
     ];
     
-    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${imageData.currentFolder}"`);
+    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${globalData.currentFolder}"`);
     
     res.json({
       list: folderList,
-      current: imageData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in GET /folder endpoint:', error);
@@ -768,8 +810,8 @@ app.post('/folder', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!imageData.folders) {
-      imageData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     let folder;
@@ -778,14 +820,14 @@ app.post('/folder', (req, res) => {
     if (hasUid && !hasLabel) {
       if (uid === '' || uid === null) {
         // Selecting Unsorted
-        imageData.currentFolder = '';
+        globalData.currentFolder = '';
         console.log('Selected Unsorted folder');
       } else {
-        folder = imageData.folders.find(f => f.uid === uid);
+        folder = globalData.folders.find(f => f.uid === uid);
         if (!folder) {
           return res.status(404).json({ error: `Folder with uid ${uid} not found` });
         }
-        imageData.currentFolder = folder.uid;
+        globalData.currentFolder = folder.uid;
         console.log(`Selected folder: ${folder.label} (${folder.uid})`);
       }
     }
@@ -796,19 +838,19 @@ app.post('/folder', (req, res) => {
       }
       
       // Check if folder with this label already exists
-      folder = imageData.folders.find(f => f.label === label.trim());
+      folder = globalData.folders.find(f => f.label === label.trim());
       
       if (!folder) {
         // Create new folder with unique uid
         const newUid = `folder-${Date.now()}`;
         folder = { uid: newUid, label: label.trim() };
-        imageData.folders.push(folder);
+        globalData.folders.push(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else {
         console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
       }
       
-      imageData.currentFolder = folder.uid;
+      globalData.currentFolder = folder.uid;
     }
     // Case 3: Both uid and label provided
     else {
@@ -816,12 +858,12 @@ app.post('/folder', (req, res) => {
         return res.status(400).json({ error: 'Invalid folder label' });
       }
       
-      folder = imageData.folders.find(f => f.uid === uid);
+      folder = globalData.folders.find(f => f.uid === uid);
       
       if (!folder) {
         // Create folder with specified uid and label
         folder = { uid, label: label.trim() };
-        imageData.folders.push(folder);
+        globalData.folders.push(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else if (folder.label !== label.trim()) {
         // Rename existing folder
@@ -832,21 +874,21 @@ app.post('/folder', (req, res) => {
         console.log(`Folder already exists with matching label: ${folder.label} (${folder.uid})`);
       }
       
-      imageData.currentFolder = folder.uid;
+      globalData.currentFolder = folder.uid;
     }
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...imageData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: imageData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in POST /folder endpoint:', error);
@@ -874,12 +916,12 @@ app.put('/folder', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!imageData.folders) {
-      imageData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     // Find folder by uid
-    const folder = imageData.folders.find(f => f.uid === uid);
+    const folder = globalData.folders.find(f => f.uid === uid);
     
     if (!folder) {
       console.log(`Folder not found: ${uid}`);
@@ -892,17 +934,17 @@ app.put('/folder', (req, res) => {
     console.log(`Renamed folder from "${oldLabel}" to "${folder.label}" (${folder.uid})`);
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...imageData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: imageData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in PUT /folder endpoint:', error);
@@ -926,31 +968,31 @@ app.delete('/folder/:uid', (req, res) => {
     }
     
     // Initialize folders array if needed
-    if (!imageData.folders) {
-      imageData.folders = [];
+    if (!globalData.folders) {
+      globalData.folders = [];
     }
     
     // Find and remove folder
-    const folderIndex = imageData.folders.findIndex(f => f.uid === uid);
+    const folderIndex = globalData.folders.findIndex(f => f.uid === uid);
     
     if (folderIndex === -1) {
       console.log(`Folder not found: ${uid}`);
       return res.status(404).json({ error: `Folder with uid ${uid} not found` });
     }
     
-    const deletedFolder = imageData.folders[folderIndex];
-    imageData.folders.splice(folderIndex, 1);
+    const deletedFolder = globalData.folders[folderIndex];
+    globalData.folders.splice(folderIndex, 1);
     console.log(`Deleted folder: ${deletedFolder.label} (${deletedFolder.uid})`);
     
     // If deleted folder was current, set current to unsorted
-    if (imageData.currentFolder === uid) {
-      imageData.currentFolder = '';
+    if (globalData.currentFolder === uid) {
+      globalData.currentFolder = '';
       console.log('Deleted folder was current, set current to Unsorted');
     }
     
     // Update all image data entries with this folder uid to have empty string
     let updatedCount = 0;
-    imageData.imageData.forEach(item => {
+    globalData.mediaData.forEach(item => {
       if (item.folder === uid) {
         item.folder = '';
         updatedCount++;
@@ -962,17 +1004,17 @@ app.delete('/folder/:uid', (req, res) => {
     }
     
     // Save changes
-    saveImageData();
+    saveMediaData();
     
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...imageData.folders
+      ...globalData.folders
     ];
     
     res.json({
       list: folderList,
-      current: imageData.currentFolder
+      current: globalData.currentFolder
     });
   } catch (error) {
     console.error('Error in DELETE /folder/:uid endpoint:', error);
@@ -983,10 +1025,12 @@ app.delete('/folder/:uid', (req, res) => {
 // GET endpoint for workflow list
 app.get('/workflows', (req, res) => {
   try {
-    const workflows = comfyuiWorkflows.workflows.map(workflow => ({
-      name: workflow.name,
-      ...workflow.options
-    }));
+    const workflows = comfyuiWorkflows.workflows
+      .filter(workflow => !workflow.hidden)
+      .map(workflow => ({
+        name: workflow.name,
+        ...workflow.options
+      }));
     res.json(workflows);
   } catch (error) {
     console.error('Error getting workflows:', error);
@@ -1010,6 +1054,8 @@ app.post('/generate/inpaint', upload.fields([
     console.log('- seed:', seed);
     console.log('- prompt:', prompt);
     console.log('- inpaintArea:', inpaintArea);
+    console.log('- image_0_imageFormat:', req.body.image_0_imageFormat);
+    console.log('- All req.body keys:', Object.keys(req.body));
     
     // Validate required fields
     if (!workflow) {
@@ -1053,18 +1099,21 @@ app.post('/generate/inpaint', upload.fields([
     console.log('- image:', imageFile.originalname, 'size:', imageFile.size, 'type:', imageFile.mimetype);
     console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
     
-    // Generate unique filenames for ComfyUI upload
-    const timestamp = Date.now();
-    const imageFilename = `inpaint_image_${timestamp}.png`;
-    const maskFilename = `inpaint_mask_${timestamp}.png`;
+    // Generate filenames for ComfyUI upload
+    // For inpaint image: reuse storage filename if from gallery, otherwise use temp name
+    const imageUrl = req.body.imageUrl;
+    const imageFilename = imageUrl ? imageUrl.replace('/media/', '') : `inpaint_image_${Date.now()}.png`;
+    
+    // For mask: use filename provided by client (includes dimensions and area for deduplication)
+    const maskFilename = req.body.maskFilename || `mask_${Date.now()}.png`;
     
     try {
       // Upload both images to ComfyUI
       console.log('Uploading images to ComfyUI...');
       
       const [imageUploadResult, maskUploadResult] = await Promise.all([
-        uploadImageToComfyUI(imageFile.buffer, imageFilename, "input", true),
-        uploadImageToComfyUI(maskFile.buffer, maskFilename, "input", true)
+        uploadFileToComfyUI(imageFile.buffer, imageFilename, "image", "input", true),
+        uploadFileToComfyUI(maskFile.buffer, maskFilename, "image", "input", true)
       ]);
       
       console.log('Both images uploaded successfully to ComfyUI');
@@ -1086,15 +1135,8 @@ app.post('/generate/inpaint', upload.fields([
         console.log('Generated random seed:', req.body.seed);
       }
       
-      // Create storage path for the generated inpaint result image
-      const storageFolder = path.join(actualDirname, 'storage');
-      if (!fs.existsSync(storageFolder)) {
-        fs.mkdirSync(storageFolder, { recursive: true });
-      }
-      
-      const nextIndex = findNextIndex('image', storageFolder);
-      const filename = `image_${nextIndex}.${workflowData.format || 'png'}`;
-      req.body.savePath = path.join(storageFolder, filename);
+      // Don't create saveImagePath here - it will be created after preGenerationTasks
+      // so that the format can be determined from extra inputs
       
       // Prepare request body with imagePath and maskPath from uploaded filenames
       req.body.imagePath = imageUploadResult.filename;
@@ -1106,11 +1148,11 @@ app.post('/generate/inpaint', upload.fields([
         req.body.inpaintArea = parsedInpaintArea;
       }
       
-      // Remove uploads data from request body before calling handleImageGeneration
+      // Remove uploads data from request body before calling handleMediaGeneration
       delete req.body.uploads;
       
       // Call handleImageGeneration with workflow data and modifications
-      handleImageGeneration(req, res, workflowData);
+      handleMediaGeneration(req, res, workflowData, config);
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);
@@ -1132,7 +1174,7 @@ app.post('/generate/inpaint', upload.fields([
 // Initialize services and start server
 async function startServer() {
   // Load image data on server initialization
-  loadImageData();
+  loadMediaData();
   
   await checkAndStartServices();
   

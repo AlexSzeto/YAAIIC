@@ -2,6 +2,8 @@ import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createImageModal } from './custom-ui/modal.mjs'
 import { Checkbox } from './custom-ui/checkbox.mjs'
+import { Button } from './custom-ui/button.mjs'
+import { globalAudioPlayer } from './global-audio-player.mjs'
 
 // Gallery Preview Component
 export class GalleryPreview extends Component {
@@ -10,20 +12,35 @@ export class GalleryPreview extends Component {
     
     this.state = {
       imageError: false,
-      isHovering: false
+      isHovering: false,
+      isAudioPlaying: false
     };
     
     this.containerRef = null;
+    this.unsubscribeAudioPlayer = null;
   }
 
   componentDidMount() {
     // Add keyboard listener for spacebar
     document.addEventListener('keydown', this.handleKeyDown);
+    
+    // Subscribe to audio player state changes
+    this.unsubscribeAudioPlayer = globalAudioPlayer.subscribe(() => {
+      const { item } = this.props;
+      if (item && item.audioUrl) {
+        this.setState({ isAudioPlaying: globalAudioPlayer.isPlaying(item.audioUrl) });
+      }
+    });
   }
 
   componentWillUnmount() {
     // Clean up keyboard listener
     document.removeEventListener('keydown', this.handleKeyDown);
+    
+    // Unsubscribe from audio player
+    if (this.unsubscribeAudioPlayer) {
+      this.unsubscribeAudioPlayer();
+    }
   }
 
   handleKeyDown = (e) => {
@@ -55,6 +72,15 @@ export class GalleryPreview extends Component {
     this.setState({ imageError: true });
   }
 
+  handleAudioToggle = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const { item } = this.props;
+    if (item && item.audioUrl) {
+      globalAudioPlayer.toggle(item.audioUrl);
+    }
+  }
+
   handleImageClick = (e) => {
     // Don't open modal if disabled
     if (this.props.disabled) {
@@ -67,7 +93,18 @@ export class GalleryPreview extends Component {
       return;
     }
     
+    // Don't open modal if clicking on audio button
+    if (e.target.closest('.gallery-audio-button')) {
+      return;
+    }
+    
     const { item, onSelectAsInput } = this.props;
+    
+    // Don't open modal for audio items in gallery mode
+    if (item && item.audioUrl && !this.props.onImageClick && !onSelectAsInput) {
+      return;
+    }
+    
     // If a custom image click handler is provided, delegate to it
     if (this.props.onImageClick) {
       this.props.onImageClick(item);
@@ -106,7 +143,8 @@ export class GalleryPreview extends Component {
 
   render() {
     const { item, onSelect, isSelected, disableCheckbox = false, disabled = false } = this.props;
-    const { imageError } = this.state;
+    const { imageError, isAudioPlaying } = this.state;
+    const hasAudio = item && item.audioUrl;
 
     return html`
       <div 
@@ -138,18 +176,29 @@ export class GalleryPreview extends Component {
             color: '#999999',
             fontSize: '10px',
             cursor: 'default'
-          } : disabled ? { cursor: 'not-allowed' } : { cursor: 'pointer' }}
+          } : disabled ? { cursor: 'not-allowed' } : (hasAudio ? { cursor: 'default' } : { cursor: 'pointer' })}
           onError=${this.handleImageError}
           onClick=${this.handleImageClick}
         >
           ${imageError && 'No image'}
         </img>
-        <div class="gallery-item-info">
-          <div class="gallery-item-name">
-            ${item.name || 'Unnamed'}
-          </div>
-          <div class="gallery-item-date">
-            ${this.formatDate(item.timestamp)}
+        <div class="gallery-item-info overlay-panel ${hasAudio ? 'has-audio' : ''}">
+          ${hasAudio && html`
+            <div class="gallery-audio-button" onClick=${this.handleAudioToggle}>
+              <${Button}
+                variant="icon"
+                icon=${isAudioPlaying ? 'stop' : 'play'}
+                title=${isAudioPlaying ? 'Stop' : 'Play'}
+              />
+            </div>
+          `}
+          <div class="gallery-item-text-content">
+            <div class="gallery-item-name">
+              ${item.name || 'Unnamed'}
+            </div>
+            <div class="gallery-item-date">
+              ${this.formatDate(item.timestamp)}
+            </div>
           </div>
         </div>
       </div>

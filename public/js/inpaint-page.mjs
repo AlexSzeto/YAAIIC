@@ -100,7 +100,7 @@ function InpaintApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [workflow, setWorkflow] = useState(null);
-  const [imageData, setImageData] = useState(null);
+  const [mediaData, setMediaData] = useState(null);
   const [inpaintArea, setInpaintArea] = useState(null);
   const [history, setHistory] = useState([]);
   const [taskId, setTaskId] = useState(null);
@@ -149,7 +149,7 @@ function InpaintApp() {
         }
         
         // Load image data
-        const data = await fetchJson(`/image-data/${numericUID}`, {}, {
+        const data = await fetchJson(`/media-data/${numericUID}`, {}, {
           maxRetries: 2,
           retryDelay: 1000,
           showUserFeedback: true,
@@ -157,7 +157,7 @@ function InpaintApp() {
         });
         
         console.log('Image data loaded:', data);
-        setImageData(data);
+        setMediaData(data);
         setHistory([data]);
         
         // Populate form with image data
@@ -197,6 +197,23 @@ function InpaintApp() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
+    
+    // Initialize extraInputs in formState with default values
+    if (newWorkflow && newWorkflow.extraInputs && Array.isArray(newWorkflow.extraInputs)) {
+      const extraInputDefaults = {};
+      newWorkflow.extraInputs.forEach(input => {
+        if (input.default !== undefined) {
+          extraInputDefaults[input.id] = input.default;
+        }
+      });
+      
+      // Update formState with new defaults
+      setFormState(prev => {
+        const newState = { ...prev };
+        Object.assign(newState, extraInputDefaults);
+        return newState;
+      });
+    }
   };
 
   // Handle inpaint area change
@@ -216,7 +233,7 @@ function InpaintApp() {
       return;
     }
     
-    if (!imageData?.imageUrl) {
+    if (!mediaData?.imageUrl) {
       toast.error('No image loaded');
       return;
     }
@@ -226,7 +243,7 @@ function InpaintApp() {
       toast.show('Preparing inpaint request...');
       
       // Get the original image canvas
-      const imageCanvas = await createOriginalImageCanvas(imageData.imageUrl);
+      const imageCanvas = await createOriginalImageCanvas(mediaData.imageUrl);
       
       // Determine orientation from image dimensions - default to "detect" if undefined
       let orientation = workflow.orientation || 'detect';
@@ -246,6 +263,9 @@ function InpaintApp() {
       const imageBlob = await canvasToBlob(imageCanvas, 'image/png');
       const maskBlob = await canvasToBlob(maskCanvas, 'image/png');
       
+      // Generate mask filename based on dimensions and area
+      const maskFilename = `mask_${Math.round(imageCanvas.width)}_${Math.round(imageCanvas.height)}_${Math.round(inpaintArea.x1)}_${Math.round(inpaintArea.y1)}_${Math.round(inpaintArea.x2)}_${Math.round(inpaintArea.y2)}.png`;
+      
       // Prepare form data
       const formData = new FormData();
       formData.append('workflow', workflow.name);
@@ -254,8 +274,28 @@ function InpaintApp() {
       formData.append('prompt', formState.description.trim());
       formData.append('orientation', orientation);
       formData.append('inpaintArea', JSON.stringify(inpaintArea));
+      formData.append('maskFilename', maskFilename);
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
+      
+      // Append image field names from the source mediaData
+      const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
+      imageTextFieldNames.forEach(fieldName => {
+        const value = mediaData[fieldName];
+        if (value) {
+          formData.append(`image_0_${fieldName}`, value);
+        }
+      });
+      
+      // Add all extra inputs from workflow configuration
+      if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+        workflow.extraInputs.forEach(input => {
+          const value = formState[input.id];
+          if (value !== undefined && value !== null && value !== '') {
+            formData.append(input.id, value);
+          }
+        });
+      }
       
       toast.show('Sending inpaint request...');
       
@@ -295,8 +335,8 @@ function InpaintApp() {
     if (data.result && data.result.uid) {
       try {
         // Load the new image data
-        const newImageData = await fetchJson(`/image-data/${data.result.uid}`);
-        setImageData(newImageData);
+        const newImageData = await fetchJson(`/media-data/${data.result.uid}`);
+        setMediaData(newImageData);
         
         // Add to history
         setHistory(prev => [newImageData, ...prev]);
@@ -376,7 +416,7 @@ function InpaintApp() {
 
   // Handle carousel selection
   const handleCarouselSelect = (item) => {
-    setImageData(item);
+    setMediaData(item);
     
     // Update form with selected image's data
     setFormState(prev => ({
@@ -444,15 +484,15 @@ function InpaintApp() {
             <p>${error}</p>
           `}
           
-          ${!loading && !error && imageData?.imageUrl && html`
+          ${!loading && !error && mediaData?.imageUrl && html`
             <${InpaintCanvas}
-              imageUrl=${imageData.imageUrl}
+              imageUrl=${mediaData.imageUrl}
               inpaintArea=${inpaintArea}
               onChangeInpaintArea=${handleInpaintAreaChange}
             />
           `}
           
-          ${!loading && !error && !imageData?.imageUrl && html`
+          ${!loading && !error && !mediaData?.imageUrl && html`
             <p>No image loaded for inpainting</p>
           `}
         </div>
@@ -464,7 +504,9 @@ function InpaintApp() {
               value=${workflow}
               onChange=${handleWorkflowChange}
               disabled=${isGenerating}
-              filterType="inpaint"
+              typeOptions=${[
+                { label: 'Inpaint', value: 'inpaint' }
+              ]}
             />
             
             <${InpaintForm}
@@ -485,7 +527,7 @@ function InpaintApp() {
           <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Session History</h3>
           <${ImageCarousel} 
             items=${history} 
-            selectedItem=${imageData}
+            selectedItem=${mediaData}
             onSelect=${handleCarouselSelect}
           />
         </div>

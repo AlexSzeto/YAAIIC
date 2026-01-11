@@ -12,11 +12,20 @@ import { fetchJson } from '../util.mjs';
  * @param {Function} props.onChange - Callback when workflow changes (workflow) => void
  * @param {boolean} [props.disabled=false] - Whether the selector is disabled
  * @param {string|string[]} [props.filterType] - Optional filter for workflow types ('image', 'video', 'inpaint')
+ * @param {Array<{label: string, value: string}>} [props.typeOptions] - Optional array of type options for the type selector
  */
-export function WorkflowSelector({ value, onChange, disabled = false, filterType }) {
+export function WorkflowSelector({ value, onChange, disabled = false, filterType, typeOptions }) {
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
+
+  // Initialize selectedType from typeOptions on mount
+  useEffect(() => {
+    if (typeOptions && typeOptions.length > 0) {
+      setSelectedType(typeOptions[0].value);
+    }
+  }, []);
 
   // Fetch workflows on mount
   useEffect(() => {
@@ -32,25 +41,8 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
           showSuccessFeedback: false
         });
         
-        // Filter workflows based on filterType prop
-        let filteredWorkflows;
-        if (filterType) {
-          const types = Array.isArray(filterType) ? filterType : [filterType];
-          filteredWorkflows = data.filter(w => types.includes(w.type));
-        } else {
-          // Default: exclude inpaint workflows (backwards compatible)
-          filteredWorkflows = data.filter(
-            w => w.type === 'image' || w.type === 'video'
-          );
-        }
-        
-        setWorkflows(filteredWorkflows);
-        console.log('Workflows loaded:', filteredWorkflows);
-        
-        // Auto-select first workflow if available and nothing selected
-        if (filteredWorkflows.length > 0 && !value) {
-          onChange(filteredWorkflows[0]);
-        }
+        setWorkflows(data);
+        console.log('Workflows loaded:', data);
       } catch (err) {
         console.error('Error loading workflows:', err);
         setError('Failed to load workflows');
@@ -60,7 +52,31 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
     }
 
     loadWorkflows();
-  }, [filterType]);
+  }, []);
+  
+  // Filter workflows based on typeOptions/selectedType or filterType
+  const filteredWorkflows = (() => {
+    if (typeOptions && selectedType) {
+      // Use type selector filter
+      return workflows.filter(w => w.type === selectedType);
+    } else if (filterType) {
+      // Use filterType prop (for backward compatibility)
+      const types = Array.isArray(filterType) ? filterType : [filterType];
+      return workflows.filter(w => types.includes(w.type));
+    } else {
+      // Default: exclude inpaint workflows (backwards compatible)
+      return workflows.filter(
+        w => w.type === 'image' || w.type === 'video'
+      );
+    }
+  })();
+  
+  // Auto-select first workflow when filtered workflows change
+  useEffect(() => {
+    if (filteredWorkflows.length > 0 && !value) {
+      onChange(filteredWorkflows[0]);
+    }
+  }, [filteredWorkflows.length, selectedType]);
 
   // Handle select change
   const handleChange = (e) => {
@@ -70,27 +86,49 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
       return;
     }
     
-    const workflow = workflows.find(w => w.name === selectedName);
+    const workflow = filteredWorkflows.find(w => w.name === selectedName);
     if (workflow) {
       onChange(workflow);
     }
+  };
+  
+  // Handle type selector change
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setSelectedType(newType);
+    // Clear current selection when type changes
+    onChange(null);
   };
 
   // Build options for select
   const options = [
     { label: loading ? 'Loading workflows...' : 'Select a workflow...', value: '' },
-    ...workflows.map(w => ({ label: w.name, value: w.name }))
+    ...filteredWorkflows.map(w => ({ label: w.name, value: w.name }))
   ];
+  
+  const showTypeSelector = typeOptions && typeOptions.length > 1;
 
   return html`
-    <${Select}
-      label="Workflow"
-      options=${options}
-      value=${value?.name || ''}
-      onChange=${handleChange}
-      disabled=${loading || disabled}
-      error=${error}
-      fullWidth=${true}
-    />
+    <div className="workflow-selector-container">
+      ${showTypeSelector && html`
+        <${Select}
+          label="Workflow Type"
+          options=${typeOptions}
+          value=${selectedType || ''}
+          onChange=${handleTypeChange}
+          disabled=${loading || disabled}
+          fullWidth=${false}
+        />
+      `}
+      <${Select}
+        label="Workflow"
+        options=${options}
+        value=${value?.name || ''}
+        onChange=${handleChange}
+        disabled=${loading || disabled}
+        error=${error}
+        fullWidth=${true}
+      />
+    </div>
   `;
 }

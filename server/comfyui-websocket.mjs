@@ -112,7 +112,7 @@ function handleComfyUIMessage(data) {
     const { type, data: messageData } = message;
     
     // Log all messages for debugging
-    console.log('ComfyUI WebSocket message:', type, messageData);
+    // console.log('ComfyUI WebSocket message:', type, messageData);
     
     switch (type) {
       case 'execution_start':
@@ -149,7 +149,7 @@ function handleComfyUIMessage(data) {
         
       default:
         // Unknown message type, log it
-        console.log(`Unknown ComfyUI message type: ${type}`, messageData);
+        // console.log(`Unknown ComfyUI message type: ${type}`, messageData);
         break;
     }
   } catch (error) {

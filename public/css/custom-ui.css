@@ -5,13 +5,10 @@
 
 .image-modal-title {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
-  background: rgba(40, 40, 40, 0.8);
-  backdrop-filter: blur(4px);
+  left: 0;
+  bottom: 0;
   color: #fff;
   padding: 6px 16px;
-  border-radius: 12px;
   font-weight: bold;
   font-size: 1rem;
   pointer-events: none;
@@ -34,6 +31,15 @@
 }
 /* Import shared CSS variables */
 @import 'variables.css';
+
+/* ===== SHARED OVERLAY STYLES ===== */
+/* Generic semi-transparent overlay with blur effect */
+.overlay-panel {
+  background: rgba(40, 40, 40, 0.8);
+  backdrop-filter: blur(4px);
+  margin: 6px;
+  border-radius: 6px;
+}
 
 /* ===== SHARED BUTTON STYLES ===== */
 .btn-with-icon {
@@ -420,11 +426,7 @@
   bottom: 0;
   left: 0;
   padding: 8px 10px;
-  background: rgba(40, 40, 40, 0.8);
-  backdrop-filter: blur(4px);
-  margin: 6px;
   margin-right: 0;
-  border-radius: 6px;
   font-size: 12px;
   color: var(--dark-text-primary);
   display: flex;
@@ -433,6 +435,27 @@
   pointer-events: none;
   max-width: calc(100% - 12px);
   box-sizing: border-box;
+}
+
+/* Gallery item info with audio - horizontal layout */
+.gallery-item-info.has-audio {
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* Audio button container */
+.gallery-audio-button {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+/* Text content wrapper for audio items */
+.gallery-item-text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .gallery-item-name {
@@ -674,8 +697,30 @@
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 40px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.image-modal-container.has-action-button {
+  padding-bottom: 60px;
+}
+
+.image-modal-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-modal-action-area {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 10px;
 }
 
 .image-modal-autoscale,
@@ -723,10 +768,7 @@
 }
 
 .image-modal-select {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  z-index: 10001;
+  /* Button is now positioned in the action area instead of absolutely on the image */
 }
 
 .image-modal-error {
@@ -1005,6 +1047,104 @@
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
 
+/* ===== AUDIO SELECT COMPONENT ===== */
+
+.audio-select-component {
+  display: inline-block;
+}
+
+.audio-select-area {
+  width: 150px;
+  height: 150px;
+  border: 2px dashed var(--dark-border-focus);
+  border-radius: 8px;
+  background-color: var(--dark-background-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-select-area:hover {
+  border-color: var(--dark-border-highlight);
+  background-color: var(--dark-background-hover);
+}
+
+.audio-select-area.has-audio {
+  border-style: solid;
+  border-color: var(--dark-border-secondary);
+  cursor: default;
+  padding: 0;
+}
+
+.audio-select-area.has-audio:hover {
+  border-color: var(--dark-border-highlight);
+}
+
+.audio-select-area.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Empty State */
+.audio-select-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.audio-select-text {
+  color: var(--dark-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Audio Header (top section with name and icon) */
+.audio-select-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  margin-bottom: 0;
+  max-width: 134px;
+}
+
+.audio-select-name {
+  color: var(--dark-text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Control Buttons Overlay (bottom centered) */
+.audio-select-overlay {
+  position: absolute;
+  bottom: 0;
+  width: min-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 0;
+}
+
 /* ===== CUSTOM CHECKBOX ===== */
 .custom-checkbox-visual {
   display: flex;
@@ -1170,3 +1310,71 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-focus);
 }
+
+/* ===== AUDIO PLAYER OVERLAY ===== */
+.audio-player-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px;
+  margin: 6px;
+}
+
+.audio-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audio-player-timeline {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audio-time {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Courier New', monospace;
+  min-width: 40px;
+  text-align: center;
+}
+
+.audio-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-progress-bar:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.audio-progress-fill {
+  height: 100%;
+  background: var(--primary-background);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  position: relative;
+}
+
+/*
+.audio-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+*/

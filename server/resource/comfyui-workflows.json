@@ -2,29 +2,86 @@
   "defaultImageGenerationTasks": [
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "imagePath": "savePath",
+      "imagePath": "saveImagePath",
       "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
       "to": "description"
     },
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "imagePath": "savePath",
+      "imagePath": "saveImagePath",
       "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
       "to": "summary"
-    },  
+    },
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+      "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
       "to": "name",
       "replaceBlankFieldOnly": true
     },
     {
       "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+      "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
       "to": "tags"
     }
   ],
+  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
   "workflows": [
+    {
+      "name": "Text to Image (Album Cover)",
+      "hidden": true,
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "template": "(prompt unavailable for uploaded audio)",
+          "to": "prompt"
+        },
+        {
+          "template": "(description unavailable for uploaded audio)",
+          "to": "description"
+        },
+        {
+          "template": "(summary unavailable for uploaded audio)",
+          "to": "summary"
+        },
+        {
+          "template": "(tags unavailable for uploaded audio)",
+          "to": "tags"
+        }
+      ],
+      "base": "text-to-image-album.json",
+      "finalNode": "18",
+      "replace": [
+        {
+          "from": "ollamaAPIPath",
+          "to": ["20", "inputs", "url"]
+        },
+        {
+          "from": "name",
+          "to": ["22", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["3", "inputs", "seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["18", "inputs", "path"]
+        }
+      ]
+    },
     {
       "name": "Text to Image (Illustrious Characters)",
       "options": {
@@ -33,7 +90,19 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -42,24 +111,23 @@
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "illustrious-text-to-image.json",
-      "format": "png",
       "finalNode": "10",
       "replace": [
         {
@@ -72,20 +140,33 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["10", "inputs", "path"]
         }
       ]
     },
     {
       "name": "Image Style Transfer (Illustrious)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": true,
         "inputImages": 1,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -94,31 +175,30 @@
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "illustrious-image-style.json",
-      "format": "png",
       "finalNode": "11",
       "upload": [
         {
           "from": "image_0",
           "storePathAs": "imagePath"
         }
-      ],      
+      ],
       "replace": [
         {
           "from": "prompt",
@@ -130,7 +210,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["11", "inputs", "path"]
         },
         {
@@ -141,45 +221,57 @@
     },
     {
       "name": "Text to Image (Flux Fantasy Landscape)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "jpg",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "flux-fantasy-text-to-landscape.json",
-      "format": "jpg",
       "finalNode": "9",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "The image is a painting from Carl Spitzweg inbetween \nIn the style of chargen_concept_art image of\n\nmagnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background, professional, winning\n\nFantasy illustration of\n\n"
         },
@@ -188,52 +280,64 @@
           "to": ["31", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         }
       ]
     },
     {
       "name": "Text to Image (Flux Fantasy Portrait)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "jpg",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "flux-fantasy-text-to-portrait.json",
-      "format": "jpg",
       "finalNode": "44",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "In the style of chargen_concept_art image of\n\na highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n"
         },
@@ -242,7 +346,7 @@
           "to": ["31", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["44", "inputs", "path"]
         }
       ]
@@ -255,39 +359,50 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "jpg",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "zimage-fantasy-landscape.json",
-      "format": "jpg",
       "finalNode": "43",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "Magnificent, painterly, epic, majestic, naturalistic, fantasy art, cover art, impressionist, highly detailed, sharp focus, cinematic light, finely detailed, intricate, dynamic perspective, perfect, aesthetic, deep background fantasy illustration of \n\n",
           "postfix": "\n\nThe composition heavily relies on off center, golden ratio to create an aesthetically pleasing, dynamic layout."
@@ -297,7 +412,7 @@
           "to": ["39", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["43", "inputs", "path"]
         }
       ]
@@ -310,39 +425,50 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "jpg",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "gemma3:4b",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "zimage-fantasy-portrait.json",
-      "format": "jpg",
       "finalNode": "43",
       "replace": [
         {
-          "from" : "prompt",
+          "from": "prompt",
           "to": ["6", "inputs", "text"],
           "prefix": "a highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n"
         },
@@ -351,7 +477,7 @@
           "to": ["39", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["43", "inputs", "path"]
         }
       ]
@@ -366,6 +492,12 @@
         "nameRequired": false,
         "orientation": "detect"
       },
+      "preGenerationTasks": [
+        {
+          "from": "image_0_imageFormat",
+          "to": "imageFormat"
+        }
+      ],
       "postGenerationTasks": [
         {
           "template": "(description not generated by default)",
@@ -377,7 +509,6 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "format": "jpg",
       "finalNode": "9",
       "upload": [
         {
@@ -400,7 +531,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         },
         {
@@ -423,6 +554,12 @@
         "nameRequired": false,
         "orientation": "detect"
       },
+      "preGenerationTasks": [
+        {
+          "from": "image_0_imageFormat",
+          "to": "imageFormat"
+        }
+      ],
       "postGenerationTasks": [
         {
           "template": "(description not generated by default)",
@@ -434,7 +571,6 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "format": "png",
       "finalNode": "9",
       "upload": [
         {
@@ -457,7 +593,7 @@
           "to": ["3", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["9", "inputs", "path"]
         },
         {
@@ -478,35 +614,46 @@
         "inputImages": 1,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "savePath",
+          "imagePath": "saveImagePath",
           "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
-        },  
+        },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: [description]",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name",
           "replaceBlankFieldOnly": true
         },
         {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:[summary].\n\nThe list of tags are:",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
         }
       ],
       "base": "qwen-image-to-image.json",
-      "format": "png",
       "finalNode": "229",
       "upload": [
         {
@@ -524,7 +671,7 @@
           "to": ["228", "inputs", "seed"]
         },
         {
-          "from": "savePath",
+          "from": "saveImagePath",
           "to": ["229", "inputs", "path"]
         },
         {
@@ -541,26 +688,43 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
-            "to": "description"
-          },
-          {
-            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "In the beginning:\n{{image_0_description}}\n\nIn the end:\n{{image_1_description}}",
+          "to": "description"
+        },
+        {
+          "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
+          "to": "summary"
+        }
+      ],
       "base": "wan-image-to-video.json",
-      "format": "webp",
       "finalNode": "76",
       "upload": [
         {
@@ -614,7 +778,7 @@
           "to": ["57", "inputs", "noise_seed"]
         },
         {
-          "from": "saveFilename",
+          "from": "saveImageFilename",
           "to": ["63", "inputs", "filename_prefix"]
         },
         {
@@ -648,27 +812,44 @@
         "inputImages": 1,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "Given the summary of the first frame of a video: [image_0_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "[image_0_description]",
-            "to": "description"
-          },
-          {
-            "template": "[image_0_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        }
+      ],
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
-      "format": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -706,7 +887,7 @@
           "to": ["109", "inputs", "noise_seed"]
         },
         {
-          "from": "saveFilename",
+          "from": "saveImageFilename",
           "to": ["106", "inputs", "filename_prefix"]
         },
         {
@@ -724,10 +905,10 @@
         {
           "from": "framerate",
           "to": ["106", "inputs", "frame_rate"]
-        }        
+        }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
-    },    
+    },
     {
       "name": "Image to Video (WAN5b)",
       "options": {
@@ -736,26 +917,43 @@
         "inputImages": 2,
         "optionalPrompt": true,
         "nameRequired": true,
-        "orientation": "detect"
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
       },
       "preGenerationTasks": [
-          {
-            "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-            "prompt": "First frame summary: [image_0_summary]\n\nLast frame summary: [image_1_summary]\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-            "to": "prompt",
-            "replaceBlankFieldOnly": true
-          },
-          {
-            "template": "In the beginning:\n[image_0_description]\n\nIn the end:\n[image_1_description]",
-            "to": "description"
-          },
-          {
-            "template": "First frame summary:\n[image_0_summary]\n\nLast frame summary:\n[image_1_summary]",
-            "to": "summary"
-          }
-        ],
+        {
+            "template": "webp",
+            "to": "imageFormat"
+        },
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt",
+          "replaceBlankFieldOnly": true
+        },
+        {
+          "template": "In the beginning:\n{{image_0_description}}\n\nIn the end:\n{{image_1_description}}",
+          "to": "description"
+        },
+        {
+          "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
+          "to": "summary"
+        }
+      ],
       "base": "wan5b-image-to-video.json",
-      "format": "webp",
       "finalNode": "119",
       "upload": [
         {
@@ -812,9 +1010,144 @@
         {
           "from": "framerate",
           "to": ["106", "inputs", "frame_rate"]
-        }        
+        }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
+    },
+    {
+      "name": "Text to Music (ACE-Step)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudio": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "lyrics",
+            "type": "textarea",
+            "label": "Lyrics"
+          },
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "base": "acestep-text-to-music.json",
+      "finalNode": "90",
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        },
+        {
+          "template": "[inst]",
+          "to": "lyrics",
+          "replaceBlankFieldOnly": true
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["75", "inputs", "value"]
+        },
+        {
+          "from": "lyrics",
+          "to": ["87", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["52", "inputs", "seed"]
+        },
+        {
+          "from": "length",
+          "to": ["17", "inputs", "seconds"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["90", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["88", "inputs", "path"]
+        }
+      ]
+    },
+    {
+      "name": "Text to Speech (Chatterbox)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "base": "chatterbox-text-to-speech.json",
+      "finalNode": "21",
+      "upload": [
+        {
+          "from": "audio_0",
+          "storePathAs": "referenceAudioPath"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["15", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["14", "inputs", "seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["21", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["20", "inputs", "path"]
+        },
+        {
+          "from": "referenceAudioPath",
+          "to": ["5", "inputs", "audio"]
+        }
+      ]
+
     }
   ]
 }
+  

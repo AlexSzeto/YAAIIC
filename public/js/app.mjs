@@ -10,7 +10,7 @@ import { GeneratedResult } from './app-ui/generated-result.mjs';
 
 import { ProgressBanner } from './custom-ui/progress-banner.mjs';
 import { sseManager } from './sse-manager.mjs';
-import { fetchJson } from './util.mjs';
+import { fetchJson, extractNameFromFilename } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
 
@@ -70,6 +70,9 @@ function App() {
   // Input images for img2img workflows (array of {blob, url, description})
   const [inputImages, setInputImages] = useState([]);
   
+  // Input audio files for audio workflows (array of {url, mediaData})
+  const [inputAudios, setInputAudios] = useState([]);
+  
   // All available workflows (for lookup)
   const [workflows, setWorkflows] = useState([]);
   
@@ -106,7 +109,7 @@ function App() {
         }
 
         // Load recent history
-        const recent = await fetchJson('/image-data?limit=10');
+        const recent = await fetchJson('/media-data?limit=10');
         if (Array.isArray(recent)) {
           setHistory(recent);
           // Optionally set the first image as current
@@ -130,8 +133,30 @@ function App() {
   // Handle workflow change
   const handleWorkflowChange = (newWorkflow) => {
     setWorkflow(newWorkflow);
-    // Reset input images when workflow changes
+    // Reset input images and audio when workflow changes
     setInputImages([]);
+    setInputAudios([]);
+    
+    // Initialize extraInputs in formState with default values
+    if (newWorkflow && newWorkflow.extraInputs && Array.isArray(newWorkflow.extraInputs)) {
+      const extraInputDefaults = {};
+      newWorkflow.extraInputs.forEach(input => {
+        if (input.default !== undefined) {
+          extraInputDefaults[input.id] = input.default;
+        }
+      });
+      
+      // Update formState with new defaults, preserving existing values not from extraInputs
+      setFormState(prev => {
+        // Remove old extraInput values that are no longer in the new workflow
+        const newState = { ...prev };
+        
+        // Add new extraInput defaults
+        Object.assign(newState, extraInputDefaults);
+        
+        return newState;
+      });
+    }
   };
   
   // Handle image change for a specific slot
@@ -144,11 +169,11 @@ function App() {
       } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
         // It's a file/blob - create preview URL
         const url = URL.createObjectURL(fileOrUrl);
-        // For uploads, we don't have server-side metadata yet, so imageData is empty
-        newImages[index] = { blob: fileOrUrl, url, imageData: {} };
+        // For uploads, we don't have server-side metadata yet, so mediaData is empty
+        newImages[index] = { blob: fileOrUrl, url, mediaData: {} };
       } else if (typeof fileOrUrl === 'string') {
         // It's a URL
-        newImages[index] = { url: fileOrUrl, imageData: {} };
+        newImages[index] = { url: fileOrUrl, mediaData: {} };
       }
       return newImages;
     });
@@ -156,12 +181,36 @@ function App() {
   
   // Handle gallery selection for a specific image slot
   const handleSelectFromGallery = (targetIndex) => {
-    setGallerySelectionMode({ active: true, index: targetIndex });
+    setGallerySelectionMode({ active: true, index: targetIndex, type: 'image' });
+    setIsGalleryOpen(true);
+  };
+  
+  // Handle audio change for a specific slot
+  const handleAudioChange = (index, audioUrlOrData) => {
+    setInputAudios(prev => {
+      const newAudios = [...prev];
+      if (audioUrlOrData === null) {
+        // Clear the slot
+        newAudios[index] = null;
+      } else if (typeof audioUrlOrData === 'string') {
+        // It's a URL
+        newAudios[index] = { url: audioUrlOrData, mediaData: {} };
+      } else if (audioUrlOrData && typeof audioUrlOrData === 'object') {
+        // It's media data object
+        newAudios[index] = { url: audioUrlOrData.audioUrl, mediaData: audioUrlOrData };
+      }
+      return newAudios;
+    });
+  };
+  
+  // Handle gallery selection for a specific audio slot
+  const handleSelectAudioFromGallery = (targetIndex) => {
+    setGallerySelectionMode({ active: true, index: targetIndex, type: 'audio' });
     setIsGalleryOpen(true);
   };
   
   // Handle "Select as Input" from generated result or gallery
-  const handleSelectAsInput = async (imageData) => {
+  const handleSelectAsInput = async (mediaData) => {
     // Find first empty slot
     const requiredSlots = workflow?.inputImages || 0;
     let targetIndex = -1;
@@ -180,7 +229,7 @@ function App() {
     
     try {
       // Fetch the image as a blob if we have a URL
-      const imageUrl = imageData.imageUrl || imageData.url;
+      const imageUrl = mediaData.imageUrl || mediaData.url;
       if (!imageUrl) {
         toast.error('No image URL available');
         return;
@@ -194,7 +243,7 @@ function App() {
         newImages[targetIndex] = { 
           blob, 
           url: imageUrl, 
-          imageData: imageData
+          mediaData: mediaData
         };
         return newImages;
       });
@@ -270,13 +319,14 @@ function App() {
         }
       }
       
-      // Check if we have images to send
+      // Check if we have images or audio to send
       const hasImages = inputImages.some(img => img && img.blob);
+      const hasAudios = inputAudios.some(audio => audio && audio.url);
       
       let response;
       
-      if (hasImages) {
-        // Build multipart form data with uploaded images
+      if (hasImages || hasAudios) {
+        // Build multipart form data with uploaded images/audio
         const formData = new FormData();
         formData.append('prompt', formState.description);
         formData.append('workflow', workflow.name);
@@ -286,24 +336,49 @@ function App() {
           formData.append('name', formState.name.trim());
         }
         
-        // Video params
-        if (workflow.type === 'video') {
-          formData.append('frames', normalizeFrameCount(formState.length));
-          formData.append('framerate', formState.framerate);
-          formData.append('orientation', orientation);
+        // Add orientation for workflows that need it
+        formData.append('orientation', orientation);
+        
+        // Add all extra inputs from workflow configuration
+        if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+          workflow.extraInputs.forEach(input => {
+            const value = formState[input.id];
+            if (value !== undefined && value !== null && value !== '') {
+              formData.append(input.id, value);
+            }
+          });
         }
         
         // Append images
-        const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name'];
+        const mediaTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'uid'];
+        const imageTextFieldNames = [...mediaTextFieldNames, 'imageFormat'];
         inputImages.forEach((img, index) => {
           if (img && img.blob) {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
 
             imageTextFieldNames.forEach(fieldName => {
-              // Check top-level (legacy/upload) or nested in imageData (selected)
-              const value = img.imageData?.[fieldName] || img[fieldName];
+              // Check top-level (legacy/upload) or nested in mediaData (selected)
+              const value = img.mediaData?.[fieldName] || img[fieldName];
               if (value) {
                 formData.append(`image_${index}_${fieldName}`, value);
+              }
+            });
+          }
+        });
+        
+        const audioTextFieldNames = [...mediaTextFieldNames, 'audioFormat'];
+        // Append audio files as blobs (from gallery selection)
+        inputAudios.forEach((audio, index) => {
+          if (audio && audio.blob) {
+            // Extract the original filename from the audio URL (e.g., "/media/audio_123.mp3" -> "audio_123.mp3")
+            const originalFilename = audio.url ? audio.url.split('/').pop() : `audio_${index}.mp3`;
+            formData.append(`audio_${index}`, audio.blob, originalFilename);
+            
+            audioTextFieldNames.forEach(fieldName => {
+              // Check top-level (legacy/upload) or nested in mediaData (selected)
+              const value = audio.mediaData?.[fieldName] || audio[fieldName];
+              if (value) {
+                formData.append(`audio_${index}_${fieldName}`, value);
               }
             });
           }
@@ -321,10 +396,18 @@ function App() {
           description: formState.description,
           prompt: formState.description,
           seed: formState.seed,
-          length: normalizeFrameCount(formState.length),
-          framerate: formState.framerate,
           orientation: orientation
         };
+        
+        // Add all extra inputs from workflow configuration
+        if (workflow.extraInputs && Array.isArray(workflow.extraInputs)) {
+          workflow.extraInputs.forEach(input => {
+            const value = formState[input.id];
+            if (value !== undefined && value !== null && value !== '') {
+              requestBody[input.id] = value;
+            }
+          });
+        }
 
         response = await fetchJson('/generate', {
           method: 'POST',
@@ -354,7 +437,7 @@ function App() {
     
     if (data.result && data.result.uid) {
       try {
-        const img = await fetchJson(`/image-data/${data.result.uid}`);
+        const img = await fetchJson(`/media-data/${data.result.uid}`);
         setGeneratedImage(img);
         
         // Add to history
@@ -422,7 +505,7 @@ function App() {
     if (!image) return;
 
     try {
-      await fetchJson('/image-data/delete', {
+      await fetchJson('/media-data/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uids: [image.uid] })
@@ -515,13 +598,13 @@ function App() {
     console.log('Regenerate complete:', data);
     setRegenerateTaskId(null);
     
-    if (data.imageData) {
+    if (data.mediaData) {
       // Update the generated image display with complete data
-      setGeneratedImage(data.imageData);
+      setGeneratedImage(data.mediaData);
       
       // Update history item by uid
       setHistory(prev => prev.map(item => 
-        item.uid === data.imageData.uid ? data.imageData : item
+        item.uid === data.mediaData.uid ? data.mediaData : item
       ));
       
       toast.success('Regeneration complete');
@@ -556,7 +639,7 @@ function App() {
         setCurrentFolder(selectedFolder);
         
         // Refresh gallery to show images from the new folder
-        const recent = await fetchJson(`/image-data?limit=10&folder=${selectedUid}`);
+        const recent = await fetchJson(`/media-data?limit=10&folder=${selectedUid}`);
         if (Array.isArray(recent)) {
           setHistory(recent);
           if (recent.length > 0) {
@@ -577,32 +660,60 @@ function App() {
   // Gallery handlers
   const handleGallerySelect = async (item) => {
      if (gallerySelectionMode.active) {
-         // Selection mode: Use image as input
-         const imageUrl = item.imageUrl || item.url;
-         if (imageUrl) {
-             try {
-                 // Fetch the image as a blob so it can be sent to the server
-                 const response = await fetch(imageUrl);
-                 const blob = await response.blob();
-                 
-                 setInputImages(prev => {
-                     const newImages = [...prev];
-                     newImages[gallerySelectionMode.index] = { 
-                         blob, 
-                         url: imageUrl, 
-                         imageData: item
-                     };
-                     return newImages;
-                 });
-                 
-                 toast.success('Image selected from gallery');
-             } catch (err) {
-                 console.error('Failed to fetch image from gallery:', err);
-                 toast.error('Failed to select image from gallery');
+         // Selection mode: Use media as input
+         if (gallerySelectionMode.type === 'audio') {
+             // Audio selection
+             const audioUrl = item.audioUrl;
+             if (audioUrl) {
+                 try {
+                     // Fetch the audio as a blob so it can be sent to the server
+                     const response = await fetch(audioUrl);
+                     const blob = await response.blob();
+                     
+                     setInputAudios(prev => {
+                         const newAudios = [...prev];
+                         newAudios[gallerySelectionMode.index] = { 
+                             blob,
+                             url: audioUrl, 
+                             mediaData: item
+                         };
+                         return newAudios;
+                     });
+                     
+                     toast.success('Audio selected from gallery');
+                 } catch (err) {
+                     console.error('Failed to fetch audio from gallery:', err);
+                     toast.error('Failed to select audio from gallery');
+                 }
+             }
+         } else {
+             // Image selection
+             const imageUrl = item.imageUrl || item.url;
+             if (imageUrl) {
+                 try {
+                     // Fetch the image as a blob so it can be sent to the server
+                     const response = await fetch(imageUrl);
+                     const blob = await response.blob();
+                     
+                     setInputImages(prev => {
+                         const newImages = [...prev];
+                         newImages[gallerySelectionMode.index] = { 
+                             blob, 
+                             url: imageUrl, 
+                             mediaData: item
+                         };
+                         return newImages;
+                     });
+                     
+                     toast.success('Image selected from gallery');
+                 } catch (err) {
+                     console.error('Failed to fetch image from gallery:', err);
+                     toast.error('Failed to select image from gallery');
+                 }
              }
          }
          setIsGalleryOpen(false);
-         setGallerySelectionMode({ active: false, index: -1 });
+         setGallerySelectionMode({ active: false, index: -1, type: null });
      } else {
          // View mode: View generated result
          setGeneratedImage(item);
@@ -623,16 +734,32 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    // Determine file type
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/');
+    
+    if (!isImage && !isAudio) {
+      toast.error('Please select an image or audio file');
       return;
     }
     
     try {
       const formData = new FormData();
-      formData.append('image', file);
       
-      const result = await fetchJson('/upload/image', {
+      // Use appropriate form field name based on file type
+      const fieldName = isAudio ? 'audio' : 'image';
+      formData.append(fieldName, file);
+      
+      // Extract name from filename
+      const extractedName = extractNameFromFilename(file.name);
+      if (extractedName) {
+        formData.append('name', extractedName);
+      }
+      
+      // Use appropriate endpoint based on file type
+      const endpoint = isAudio ? '/upload/audio' : '/upload/image';
+      
+      const result = await fetchJson(endpoint, {
         method: 'POST',
         body: formData
       });
@@ -697,6 +824,11 @@ function App() {
           value=${workflow}
           onChange=${handleWorkflowChange}
           disabled=${isGenerating}
+          typeOptions=${[
+            { label: 'Image', value: 'image' },
+            { label: 'Video', value: 'video' },
+            { label: 'Audio', value: 'audio' }
+          ]}
         />
         
         <${GenerationForm}
@@ -710,6 +842,9 @@ function App() {
           inputImages=${inputImages}
           onImageChange=${handleImageChange}
           onSelectFromGallery=${handleSelectFromGallery}
+          inputAudios=${inputAudios}
+          onAudioChange=${handleAudioChange}
+          onSelectAudioFromGallery=${handleSelectAudioFromGallery}
         />
         <!-- Note: Passed onUploadClick logic to decouple, though implementation of upload button in Form relies on ID or prop -->
       </div>
@@ -729,13 +864,22 @@ function App() {
         isSelectDisabled=${(() => {
           // Disable if no workflow or workflow doesn't need images
           if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-          // Disable if the image is a video file
-          const imageUrl = generatedImage?.imageUrl || '';
-          const isVideo = /\.(webm|mp4|webp|gif)$/i.test(imageUrl);
-          if (isVideo) return true;
+          // Disable if the media type doesn't match the workflow type
+          const workflowType = workflow.type || 'image';
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== workflowType) return true;
           // Disable if all slots are filled
           const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
           if (filledCount >= workflow.inputImages) return true;
+          // TODO: account for inputAudio slots when implementing input audios
+          return false;
+        })()}
+        isInpaintDisabled=${(() => {
+          // Disable inpaint if no UID or handler
+          // if (!generatedImage?.uid || !handleInpaint) return true;
+          // Disable if the media type is not an image
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== 'image') return true;
           return false;
         })()}
       />
@@ -757,9 +901,9 @@ function App() {
         isOpen=${isGalleryOpen}
         onClose=${() => {
             setIsGalleryOpen(false);
-            setGallerySelectionMode({ active: false, index: -1 });
+            setGallerySelectionMode({ active: false, index: -1, type: null });
         }}
-        queryPath="/image-data"
+        queryPath="/media-data"
         folder=${currentFolder.uid}
         previewFactory=${createGalleryPreview}
         onSelect=${handleGallerySelect}
@@ -771,7 +915,7 @@ function App() {
           }
         }}
         selectionMode=${gallerySelectionMode.active}
-        fileTypeFilter=${gallerySelectionMode.active ? 'image' : null}
+        fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
         onSelectAsInput=${handleSelectAsInput}
       />
       
@@ -779,7 +923,7 @@ function App() {
         type="file" 
         id="upload-file-input" 
         style="display: none" 
-        accept="image/*"
+        accept="image/*,audio/*"
         onChange=${handleUploadFile}
       />
       

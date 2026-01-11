@@ -20,7 +20,7 @@ export function Gallery({
   onLoad,      // Helper for legacy single-item load or "Load" button in bulk mode
   onSelect,    // Callback for selection mode (single item)
   selectionMode = false,
-  fileTypeFilter = null,
+  fileTypeFilter = null, // Legacy: string like 'image' or array of allowed types like ['image', 'video']
   onSelectAsInput = null,  // Callback for "Use as Input" action from gallery preview
   folder = undefined  // Optional folder filter (uid)
 }) {
@@ -131,17 +131,23 @@ export function Gallery({
     setSearchQuery(e.target.value);
   };
 
-  const isVideoItem = (item) => {
-    if (!item) return false;
-    if (item.imageUrl) {
-      const videoExtensions = ['.mp4', '.webm', '.gif', '.webp'];
-      const url = item.imageUrl.toLowerCase();
-      if (videoExtensions.some(ext => url.endsWith(ext))) return true;
-    }
-    if (item.workflow && typeof item.workflow === 'string') {
-      if (item.workflow.toLowerCase().includes('video')) return true;
-    }
-    return false;
+  /**
+   * Check if media should be disabled for selection based on allowed types
+   * @param {Object} mediaEntry - The media data entry
+   * @param {Array<string>|string|null} allowedTypes - Array of allowed types or legacy string
+   * @returns {boolean} - True if should be disabled
+   */
+  const shouldDisableMediaForSelection = (mediaEntry, allowedTypes) => {
+    if (!mediaEntry || !allowedTypes) return false;
+    
+    // Convert legacy string format to array
+    const typesArray = typeof allowedTypes === 'string' ? [allowedTypes] : allowedTypes;
+    
+    // Get media type from entry (defaults to 'image' for backwards compatibility)
+    const mediaType = mediaEntry.type || 'image';
+    
+    // Return true if media type is NOT in the allowed types array
+    return !typesArray.includes(mediaType);
   };
 
   const handleItemClick = (item) => {
@@ -191,7 +197,7 @@ export function Gallery({
     try {
       if (window.showToast) window.showToast(`Deleting ${selectedItems.length} ${itemText}...`);
 
-      const response = await fetchJson('/image-data/delete', {
+      const response = await fetchJson('/media-data/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uids: selectedItems })
@@ -304,8 +310,7 @@ export function Gallery({
       const isSelected = selectedItems.includes(item.uid);
       const onSelectCallback = selectionMode ? null : handleItemSelect;
       const disableCheckbox = selectionMode;
-      const isVideo = isVideoItem(item);
-      const shouldDisable = selectionMode && fileTypeFilter === 'image' && isVideo;
+      const shouldDisable = selectionMode && shouldDisableMediaForSelection(item, fileTypeFilter);
 
       // previewFactory returns a DOM node
       const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, handleItemClick, shouldDisable, onSelectAsInput);

@@ -1,10 +1,11 @@
 import { html } from 'htm/preact';
 import { Textarea } from '../custom-ui/textarea.mjs';
 import { Input } from '../custom-ui/input.mjs';
-import { Select } from '../custom-ui/select.mjs';
 import { Button } from '../custom-ui/button.mjs';
 import { SeedControl } from './seed-control.mjs';
 import { ImageSelect } from '../custom-ui/image-select.mjs';
+import { AudioSelect } from '../custom-ui/audio-select.mjs';
+import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
 
 /**
  * Generation Form Component
@@ -29,14 +30,24 @@ export function GenerationForm({
   onUploadClick,
   inputImages = [],
   onImageChange,
-  onSelectFromGallery
+  onSelectFromGallery,
+  inputAudios = [],
+  onAudioChange,
+  onSelectAudioFromGallery
 }) {
   
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
   };
 
+  const handleCheckboxChange = (fieldName) => (e) => {
+    onFieldChange(fieldName, e.target.checked);
+  };
+
   const isVideoWorkflow = workflow?.type === 'video';
+  
+  // Create renderExtraInputs function using the reusable renderer
+  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
   
   // Compute whether generate button should be disabled
   const isGenerateDisabled = (() => {
@@ -52,6 +63,11 @@ export function GenerationForm({
     if (workflow.inputImages && workflow.inputImages > 0) {
       const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
       if (filledCount < workflow.inputImages) return true;
+    }
+    // Disabled if audios are required but not all provided
+    if (workflow.inputAudios && workflow.inputAudios > 0) {
+      const filledCount = inputAudios.filter(audio => audio && (audio.blob || audio.url)).length;
+      if (filledCount < workflow.inputAudios) return true;
     }
     return false;
   })();
@@ -79,36 +95,15 @@ export function GenerationForm({
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
           disabled=${isGenerating}
         />
+
+        ${workflow?.extraInputs ? html`
+          ${renderExtraInputs(workflow.extraInputs, 'standard')}
+      ` : null}
       </div>
 
-      <!-- Row 2: Video Controls (Conditional) -->
-      ${isVideoWorkflow && html`
-        <div class="form-row video-controls" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-          <${Input}
-            label="Length (frames)"
-            type="number"
-            min="1"
-            value=${formState.length || 25}
-            onChange=${handleChange('length')}
-            disabled=${isGenerating}
-          />
-          
-          <${Input}
-            label="Frame Rate"
-            type="number"
-            min="1"
-            max="60"
-            step="1"
-            value=${formState.framerate || 20}
-            onChange=${handleChange('framerate')}
-            disabled=${isGenerating}
-          />
-        </div>
-      `}
-
-      <!-- Description -->
+      <!-- Prompt -->
       <${Textarea}
-        label="Description"
+        label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}
         placeholder="Enter your text here..."
@@ -116,6 +111,9 @@ export function GenerationForm({
         onChange=${handleChange('description')}
         disabled=${isGenerating}
       />
+
+      <!-- Extra Textarea Inputs (after description) -->
+      ${workflow?.extraInputs && renderExtraInputs(workflow.extraInputs, 'textarea')}
 
       <!-- Row 3: Image Upload -->
       ${workflow?.inputImages > 0 && html`
@@ -127,6 +125,22 @@ export function GenerationForm({
               value=${inputImages[i]?.url || inputImages[i]?.blob || null}
               onChange=${(fileOrUrl) => onImageChange && onImageChange(i, fileOrUrl)}
               onSelectFromGallery=${() => onSelectFromGallery && onSelectFromGallery(i)}
+              disabled=${isGenerating}
+            />
+          `)}
+        </div>
+      `}
+
+      <!-- Row 3.5: Audio Upload -->
+      ${workflow?.inputAudios > 0 && html`
+        <div id="audio-upload-container" class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+          ${Array.from({ length: workflow.inputAudios }, (_, i) => html`
+            <${AudioSelect}
+              key=${i}
+              label=${workflow.inputAudios > 1 ? `Audio ${i + 1}` : 'Input Audio'}
+              value=${inputAudios[i]?.mediaData || inputAudios[i]?.url || null}
+              onChange=${(audioUrlOrData) => onAudioChange && onAudioChange(i, audioUrlOrData)}
+              onSelectFromGallery=${() => onSelectAudioFromGallery && onSelectAudioFromGallery(i)}
               disabled=${isGenerating}
             />
           `)}
@@ -151,7 +165,7 @@ export function GenerationForm({
         <${Button} 
           variant="primary"
           icon="upload"
-          title="Upload Image"
+          title="Upload Media"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
           disabled=${isGenerating}
         >

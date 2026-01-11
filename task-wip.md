@@ -2,8 +2,8 @@
 - tag searches are not working as expected (i.e. anime tag search not picking up many "anime" tagged images)
 
 # Features
-- Customizable post generation processing
-- Audio workflows
+- Rename all generation variables ("savePath", etc.) to use snake_case. refactor prefix/postfix into using {{template}}. add pipes for templates. add math ops. send seed to ollama. client send seed even for uploads.
+- Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
 - Export to destination (customizable)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
@@ -32,3 +32,6 @@ checkpoint
 - Download URLs for Illustrious Inpaint:
 1. https://huggingface.co/ShinoharaHare/Waifu-Inpaint-XL/resolve/main/Waifu-Inpaint-XL.safetensors
 checkpoint
+
+- Download URLs for Low Quant Album Gen:
+1. https://huggingface.co/Old-Fisherman/SDXL_Finetune_GGUF_Files/blob/main/GGUF_Models/juggernautXL_juggXIByRundiffusion_Q4_K_S.gguf

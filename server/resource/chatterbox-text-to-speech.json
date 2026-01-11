@@ -1,0 +1,274 @@
+{
+  "1": {
+    "inputs": {
+      "language": "English",
+      "device": "auto",
+      "exaggeration": 0.5,
+      "temperature": 0.25,
+      "cfg_weight": 1,
+      "crash_protection_template": "hmm ,, {seg} hmm ,,"
+    },
+    "class_type": "ChatterBoxEngineNode",
+    "_meta": {
+      "title": "ChatterBox TTS Engine"
+    }
+  },
+  "2": {
+    "inputs": {
+      "voice_name": "none",
+      "reference_text": "",
+      "opt_audio_input": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "CharacterVoicesNode",
+    "_meta": {
+      "title": "Character Voices"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": [
+        "15",
+        0
+      ],
+      "narrator_voice": "none",
+      "seed": 146306700,
+      "enable_chunking": true,
+      "max_chars_per_chunk": 400,
+      "chunk_combination_method": "crossfade",
+      "silence_between_chunks_ms": 100,
+      "enable_audio_cache": true,
+      "batch_size": 0,
+      "TTS_engine": [
+        "1",
+        0
+      ],
+      "opt_narrator": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "UnifiedTTSTextNode",
+    "_meta": {
+      "title": "TTS Text"
+    }
+  },
+  "5": {
+    "inputs": {
+      "audio": "voice_preview_hope - soothing narrator.mp3",
+      "audioUI": ""
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Load Audio"
+    }
+  },
+  "8": {
+    "inputs": {
+      "ckpt_name": "landscapeAnimePro_v310W768.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "9": {
+    "inputs": {
+      "samples": [
+        "14",
+        0
+      ],
+      "vae": [
+        "8",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "11": {
+    "inputs": {
+      "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
+      "clip": [
+        "8",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "width": 256,
+      "height": 256,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "13": {
+    "inputs": {
+      "text": [
+        "18",
+        0
+      ],
+      "clip": [
+        "8",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "14": {
+    "inputs": {
+      "seed": 301197075866769,
+      "steps": 15,
+      "cfg": 4,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "13",
+        0
+      ],
+      "negative": [
+        "11",
+        0
+      ],
+      "latent_image": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "15": {
+    "inputs": {
+      "value": "Daisy's cheeks flush with warmth as she realizes her slip-up, her eyes widening briefly before she laughs nervously, her voice barely above a whisper, \"Oh gosh, I'm so sorry. I thought...I thought you were someone else. I'm Daisy, nice to meet you.\" She extends her hand towards Andrew, her fingers slightly trembling, trying to hide her embarrassment behind a smile."
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "16": {
+    "inputs": {
+      "enable_mirostat": false,
+      "mirostat": 0,
+      "enable_mirostat_eta": false,
+      "mirostat_eta": 0.1,
+      "enable_mirostat_tau": false,
+      "mirostat_tau": 5,
+      "enable_num_ctx": false,
+      "num_ctx": 2048,
+      "enable_repeat_last_n": false,
+      "repeat_last_n": 64,
+      "enable_repeat_penalty": false,
+      "repeat_penalty": 1.1,
+      "enable_temperature": false,
+      "temperature": 0.8,
+      "enable_seed": false,
+      "seed": 755997672,
+      "enable_stop": false,
+      "stop": "",
+      "enable_tfs_z": false,
+      "tfs_z": 1,
+      "enable_num_predict": false,
+      "num_predict": -1,
+      "enable_top_k": false,
+      "top_k": 40,
+      "enable_top_p": false,
+      "top_p": 0.9,
+      "enable_min_p": false,
+      "min_p": 0,
+      "debug": false
+    },
+    "class_type": "OllamaOptionsV2",
+    "_meta": {
+      "title": "Ollama Options"
+    }
+  },
+  "17": {
+    "inputs": {
+      "url": "http://127.0.0.1:11434",
+      "model": "tinyllama:latest",
+      "keep_alive": 5,
+      "keep_alive_unit": "minutes",
+      "🔄 Reconnect": null
+    },
+    "class_type": "OllamaConnectivityV2",
+    "_meta": {
+      "title": "Ollama Connectivity"
+    }
+  },
+  "18": {
+    "inputs": {
+      "system": "Write a single paragraph of visual description for an album cover based on a landscape painting or abstract drawing that would be fitting for the dialog. Only describe nature or abstract shapes free of people or animals.",
+      "prompt": [
+        "15",
+        0
+      ],
+      "think": false,
+      "keep_context": false,
+      "format": "text",
+      "connectivity": [
+        "17",
+        0
+      ],
+      "options": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "OllamaGenerateV2",
+    "_meta": {
+      "title": "Ollama Generate"
+    }
+  },
+  "20": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "21": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  }
+}

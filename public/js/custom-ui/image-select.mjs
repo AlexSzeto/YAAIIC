@@ -129,7 +129,7 @@ export function ImageSelect({
         ` : html`
           <!-- Empty State -->
           <div class="image-select-empty">
-            <box-icon name='image-add' color='#888888' size='48px'></box-icon>
+            <box-icon name='image-add' color='white' size='48px'></box-icon>
             <div class="image-select-text">Select Image</div>
           </div>
         `}

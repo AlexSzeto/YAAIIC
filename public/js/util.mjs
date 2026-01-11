@@ -269,6 +269,60 @@ export function getQueryParam(param) {
 }
 
 /**
+ * Extract a human-readable name from a filename
+ * Handles various case formats: camelCase, PascalCase, snake_case, kebab-case, and "Title Case With Spaces"
+ * @param {string} filename - The filename to parse (with or without extension)
+ * @returns {string|null} - The extracted name in title case with spaces, or null if extraction fails
+ */
+export function extractNameFromFilename(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return null;
+  }
+  
+  // Remove file extension
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+  
+  // If the name is empty after removing extension, return null
+  if (!nameWithoutExt) {
+    return null;
+  }
+  
+  let words = [];
+  
+  // Check if it's snake_case or kebab-case (contains _ or -)
+  if (nameWithoutExt.includes('_') || nameWithoutExt.includes('-')) {
+    // Split by underscores and hyphens
+    words = nameWithoutExt.split(/[_-]+/);
+  }
+  // Check if it's already space-separated
+  else if (nameWithoutExt.includes(' ')) {
+    words = nameWithoutExt.split(/\s+/);
+  }
+  // Otherwise, assume it's camelCase or PascalCase
+  else {
+    // Split on capital letters, keeping the capital with the following word
+    // This regex matches: capital letter preceded by lowercase, OR capital letter followed by lowercase and preceded by another capital
+    words = nameWithoutExt.split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/);
+  }
+  
+  // Filter out empty strings and convert each word to title case
+  words = words
+    .filter(word => word && word.trim())
+    .map(word => {
+      word = word.trim().toLowerCase();
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+  
+  // If no valid words were extracted, return null
+  if (words.length === 0) {
+    return null;
+  }
+  
+  // Join words with spaces
+  return words.join(' ');
+}
+
+/**
  * PageTitleManager - Manages dynamic page title updates
  */
 export class PageTitleManager {
