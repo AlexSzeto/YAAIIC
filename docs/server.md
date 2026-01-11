@@ -20,11 +20,11 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 - **Payload**: None
 - **Output**: JavaScript file content
 
-### Serve Images
-- **Endpoint**: `GET /image/:filename`
-- **Use Case**: Retrieve generated images, videos, and uploaded assets.
+### Serve Media Files
+- **Endpoint**: `GET /media/:filename`
+- **Use Case**: Retrieve generated images, videos, audio files, and uploaded assets.
 - **Payload**: `filename` path parameter.
-- **Output**: Image or video file (e.g., PNG, JPG, WEBP).
+- **Output**: Media file (e.g., PNG, JPG, WEBP for images/videos, MP3, OGG, WAV for audio).
 
 ## Data & Resources
 
@@ -52,7 +52,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 
 ### List Workflows
 - **Endpoint**: `GET /workflows`
-- **Use Case**: Retrieve the list of available ComfyUI workflows configured on the server.
+- **Use Case**: Retrieve the list of available ComfyUI workflows configured on the server. Workflows marked as `hidden: true` are not included in the response.
 - **Payload**: None
 - **Output**: Array of workflow option objects.
   ```json
@@ -62,40 +62,59 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
       "type": "image",
       "autocomplete": true,
       "inputImages": 0,
+      "inputAudios": 0,
       "optionalPrompt": false,
       "nameRequired": false,
-      "orientation": "portrait"
+      "orientation": "portrait",
+      "extraInputs": []
     },
     {
       "name": "Image to Video (Example)",
       "type": "video",
       "autocomplete": false,
       "inputImages": 2,
+      "inputAudios": 0,
       "optionalPrompt": true,
       "nameRequired": true,
-      "orientation": "detect"
+      "orientation": "detect",
+      "extraInputs": [
+        {"id": "frames", "type": "number", "label": "Frames", "default": 25},
+        {"id": "framerate", "type": "number", "label": "Frame Rate", "default": 20}
+      ]
+    },
+    {
+      "name": "Text to Audio (Example)",
+      "type": "audio",
+      "autocomplete": false,
+      "inputImages": 0,
+      "inputAudios": 0,
+      "optionalPrompt": false,
+      "nameRequired": true,
+      "extraInputs": [
+        {"id": "audioFormat", "type": "select", "label": "Audio Format", "default": "mp3", "options": [{"label": "MP3", "value": "mp3"}, {"label": "OGG", "value": "ogg"}]}
+      ]
     }
   ]
   ```
 - **Error State**: 500 if workflows cannot be loaded.
 
-### Search Image History
-- **Endpoint**: `GET /image-data`
-- **Use Case**: Search through the history of generated images and videos.
+### Search Media History
+- **Endpoint**: `GET /media-data`
+- **Use Case**: Search through the history of generated images, videos, and audio files.
 - **Payload**:
   - `query` (query, string): Search term (matches name, description, prompt, or date in yyyy-mm-dd format).
   - `tags` (query, string): Comma-separated list of tags. Results must contain ALL specified tags.
   - `folder` (query, string): Filter by folder UID. If omitted, uses the current folder. Use empty string "" for unsorted items.
   - `sort` (query, enum): 'ascending' or 'descending' (default).
   - `limit` (query, integer): Max number of results. Default: 10.
-- **Output**: Array of image data objects.
+- **Output**: Array of media data objects.
 - **Error State**: 500 on internal error.
 
-### Get Image Details
-- **Endpoint**: `GET /image-data/:uid`
-- **Use Case**: Retrieve full details for a specific generated image by its unique ID.
+### Get Media Details
+- **Endpoint**: `GET /media-data/:uid`
+- **Use Case**: Retrieve full details for a specific generated media item by its unique ID.
 - **Payload**: `uid` path parameter (integer).
-- **Output**: Image data object.
+- **Output**: Media data object.
   ```json
   {
     "uid": 1234567890,
@@ -104,7 +123,8 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "summary": "Objective visual inventory...",
     "tags": ["portrait", "anime", "female"],
     "prompt": "user prompt text...",
-    "imageUrl": "/image/image_1.png",
+    "imageUrl": "/media/image_1.png",
+    "audioUrl": "/media/audio_1.mp3",
     "workflow": "workflow_name",
     "type": "image",
     "seed": 12345,
@@ -120,9 +140,9 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - 404 if image not found.
   - 500 on internal error.
 
-### Delete Image History
-- **Endpoint**: `DELETE /image-data/delete`
-- **Use Case**: Delete multiple image history entries.
+### Delete Media History
+- **Endpoint**: `DELETE /media-data/delete`
+- **Use Case**: Delete multiple media history entries.
 - **Payload**: JSON body.
   ```json
   {
@@ -141,9 +161,9 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - 400 if `uids` is missing, not an array, or contains non-integers.
   - 500 if saving changes fails.
 
-### Edit Image Data
+### Edit Media Data
 - **Endpoint**: `POST /edit`
-- **Use Case**: Update metadata for one or multiple existing image entries.
+- **Use Case**: Update metadata for one or multiple existing media entries.
 - **Payload**: JSON body with a single image data object or an array of image data objects.
   
   **Single object**:
@@ -325,6 +345,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 - **Use Case**: Upload an image file with automatic LLM analysis for description, summary, name, and tags.
 - **Payload**: `multipart/form-data`.
   - `image`: Image file (Required, must be an image MIME type).
+  - `name`: Optional name extracted from filename (string, optional).
 - **Output**: Task ID for SSE tracking.
   ```json
   {
@@ -340,19 +361,21 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 
 ## Generation Endpoints & Workflow
 
-### Generate (Image/Video)
+### Generate (Image/Video/Audio)
 - **Endpoint**: `POST /generate`
-- **Use Case**: Initiate image or video generation using a configured ComfyUI workflow.
+- **Use Case**: Initiate image, video, or audio generation using a configured ComfyUI workflow.
 - **Payload**: `multipart/form-data` or JSON body depending on workflow requirements.
 
-  **For workflows with input images** (`multipart/form-data`):
+  **For workflows with input files** (`multipart/form-data`):
   - `workflow` (string, required): Workflow name.
   - `prompt` (string, required unless `optionalPrompt` is true): Positive prompt text.
   - `name` (string, required if `nameRequired` is true): Name for the output.
   - `seed` (integer, optional): Random seed. Auto-generated if omitted.
   - `image_0` (file, if `inputImages >= 1`): First input image.
   - `image_1` (file, if `inputImages >= 2`): Second input image.
+  - `audio_0` (file, if `inputAudios >= 1`): First input audio file.
   - `orientation` (string, optional): 'portrait', 'landscape', or 'square' (only when `orientation: "detect"`).
+  - Extra inputs: Any additional fields defined in workflow's `extraInputs` configuration (e.g., `frames`, `framerate`, `audioFormat`).
 
   **For text-only workflows** (JSON body):
   ```json
@@ -361,7 +384,10 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "prompt": "positive prompt text",
     "seed": 12345,
     "name": "Optional Name",
-    "orientation": "portrait"
+    "orientation": "portrait",
+    "frames": 25,
+    "framerate": 20,
+    "audioFormat": "mp3"
   }
   ```
 - **Output**:
@@ -387,6 +413,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - `name`: Name for the generation (Required).
   - `seed`: Seed number (Optional).
   - `inpaintArea`: JSON string describing area `{x1, y1, x2, y2}` (Optional).
+  - Extra inputs: Any additional fields defined in workflow's `extraInputs` configuration.
 - **Output**:
   ```json
   {
@@ -418,7 +445,9 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
     - Server buffers messages if the client hasn't connected yet.
 
 3.  **Process Stages (Server-Side)**:
-    - **Pre-Generation Tasks**: If configured, LLM tasks run to prepare data (e.g., auto-generate prompts).
+    - **VRAM Management**: If the requested workflow differs from the last used workflow, the server calls ComfyUI's `/free` endpoint to unload models and maximize VRAM. Similarly, if a different Ollama model is needed, the previous model is unloaded.
+    - **WebSocket Initialization**: ComfyUI WebSocket connection is reinitialized to ensure stable communication.
+    - **Pre-Generation Tasks**: If configured, LLM tasks or template tasks run to prepare data (e.g., auto-generate prompts, set default formats).
     - **Validation & Setup**: Server verifies inputs and prepares the ComfyUI workflow.
     - **Queuing**: Request is sent to the ComfyUI backend.
     - **Generation**: ComfyUI processes the image/video. SSE events emit progress percentages.
@@ -452,7 +481,8 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
           "maxValue": 20
         },
         "result": {
-          "imageUrl": "/image/filename.png",
+          "imageUrl": "/media/filename.png",
+          "audioUrl": "/media/audio_1.mp3",
           "description": "AI-generated prose description...",
           "summary": "Objective visual inventory...",
           "tags": ["portrait", "anime"],

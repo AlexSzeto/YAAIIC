@@ -2,6 +2,10 @@
 
 This document describes the structure of the `comfyui-workflows.json` configuration file, which defines how the server exposes and executes ComfyUI workflows.
 
+## Overview
+
+The server manages VRAM automatically by tracking the last used workflow and Ollama model. When switching between workflows or models, the server unloads the previous one to maximize available VRAM for the new task. This ensures optimal performance even on systems with limited GPU memory.
+
 ## Root Structure
 
 The configuration file has the following root-level properties:
@@ -9,6 +13,7 @@ The configuration file has the following root-level properties:
 ```json
 {
   "defaultImageGenerationTasks": [...],
+  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
   "workflows": [...]
 }
 ```
@@ -17,8 +22,15 @@ The configuration file has the following root-level properties:
 
 **`defaultImageGenerationTasks`** (array, optional)
 - LLM-based analysis tasks that run after image generation by default.
-
+- Used for uploads and regeneration when no workflow-specific post-generation tasks are defined.
 - See [LLM Task Object](#llm-task-object) for structure.
+
+### Default Audio Generation Workflow
+
+**`defaultAudioGenerationWorkflow`** (string, optional)
+- Name of the workflow to use for generating album covers when audio files are uploaded.
+- The referenced workflow should be marked as `hidden: true` to prevent it from appearing in client workflow lists.
+- This workflow is automatically triggered when an audio file is uploaded via `/upload/audio`.
 
 ### Workflows Array
 
@@ -36,16 +48,17 @@ Each workflow object supports the following parameters:
 - **`name`** (string, required)
   - The unique display name of the workflow. Used by the client to select the workflow.
 
+- **`hidden`** (boolean, optional)
+  - Whether to hide this workflow from client workflow lists. Default: `false`.
+  - Hidden workflows can still be referenced internally (e.g., for `defaultAudioGenerationWorkflow`).
+  - Useful for internal workflows like album cover generation.
+
 - **`options`** (object, required)
   - Contains UI behavior and validation configuration. See [Options Object](#options-object).
 
 - **`base`** (string, required)
   - The filename of the underlying ComfyUI workflow JSON file.
   - Must exist in the `server/resource/` directory.
-
-- **`imageFormat`** (string, optional)
-  - The output file format. Default: `"png"`.
-  - Common values: `"png"`, `"jpg"`, `"webp"`.
 
 - **`finalNode`** (string, required)
   - The node ID of the final output node in the workflow.
@@ -57,8 +70,9 @@ The `options` object controls UI behavior and input validation:
 
 - **`type`** (string, required)
   - The generation mode.
-  - Values: `"image"`, `"video"`, `"inpaint"`.
+  - Values: `"image"`, `"video"`, `"audio"`, `"inpaint"`.
   - Determines which endpoint handler is used and post-processing behavior.
+  - Automatically added to generated media metadata.
 
 - **`autocomplete`** (boolean, optional)
   - Whether to enable Danbooru tag autocompletion for prompts.
@@ -69,6 +83,11 @@ The `options` object controls UI behavior and input validation:
   - `0`: Text-to-image (no input images)
   - `1`: Image-to-image or single reference
   - `2`: First and last frame for video workflows
+
+- **`inputAudios`** (integer, optional)
+  - Number of input audio files required. Default: `0`.
+  - Used for audio-to-audio or audio remixing workflows.
+  - Audio files are uploaded as `audio_0`, `audio_1`, etc.
 
 - **`optionalPrompt`** (boolean, optional)
   - Whether the prompt field can be empty. Default: `false`.
@@ -84,10 +103,6 @@ The `options` object controls UI behavior and input validation:
     - `"portrait"`: Fixed portrait dimensions.
     - `"landscape"`: Fixed landscape dimensions.
     - `"detect"`: Auto-detect from input image or user selection.
-
-- **`hidden`** (boolean, optional)
-  - Whether to hide this workflow from client workflow lists. Default: `false`.
-  - Useful for internal workflows like album cover generation.
 
 - **`extraInputs`** (array, optional)
   - Additional input fields to render in the UI for this workflow.
@@ -110,18 +125,39 @@ The `options` object controls UI behavior and input validation:
 - **`upload`** (array, optional)
   - Defines how to handle uploaded files and map them to internal variables.
   - Each item:
-    - **`from`** (string): Field name in the upload (e.g., `"image_0"`, `"image_1"`, `"mask"`).
+    - **`from`** (string): Field name in the upload (e.g., `"image_0"`, `"image_1"`, `"audio_0"`, `"mask"`).
     - **`storePathAs`** (string): Internal variable name to store the file path.
 
 ### Value Replacement
 
 - **`replace`** (array, optional)
   - Defines dynamic modifications to the base ComfyUI workflow JSON before execution.
-  - Supports two replacement types: **direct mapping** and **conditional replacement**.
+  - Supports two replacement types: direct mapping and conditional replacement.
+  - See [Value Replacement Object](#value-replacement-object) for detailed structure and examples.
 
-#### Direct Mapping Replacement
+### Video-Specific Properties
 
-Maps request data or internal variables to workflow nodes:
+- **`extractOutputPathFromTextFile`** (string, optional)
+  - For video workflows that output to a file path stored in a text file.
+  - The filename of the text file to read the output path from.
+
+### Audio-Specific Properties
+
+Audio workflows automatically generate two outputs:
+- **Album cover image**: Saved to `saveImagePath` / `saveImageFilename` with the format specified in `imageFormat`.
+- **Audio file**: Saved to `saveAudioPath` / `saveAudioFilename` with the format specified in `audioFormat`.
+
+Both paths are automatically generated by the server and available for use in workflow `replace` mappings. The resulting media entry will include both `imageUrl` (album cover) and `audioUrl` (audio file) fields.
+
+---
+
+## Value Replacement Object
+
+The `replace` array defines dynamic modifications to the base ComfyUI workflow JSON before execution. Each replacement object can be either a **direct mapping** or a **conditional replacement**.
+
+### Direct Mapping Replacement
+
+Maps request data or internal variables directly to workflow nodes:
 
 ```json
 {
@@ -132,20 +168,35 @@ Maps request data or internal variables to workflow nodes:
 }
 ```
 
-- **`from`** (string): Source variable name.
-  - Request fields: `"prompt"`, `"seed"`, `"name"`
-  - Internal paths: `"saveImagePath"`, `"saveImageFilename"`, `"storagePath"`
-  - Upload variables: `"imagePath"`, `"maskPath"`, `"firstFramePath"`, `"lastFramePath"`
-  - Video settings: `"frames"`, `"framerate"`
-  - Extra inputs: Any `id` from the workflow's `extraInputs` array
-  - Special variables: `"ollamaAPIPath"` (server configuration)
-- **`to`** (array): Target path in workflow JSON: `["NodeID", "inputs", "keyName"]`.
-- **`prefix`** (string, optional): Text to prepend.
-- **`postfix`** (string, optional): Text to append.
+#### Properties
 
-#### Conditional Replacement
+- **`from`** (string, required)
+  - Source variable name to read the value from.
+  - Available source variables:
+    - **Request fields**: `"prompt"`, `"seed"`, `"name"`
+    - **Internal paths**: `"saveImagePath"`, `"saveImageFilename"`, `"saveAudioPath"`, `"saveAudioFilename"`, `"storagePath"`
+    - **Upload variables**: `"imagePath"`, `"maskPath"`, `"firstFramePath"`, `"lastFramePath"`, `"audioPath"`
+    - **Video settings**: `"frames"`, `"framerate"`
+    - **Audio settings**: `"audioFormat"`, `"imageFormat"`
+    - **Extra inputs**: Any `id` from the workflow's `extraInputs` array
+    - **Special variables**: `"ollamaAPIPath"` (server configuration)
 
-Sets workflow values based on generation context:
+- **`to`** (array, required)
+  - Target path in the ComfyUI workflow JSON.
+  - Format: `["NodeID", "inputs", "keyName"]`
+  - Example: `["6", "inputs", "text"]` targets the `text` input of node `6`
+
+- **`prefix`** (string, optional)
+  - Text to prepend to the source value.
+  - Example: `"masterpiece, "` prepends quality tags to prompts
+
+- **`postfix`** (string, optional)
+  - Text to append to the source value.
+  - Example: `", high quality"` appends quality tags to prompts
+
+### Conditional Replacement
+
+Sets workflow values based on runtime conditions:
 
 ```json
 {
@@ -158,17 +209,82 @@ Sets workflow values based on generation context:
 }
 ```
 
-- **`condition`** (object): Condition to evaluate.
-  - **`where`** (object): Source of value to check. Format: `{ "generationData": "fieldName" }`.
-  - **`equals`** (object): Expected value. Format: `{ "value": "expectedValue" }`.
-- **`value`** (any): Value to set if condition is true.
-- **`to`** (array): Target path in workflow JSON.
+#### Properties
+
+- **`condition`** (object, required)
+  - Defines the condition to evaluate before applying the replacement.
+  - **`where`** (object, required): Source of the value to check.
+    - Format: `{ "generationData": "fieldName" }`
+    - Checks a field from the generation data object
+  - **`equals`** (object, required): Expected value for the condition to pass.
+    - Format: `{ "value": expectedValue }`
+    - The value can be any type (string, number, boolean, etc.)
+
+- **`value`** (any, required)
+  - The value to set in the workflow if the condition is true.
+  - Can be any type that the target node input accepts.
+
+- **`to`** (array, required)
+  - Target path in the ComfyUI workflow JSON.
+  - Format: `["NodeID", "inputs", "keyName"]`
+
+### Replacement Types
+
+The server determines the replacement type based on which properties are present:
+
+1. **Direct Mapping** - Has `from` property: Maps a source variable to a target path
+2. **Conditional Replacement** - Has `condition` property: Sets value based on a condition
+
+### Example Usage
+
+```json
+"replace": [
+  {
+    "from": "prompt",
+    "to": ["6", "inputs", "text"],
+    "prefix": "masterpiece, best quality, ",
+    "postfix": ", highly detailed"
+  },
+  {
+    "from": "seed",
+    "to": ["3", "inputs", "seed"]
+  },
+  {
+    "from": "saveImagePath",
+    "to": ["10", "inputs", "path"]
+  },
+  {
+    "condition": {
+      "where": { "generationData": "orientation" },
+      "equals": { "value": "landscape" }
+    },
+    "value": 832,
+    "to": ["64", "inputs", "width"]
+  },
+  {
+    "condition": {
+      "where": { "generationData": "orientation" },
+      "equals": { "value": "portrait" }
+    },
+    "value": 640,
+    "to": ["64", "inputs", "width"]
+  }
+]
+```
 
 ### Video-Specific Properties
 
 - **`extractOutputPathFromTextFile`** (string, optional)
   - For video workflows that output to a file path stored in a text file.
   - The filename of the text file to read the output path from.
+
+### Audio-Specific Properties
+
+Audio workflows automatically generate two outputs:
+- **Album cover image**: Saved to `saveImagePath` / `saveImageFilename` with the format specified in `imageFormat`.
+- **Audio file**: Saved to `saveAudioPath` / `saveAudioFilename` with the format specified in `audioFormat`.
+
+Both paths are automatically generated by the server and available for use in workflow `replace` mappings. The resulting media entry will include both `imageUrl` (album cover) and `audioUrl` (audio file) fields.
 
 ---
 
@@ -353,16 +469,68 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
       "replaceBlankFieldOnly": true
     }
   ],
+  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
   "workflows": [
+    {
+      "name": "Text to Image (Album Cover)",
+      "hidden": true,
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait"
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "template": "(prompt unavailable for uploaded audio)",
+          "to": "prompt"
+        }
+      ],
+      "base": "example-album-cover.json",
+      "finalNode": "10",
+      "replace": [
+        {
+          "from": "name",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["10", "inputs", "path"]
+        }
+      ]
+    },
     {
       "name": "Text to Image (Example)",
       "options": {
         "type": "image",
         "autocomplete": true,
         "inputImages": 0,
+        "inputAudios": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPEG", "value": "jpg" },
+              { "label": "WebP", "value": "webp" }
+            ]
+          }
+        ]
       },
       "postGenerationTasks": [
         {
@@ -371,7 +539,6 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
         }
       ],
       "base": "example-workflow.json",
-      "imageFormat": "png",
       "finalNode": "10",
       "replace": [
         {
@@ -415,6 +582,10 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
       },
       "preGenerationTasks": [
         {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "First frame: {{image_0_description}}\nLast frame: {{image_1_description}}\nDescribe the motion:",
           "to": "prompt",
@@ -426,7 +597,6 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
         }
       ],
       "base": "video-workflow.json",
-      "imageFormat": "webp",
       "finalNode": "76",
       "upload": [
         { "from": "image_0", "storePathAs": "firstFramePath" },
@@ -459,6 +629,72 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
         }
       ],
       "extractOutputPathFromTextFile": "video-filename.txt"
+    },
+    {
+      "name": "Text to Audio (Example)",
+      "options": {
+        "type": "audio",
+        "autocomplete": false,
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          },
+          {
+            "id": "lyrics",
+            "type": "textarea",
+            "label": "Lyrics"
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "imagePath": "saveImagePath",
+          "prompt": "Describe the album cover artwork...",
+          "to": "description"
+        }
+      ],
+      "base": "audio-generation.json",
+      "finalNode": "42",
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["6", "inputs", "text"]
+        },
+        {
+          "from": "lyrics",
+          "to": ["12", "inputs", "lyrics"]
+        },
+        {
+          "from": "name",
+          "to": ["18", "inputs", "text"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["42", "inputs", "audio_path"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["43", "inputs", "image_path"]
+        }
+      ]
     }
   ]
 }

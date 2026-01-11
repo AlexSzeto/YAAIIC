@@ -3,6 +3,7 @@
 
 # Features
 - Rename all generation variables ("savePath", etc.) to use snake_case. refactor prefix/postfix into using {{template}}. add pipes for templates. add math ops. send seed to ollama. client send seed even for uploads.
+- Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
 - Export to destination (customizable)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
