@@ -775,7 +775,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         // Check if task has a condition
         if (promptConfig.condition) {
           const dataSources = {
-            generationData: generationData,
+            data: generationData,           // Primary: new 'data' key for conditions
             value: generationData
           };
           const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
@@ -877,7 +877,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         // Check if modification has a condition
         if (mod.condition) {
           const dataSources = {
-            generationData: generationData,
+            data: generationData,           // Primary: new 'data' key for conditions
             value: generationData
           };
           const shouldExecute = checkExecutionCondition(dataSources, mod.condition);

@@ -519,3 +519,106 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
       }
       ```
     - `heartbeat`: Periodic keep-alive ping (every 30s). Format: `: heartbeat`
+
+## Export Endpoints
+
+### List Export Destinations
+- **Endpoint**: `GET /exports`
+- **Use Case**: Retrieve available export destinations configured on the server.
+- **Payload**:
+  - `type` (query, string, optional): Filter by media type ('image', 'video', 'audio').
+- **Output**: Array of export destination objects.
+  ```json
+  [
+    {
+      "id": "example-folder-export",
+      "name": "Save to Exports Folder",
+      "types": ["image", "video"]
+    },
+    {
+      "id": "example-endpoint-export",
+      "name": "Post to API",
+      "types": ["image"]
+    }
+  ]
+  ```
+- **Error State**: 500 on internal error.
+
+### Export Media
+- **Endpoint**: `POST /export`
+- **Use Case**: Export a media item to a configured destination (folder or API endpoint).
+- **Payload**: JSON body.
+  ```json
+  {
+    "exportId": "example-folder-export",
+    "mediaId": 1234567890
+  }
+  ```
+  - `exportId` (string, required): ID of the export destination from config.
+  - `mediaId` (integer, required): UID of the media item to export.
+- **Output**:
+  - For `save` type exports:
+    ```json
+    {
+      "success": true,
+      "path": "C:\\exports\\my_image.png"
+    }
+    ```
+  - For `post` type exports:
+    ```json
+    {
+      "success": true,
+      "response": { ... endpoint response ... },
+      "statusCode": 200
+    }
+    ```
+- **Error State**:
+  - 400 if `exportId` or `mediaId` is missing, or if export type is unknown.
+  - 404 if export configuration or media not found.
+  - 500 on export failure.
+
+### Export Configuration
+
+Exports are configured in `config.json` under the `exports` array. Each export supports:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier |
+| `name` | string | Display name for UI |
+| `exportType` | string | `"save"` (folder) or `"post"` (API) |
+| `types` | array | Media types: `["image", "video", "audio"]` |
+| `folderTemplate` | string | Destination folder path (save type) |
+| `filenameTemplate` | string | Generated filename template |
+| `endpoint` | string | API URL (post type) |
+| `prepareDataTasks` | array | Data transformation tasks (post type) |
+| `sendProperties` | array | Properties to include in POST (post type) |
+
+#### Template Syntax
+
+Templates use `{{property|pipe1|pipe2}}` syntax:
+- `{{name}}` - Direct property access
+- `{{name|split-by-spaces|snakecase|lowercase}}` - Property with pipe transformations
+
+**Available Pipes**: `split-by-spaces`, `snakecase`, `camelcase`, `kebabcase`, `titlecase`, `join-by-spaces`, `lowercase`, `uppercase`
+
+For detailed pipe documentation and examples, see [Template Syntax in workflow.md](workflow.md#template-syntax).
+
+#### Conditional Tasks
+
+PrepareDataTasks support conditions using the same logic as workflow conditions:
+
+```json
+{
+  "template": "landscape",
+  "to": "orientationTag",
+  "condition": {
+    "where": { "data": "orientation" },
+    "equals": { "value": "landscape" }
+  }
+}
+```
+
+The condition checks if `data.orientation === "landscape"`. If false, the task is skipped.
+
+For detailed condition syntax and examples, see [Condition Object in workflow.md](workflow.md#condition-object).
+

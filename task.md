@@ -177,4 +177,4 @@ Create a configurable list of export destinations and allow the user to export f
    5. On selection: call `POST /export` with exportId and mediaId
    6. Show toast notification with success/error result
 
-[] Implement conditional tasks. Use the same conditional logic as the workflow replacement object. Refactor the definition "generationData" to just "data". Update documentation.
+[x] Implement conditional tasks. Use the same conditional logic as the workflow replacement object. Refactor the definition "generationData" to just "data". Update documentation.

@@ -9,6 +9,7 @@ import FormData from 'form-data';
 import https from 'https';
 import http from 'http';
 import { parseTemplate } from './template-utils.mjs';
+import { checkExecutionCondition } from './util.mjs';
 
 /**
  * Resolve the absolute file path from a media data object
@@ -120,6 +121,19 @@ export async function handlePostExport(exportConfig, mediaData, storageFolder) {
     // Run prepare data tasks
     if (exportConfig.prepareDataTasks && Array.isArray(exportConfig.prepareDataTasks)) {
       for (const task of exportConfig.prepareDataTasks) {
+        // Check if task has a condition
+        if (task.condition) {
+          const dataSources = {
+            data: exportData,
+            value: exportData
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, task.condition);
+          if (!shouldExecute) {
+            console.log(`Skipping export task for ${task.to} due to unmet condition`);
+            continue;
+          }
+        }
+        
         if (task.from) {
           // Handle special file references
           if (task.from === 'image_0' || task.from === 'audio_0') {
@@ -140,7 +154,7 @@ export async function handlePostExport(exportConfig, mediaData, storageFolder) {
           }
         } else if (task.template) {
           // Parse template and set value
-          exportData[task.to] = parseTemplate(task.template, mediaData);
+          exportData[task.to] = parseTemplate(task.template, exportData);
         }
       }
     }

@@ -28,9 +28,17 @@
         {
           "template": "{{name}}",
           "to": "title"
+        },
+        {
+          "template": "landscape",
+          "to": "orientationTag",
+          "condition": {
+            "where": { "data": "orientation" },
+            "equals": { "value": "landscape" }
+          }
         }
       ],
-      "sendProperties": ["title", "file"]
+      "sendProperties": ["title", "file", "orientationTag"]
     }
   ]
 }
