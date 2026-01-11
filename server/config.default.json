@@ -6,39 +6,43 @@
   "comfyuiLaunchPath": "H:\\start_comfyui.bat",
   "exports": [
     {
-      "id": "example-folder-export",
-      "name": "Save to Exports Folder",
+      "id": "download",
+      "name": "Download",
       "exportType": "save",
-      "types": ["image", "video"],
-      "folderTemplate": "C:\\exports\\",
-      "filenameTemplate": "{{name|split-by-spaces|snakecase|lowercase}}"
+      "types": ["image", "video", "audio"],
+      "folderTemplate": "D:\\",
+      "filenameTemplate": "{{name|split-by-spaces|kebabcase|lowercase}}"
     },
     {
-      "id": "example-endpoint-export",
-      "name": "Post to API",
+      "id": "save-to-dm-tools",
+      "name": "Export Image to DM Tools",
       "exportType": "post",
       "types": ["image"],
-      "filenameTemplate": "{{name|split-by-spaces|snakecase|lowercase}}",
-      "endpoint": "https://httpbin.org/post",
+      "filenameTemplate": "{{orientation}}-{{name|split-by-spaces|kebabcase|lowercase}}",
+      "endpoint": "http://localhost:5000/campaign/media",
       "prepareDataTasks": [
-        {
-          "from": "image_0",
-          "to": "file"
-        },
-        {
-          "template": "{{name}}",
-          "to": "title"
-        },
-        {
-          "template": "landscape",
-          "to": "orientationTag",
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
+          {
+            "from": "image_0",
+            "to": "file"
+          },
+          {
+            "template": "images",
+            "to": "subtype"
+          },
+          {
+            "condition": {
+              "where" : { "data": "orientation" },
+              "equals": { "value": "landscape" }
+            },
+            "template": "location",
+            "to": "orientation"
+          },
+          {
+            "template": "{{orientation}}",
+            "to": "tags"
           }
-        }
       ],
-      "sendProperties": ["title", "file", "orientationTag"]
+      "sendProperties": ["name", "file", "subtype", "tags"]
     }
   ]
 }
