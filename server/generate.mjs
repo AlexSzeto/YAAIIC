@@ -887,22 +887,20 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           }
         }
         
-        const { from, value: directValue, to, prefix, postfix } = mod;
+        const { from, value: directValue, to } = mod;
         
         // Determine the source of the value
         let value;
         if (directValue !== undefined) {
           // Use direct value if provided
           value = directValue;
-          console.log(`Modifying: direct value to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+          console.log(`Modifying: direct value to ${to.join(',')}`);
         } else if (from) {
           // Use value from generationData
           value = generationData[from];
-          console.log(`Modifying: ${from} to ${to.join(',')} ${prefix ? 'with prefix ' + prefix : ''} ${postfix ? 'and postfix ' + postfix : ''}`);
+          console.log(`Modifying: ${from} to ${to.join(',')}`);
         }
         
-        if(prefix) value = `${prefix} ${value}`;
-        if(postfix) value = `${value} ${postfix}`;
         console.log(` - New value: ${value}`);
 
         if(value !== undefined && to && Array.isArray(to)) {

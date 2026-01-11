@@ -162,9 +162,7 @@ Maps request data or internal variables directly to workflow nodes:
 ```json
 {
   "from": "prompt",
-  "to": ["6", "inputs", "text"],
-  "prefix": "masterpiece, ",
-  "postfix": ", high quality"
+  "to": ["6", "inputs", "text"]
 }
 ```
 
@@ -185,14 +183,6 @@ Maps request data or internal variables directly to workflow nodes:
   - Target path in the ComfyUI workflow JSON.
   - Format: `["NodeID", "inputs", "keyName"]`
   - Example: `["6", "inputs", "text"]` targets the `text` input of node `6`
-
-- **`prefix`** (string, optional)
-  - Text to prepend to the source value.
-  - Example: `"masterpiece, "` prepends quality tags to prompts
-
-- **`postfix`** (string, optional)
-  - Text to append to the source value.
-  - Example: `", high quality"` appends quality tags to prompts
 
 ### Conditional Replacement
 
@@ -236,9 +226,7 @@ The server determines the replacement type based on which properties are present
 "replace": [
   {
     "from": "prompt",
-    "to": ["6", "inputs", "text"],
-    "prefix": "masterpiece, best quality, ",
-    "postfix": ", highly detailed"
+    "to": ["6", "inputs", "text"]
   },
   {
     "from": "seed",
@@ -681,8 +669,7 @@ Conditions allow tasks and value replacements to execute only when specific crit
       "replace": [
         {
           "from": "prompt",
-          "to": ["6", "inputs", "text"],
-          "prefix": "masterpiece, "
+          "to": ["6", "inputs", "text"]
         },
         {
           "from": "seed",

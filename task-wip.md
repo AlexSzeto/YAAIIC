@@ -6,6 +6,7 @@
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
+- Add watch mode for config files (config.json, comfyui-workflows.json). If any of these files change, reload the config and workflows.
 - Auto download models from Hugging Face
 
 # Scratch Space

@@ -298,14 +298,6 @@
           },
           "minItems": 3,
           "maxItems": 3
-        },
-        "prefix": {
-          "type": "string",
-          "description": "Text to prepend to the value"
-        },
-        "postfix": {
-          "type": "string",
-          "description": "Text to append to the value"
         }
       },
       "required": ["from", "to"],
