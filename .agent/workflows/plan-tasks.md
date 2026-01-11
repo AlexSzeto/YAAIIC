@@ -4,11 +4,12 @@ description: Subdivide a single goal into multiple stages of testable subgoals
 
 1. **CRITICAL: This is a PURE PLANNING step.** You are strictly FORBIDDEN from writing any code, creating files, or modifying any file other than `task.md`.
 2. Create a plan to implement the features in `task.md`, following the rules from `.github/copilot-instructions.md`.
-3. `task.md` should only contain a title and a goal subtopic with a paragraph describing the feature that needs to be implemented. If this is not the case, **STOP**, and inform the user that the task document is currently formatted incorrectly.
-4. Create a set of unchecked goals (using the `[] Objective description` format) to accomplish the objective. Limit the description to a single paragraph of text. 
-5. Each individual task should be independently testable, and at the end of each task the project should be executable with its existing functions intact.
-6. An exception to rule 5: If a single task is covering a significant portion of the code base (more than 2-3 files) or the effort involved to cover the goal. In that case, divide the big task into smaller tasks where each task covers a logical subsection of changes that can be manually reviewed.
-7. **VERIFY: Ensure you have NOT modified any file other than `task.md`.** if you have, undo those changes immediately.
+3. `task.md` should only contain a title and a goal subtopic with a paragraph describing the feature that needs to be implemented. Alternately, there might already be a section of well defined Implementation Details, which gives detailed specifications to accomplish the stated goals. If the goal is missing, or there are tasks in the document already, **STOP**, and inform the user that the task document is currently formatted incorrectly.
+4. If there is implementation details, examine it and determine if there are missing features that are required to accomplish the stated goal. If anything is missing or ambiguous, query the user to fill in the context until all missing or ambiguous details are filled in, or if the user wishes to skip the process and allow the agent to make the rest of the decisions.
+5. Create a set of unchecked goals (using the `[] Objective description` format) to accomplish the objective. Limit the description to a single paragraph of text. 
+6. Each individual task should be independently testable, and at the end of each task the project should be executable with its existing functions intact.
+7. An exception to rule 5: If a single task is covering a significant portion of the code base (more than 2-3 files) or the effort involved to cover the goal. In that case, divide the big task into smaller tasks where each task covers a logical subsection of changes that can be manually reviewed.
+8. **VERIFY: Ensure you have NOT modified any file other than `task.md`.** if you have, undo those changes immediately.
 
 Afterwards, create subtasks for the main tasks according to the following instructions, as duplicated from `plan-subtasks.md`:
 

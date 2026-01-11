@@ -3,5 +3,46 @@
   "ollamaLaunchPath": "H:\\start_ollama.bat",
   "ollamaUseCPU": false,
   "comfyuiAPIPath": "http://localhost:8188",
-  "comfyuiLaunchPath": "H:\\start_comfyui.bat"
+  "comfyuiLaunchPath": "H:\\start_comfyui.bat",
+  "exports": [
+    {
+      "id": "download",
+      "name": "Download",
+      "exportType": "save",
+      "types": ["image", "video", "audio"],
+      "folderTemplate": "D:\\",
+      "filenameTemplate": "{{name|split-by-spaces|kebabcase|lowercase}}"
+    },
+    {
+      "id": "save-to-dm-tools",
+      "name": "Export Image to DM Tools",
+      "exportType": "post",
+      "types": ["image"],
+      "filenameTemplate": "{{orientation}}-{{name|split-by-spaces|kebabcase|lowercase}}",
+      "endpoint": "http://localhost:5000/campaign/media",
+      "prepareDataTasks": [
+          {
+            "from": "image_0",
+            "to": "file"
+          },
+          {
+            "template": "images",
+            "to": "subtype"
+          },
+          {
+            "condition": {
+              "where" : { "data": "orientation" },
+              "equals": { "value": "landscape" }
+            },
+            "template": "location",
+            "to": "orientation"
+          },
+          {
+            "template": "{{orientation}}",
+            "to": "tags"
+          }
+      ],
+      "sendProperties": ["name", "file", "subtype", "tags"]
+    }
+  ]
 }

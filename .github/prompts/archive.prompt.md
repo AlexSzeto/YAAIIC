@@ -6,5 +6,6 @@ Prepare for the next set of tasks by creating a new `.md` file inside `task-hist
 ```
 # Untitled
 ## Goals
+## Implementation Details
 ## Tasks
 ```

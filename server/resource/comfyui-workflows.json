@@ -739,7 +739,7 @@
       "replace": [
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 832,
@@ -747,7 +747,7 @@
         },
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 480,
@@ -755,7 +755,7 @@
         },
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 832,
@@ -763,7 +763,7 @@
         },
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 480,
@@ -860,7 +860,7 @@
       "replace": [
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 832,
@@ -868,7 +868,7 @@
         },
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 480,
@@ -968,7 +968,7 @@
       "replace": [
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 832,
@@ -976,7 +976,7 @@
         },
         {
           "condition": {
-            "where": { "generationData": "orientation" },
+            "where": { "data": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 480,

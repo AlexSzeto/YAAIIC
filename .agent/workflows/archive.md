@@ -12,5 +12,6 @@ description: Archive tasks and cleanup
 ```
 # Untitled
 ## Goals
+## Implementation Details
 ## Tasks
 ```

@@ -5,6 +5,7 @@ import https from 'https';
 import http from 'http';
 import { sendImagePrompt, sendTextPrompt, modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createCrossFade } from './image-utils.mjs';
+import sharp from 'sharp';
 import { setObjectPathValue, readOutputPathFromTextFile, checkExecutionCondition, findNextIndex } from './util.mjs';
 import { CLIENT_ID, promptExecutionState, connectToComfyUI } from './comfyui-websocket.mjs';
 import {
@@ -532,6 +533,18 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
     
     // For image files, continue with existing logic
     
+    // Detect image dimensions and orientation
+    let orientation = 'portrait'; // default
+    try {
+      const metadata = await sharp(file.buffer).metadata();
+      if (metadata.width && metadata.height) {
+        orientation = metadata.width > metadata.height ? 'landscape' : 'portrait';
+        console.log(`Image dimensions: ${metadata.width}x${metadata.height}, orientation: ${orientation}`);
+      }
+    } catch (dimensionError) {
+      console.warn('Failed to detect image dimensions:', dimensionError.message);
+    }
+    
     // Create generationData object with the saved path
     const generationData = {
       saveImagePath: savePath,
@@ -539,7 +552,8 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
       seed: 0,
       workflow: 'Uploaded Image',
       name: extractedName || '',
-      description: ''
+      description: '',
+      orientation: orientation
     };
     
     // Process post-generation tasks to generate description and name
@@ -761,7 +775,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         // Check if task has a condition
         if (promptConfig.condition) {
           const dataSources = {
-            generationData: generationData,
+            data: generationData,           // Primary: new 'data' key for conditions
             value: generationData
           };
           const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
@@ -863,7 +877,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         // Check if modification has a condition
         if (mod.condition) {
           const dataSources = {
-            generationData: generationData,
+            data: generationData,           // Primary: new 'data' key for conditions
             value: generationData
           };
           const shouldExecute = checkExecutionCondition(dataSources, mod.condition);

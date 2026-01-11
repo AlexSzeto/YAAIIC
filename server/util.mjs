@@ -65,9 +65,23 @@ export function readOutputPathFromTextFile(filename, storageFolder) {
 
 /**
  * Check if an execution condition is met
- * @param {Object} dataSources - Object containing data sources like { generationData: {...}, value: ... }
+ * @param {Object} dataSources - Object containing data sources like { data: {...}, value: ... }
  * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }
  * @returns {boolean} True if condition is met, false otherwise
+ * 
+ * @example
+ * // Condition format:
+ * // {
+ * //   where: { data: "orientation" },  // Check the 'orientation' property from data
+ * //   equals: { value: "landscape" }   // Compare against literal value "landscape"
+ * // }
+ * 
+ * // Usage:
+ * const dataSources = { data: mediaData, value: mediaData };
+ * const condition = { where: { data: "orientation" }, equals: { value: "landscape" } };
+ * if (checkExecutionCondition(dataSources, condition)) {
+ *   // Execute task...
+ * }
  */
 export function checkExecutionCondition(dataSources, conditionData) {
   if (!conditionData) return true; // No condition means always execute
@@ -77,14 +91,14 @@ export function checkExecutionCondition(dataSources, conditionData) {
   
   /**
    * Helper function to resolve a value from data sources
-   * @param {Object} valueSpec - Object like { generationData: "key" } or { value: "directValue" }
+   * @param {Object} valueSpec - Object like { data: "key" } or { value: "directValue" }
    * @returns {*} The resolved value
    */
   const resolveValue = (valueSpec) => {
     const specKeys = Object.keys(valueSpec);
     if (specKeys.length === 0) return undefined;
     
-    const sourceKey = specKeys[0]; // e.g., "generationData" or "value"
+    const sourceKey = specKeys[0]; // e.g., "data" or "value"
     
     // If sourceKey is "value", return the direct value
     if (sourceKey === 'value') {
