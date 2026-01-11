@@ -20,5 +20,5 @@ Example task:
 }
 ```
 ## Tasks
-[] Look through `comfyui-workflows.json` and convert uses of prefix and postfix into a template replacement pre generation task:
-[] Delete prefix and postfix processing in `server/generate.mjs`. Delete specifications in `doc/workflows.md`.
+[x] Look through `comfyui-workflows.json` and convert uses of prefix and postfix into a template replacement pre generation task:
+[x] Delete prefix and postfix processing in `server/generate.mjs`. Delete specifications in `doc/workflows.md`.
