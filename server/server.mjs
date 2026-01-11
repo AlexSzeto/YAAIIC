@@ -9,6 +9,7 @@ import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } f
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
+import { handleSaveExport, handlePostExport, resolveMediaPath } from './export.mjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1044,6 +1045,96 @@ app.get('/workflows', (req, res) => {
   } catch (error) {
     console.error('Error getting workflows:', error);
     res.status(500).json({ error: 'Failed to load workflows' });
+  }
+});
+
+// GET endpoint for export destinations list
+app.get('/exports', (req, res) => {
+  try {
+    const { type } = req.query;
+    
+    // Get exports from config
+    const exports = config.exports || [];
+    
+    // Filter by type if provided
+    let filteredExports = exports;
+    if (type) {
+      filteredExports = exports.filter(exp => 
+        exp.types && exp.types.includes(type)
+      );
+    }
+    
+    // Return only id, name, and types for client display
+    const exportList = filteredExports.map(exp => ({
+      id: exp.id,
+      name: exp.name,
+      types: exp.types
+    }));
+    
+    console.log(`Exports endpoint called with type="${type || 'all'}", returning ${exportList.length} exports`);
+    res.json(exportList);
+    
+  } catch (error) {
+    console.error('Error in exports endpoint:', error);
+    res.status(500).json({ error: 'Failed to retrieve exports' });
+  }
+});
+
+// POST endpoint for exporting media
+app.post('/export', async (req, res) => {
+  try {
+    const { exportId, mediaId } = req.body;
+    
+    // Validate required fields
+    if (!exportId) {
+      return res.status(400).json({ error: 'Missing required field: exportId' });
+    }
+    if (!mediaId) {
+      return res.status(400).json({ error: 'Missing required field: mediaId' });
+    }
+    
+    // Find export configuration
+    const exports = config.exports || [];
+    const exportConfig = exports.find(exp => exp.id === exportId);
+    
+    if (!exportConfig) {
+      return res.status(404).json({ error: `Export configuration not found: ${exportId}` });
+    }
+    
+    // Find media data
+    const uid = parseInt(mediaId);
+    const mediaData = globalData.mediaData.find(item => item.uid === uid);
+    
+    if (!mediaData) {
+      return res.status(404).json({ error: `Media not found with id: ${mediaId}` });
+    }
+    
+    console.log(`Export request: exportId="${exportId}", mediaId=${mediaId}`);
+    
+    // Get storage folder path
+    const storageFolder = path.join(actualDirname, 'storage');
+    
+    // Handle export based on type
+    let result;
+    if (exportConfig.exportType === 'save') {
+      result = await handleSaveExport(exportConfig, mediaData, storageFolder);
+    } else if (exportConfig.exportType === 'post') {
+      result = await handlePostExport(exportConfig, mediaData, storageFolder);
+    } else {
+      return res.status(400).json({ error: `Unknown export type: ${exportConfig.exportType}` });
+    }
+    
+    if (result.success) {
+      console.log(`Export successful: ${exportId}`);
+      res.json({ success: true, ...result });
+    } else {
+      console.error(`Export failed: ${result.error}`);
+      res.status(500).json({ success: false, error: result.error });
+    }
+    
+  } catch (error) {
+    console.error('Error in export endpoint:', error);
+    res.status(500).json({ error: 'Failed to process export request', details: error.message });
   }
 });
 

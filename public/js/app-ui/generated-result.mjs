@@ -5,6 +5,8 @@ import { Tags } from '../custom-ui/tags.mjs';
 import { AudioPlayer } from '../custom-ui/audio-player.mjs';
 import { sendToClipboard } from '../util.mjs';
 import { createImageModal } from '../custom-ui/modal.mjs';
+import { showListSelect } from '../custom-ui/list-select.mjs';
+import { useToast } from '../custom-ui/toast.mjs';
 
 export function GeneratedResult({ 
   image, 
@@ -26,6 +28,7 @@ export function GeneratedResult({
   // Track which field is currently being edited
   // { field: string | null }
   const [editingField, setEditingField] = useState(null);
+  const toast = useToast();
   
   const handleCopy = (text, label) => {
     if (!text) return;
@@ -45,6 +48,63 @@ export function GeneratedResult({
       onEdit(image.uid, field, value);
     }
     stopEditing();
+  };
+
+  const handleExport = async () => {
+    try {
+      // Determine media type from the image data
+      const mediaType = image.type || (image.audioUrl ? 'audio' : 'image');
+      
+      // Fetch exports filtered by media type
+      const response = await fetch(`/exports?type=${mediaType}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch exports');
+      }
+      const exports = await response.json();
+      
+      if (exports.length === 0) {
+        toast.info('No export destinations configured for this media type');
+        return;
+      }
+      
+      // Show list select modal with exports
+      showListSelect({
+        title: 'Export To',
+        items: exports.map(exp => ({
+          id: exp.id,
+          label: exp.name
+        })),
+        itemIcon: 'export',
+        showActions: false,
+        showActionButton: false,
+        onSelectItem: async (item) => {
+          try {
+            // Trigger export
+            const exportResponse = await fetch('/export', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                exportId: item.id,
+                mediaId: image.uid
+              })
+            });
+            
+            const result = await exportResponse.json();
+            
+            if (result.success) {
+              toast.success(`Exported to ${item.label}`);
+            } else {
+              toast.error(`Export failed: ${result.error}`);
+            }
+          } catch (error) {
+            toast.error(`Export error: ${error.message}`);
+          }
+        }
+      });
+      
+    } catch (error) {
+      toast.error(`Failed to load exports: ${error.message}`);
+    }
   };
 
   return html`
@@ -165,6 +225,15 @@ export function GeneratedResult({
         >
           Inpaint
         <//Button>
+        <${Button}
+          variant="primary"
+          icon="export"
+          onClick=${handleExport}
+          disabled=${!image.uid}
+          title="Export this media"
+        >
+          Export
+        <//>
         <${Button} 
           variant="danger"
           icon="trash"

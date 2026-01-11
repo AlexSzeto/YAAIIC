@@ -3,5 +3,34 @@
   "ollamaLaunchPath": "H:\\start_ollama.bat",
   "ollamaUseCPU": false,
   "comfyuiAPIPath": "http://localhost:8188",
-  "comfyuiLaunchPath": "H:\\start_comfyui.bat"
+  "comfyuiLaunchPath": "H:\\start_comfyui.bat",
+  "exports": [
+    {
+      "id": "example-folder-export",
+      "name": "Save to Exports Folder",
+      "exportType": "save",
+      "types": ["image", "video"],
+      "folderTemplate": "C:\\exports\\",
+      "filenameTemplate": "{{name|split-by-spaces|snakecase|lowercase}}"
+    },
+    {
+      "id": "example-endpoint-export",
+      "name": "Post to API",
+      "exportType": "post",
+      "types": ["image"],
+      "filenameTemplate": "{{name|split-by-spaces|snakecase|lowercase}}",
+      "endpoint": "https://httpbin.org/post",
+      "prepareDataTasks": [
+        {
+          "from": "image_0",
+          "to": "file"
+        },
+        {
+          "template": "{{name}}",
+          "to": "title"
+        }
+      ],
+      "sendProperties": ["title", "file"]
+    }
+  ]
 }
