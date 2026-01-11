@@ -439,14 +439,23 @@ app.get('/media-data', (req, res) => {
       }
       
       // Tag match - image must contain ALL tags (case insensitive)
+      // Tags in media data are stored as comma-separated strings
       let tagMatch = true;
       if (tags.length > 0) {
-        tagMatch = item.tags && Array.isArray(item.tags) && 
-          tags.every(searchTag => 
-            item.tags.some(itemTag => 
+        if (!item.tags) {
+          tagMatch = false;
+        } else {
+          // Convert comma-separated string to array if needed
+          const itemTags = typeof item.tags === 'string' 
+            ? item.tags.split(',').map(t => t.trim()) 
+            : (Array.isArray(item.tags) ? item.tags : []);
+          
+          tagMatch = tags.every(searchTag => 
+            itemTags.some(itemTag => 
               itemTag.toLowerCase() === searchTag.toLowerCase()
             )
           );
+        }
       }
       
       // All conditions must be true

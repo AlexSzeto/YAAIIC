@@ -33,4 +33,4 @@ This search yields only one result, but should include at least this entry with 
     },
 ```
 ## Tasks
-[] Review the `media-data` endpoint in the server code and fix why the `tags` query parameter is not working.
+[x] Review the `media-data` endpoint in the server code and fix why the `tags` query parameter is not working.
