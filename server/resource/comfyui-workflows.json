@@ -490,21 +490,7 @@
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "test",
-            "type": "textarea",
-            "label": "Test",
-            "default": "2342sdf"
-          },
-          {
-            "id": "test2",
-            "type": "text",
-            "label": "Test2",
-            "default": "asdfasdfsadf"
-          }
-        ]
+        "orientation": "detect"
       },
       "preGenerationTasks": [
         {

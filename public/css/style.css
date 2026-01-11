@@ -80,6 +80,14 @@ p {
   gap: 15px;
   flex: 1 1 auto;
   align-items: end;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .workflow-selector-container {
+    flex-direction: column;
+    align-items: stretch;
+  }  
 }
 
 .video-controls-row {
@@ -99,7 +107,7 @@ p {
   flex-direction: column;
   min-width: 200px;
   width: 200px;
-  flex: 0 0 200px;
+  /* flex: 0 0 200px; */
 }
 
 .form-group.full-width {
@@ -902,10 +910,10 @@ body:has(.inpaint-main-layout) {
     min-width: 100%;
   }
   
-  .workflow-controls .button-row {
+  /* .workflow-controls .button-row {
     flex-direction: column;
     gap: 10px;
-  }
+  } */
   
   .workflow-controls .generate-button,
   .workflow-controls .gallery-btn {
