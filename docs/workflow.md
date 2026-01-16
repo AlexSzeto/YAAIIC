@@ -186,14 +186,6 @@ Maps request data or internal variables directly to workflow nodes:
   - Format: `["NodeID", "inputs", "keyName"]`
   - Example: `["6", "inputs", "text"]` targets the `text` input of node `6`
 
-- **`prefix`** (string, optional)
-  - Text to prepend to the source value.
-  - Example: `"masterpiece, "` prepends quality tags to prompts
-
-- **`postfix`** (string, optional)
-  - Text to append to the source value.
-  - Example: `", high quality"` appends quality tags to prompts
-
 ### Conditional Replacement
 
 Sets workflow values based on runtime conditions:
