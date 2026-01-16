@@ -107,7 +107,7 @@
       "preGenerationTasks": [
         {
           "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -137,7 +137,7 @@
       "finalNode": "10",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -176,7 +176,7 @@
       "preGenerationTasks": [
         {
           "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -212,7 +212,7 @@
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -326,7 +326,7 @@
       "preGenerationTasks": [
         {
           "template": "In the style of chargen_concept_art image of\n\na highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n{{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -358,7 +358,7 @@
       "finalNode": "44",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -396,7 +396,7 @@
       "preGenerationTasks": [
         {
           "template": "Magnificent, painterly, epic, majestic, naturalistic, fantasy art, cover art, impressionist, highly detailed, sharp focus, cinematic light, finely detailed, intricate, dynamic perspective, perfect, aesthetic, deep background fantasy illustration of \n\n{{prompt}}\n\nThe composition heavily relies on off center, golden ratio to create an aesthetically pleasing, dynamic layout.",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -428,7 +428,7 @@
       "finalNode": "43",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -466,7 +466,7 @@
       "preGenerationTasks": [
         {
           "template": "a highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n{{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -498,7 +498,7 @@
       "finalNode": "43",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -528,7 +528,7 @@
         },
         {
           "template": "a painterly digital art style illustration\n\n{{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -555,7 +555,7 @@
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -593,7 +593,7 @@
         },
         {
           "template": "a painterly digital art style illustration\n\n{{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -620,7 +620,7 @@
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {

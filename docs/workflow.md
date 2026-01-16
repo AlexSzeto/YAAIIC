@@ -162,7 +162,9 @@ Maps request data or internal variables directly to workflow nodes:
 ```json
 {
   "from": "prompt",
-  "to": ["6", "inputs", "text"]
+  "to": ["6", "inputs", "text"],
+  "prefix": "masterpiece, ",
+  "postfix": ", high quality"
 }
 ```
 
@@ -184,14 +186,22 @@ Maps request data or internal variables directly to workflow nodes:
   - Format: `["NodeID", "inputs", "keyName"]`
   - Example: `["6", "inputs", "text"]` targets the `text` input of node `6`
 
+- **`prefix`** (string, optional)
+  - Text to prepend to the source value.
+  - Example: `"masterpiece, "` prepends quality tags to prompts
+
+- **`postfix`** (string, optional)
+  - Text to append to the source value.
+  - Example: `", high quality"` appends quality tags to prompts
+
 ### Conditional Replacement
 
-Sets workflow values based on runtime conditions. See [Condition Object](#condition-object) for detailed condition syntax.
+Sets workflow values based on runtime conditions:
 
 ```json
 {
   "condition": {
-    "where": { "data": "orientation" },
+    "where": { "generationData": "orientation" },
     "equals": { "value": "landscape" }
   },
   "value": 832,
@@ -203,7 +213,12 @@ Sets workflow values based on runtime conditions. See [Condition Object](#condit
 
 - **`condition`** (object, required)
   - Defines the condition to evaluate before applying the replacement.
-  - See [Condition Object](#condition-object) for full structure and examples.
+  - **`where`** (object, required): Source of the value to check.
+    - Format: `{ "generationData": "fieldName" }`
+    - Checks a field from the generation data object
+  - **`equals`** (object, required): Expected value for the condition to pass.
+    - Format: `{ "value": expectedValue }`
+    - The value can be any type (string, number, boolean, etc.)
 
 - **`value`** (any, required)
   - The value to set in the workflow if the condition is true.
@@ -226,7 +241,9 @@ The server determines the replacement type based on which properties are present
 "replace": [
   {
     "from": "prompt",
-    "to": ["6", "inputs", "text"]
+    "to": ["6", "inputs", "text"],
+    "prefix": "masterpiece, best quality, ",
+    "postfix": ", highly detailed"
   },
   {
     "from": "seed",
@@ -238,7 +255,7 @@ The server determines the replacement type based on which properties are present
   },
   {
     "condition": {
-      "where": { "data": "orientation" },
+      "where": { "generationData": "orientation" },
       "equals": { "value": "landscape" }
     },
     "value": 832,
@@ -246,7 +263,7 @@ The server determines the replacement type based on which properties are present
   },
   {
     "condition": {
-      "where": { "data": "orientation" },
+      "where": { "generationData": "orientation" },
       "equals": { "value": "portrait" }
     },
     "value": 640,
@@ -297,7 +314,7 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 - **`prompt`** (string, required for LLM tasks)
   - The prompt text sent to the LLM.
-  - Supports template placeholder syntax. See [Template Syntax](#template-syntax).
+  - Supports placeholder syntax: `{{fieldName}}` is replaced with the value of that field.
   - Examples:
     - `"{{description}}"` - inserts the description field
     - `"{{image_0_description}}"` - inserts description of first input image
@@ -306,7 +323,7 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 - **`template`** (string, optional)
   - For non-LLM text generation, a template string with placeholders.
   - Alternative to `model` + `prompt` for simple string formatting.
-  - See [Template Syntax](#template-syntax) for placeholder format and available pipes.
+  - Uses same placeholder syntax: `{{variableName}}`.
   - Mutually exclusive with `model` and `from`.
   - Missing placeholders will cause an error.
 
@@ -327,7 +344,6 @@ Used in both `postGenerationTasks` and `preGenerationTasks`:
 
 - **`condition`** (object, optional)
   - Conditional execution check. Task only runs if condition is met.
-  - See [Condition Object](#condition-object) for structure.
 
 ### Task Types
 
@@ -435,148 +451,6 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
 
 ---
 
-## Template Syntax
-
-Templates provide a way to dynamically generate text values by substituting placeholders with data values. Templates are used in:
-- LLM task prompts
-- Template tasks (non-LLM text generation)
-- Export filename and folder templates
-
-### Basic Placeholder Format
-
-```
-{{propertyName}}
-```
-
-Placeholders are replaced with the corresponding property value from the data object. If a placeholder references a missing property, an error is thrown.
-
-### Pipe Transformations
-
-Templates support pipe transformations using the `|` character:
-
-```
-{{propertyName|pipe1|pipe2|pipe3}}
-```
-
-Pipes are applied left-to-right. Array values are automatically joined with spaces after piping.
-
-### Available Pipes
-
-| Pipe | Input | Output | Example |
-|------|-------|--------|---------|
-| `split-by-spaces` | string | array | `"hello world"` → `["hello", "world"]` |
-| `snakecase` | array | string | `["Hello", "World"]` → `"Hello_World"` |
-| `camelcase` | array | string | `["hello", "world"]` → `"helloWorld"` |
-| `kebabcase` | array | string | `["Hello", "World"]` → `"Hello-World"` |
-| `titlecase` | array | string | `["hello", "world"]` → `"Hello World"` |
-| `join-by-spaces` | array | string | `["Hello", "World"]` → `"Hello World"` |
-| `lowercase` | string | string | `"Hello World"` → `"hello world"` |
-| `uppercase` | string | string | `"Hello World"` → `"HELLO WORLD"` |
-
-### Example Templates
-
-```json
-{
-  "template": "{{name}}",
-  "to": "title"
-}
-```
-
-```json
-{
-  "template": "{{name|split-by-spaces|snakecase|lowercase}}",
-  "to": "filename"
-}
-```
-
-This converts `"My Image Name"` → `["My", "Image", "Name"]` → `"My_Image_Name"` → `"my_image_name"`.
-
-### Multi-Placeholder Templates
-
-```json
-{
-  "template": "First frame: {{image_0_description}}\nLast frame: {{image_1_description}}",
-  "to": "description"
-}
-```
-
----
-
-## Condition Object
-
-Conditions allow tasks and value replacements to execute only when specific criteria are met. They are used in:
-- [Value Replacement](#conditional-replacement) - Conditional workflow modifications
-- [LLM Task Object](#llm-task-object) - Conditional pre/post-generation tasks  
-- [Export prepareDataTasks](server.md#conditional-tasks) - Conditional export data preparation
-
-### Structure
-
-```json
-{
-  "condition": {
-    "where": { "data": "orientation" },
-    "equals": { "value": "landscape" }
-  }
-}
-```
-
-### Properties
-
-- **`where`** (object, required)
-  - Specifies the source of the value to check.
-  - Format: `{ "sourceType": "propertyName" }`
-  - Available source types:
-    - `"data"` - Property from the current data object (generationData or exportData)
-    - `"value"` - Literal value comparison (rarely used in `where`)
-
-- **`equals`** (object, required)
-  - Specifies the expected value for the condition to pass.
-  - Format: `{ "sourceType": "valueOrPropertyName" }`
-  - Available source types:
-    - `"value"` - Literal value to compare against (most common)
-    - `"data"` - Another property from the data object
-
-### Examples
-
-**Check if orientation is landscape:**
-```json
-{
-  "condition": {
-    "where": { "data": "orientation" },
-    "equals": { "value": "landscape" }
-  }
-}
-```
-
-**Check if type is audio:**
-```json
-{
-  "condition": {
-    "where": { "data": "type" },
-    "equals": { "value": "audio" }
-  }
-}
-```
-
-**Compare two data properties (advanced):**
-```json
-{
-  "condition": {
-    "where": { "data": "inputOrientation" },
-    "equals": { "data": "outputOrientation" }
-  }
-}
-```
-
-### Condition Behavior
-
-- If `condition` is omitted, the task/replacement always executes
-- If `where` or `equals` is missing, the condition evaluates to `true`
-- Comparison uses strict equality (`===`)
-- Null and undefined values are compared exactly
-
----
-
 ## Complete Example
 
 ```json
@@ -669,7 +543,8 @@ Conditions allow tasks and value replacements to execute only when specific crit
       "replace": [
         {
           "from": "prompt",
-          "to": ["6", "inputs", "text"]
+          "to": ["6", "inputs", "text"],
+          "prefix": "masterpiece, "
         },
         {
           "from": "seed",
@@ -730,7 +605,7 @@ Conditions allow tasks and value replacements to execute only when specific crit
       "replace": [
         {
           "condition": {
-            "where": { "data": "orientation" },
+            "where": { "generationData": "orientation" },
             "equals": { "value": "landscape" }
           },
           "value": 832,
