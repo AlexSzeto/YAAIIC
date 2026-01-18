@@ -1,5 +1,7 @@
 # Goober Refactoring
 ## Goals
+The ultimate intent of this refactoring is to separate the custom UI components into a reusable library that can be imported by future projects, allowing them to quickly establish a consistent look and feel without reimplementing the same component set.
+
 Refactor all existing custom UI components to use Goober for styling. Do the replacement component by component, utilizing a base light/dark theme futureproofed to be extendable for future themes. Tests would be performed after each refactoring on a test page showing all refactored components, with dynamic theme switching.
 ## Implementation Details
 - Install Goober
@@ -37,6 +39,10 @@ export { styled, css, keyframes };
 4. Merge spacing sub-theme with each color theme to produce final `light` and `dark` themes
 5. Export a `currentTheme` reactive store for runtime switching
 6. Export helper functions for accessing theme values
+7. Document how non-custom-ui components can use theme values directly:
+   - How to import and access current theme colors/spacing
+   - How to subscribe to theme changes for dynamic re-styling
+   - Example code patterns for partial theme adaptation
 ```javascript
 // theme.mjs - Theme Structure
 const spacingSubTheme = {
@@ -60,10 +66,15 @@ export const themes = {
 export let currentTheme; // reactive store
 export function setTheme(themeName);
 export function getThemeValue(path);
+
+// Partial adaptation example for non-custom-ui components:
+// import { currentTheme, getThemeValue } from './theme.mjs';
+// const color = getThemeValue('colors.primary.background');
+// // Subscribe to theme changes for dynamic updates
 ```
 
 [] Establish component documentation and property standards
-1. All custom-ui components MUST accept a `layoutClass` prop for external CSS layout classes (flexbox/grid positioning)
+1. All styling (including positioning, flexbox, grid) MUST use Goober - no external CSS classes
 2. Each component MUST include comprehensive JSDoc documentation specifying:
    - All props with types, whether required or optional, and default values
    - Whether the component accepts `children` and how they are rendered
@@ -74,14 +85,13 @@ export function getThemeValue(path);
  * ComponentName - Brief description
  * 
  * @param {Object} props
- * @param {string} [props.layoutClass] - Optional CSS class for external layout/positioning
  * @param {string} [props.variant='default'] - Component variant
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {preact.ComponentChildren} [props.children] - Child content, rendered inside container
  * @returns {preact.VNode}
  * 
  * @example
- * <ComponentName layoutClass="flex-item" variant="primary">Content</ComponentName>
+ * <ComponentName variant="primary">Content</ComponentName>
  */
 ```
 
@@ -96,15 +106,14 @@ export function getThemeValue(path);
 2. Apply global styles: body font, background, text colors from theme
 3. Include CSS reset/normalize as needed
 4. Export as wrapper component for app root
-5. Document all props with JSDoc (layoutClass, children)
+5. Document all props with JSDoc
 ```javascript
 /**
  * Page - Root wrapper providing global theme styles
  * @param {Object} props
- * @param {string} [props.layoutClass] - Optional CSS class for layout
  * @param {preact.ComponentChildren} props.children - App content (required)
  */
-export function Page({ layoutClass, children });
+export function Page({ children });
 // Applies: font-family, background-color, color from theme
 // Includes: CSS reset, scrollbar styling
 ```
@@ -113,16 +122,15 @@ export function Page({ layoutClass, children });
 1. Create or refactor `public/js/custom-ui/panel.mjs`
 2. Styled container with rounded corners, background, border from theme
 3. Support variants: default, elevated (with shadow), outlined
-4. Document all props with JSDoc (layoutClass, variant, children)
+4. Document all props with JSDoc
 ```javascript
 /**
  * Panel - Container with rounded corners and themed background
  * @param {Object} props
- * @param {string} [props.layoutClass] - Optional CSS class for layout
  * @param {'default'|'elevated'|'outlined'} [props.variant='default'] - Panel style variant
  * @param {preact.ComponentChildren} [props.children] - Panel content
  */
-export function Panel({ layoutClass, variant, children });
+export function Panel({ variant, children });
 ```
 
 [] Refactor Button component to Goober
@@ -131,13 +139,12 @@ export function Panel({ layoutClass, variant, children });
 3. Implement new variant system: medium-text, medium-icon, medium-icon-text, small-text, small-icon
 4. Apply theme colors for primary, secondary, success, danger states
 5. Include hover, focus, disabled states
-6. Document all props with JSDoc (layoutClass, variant, color, loading, disabled, icon, children)
+6. Document all props with JSDoc
 7. Update test page with all button variants
 ```javascript
 /**
  * Button - Themed button with multiple variants and states
  * @param {Object} props
- * @param {string} [props.layoutClass] - Optional CSS class for layout
  * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
  * @param {'primary'|'secondary'|'success'|'danger'} [props.color='primary'] - Color theme
  * @param {boolean} [props.loading=false] - Shows spinner, disables button
@@ -145,124 +152,163 @@ export function Panel({ layoutClass, variant, children });
  * @param {string} [props.icon] - Box-icon name (e.g. 'play', 'trash')
  * @param {preact.ComponentChildren} [props.children] - Button text (for text variants)
  */
-export function Button({ layoutClass, variant, color, loading, disabled, icon, children, ...props });
+export function Button({ variant, color, loading, disabled, icon, children, ...props });
 ```
 
 [] Refactor Input component to Goober
 1. Update `public/js/custom-ui/input.mjs` to use goober styling
 2. Apply theme colors for background, border, text, focus states
 3. Include disabled and error states
-4. Add `layoutClass` prop and document all props with JSDoc
+4. Document all props with JSDoc
 5. Update test page with input examples
 
 [] Refactor Select component to Goober
 1. Update `public/js/custom-ui/select.mjs` to use goober styling
 2. Match input styling for consistency
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with select examples
 
 [] Refactor Textarea component to Goober
 1. Update `public/js/custom-ui/textarea.mjs` to use goober styling
 2. Match input styling for consistency
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with textarea examples
 
 [] Refactor Checkbox component to Goober
 1. Update `public/js/custom-ui/checkbox.mjs` to use goober styling
 2. Apply theme colors for checked/unchecked states
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with checkbox examples
 
 [] Refactor Tags component to Goober
 1. Update `public/js/custom-ui/tags.mjs` to use goober styling
 2. Apply theme colors for tag chips
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with tags examples
 
 [] Refactor Pagination component to Goober
 1. Update `public/js/custom-ui/pagination.mjs` to use goober styling
 2. Style navigation buttons and page indicators with theme
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with pagination examples
 
 [] Refactor ImageCarousel component to Goober
 1. Update `public/js/custom-ui/image-carousel.mjs` to use goober styling
 2. Style carousel container, navigation, and indicators
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with carousel examples
 
 [] Refactor ListSelect component to Goober
 1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
 2. Style list items, hover, and selected states
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with list-select examples
 
 [] Refactor FolderSelect component to Goober
 1. Update `public/js/custom-ui/folder-select.mjs` to use goober styling
 2. Style folder tree, icons, and selection states
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with folder-select examples
 
 [] Refactor ImageSelect component to Goober
 1. Update `public/js/custom-ui/image-select.mjs` to use goober styling
 2. Style image grid, preview, and selection
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with image-select examples
 
 [] Refactor AudioSelect component to Goober
 1. Update `public/js/custom-ui/audio-select.mjs` to use goober styling
 2. Match image-select styling for consistency
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with audio-select examples
 
 [] Refactor AudioPlayer component to Goober
 1. Update `public/js/custom-ui/audio-player.mjs` to use goober styling
 2. Style player controls, progress bar, volume
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with audio-player examples
 
 [] Refactor ProgressBanner component to Goober
 1. Update `public/js/custom-ui/progress-banner.mjs` to use goober styling
 2. Style progress bar, text, and container
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with progress-banner examples
 
 [] Refactor Gallery component to Goober
 1. Update `public/js/custom-ui/gallery.mjs` to use goober styling
 2. Style grid layout, item cards, overlays, and controls
-3. Add `layoutClass` prop and document all props with JSDoc
+3. Document all props with JSDoc
 4. Update test page with gallery examples
 
 [] Refactor Toast component to Goober (global)
 1. Update `public/js/custom-ui/toast.mjs` to use goober styling
 2. Style toast container, animations, and variants (success, error, info, warning)
 3. Ensure portal rendering works with goober styles
-4. Add `layoutClass` prop and document all props with JSDoc
+4. Document all props with JSDoc
 5. Update test page with toast trigger buttons
 
 [] Refactor Dialog component to Goober (global)
 1. Update `public/js/custom-ui/dialog.mjs` to use goober styling
 2. Style overlay, dialog box, buttons, and text prompt variant
 3. Ensure portal rendering works with goober styles
-4. Add `layoutClass` prop and document all props with JSDoc
+4. Document all props with JSDoc
 5. Update test page with dialog trigger buttons
 
 [] Refactor Modal component to Goober (global)
 1. Update `public/js/custom-ui/modal.mjs` to use goober styling
 2. Style overlay, modal box, header, footer, and size variants
 3. Handle image modal styling
-4. Add `layoutClass` prop and document all props with JSDoc
+4. Document all props with JSDoc
 5. Update test page with modal trigger buttons
 
-[] Audit and refactor app to use only custom-ui components
-1. Review `public/js/app.mjs` and `public/js/app-ui/` components
-2. Replace any inline styles with styled components or custom-ui components
-3. Create additional custom-ui components as needed for app-specific UI
+[] Refactor use-pagination hook to Goober
+1. Update `public/js/custom-ui/use-pagination.mjs` for theme integration
+2. Document all exported functions/hooks with JSDoc
 
-[] Remove inline styles from custom-ui components
-1. Audit each component for remaining inline `style=` attributes
-2. Replace with goober styled components or `css` template literals
-3. Verify all styling is handled by goober
+[] Refactor GenerationForm app component to Goober
+1. Update `public/js/app-ui/generation-form.mjs` to use Goober styling
+2. Replace all inline flexbox styles with styled components
+3. Remove CSS class dependencies (generation-form, form-row)
+4. Use theme values for all spacing (gap, padding)
+
+[] Refactor GeneratedResult app component to Goober
+1. Update `public/js/app-ui/generated-result.mjs` to use Goober styling
+2. Replace inline styles with styled components
+3. Migrate hardcoded colors (#28a745, #dc3545) to theme colors (success, danger)
+4. Remove CSS class dependencies (generated-image-display, etc.)
+
+[] Refactor InpaintForm app component to Goober
+1. Update `public/js/app-ui/inpaint-form.mjs` to use Goober styling
+2. Replace inline flexbox styles with styled components
+3. Remove CSS class dependencies (inpaint-form, form-row)
+
+[] Refactor InpaintCanvas app component to Goober
+1. Update `public/js/app-ui/inpaint-canvas.mjs` to use Goober styling
+2. Replace inline styles with styled components
+3. Remove CSS class dependencies (inpaint-canvas-container, inpaint-loading, etc.)
+
+[] Refactor SeedControl app component to Goober
+1. Update `public/js/app-ui/seed-control.mjs` to use Goober styling
+2. Replace inline margin styles with styled components
+
+[] Refactor ExtraInputsRenderer app component to Goober
+1. Update `public/js/app-ui/extra-inputs-renderer.mjs` to use Goober styling
+2. Replace inline margin styles with styled components
+
+[] Refactor WorkflowSelector app component to Goober
+1. Update `public/js/app-ui/workflow-selector.mjs` to use Goober styling
+2. Remove CSS class dependency (workflow-selector-container)
+
+[] Refactor inpaint-page.mjs to Goober
+1. Update `public/js/inpaint-page.mjs` to use Goober styling
+2. Ensure all styling uses theme values
+3. Replace any inline styles or CSS class dependencies
+
+[] Remove inline styles from all components
+1. Audit all custom-ui components for remaining inline `style=` attributes
+2. Audit all app-ui components for remaining inline `style=` attributes
+3. Replace with goober styled components or `css` template literals
+4. Verify all styling is handled by Goober
 
 [] Clean up CSS files and verify visual parity
 1. Take before-screenshots of all UI pages/components
@@ -276,3 +322,4 @@ export function Button({ layoutClass, variant, color, loading, disabled, icon, c
 5. Delete `custom-ui.css` only when empty or containing only comments
 6. Delete `variables.css` only when all color variables have been migrated
 7. Final verification: compare original before-screenshots with final state to ensure no visual regressions
+
