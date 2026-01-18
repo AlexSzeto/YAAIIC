@@ -14,7 +14,7 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 - Refactor app to ONLY use custom-ui components, adding more custom components as needed.
 - Completely remove all inline styles and CSS files, verifying that the page looks identical before and after sections of the CSS file are removed.
 ## Tasks
-[] Install Goober and configure for Preact integration
+[x] Install Goober and configure for Preact integration
 1. Install goober via npm (`npm install goober`)
 2. Create `public/js/custom-ui/goober-setup.mjs` to configure goober with Preact's `h` function
 ```javascript
@@ -28,7 +28,7 @@ setup(h);
 export { styled, css, keyframes };
 ```
 
-[] Create the base theme system at `public/js/custom-ui/theme.mjs`
+[x] Create the base theme system at `public/js/custom-ui/theme.mjs`
 1. Create spacing sub-theme with default values for small and medium component sizes:
    - padding (small, medium)
    - margin (small, medium)

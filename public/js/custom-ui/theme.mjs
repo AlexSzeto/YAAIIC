@@ -1,0 +1,378 @@
+/**
+ * theme.mjs - Centralized theming system for custom UI components
+ * 
+ * This module provides a complete theming solution with:
+ * - Spacing sub-theme for consistent sizing (small, medium)
+ * - Light and dark color themes
+ * - Reactive theme switching
+ * - Helper functions for accessing theme values
+ * 
+ * ## Usage for non-custom-ui components:
+ * 
+ * ### Accessing current theme values:
+ * ```javascript
+ * import { currentTheme, getThemeValue } from './theme.mjs';
+ * 
+ * // Direct access to current theme
+ * const bgColor = currentTheme.value.colors.background.primary;
+ * 
+ * // Or use helper function with dot notation
+ * const textColor = getThemeValue('colors.text.primary');
+ * ```
+ * 
+ * ### Subscribing to theme changes:
+ * ```javascript
+ * import { currentTheme } from './theme.mjs';
+ * 
+ * // In a Preact component using signals
+ * const MyComponent = () => {
+ *   const theme = currentTheme.value;
+ *   return html`<div style="color: ${theme.colors.text.primary}">...</div>`;
+ * };
+ * 
+ * // Or subscribe manually
+ * currentTheme.subscribe((theme) => {
+ *   document.body.style.backgroundColor = theme.colors.background.primary;
+ * });
+ * ```
+ */
+
+// ============================================================================
+// Spacing Sub-Theme
+// ============================================================================
+
+const spacingSubTheme = {
+  spacing: {
+    small: {
+      padding: '4px 8px',
+      paddingVertical: '4px',
+      paddingHorizontal: '8px',
+      margin: '4px',
+      borderRadius: '4px',
+      gap: '4px'
+    },
+    medium: {
+      padding: '8px 16px',
+      paddingVertical: '8px',
+      paddingHorizontal: '16px',
+      margin: '8px',
+      borderRadius: '8px',
+      gap: '8px'
+    }
+  },
+  border: {
+    width: '1px',
+    style: 'solid'
+  },
+  transitions: {
+    fast: '0.15s ease',
+    normal: '0.25s ease',
+    slow: '0.4s ease'
+  }
+};
+
+// ============================================================================
+// Typography Sub-Theme
+// ============================================================================
+
+const typographySubTheme = {
+  typography: {
+    fontFamily: 'Arial, sans-serif',
+    fontSize: {
+      small: '12px',
+      medium: '14px',
+      large: '16px'
+    },
+    fontWeight: {
+      normal: '400',
+      medium: '500',
+      bold: '600'
+    }
+  }
+};
+
+// ============================================================================
+// Monotype Sub-Theme
+// ============================================================================
+
+const monotypeSubTheme = {
+  monotype: {
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: {
+      small: '11px',
+      medium: '13px',
+      large: '15px'
+    }
+  }
+};
+
+// ============================================================================
+// Color Themes
+// ============================================================================
+
+const lightColors = {
+  // Primary Color Theme
+  primary: {
+    background: '#007bff',
+    hover: '#0056b3',
+    focus: 'rgba(0, 123, 255, 0.5)',
+    highlight: '#007acc',
+    text: '#ffffff'
+  },
+  // Secondary Color Theme
+  secondary: {
+    background: '#6c757d',
+    hover: '#545b62',
+    focus: 'rgba(108, 117, 125, 0.5)',
+    text: '#ffffff'
+  },
+  // Success Color Theme
+  success: {
+    background: '#28a745',
+    hover: '#218838',
+    focus: 'rgba(40, 167, 69, 0.5)',
+    text: '#ffffff'
+  },
+  // Danger Color Theme
+  danger: {
+    background: '#dc3545',
+    hover: '#c82333',
+    border: '#dc3545',
+    borderHover: '#c82333',
+    focus: 'rgba(220, 53, 69, 0.5)',
+    text: '#ffffff'
+  },
+  // Background Colors
+  background: {
+    primary: '#ffffff',
+    secondary: '#f8f9fa',
+    tertiary: '#e9ecef',
+    card: '#ffffff',
+    hover: '#f1f1f1',
+    disabled: '#e9ecef'
+  },
+  // Border Colors
+  border: {
+    primary: '#dee2e6',
+    secondary: '#ced4da',
+    focus: '#80bdff',
+    highlight: '#007bff'
+  },
+  // Text Colors
+  text: {
+    primary: '#212529',
+    secondary: '#495057',
+    muted: '#6c757d',
+    placeholder: '#adb5bd',
+    disabled: '#868e96'
+  },
+  // UI Component Colors
+  overlay: {
+    background: 'rgba(0, 0, 0, 0.5)',
+    backgroundStrong: 'rgba(0, 0, 0, 0.8)'
+  },
+  shadow: {
+    color: 'rgba(0, 0, 0, 0.15)',
+    colorStrong: 'rgba(0, 0, 0, 0.25)'
+  },
+  focus: {
+    shadowPrimary: 'rgba(0, 123, 255, 0.25)',
+    shadowWhite: 'rgba(255, 255, 255, 0.3)'
+  },
+  scrollbar: {
+    track: '#f1f1f1',
+    thumb: '#c1c1c1',
+    thumbHover: '#a1a1a1'
+  }
+};
+
+const darkColors = {
+  // Primary Color Theme
+  primary: {
+    background: '#007bff',
+    hover: '#0056b3',
+    focus: 'rgba(0, 123, 255, 0.5)',
+    highlight: '#007acc',
+    text: '#ffffff'
+  },
+  // Secondary Color Theme
+  secondary: {
+    background: '#6c757d',
+    hover: '#545b62',
+    focus: 'rgba(108, 117, 125, 0.5)',
+    text: '#ffffff'
+  },
+  // Success Color Theme
+  success: {
+    background: '#28a745',
+    hover: '#218838',
+    focus: 'rgba(40, 167, 69, 0.5)',
+    text: '#ffffff'
+  },
+  // Danger Color Theme
+  danger: {
+    background: '#dc3545',
+    hover: '#c82333',
+    border: '#dc3545',
+    borderHover: '#c82333',
+    focus: 'rgba(220, 53, 69, 0.5)',
+    text: '#ffffff'
+  },
+  // Background Colors
+  background: {
+    primary: '#121212',
+    secondary: '#1e1e1e',
+    tertiary: '#2a2a2a',
+    card: '#2d2d2d',
+    hover: '#404040',
+    disabled: '#2a2a2a'
+  },
+  // Border Colors
+  border: {
+    primary: '#333333',
+    secondary: '#444444',
+    focus: '#555555',
+    highlight: '#ffffff'
+  },
+  // Text Colors
+  text: {
+    primary: '#ffffff',
+    secondary: '#cccccc',
+    muted: '#999999',
+    placeholder: '#666666',
+    disabled: '#888888'
+  },
+  // UI Component Colors
+  overlay: {
+    background: 'rgba(0, 0, 0, 0.5)',
+    backgroundStrong: 'rgba(0, 0, 0, 0.8)'
+  },
+  shadow: {
+    color: 'rgba(0, 0, 0, 0.3)',
+    colorStrong: 'rgba(0, 0, 0, 0.3)'
+  },
+  focus: {
+    shadowPrimary: 'rgba(255, 255, 255, 0.6)',
+    shadowWhite: 'rgba(255, 255, 255, 0.3)'
+  },
+  scrollbar: {
+    track: '#1e1e1e',
+    thumb: '#555555',
+    thumbHover: '#666666'
+  }
+};
+
+// ============================================================================
+// Merged Themes
+// ============================================================================
+
+export const themes = {
+  light: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, colors: lightColors, name: 'light' },
+  dark: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, colors: darkColors, name: 'dark' }
+};
+
+// ============================================================================
+// Reactive Theme Store
+// ============================================================================
+
+/**
+ * Simple reactive store for current theme
+ * Supports subscriptions for reactive updates
+ */
+function createThemeStore(initialTheme) {
+  let value = initialTheme;
+  const subscribers = new Set();
+
+  return {
+    get value() {
+      return value;
+    },
+    set value(newValue) {
+      value = newValue;
+      subscribers.forEach(fn => fn(value));
+    },
+    subscribe(fn) {
+      subscribers.add(fn);
+      fn(value); // Call immediately with current value
+      return () => subscribers.delete(fn);
+    }
+  };
+}
+
+/**
+ * Current theme reactive store
+ * Subscribe to get notified when the theme changes
+ * Default theme is based on browser's preferred color scheme
+ * 
+ * @type {{ value: typeof themes.dark, subscribe: (fn: (theme: typeof themes.dark) => void) => () => void }}
+ */
+const getDefaultTheme = () => {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? themes.dark : themes.light;
+  }
+  return themes.dark; // Fallback to dark if matchMedia not available
+};
+
+export const currentTheme = createThemeStore(getDefaultTheme());
+
+// ============================================================================
+// Public API
+// ============================================================================
+
+/**
+ * Set the current theme by name
+ * 
+ * @param {'light'|'dark'} themeName - Name of the theme to activate
+ * @throws {Error} If theme name is not found
+ * 
+ * @example
+ * setTheme('dark');
+ * setTheme('light');
+ */
+export function setTheme(themeName) {
+  if (!themes[themeName]) {
+    throw new Error(`Theme "${themeName}" not found. Available themes: ${Object.keys(themes).join(', ')}`);
+  }
+  currentTheme.value = themes[themeName];
+}
+
+/**
+ * Toggle between light and dark themes
+ * 
+ * @returns {string} The name of the newly active theme
+ * 
+ * @example
+ * toggleTheme(); // Switches from dark to light or vice versa
+ */
+export function toggleTheme() {
+  const newTheme = currentTheme.value.name === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme);
+  return newTheme;
+}
+
+/**
+ * Get a specific value from the current theme using dot notation
+ * 
+ * @param {string} path - Dot-notation path to the theme value (e.g., 'colors.primary.background')
+ * @returns {*} The theme value at the specified path, or undefined if not found
+ * 
+ * @example
+ * getThemeValue('colors.primary.background'); // '#007bff'
+ * getThemeValue('spacing.medium.padding'); // '8px 16px'
+ * getThemeValue('colors.text.primary'); // '#ffffff' (in dark theme)
+ */
+export function getThemeValue(path) {
+  return path.split('.').reduce((obj, key) => obj?.[key], currentTheme.value);
+}
+
+/**
+ * Get all available theme names
+ * 
+ * @returns {string[]} Array of available theme names
+ * 
+ * @example
+ * getAvailableThemes(); // ['light', 'dark']
+ */
+export function getAvailableThemes() {
+  return Object.keys(themes);
+}
