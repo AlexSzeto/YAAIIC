@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom UI Component Test Page</title>
+  
+  <!-- Import Map for bare module specifiers -->
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "https://esm.sh/preact@10.19.2",
+        "preact/": "https://esm.sh/preact@10.19.2/",
+        "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
+        "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact",
+        "goober": "https://esm.sh/goober@2.1.14?external=preact"
+      }
+    }
+  </script>
+  
+  <!-- Box Icons for icon support -->
+  <script src="https://unpkg.com/boxicons@latest/dist/boxicons.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    import { html, render, Component } from 'htm/preact';
+    import { styled, css } from './goober-setup.mjs';
+    import { Page } from './page.mjs';
+    import { currentTheme, toggleTheme } from './theme.mjs';
+    import { Button } from './button.mjs';
+    
+    // =========================================================================
+    // Styled Components
+    // =========================================================================
+    
+    /**
+     * Main container for the test page content
+     */
+    const Container = styled('div')`
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    `;
+    
+    /**
+     * Header with flex layout for title and theme toggle
+     */
+    const Header = styled('header')`
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    `;
+    
+    /**
+     * Page title with no margin (handled by Header)
+     */
+    const Title = styled('h1')`
+      margin: 0;
+    `;
+    
+    /**
+     * Muted text paragraph
+     */
+    const MutedText = styled('p')`
+      margin-bottom: 24px;
+      opacity: 0.7;
+    `;
+    
+    /**
+     * Section container with bottom margin
+     */
+    const Section = styled('section')`
+      margin-bottom: 48px;
+    `;
+    
+    /**
+     * Section title with bottom border
+     */
+    const SectionTitle = styled('h2')`
+      border-bottom: 1px solid currentColor;
+      padding-bottom: 8px;
+      opacity: 0.5;
+    `;
+    
+    /**
+     * Flex container for component demos
+     */
+    const ComponentGrid = styled('div')`
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+    `;
+    
+    /**
+     * Placeholder text for coming soon sections
+     */
+    const ComingSoon = styled('p')`
+      opacity: 0.6;
+    `;
+    
+    // =========================================================================
+    // Test Application
+    // =========================================================================
+    
+    /**
+     * TestApp - Main test page application component
+     * Displays all custom UI components with various states for testing
+     */
+    class TestApp extends Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          themeName: currentTheme.value.name
+        };
+      }
+      
+      componentDidMount() {
+        // Subscribe to theme changes
+        this.unsubscribe = currentTheme.subscribe((theme) => {
+          this.setState({ themeName: theme.name });
+        });
+      }
+      
+      componentWillUnmount() {
+        if (this.unsubscribe) {
+          this.unsubscribe();
+        }
+      }
+      
+      handleToggleTheme = () => {
+        toggleTheme();
+      };
+      
+      render() {
+        const { themeName } = this.state;
+        
+        return html`
+          <${Page}>
+            <${Container}>
+              <${Header}>
+                <${Title}>Custom UI Component Test Page<//>
+                <${Button} 
+                  variant="primary" 
+                  icon=${themeName === 'dark' ? 'sun' : 'moon'}
+                  onClick=${this.handleToggleTheme}
+                >
+                  ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                <//>
+              <//>
+              
+              <${MutedText}>
+                Current theme: <strong>${themeName}</strong>
+              <//>
+              
+              <!-- Component Sections -->
+              <${Section}>
+                <${SectionTitle}>Page Component<//>
+                <p>The Page component provides global styles including:</p>
+                <ul>
+                  <li>Font family (Arial, sans-serif)</li>
+                  <li>Background color from theme</li>
+                  <li>Text color from theme</li>
+                  <li>CSS reset / base styles</li>
+                  <li>Custom scrollbar styling</li>
+                </ul>
+              <//>
+              
+              <${Section}>
+                <${SectionTitle}>Button Component (Original - To Be Refactored)<//>
+                <${ComponentGrid}>
+                  <${Button} variant="primary">Primary<//>
+                  <${Button} variant="secondary">Secondary<//>
+                  <${Button} variant="success">Success<//>
+                  <${Button} variant="danger">Danger<//>
+                  <${Button} variant="primary" icon="play">With Icon<//>
+                  <${Button} variant="primary" loading=${true}>Loading<//>
+                  <${Button} variant="primary" disabled=${true}>Disabled<//>
+                <//>
+              <//>
+              
+              <${Section}>
+                <${SectionTitle}>Panel Component (Coming Soon)<//>
+                <${ComingSoon}>Panel component will be added after refactoring.<//>
+              <//>
+              
+              <!-- More component sections will be added as they are refactored -->
+              
+            <//>
+          <//>
+        `;
+      }
+    }
+    
+    // Render the test app
+    render(html`<${TestApp} />`, document.getElementById('app'));
+  </script>
+</body>
+</html>

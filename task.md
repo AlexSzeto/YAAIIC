@@ -73,7 +73,7 @@ export function getThemeValue(path);
 // // Subscribe to theme changes for dynamic updates
 ```
 
-[] Establish component documentation and property standards
+[x] Establish component documentation and property standards
 1. All styling (including positioning, flexbox, grid) MUST use Goober - no external CSS classes
 2. Each component MUST include comprehensive JSDoc documentation specifying:
    - All props with types, whether required or optional, and default values
@@ -95,13 +95,13 @@ export function getThemeValue(path);
  */
 ```
 
-[] Create the test page at `public/js/custom-ui/test.html`
+[x] Create the test page at `public/js/custom-ui/test.html`
 1. Create HTML page with Preact/htm setup and goober imports
 2. Add theme toggle using Button component (not a separate theme switcher component)
 3. Create sections for each component being refactored
 4. Import and render each component with various props/states
 
-[] Create base Page component for global styles
+[x] Create base Page component for global styles
 1. Create `public/js/custom-ui/page.mjs`
 2. Apply global styles: body font, background, text colors from theme
 3. Include CSS reset/normalize as needed
