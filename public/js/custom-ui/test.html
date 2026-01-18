@@ -30,6 +30,7 @@
     import { Page } from './page.mjs';
     import { currentTheme, toggleTheme } from './theme.mjs';
     import { Button } from './button.mjs';
+    import { Panel } from './panel.mjs';
     
     // =========================================================================
     // Styled Components
@@ -144,7 +145,8 @@
               <${Header}>
                 <${Title}>Custom UI Component Test Page<//>
                 <${Button} 
-                  variant="primary" 
+                  variant="medium-icon-text"
+                  color="primary" 
                   icon=${themeName === 'dark' ? 'sun' : 'moon'}
                   onClick=${this.handleToggleTheme}
                 >
@@ -170,22 +172,75 @@
               <//>
               
               <${Section}>
-                <${SectionTitle}>Button Component (Original - To Be Refactored)<//>
+                <${SectionTitle}>Button Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">All button variants with color themes</p>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Text Buttons (default)</h4>
                 <${ComponentGrid}>
-                  <${Button} variant="primary">Primary<//>
-                  <${Button} variant="secondary">Secondary<//>
-                  <${Button} variant="success">Success<//>
-                  <${Button} variant="danger">Danger<//>
-                  <${Button} variant="primary" icon="play">With Icon<//>
-                  <${Button} variant="primary" loading=${true}>Loading<//>
-                  <${Button} variant="primary" disabled=${true}>Disabled<//>
+                  <${Button} color="primary">Primary<//>
+                  <${Button} color="secondary">Secondary<//>
+                  <${Button} color="success">Success<//>
+                  <${Button} color="danger">Danger<//>
+                  <${Button} color="primary" disabled=${true}>Disabled<//>
+                  <${Button} color="primary" loading=${true}>Loading<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Icon-Text Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="medium-icon-text" icon="play" color="primary">Play<//>
+                  <${Button} variant="medium-icon-text" icon="save" color="success">Save<//>
+                  <${Button} variant="medium-icon-text" icon="trash" color="danger">Delete<//>
+                  <${Button} variant="medium-icon-text" icon="cog" color="secondary">Settings<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Icon-Only Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="medium-icon" icon="play" color="primary" title="Play" />
+                  <${Button} variant="medium-icon" icon="pause" color="secondary" title="Pause" />
+                  <${Button} variant="medium-icon" icon="check" color="success" title="Confirm" />
+                  <${Button} variant="medium-icon" icon="x" color="danger" title="Close" />
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Small Text Buttons (tag-style)</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="small-text" color="primary">Tag Primary<//>
+                  <${Button} variant="small-text" color="secondary">Tag Secondary<//>
+                  <${Button} variant="small-text" color="success">Tag Success<//>
+                  <${Button} variant="small-text" color="danger">Tag Danger<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Small Icon-Only Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="small-icon" icon="copy" color="secondary" title="Copy" />
+                  <${Button} variant="small-icon" icon="edit" color="primary" title="Edit" />
+                  <${Button} variant="small-icon" icon="refresh" color="success" title="Refresh" />
+                  <${Button} variant="small-icon" icon="trash" color="danger" title="Delete" />
                 <//>
               <//>
               
               <${Section}>
-                <${SectionTitle}>Panel Component (Coming Soon)<//>
-                <${ComingSoon}>Panel component will be added after refactoring.<//>
-              <//>
+                <${SectionTitle}>Panel Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Panel}>
+                    <strong>Default Panel</strong>
+                    <p>Solid background with subtle border.</p>
+                  <//>
+                  <${Panel} variant="elevated">
+                    <strong>Elevated Panel</strong>
+                    <p>Raised appearance with shadow, no border.</p>
+                  <//>
+                  <${Panel} variant="outlined">
+                    <strong>Outlined Panel</strong>
+                    <p>Transparent background with prominent border.</p>
+                  <//>
+                  <div style="position: relative; background: linear-gradient(45deg, #007bff, #28a745); padding: 20px; border-radius: 8px;">
+                    <${Panel} variant="glass">
+                      <strong>Glass Panel</strong>
+                      <p>Semi-transparent with blur effect.</p>
+                    <//>
+                  </div>
+                </>
+              </${Section}>
               
               <!-- More component sections will be added as they are refactored -->
               

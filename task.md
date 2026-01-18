@@ -13,6 +13,10 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 - Repeat for all other components, saving global features like toast and modals for last.
 - Refactor app to ONLY use custom-ui components, adding more custom components as needed.
 - Completely remove all inline styles and CSS files, verifying that the page looks identical before and after sections of the CSS file are removed.
+
+## Implementation Notes
+- **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
+
 ## Tasks
 [x] Install Goober and configure for Preact integration
 1. Install goober via npm (`npm install goober`)
@@ -118,7 +122,7 @@ export function Page({ children });
 // Includes: CSS reset, scrollbar styling
 ```
 
-[] Create Panel component
+[x] Create Panel component
 1. Create or refactor `public/js/custom-ui/panel.mjs`
 2. Styled container with rounded corners, background, border from theme
 3. Support variants: default, elevated (with shadow), outlined
@@ -133,7 +137,7 @@ export function Page({ children });
 export function Panel({ variant, children });
 ```
 
-[] Refactor Button component to Goober
+[x] Refactor Button component to Goober
 1. Remove CSS class-based styling from `button.mjs`
 2. Create styled button using goober's `styled` function
 3. Implement new variant system: medium-text, medium-icon, medium-icon-text, small-text, small-icon

@@ -169,7 +169,8 @@ const lightColors = {
   // UI Component Colors
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
-    backgroundStrong: 'rgba(0, 0, 0, 0.8)'
+    backgroundStrong: 'rgba(0, 0, 0, 0.8)',
+    glass: 'rgba(40, 40, 40, 0.8)'
   },
   shadow: {
     color: 'rgba(0, 0, 0, 0.15)',
@@ -245,7 +246,8 @@ const darkColors = {
   // UI Component Colors
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
-    backgroundStrong: 'rgba(0, 0, 0, 0.8)'
+    backgroundStrong: 'rgba(0, 0, 0, 0.8)',
+    glass: 'rgba(40, 40, 40, 0.8)'
   },
   shadow: {
     color: 'rgba(0, 0, 0, 0.3)',
