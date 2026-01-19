@@ -17,6 +17,58 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 ## Implementation Notes
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
 
+## Component Transition Guide
+This section documents how to migrate existing app code from old component APIs to the new Goober-styled versions.
+
+### Panel (NEW)
+Panel is a new component. No migration needed - just start using it.
+```javascript
+// Usage
+import { Panel } from './custom-ui/panel.mjs';
+<Panel variant="default|elevated|outlined|glass">content</Panel>
+```
+
+### Button
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `variant="primary"` | `color="primary"` | Color is now separate from size |
+| `variant="secondary"` | `color="secondary"` | Default color |
+| `variant="success"` | `color="success"` | |
+| `variant="danger"` | `color="danger"` | |
+| `variant="icon"` | `variant="small-icon"` | Small square icon button (28x28) |
+| `variant="icon-nav"` | `variant="medium-icon"` | Medium square icon button (44x44) |
+| `variant="small-text"` | `variant="small-text"` | Same |
+| `variant="primary-small-text"` | `variant="small-text" color="primary"` | Split into variant + color |
+| (default with text) | `variant="medium-text"` | Default, explicit name |
+| (with icon + text) | `variant="medium-icon-text"` | Explicit icon+text variant |
+
+```javascript
+// Old
+<Button variant="primary" icon="play">Play</Button>
+<Button variant="icon">X</Button>
+
+// New
+<Button variant="medium-icon-text" color="primary" icon="play">Play</Button>
+<Button variant="small-icon" icon="x" color="secondary" />
+```
+
+### Input
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `className` | (removed) | Use styled wrapper if needed |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old
+<Input label="Name" className="custom-class" />
+
+// New  
+<Input label="Name" />
+// If custom styling needed, wrap in a styled container
+```
+
 ## Tasks
 [x] Install Goober and configure for Preact integration
 1. Install goober via npm (`npm install goober`)
@@ -159,7 +211,7 @@ export function Panel({ variant, children });
 export function Button({ variant, color, loading, disabled, icon, children, ...props });
 ```
 
-[] Refactor Input component to Goober
+[x] Refactor Input component to Goober
 1. Update `public/js/custom-ui/input.mjs` to use goober styling
 2. Apply theme colors for background, border, text, focus states
 3. Include disabled and error states
@@ -171,78 +223,91 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 2. Match input styling for consistency
 3. Document all props with JSDoc
 4. Update test page with select examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Textarea component to Goober
 1. Update `public/js/custom-ui/textarea.mjs` to use goober styling
 2. Match input styling for consistency
 3. Document all props with JSDoc
 4. Update test page with textarea examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Checkbox component to Goober
 1. Update `public/js/custom-ui/checkbox.mjs` to use goober styling
 2. Apply theme colors for checked/unchecked states
 3. Document all props with JSDoc
 4. Update test page with checkbox examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Tags component to Goober
 1. Update `public/js/custom-ui/tags.mjs` to use goober styling
 2. Apply theme colors for tag chips
 3. Document all props with JSDoc
 4. Update test page with tags examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Pagination component to Goober
 1. Update `public/js/custom-ui/pagination.mjs` to use goober styling
 2. Style navigation buttons and page indicators with theme
 3. Document all props with JSDoc
 4. Update test page with pagination examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ImageCarousel component to Goober
 1. Update `public/js/custom-ui/image-carousel.mjs` to use goober styling
 2. Style carousel container, navigation, and indicators
 3. Document all props with JSDoc
 4. Update test page with carousel examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ListSelect component to Goober
 1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
 2. Style list items, hover, and selected states
 3. Document all props with JSDoc
 4. Update test page with list-select examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor FolderSelect component to Goober
 1. Update `public/js/custom-ui/folder-select.mjs` to use goober styling
 2. Style folder tree, icons, and selection states
 3. Document all props with JSDoc
 4. Update test page with folder-select examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ImageSelect component to Goober
 1. Update `public/js/custom-ui/image-select.mjs` to use goober styling
 2. Style image grid, preview, and selection
 3. Document all props with JSDoc
 4. Update test page with image-select examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor AudioSelect component to Goober
 1. Update `public/js/custom-ui/audio-select.mjs` to use goober styling
 2. Match image-select styling for consistency
 3. Document all props with JSDoc
 4. Update test page with audio-select examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor AudioPlayer component to Goober
 1. Update `public/js/custom-ui/audio-player.mjs` to use goober styling
 2. Style player controls, progress bar, volume
 3. Document all props with JSDoc
 4. Update test page with audio-player examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ProgressBanner component to Goober
 1. Update `public/js/custom-ui/progress-banner.mjs` to use goober styling
 2. Style progress bar, text, and container
 3. Document all props with JSDoc
 4. Update test page with progress-banner examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Gallery component to Goober
 1. Update `public/js/custom-ui/gallery.mjs` to use goober styling
 2. Style grid layout, item cards, overlays, and controls
 3. Document all props with JSDoc
 4. Update test page with gallery examples
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Toast component to Goober (global)
 1. Update `public/js/custom-ui/toast.mjs` to use goober styling
@@ -250,6 +315,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 3. Ensure portal rendering works with goober styles
 4. Document all props with JSDoc
 5. Update test page with toast trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Dialog component to Goober (global)
 1. Update `public/js/custom-ui/dialog.mjs` to use goober styling
@@ -257,6 +323,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 3. Ensure portal rendering works with goober styles
 4. Document all props with JSDoc
 5. Update test page with dialog trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Modal component to Goober (global)
 1. Update `public/js/custom-ui/modal.mjs` to use goober styling
@@ -264,6 +331,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 3. Handle image modal styling
 4. Document all props with JSDoc
 5. Update test page with modal trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor use-pagination hook to Goober
 1. Update `public/js/custom-ui/use-pagination.mjs` for theme integration

@@ -31,6 +31,7 @@
     import { currentTheme, toggleTheme } from './theme.mjs';
     import { Button } from './button.mjs';
     import { Panel } from './panel.mjs';
+    import { Input } from './input.mjs';
     
     // =========================================================================
     // Styled Components
@@ -240,6 +241,19 @@
                     <//>
                   </div>
                 </>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Input Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Input} label="Basic Input" name="basic" placeholder="Enter text..." />
+                  <${Input} label="With Value" name="withValue" value="Hello World" />
+                  <${Input} label="Disabled" name="disabled" disabled=${true} value="Cannot edit" />
+                  <${Input} label="With Error" name="error" error="This field is required" />
+                <//>
+                <div style="margin-top: 16px;">
+                  <${Input} label="Full Width Input" name="fullWidth" fullWidth=${true} placeholder="This spans the full width..." />
+                </div>
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->
