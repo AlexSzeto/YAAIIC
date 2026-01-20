@@ -73,7 +73,7 @@ const ItemContainer = styled('div')`
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  cursor: ${props => props.disabled ? 'default' : 'pointer'};
   transition: background-color ${props => props.theme.transitions.fast};
   opacity: ${props => props.disabled ? 0.5 : 1};
   

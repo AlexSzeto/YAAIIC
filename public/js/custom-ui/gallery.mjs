@@ -6,7 +6,7 @@ import { usePagination } from './use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
 import { showDialog } from './dialog.mjs';
 import { createImageModal } from './modal.mjs';
-import { showFolderSelect } from './folder-select.mjs';
+import { showFolderSelect } from '../app-ui/folder-select.mjs';
 
 /**
  * Gallery Component

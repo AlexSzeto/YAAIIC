@@ -340,3 +340,48 @@ showListSelect({
 - Danger color added to delete button: `color="danger"`
 - Theme-responsive colors and transitions
 - Maintains backwards compatibility with existing code
+
+## FolderSelect (MOVED to app-ui)
+**Component moved from `custom-ui/folder-select.mjs` to `app-ui/folder-select.mjs`**
+
+The FolderSelect component has been refactored to use ListSelect as its base component. It is now considered an app-specific component rather than a generic UI component.
+
+| Old Import | New Import |
+|------------|------------|
+| `import { showFolderSelect } from './custom-ui/folder-select.mjs'` | `import { showFolderSelect } from './app-ui/folder-select.mjs'` |
+
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed |
+
+```javascript
+// Old (still works via re-export for backward compatibility)
+import { showFolderSelect } from './custom-ui/folder-select.mjs';
+
+showFolderSelect(
+  (uid) => console.log('Selected:', uid),
+  (uid, newLabel) => console.log('Renamed:', uid, newLabel),
+  (uid) => console.log('Deleted:', uid),
+  (newFolder) => console.log('Created:', newFolder),
+  currentFolderUid
+);
+
+// New (recommended)
+import { showFolderSelect } from './app-ui/folder-select.mjs';
+
+showFolderSelect(
+  (uid) => console.log('Selected:', uid),
+  (uid, newLabel) => console.log('Renamed:', uid, newLabel),
+  (uid) => console.log('Deleted:', uid),
+  (newFolder) => console.log('Created:', newFolder),
+  currentFolderUid
+);
+```
+
+**Key Changes:**
+- Now uses ListSelect internally for consistent Goober styling
+- All styling handled by Goober (no CSS classes needed)
+- Theme-responsive colors and transitions
+- Maintains full backwards compatibility with existing API
+

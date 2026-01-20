@@ -13,7 +13,7 @@ import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
 import { Button } from './custom-ui/button.mjs';
-import { showFolderSelect } from './custom-ui/folder-select.mjs';
+import { showFolderSelect } from './app-ui/folder-select.mjs';
 
 /**
  * Helper function to generate random seed

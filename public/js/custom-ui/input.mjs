@@ -107,7 +107,7 @@ export class Input extends Component {
         border-color: ${theme.colors.border.secondary};
         color: ${theme.colors.text.muted};
         opacity: 0.6;
-        cursor: not-allowed;
+        cursor: default;
       }
     `;
 

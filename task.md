@@ -219,7 +219,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with list-select examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor FolderSelect component to Goober
+[x] Refactor FolderSelect component to Goober
 1. Move the FolderSelect component into the app-ui folder
 2. Update `public/js/custom-ui/folder-select.mjs` to use list-select as its base component. If there are missing features, implement it inside list-select.
 3. Style folder tree, icons, and selection states
@@ -351,6 +351,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 [] Remove deprecated component files
 1. Delete `public/js/custom-ui/tags.mjs` - replaced by button-group.mjs
 2. Delete `public/js/custom-ui/image-carousel.mjs` - replaced by item-navigator.mjs
-3. Verify no imports remain in the codebase for these files
-4. Update any remaining references to use the new components
+3. Delete `public/js/custom-ui/folder-select.mjs` - moved to app-ui
+4. Verify no imports remain in the codebase for these files
+5. Update any remaining references to use the new components
 

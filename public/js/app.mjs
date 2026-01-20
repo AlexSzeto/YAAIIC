@@ -18,7 +18,7 @@ import { Gallery } from './custom-ui/gallery.mjs';
 import { ImageCarousel } from './custom-ui/image-carousel.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
 import { Button } from './custom-ui/button.mjs';
-import { showFolderSelect } from './custom-ui/folder-select.mjs';
+import { showFolderSelect } from './app-ui/folder-select.mjs';
 
 /**
  * Helper function to generate random seed

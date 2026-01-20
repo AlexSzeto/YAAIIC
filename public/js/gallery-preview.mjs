@@ -176,7 +176,7 @@ export class GalleryPreview extends Component {
             color: '#999999',
             fontSize: '10px',
             cursor: 'default'
-          } : disabled ? { cursor: 'not-allowed' } : (hasAudio ? { cursor: 'default' } : { cursor: 'pointer' })}
+          } : disabled ? { cursor: 'default' } : (hasAudio ? { cursor: 'default' } : { cursor: 'pointer' })}
           onError=${this.handleImageError}
           onClick=${this.handleImageClick}
         >

@@ -225,7 +225,7 @@ New input types:
    7. Apply disabled state (greyed out, unclickable) to media entries that don't match the filter, reusing existing `gallery-item disabled` class
    8. In `public/js/custom-ui/image-select.mjs`, locate where the component triggers gallery selection mode
    9. Update the component to pass `allowedTypes: ["image"]` parameter when opening the gallery
-   10. Ensure disabled entries show visual feedback (reduced opacity, cursor not-allowed, etc.)
+   10. Ensure disabled entries show visual feedback (reduced opacity, cursor default, etc.)
    12. Test that image-select component disables all non-image media in the gallery
    13. Test that attempting to click disabled entries does not trigger selection
    14. Verify visual styling clearly indicates which entries are selectable vs disabled
