@@ -129,6 +129,8 @@ const lightColors = {
     background: '#28a745',
     hover: '#218838',
     focus: 'rgba(40, 167, 69, 0.5)',
+    backgroundLight: 'rgba(34, 197, 94, 0.1)',
+    border: 'rgba(34, 197, 94, 0.3)',
     text: '#ffffff'
   },
   // Danger Color Theme
@@ -137,6 +139,7 @@ const lightColors = {
     hover: '#c82333',
     border: '#dc3545',
     borderHover: '#c82333',
+    backgroundLight: 'rgba(239, 68, 68, 0.1)',
     focus: 'rgba(220, 53, 69, 0.5)',
     text: '#ffffff'
   },
@@ -211,6 +214,8 @@ const darkColors = {
     background: '#28a745',
     hover: '#218838',
     focus: 'rgba(40, 167, 69, 0.5)',
+    backgroundLight: 'rgba(34, 197, 94, 0.1)',
+    border: 'rgba(34, 197, 94, 0.3)',
     text: '#ffffff'
   },
   // Danger Color Theme
@@ -219,6 +224,7 @@ const darkColors = {
     hover: '#c82333',
     border: '#dc3545',
     borderHover: '#c82333',
+    backgroundLight: 'rgba(239, 68, 68, 0.1)',
     focus: 'rgba(220, 53, 69, 0.5)',
     text: '#ffffff'
   },

@@ -490,3 +490,45 @@ import { AudioPlayer } from './custom-ui/audio-player.mjs';
 - Theme-responsive colors and transitions
 - Progress bar hover effect for better UX
 - Maintains full backwards compatibility with existing API
+
+## ProgressBanner
+**Old API → New API:**
+
+The ProgressBanner component has been refactored to use Goober styling with theme subscription.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed |
+
+```javascript
+// Old (still works, but now styled with Goober)
+import { ProgressBanner } from './custom-ui/progress-banner.mjs';
+
+<ProgressBanner 
+  taskId="task-123"
+  sseManager={sseManager}
+  onComplete={handleComplete}
+  onError={handleError}
+  defaultTitle="Page Title"
+/>
+
+// New (same API, uses Goober internally)
+import { ProgressBanner } from './custom-ui/progress-banner.mjs';
+
+<ProgressBanner 
+  taskId="task-123"
+  sseManager={sseManager}
+  onComplete={handleComplete}
+  onError={handleError}
+  defaultTitle="Page Title"
+/>
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Uses theme colors for success/error states (green for complete, red for error)
+- Theme-responsive background, borders, shadows, and text colors
+- Smooth slide-up animation and transitions
+- Auto-dismiss after completion (2s) or error (5s)
+- Updates page title with progress percentage during generation
+- Maintains full backwards compatibility with existing API

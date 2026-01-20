@@ -22,7 +22,7 @@ const Controls = styled('div')`
   width: 100%;
 `;
 
-const Timeline = styled('div')`
+const TimelineWrapper = styled('div')`
   display: flex;
   align-items: center;
   flex: 1;
@@ -53,6 +53,134 @@ const ProgressFill = styled('div')`
   transition: width 0.1s linear;
 `;
 
+// =========================================================================
+// AudioTimeline Component (isolated to prevent parent re-renders)
+// =========================================================================
+
+/**
+ * AudioTimeline Component
+ * Displays progress bar and time information for audio playback.
+ * Manages its own currentTime state to prevent parent re-renders.
+ * 
+ * @param {Object} props
+ * @param {HTMLAudioElement} props.audioElement - Reference to the audio element
+ * @param {number} props.duration - Total duration of the audio
+ */
+class AudioTimeline extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      theme: currentTheme.value,
+      currentTime: 0
+    };
+  }
+
+  componentDidMount() {
+    this.unsubscribeTheme = currentTheme.subscribe((theme) => {
+      this.setState({ theme });
+    });
+
+    const { audioElement } = this.props;
+    if (audioElement) {
+      audioElement.addEventListener('timeupdate', this.handleTimeUpdate);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribeTheme) {
+      this.unsubscribeTheme();
+    }
+
+    const { audioElement } = this.props;
+    if (audioElement) {
+      audioElement.removeEventListener('timeupdate', this.handleTimeUpdate);
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    // Handle audioElement changes (e.g., when audio source changes)
+    if (prevProps.audioElement !== this.props.audioElement) {
+      if (prevProps.audioElement) {
+        prevProps.audioElement.removeEventListener('timeupdate', this.handleTimeUpdate);
+      }
+      if (this.props.audioElement) {
+        this.props.audioElement.addEventListener('timeupdate', this.handleTimeUpdate);
+      }
+    }
+  }
+
+  handleTimeUpdate = () => {
+    const { audioElement } = this.props;
+    if (audioElement) {
+      this.setState({ currentTime: audioElement.currentTime });
+    }
+  };
+
+  handleProgressClick = (e) => {
+    const { audioElement, duration } = this.props;
+    if (!audioElement) return;
+
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * duration;
+
+    audioElement.currentTime = newTime;
+    this.setState({ currentTime: newTime });
+  };
+
+  formatTime = (seconds) => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  render() {
+    const { duration } = this.props;
+    const { theme, currentTime } = this.state;
+
+    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+    const timelineStyle = {
+      gap: theme.spacing.small.gap
+    };
+
+    const timeStyle = {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSize.small
+    };
+
+    const progressBarStyle = {
+      backgroundColor: theme.colors.overlay.background,
+      transition: `height ${theme.transitions.fast}`
+    };
+
+    const progressFillStyle = {
+      width: `${progress}%`,
+      backgroundColor: theme.colors.primary.background
+    };
+
+    return html`
+      <${TimelineWrapper} style=${timelineStyle}>
+        <${Time} style=${timeStyle}>${this.formatTime(currentTime)}</${Time}>
+        
+        <${ProgressBar} style=${progressBarStyle} onClick=${this.handleProgressClick}>
+          <${ProgressFill} style=${progressFillStyle} />
+        </${ProgressBar}>
+        
+        <${Time} style=${timeStyle}>${this.formatTime(duration)}</${Time}>
+      </${TimelineWrapper}>
+    `;
+  }
+}
+
+// =========================================================================
+// AudioPlayer Component
+// =========================================================================
+
 /**
  * AudioPlayer Component
  * An overlay audio player with play/pause, progress bar, and time display.
@@ -79,7 +207,6 @@ export class AudioPlayer extends Component {
     this.state = {
       theme: currentTheme.value,
       isPlaying: false,
-      currentTime: 0,
       duration: 0,
       isLoading: true
     };
@@ -94,7 +221,6 @@ export class AudioPlayer extends Component {
     const audio = this.audioRef.current;
     if (audio) {
       audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
-      audio.addEventListener('timeupdate', this.handleTimeUpdate);
       audio.addEventListener('ended', this.handleEnded);
       audio.addEventListener('error', this.handleError);
     }
@@ -108,7 +234,6 @@ export class AudioPlayer extends Component {
     const audio = this.audioRef.current;
     if (audio) {
       audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', this.handleTimeUpdate);
       audio.removeEventListener('ended', this.handleEnded);
       audio.removeEventListener('error', this.handleError);
     }
@@ -121,13 +246,6 @@ export class AudioPlayer extends Component {
         duration: audio.duration,
         isLoading: false
       });
-    }
-  };
-
-  handleTimeUpdate = () => {
-    const audio = this.audioRef.current;
-    if (audio) {
-      this.setState({ currentTime: audio.currentTime });
     }
   };
 
@@ -153,35 +271,11 @@ export class AudioPlayer extends Component {
     }
   };
 
-  handleProgressClick = (e) => {
-    const audio = this.audioRef.current;
-    if (!audio) return;
-
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * this.state.duration;
-
-    audio.currentTime = newTime;
-    this.setState({ currentTime: newTime });
-  };
-
-  formatTime = (seconds) => {
-    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   render() {
     const { audioUrl } = this.props;
-    const { theme, isPlaying, currentTime, duration, isLoading } = this.state;
+    const { theme, isPlaying, duration, isLoading } = this.state;
 
     if (!audioUrl) return null;
-
-    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     // Dynamic styles based on theme
     const wrapperStyle = {
@@ -190,25 +284,6 @@ export class AudioPlayer extends Component {
 
     const controlsStyle = {
       gap: theme.spacing.medium.gap
-    };
-
-    const timelineStyle = {
-      gap: theme.spacing.small.gap
-    };
-
-    const timeStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.small
-    };
-
-    const progressBarStyle = {
-      backgroundColor: theme.colors.overlay.background,
-      transition: `height ${theme.transitions.fast}`
-    };
-
-    const progressFillStyle = {
-      width: `${progress}%`,
-      backgroundColor: theme.colors.primary.background
     };
 
     return html`
@@ -221,24 +296,19 @@ export class AudioPlayer extends Component {
         
         <${Panel} variant="glass">
           <${Controls} style=${controlsStyle}>
-              <${Button}
-                variant="medium-icon"
-                color="secondary"
-                icon=${isPlaying ? 'pause' : 'play'}
-                onClick=${this.togglePlayPause}
-                disabled=${isLoading}
-                title=${isPlaying ? 'Pause' : 'Play'}
-              />
+            <${Button}
+              variant="medium-icon"
+              color="secondary"
+              icon=${isPlaying ? 'pause' : 'play'}
+              onClick=${this.togglePlayPause}
+              disabled=${isLoading}
+              title=${isPlaying ? 'Pause' : 'Play'}
+            />
             
-            <${Timeline} style=${timelineStyle}>
-              <${Time} style=${timeStyle}>${this.formatTime(currentTime)}</${Time}>
-              
-              <${ProgressBar} style=${progressBarStyle} onClick=${this.handleProgressClick}>
-                <${ProgressFill} style=${progressFillStyle} />
-              </${ProgressBar}>
-              
-              <${Time} style=${timeStyle}>${this.formatTime(duration)}</${Time}>
-            </${Timeline}>
+            <${AudioTimeline}
+              audioElement=${this.audioRef.current}
+              duration=${duration}
+            />
           </${Controls}>
         </${Panel}>
       </${Wrapper}>

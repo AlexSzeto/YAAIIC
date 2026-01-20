@@ -42,6 +42,7 @@
     import { ImageSelect } from './image-select.mjs';
     import { AudioSelect } from './audio-select.mjs';
     import { AudioPlayer } from './audio-player.mjs';
+    import { ProgressBanner } from './progress-banner.mjs';
     
     // =========================================================================
     // Styled Components
@@ -150,6 +151,80 @@
           // AudioSelect states
           audioSelectValue1: null,
           audioSelectValue2: { audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', name: 'SoundHelix Song 1', imageUrl: 'https://picsum.photos/150' },
+          // ProgressBanner states
+          progressBannerVisible: false,
+          progressBannerKey: 0,
+        };
+        
+        // Mock SSE manager for testing ProgressBanner
+        this.mockSSEManager = {
+          subscribers: {},
+          subscribe(taskId, handlers) {
+            this.subscribers[taskId] = handlers;
+          },
+          unsubscribe(taskId) {
+            delete this.subscribers[taskId];
+          },
+          // Simulate progress updates with realistic step changes
+          simulateProgress(taskId) {
+            const handlers = this.subscribers[taskId];
+            if (!handlers) return;
+            
+            // Define realistic steps with progress ranges
+            const steps = [
+              { range: [0, 15], name: 'Loading model...', node: 'CheckpointLoaderSimple' },
+              { range: [15, 25], name: 'Loading LoRA...', node: 'LoraLoaderModelOnly' },
+              { range: [25, 35], name: 'Encoding prompt...', node: 'CLIPTextEncode' },
+              { range: [35, 40], name: 'Preparing canvas...', node: 'EmptyLatentImage' },
+              { range: [40, 85], name: 'Sampling image...', node: 'KSampler' },
+              { range: [85, 95], name: 'Decoding image...', node: 'VAEDecode' },
+              { range: [95, 100], name: 'Saving image...', node: 'SaveImage' }
+            ];
+            
+            let progress = 0;
+            let stepIndex = 0;
+            
+            const interval = setInterval(() => {
+              progress += 2; // Increment by 2% for smoother animation
+              
+              // Find current step
+              while (stepIndex < steps.length - 1 && progress > steps[stepIndex].range[1]) {
+                stepIndex++;
+              }
+              
+              const currentStep = steps[stepIndex];
+              
+              if (progress <= 100) {
+                handlers.onProgress?.({
+                  progress: {
+                    percentage: progress,
+                    currentValue: progress,
+                    maxValue: 100,
+                    currentStep: currentStep.name,
+                    node: currentStep.node
+                  }
+                });
+              }
+              
+              if (progress >= 100) {
+                clearInterval(interval);
+                handlers.onComplete?.({
+                  progress: { maxValue: 100 }
+                });
+              }
+            }, 200); // Faster updates for smoother animation
+          },
+          // Simulate error
+          simulateError(taskId) {
+            const handlers = this.subscribers[taskId];
+            if (!handlers) return;
+            
+            setTimeout(() => {
+              handlers.onError?.({
+                error: { message: 'Simulated generation error' }
+              });
+            }, 1000);
+          }
         };
       }
       
@@ -208,6 +283,32 @@
       
       handleAudioChange2 = (value) => {
         this.setState({ audioSelectValue2: value });
+      };
+      
+      handleSimulateProgress = () => {
+        const taskId = 'test-task-' + Date.now();
+        this.setState({ 
+          progressBannerVisible: true,
+          progressBannerKey: this.state.progressBannerKey + 1,
+          currentTaskId: taskId
+        });
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          this.mockSSEManager.simulateProgress(taskId);
+        }, 100);
+      };
+      
+      handleSimulateError = () => {
+        const taskId = 'test-task-error-' + Date.now();
+        this.setState({ 
+          progressBannerVisible: true,
+          progressBannerKey: this.state.progressBannerKey + 1,
+          currentTaskId: taskId
+        });
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          this.mockSSEManager.simulateError(taskId);
+        }, 100);
       };
       
 
@@ -640,6 +741,39 @@
                     <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
                   </div>
                 <//${ComponentGrid}>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ProgressBanner Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error</p>
+                
+                <${ComponentGrid}>
+                  <${Button} 
+                    variant="medium-text"
+                    color="primary"
+                    onClick=${this.handleSimulateProgress}
+                  >
+                    Simulate Progress
+                  <//>
+                  <${Button} 
+                    variant="medium-text"
+                    color="danger"
+                    onClick=${this.handleSimulateError}
+                  >
+                    Simulate Error
+                  <//>
+                <//>
+                
+                ${this.state.progressBannerVisible ? html`
+                  <${ProgressBanner}
+                    key=${this.state.progressBannerKey}
+                    taskId=${this.state.currentTaskId}
+                    sseManager=${this.mockSSEManager}
+                    defaultTitle="Component Test Page"
+                    onComplete=${() => console.log('Progress complete!')}
+                    onError=${() => console.log('Progress error!')}
+                  />
+                ` : null}
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->

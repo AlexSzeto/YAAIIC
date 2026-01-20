@@ -248,7 +248,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with audio-player examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor ProgressBanner component to Goober
+[x] Refactor ProgressBanner component to Goober
 1. Update `public/js/custom-ui/progress-banner.mjs` to use goober styling
 2. Style progress bar, text, and container
 3. Document all props with JSDoc
