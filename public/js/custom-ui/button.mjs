@@ -92,12 +92,12 @@ export class Button extends Component {
         gap: '4px'
       },
       medium: {
-        height: '44px',
-        minWidth: isIconOnly ? '44px' : '120px',
+        height: isIconOnly ? '32px' : '44px',
+        minWidth: isIconOnly ? '32px' : '120px',
         padding: isIconOnly ? '0' : theme.spacing.medium.padding,
         fontSize: theme.typography.fontSize.medium,
-        iconSize: isIconOnly ? '24px' : '18px',
-        borderRadius: theme.spacing.medium.borderRadius,
+        iconSize: isIconOnly ? '20px' : '18px',
+        borderRadius: isIconOnly ? theme.spacing.small.borderRadius : theme.spacing.medium.borderRadius,
         gap: '8px'
       }
     };

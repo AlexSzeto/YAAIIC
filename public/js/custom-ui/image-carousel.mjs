@@ -1,80 +1,28 @@
-import { html } from 'htm/preact';
-import { Button } from './button.mjs';
+import { ItemNavigator } from './item-navigator.mjs';
 
 /**
- * Image Carousel Component
+ * @deprecated Use ItemNavigator instead. ImageCarousel is now a thin wrapper for backwards compatibility.
+ * 
+ * ImageCarousel - Carousel navigation for selecting items from a list
+ * 
+ * This component is deprecated. Use ItemNavigator for new code.
  * 
  * @param {Object} props
- * @param {Array} props.items - Array of image objects or strings
- * @param {any} props.selectedItem - Currently selected item
- * @param {Function} props.onSelect - (item) => void
- * @param {Function} [props.onDelete] - (item) => void
- * @param {string} [props.height='150px']
+ * @param {Array} props.items - Array of items (objects with url property, or strings)
+ * @param {*} props.selectedItem - Currently selected item from the items array
+ * @param {Function} props.onSelect - Callback when an item is selected, receives (item, index)
+ * @param {string} [props.emptyMessage='No items'] - Message shown when items array is empty
+ * @returns {preact.VNode}
+ * 
+ * @example
+ * // Migration: Replace ImageCarousel with ItemNavigator
+ * // Old:
+ * <ImageCarousel items={images} selectedItem={current} onSelect={setImage} />
+ * 
+ * // New:
+ * <ItemNavigator items={images} selectedItem={current} onSelect={setImage} />
  */
-export function ImageCarousel({ 
-  items = [], 
-  selectedItem, 
-  onSelect, 
-  onDelete, 
-  height = '150px',
-  className = ''
-}) {
-  if (items.length === 0) {
-    return html`
-      <div class="carousel-display" style="text-align: center; color: var(--dark-text-secondary); padding: 20px;">
-        No history items
-      </div>
-    `;
-  }
+export { ItemNavigator as ImageCarousel };
 
-  // Find index of selected item for navigation logic
-  const selectedIndex = items.findIndex(item => 
-    // Handle both object comparison and string comparison (legacy support)
-    item === selectedItem || (item.url && selectedItem.url && item.url === selectedItem.url)
-  );
-  
-  // Safe default if not found
-  const currentIndex = selectedIndex === -1 ? 0 : selectedIndex;
-  
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      onSelect(items[currentIndex - 1]);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < items.length - 1) {
-      onSelect(items[currentIndex + 1]);
-    }
-  };
-
-  return html`
-    <div class="carousel-display ${className}">
-      <div class="carousel-controls">
-        <div class="carousel-nav">
-          <${Button} 
-            variant="icon-nav" 
-            icon="chevron-left" 
-            onClick=${handlePrev} 
-            disabled=${currentIndex <= 0}
-            title="Previous"
-          />
-          
-          <div class="carousel-index">
-            <span class="current-index">${currentIndex + 1}</span> / <span class="total-count">${items.length}</span>
-          </div>
-          
-          <${Button} 
-            variant="icon-nav" 
-            icon="chevron-right" 
-            onClick=${handleNext} 
-            disabled=${currentIndex >= items.length - 1}
-            title="Next"
-          />
-        </div>
-      </div>
-      
-      ${/* Optional: Horizontal strip of thumbnails could go here if requested, but for now matching existing behavior */ null}
-    </div>
-  `;
-}
+// Also export ItemNavigator for direct use
+export { ItemNavigator };

@@ -35,6 +35,10 @@
     import { Select } from './select.mjs';
     import { Textarea } from './textarea.mjs';
     import { Checkbox } from './checkbox.mjs';
+    import { ButtonGroup } from './button-group.mjs';
+    import { PaginationControls } from './pagination.mjs';
+    import { ImageCarousel } from './image-carousel.mjs';
+    import { ItemNavigator } from './item-navigator.mjs';
     
     // =========================================================================
     // Styled Components
@@ -123,7 +127,27 @@
           // Checkbox states
           checkbox1: false,
           checkbox2: true,
-          checkbox3: true
+          checkbox3: true,
+          // ButtonGroup states
+          selectedTags: ['tag2'],
+          // Pagination state
+          paginationPage: 0,
+          // ItemNavigator state
+          navigatorItems: [
+            { id: '1', name: 'Image 1' },
+            { id: '2', name: 'Image 2' },
+            { id: '3', name: 'Image 3' },
+            { id: '4', name: 'Image 4' },
+            { id: '5', name: 'Image 5' }
+          ],
+          navigatorSelected: null,
+          // ImageCarousel state (deprecated, kept for compatibility testing)
+          carouselItems: [
+            { id: '1', name: 'Item A' },
+            { id: '2', name: 'Item B' },
+            { id: '3', name: 'Item C' }
+          ],
+          carouselSelected: null
         };
       }
       
@@ -146,6 +170,30 @@
       
       handleCheckbox = (key) => () => {
         this.setState(prev => ({ [key]: !prev[key] }));
+      };
+      
+      handleTagSelect = (id) => {
+        this.setState(prev => ({
+          selectedTags: prev.selectedTags.includes(id)
+            ? prev.selectedTags.filter(t => t !== id)
+            : [...prev.selectedTags, id]
+        }));
+      };
+      
+      handlePaginationPrev = () => {
+        this.setState(prev => ({ paginationPage: Math.max(0, prev.paginationPage - 1) }));
+      };
+      
+      handlePaginationNext = () => {
+        this.setState(prev => ({ paginationPage: Math.min(4, prev.paginationPage + 1) }));
+      };
+      
+      handleNavigatorSelect = (item) => {
+        this.setState({ navigatorSelected: item });
+      };
+      
+      handleCarouselSelect = (item) => {
+        this.setState({ carouselSelected: item });
       };
       
       render() {
@@ -327,6 +375,94 @@
                   <${Checkbox} label="Label on Left" labelPosition="left" checked=${this.state.checkbox3} onChange=${this.handleCheckbox('checkbox3')} />
                   <${Checkbox} checked=${this.state.checkbox1} onChange=${this.handleCheckbox('checkbox1')} />
                 </${ComponentGrid}>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ButtonGroup Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Click buttons to toggle selection</p>
+                <${ButtonGroup}
+                  items=${[
+                    { id: 'tag1', name: 'Option A' },
+                    { id: 'tag2', name: 'Option B' },
+                    { id: 'tag3', name: 'Option C' },
+                    { id: 'tag4', name: 'Long Option Name' }
+                  ]}
+                  selected=${this.state.selectedTags}
+                  onSelect=${this.handleTagSelect}
+                />
+                <h4 style="margin: 16px 0 8px;">Medium Variant</h4>
+                <${ButtonGroup}
+                  items=${[
+                    { id: 'a', name: 'First' },
+                    { id: 'b', name: 'Second' },
+                    { id: 'c', name: 'Third' }
+                  ]}
+                  selected=${['a']}
+                  variant="medium-text"
+                />
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Pagination Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Interactive pagination controls</p>
+                <${PaginationControls}
+                  currentPage=${this.state.paginationPage}
+                  totalPages=${5}
+                  onPrev=${this.handlePaginationPrev}
+                  onNext=${this.handlePaginationNext}
+                />
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ItemNavigator Component (NEW)</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Unified navigation component replacing ImageCarousel and item-centric pagination</p>
+                
+                <h4 style="margin: 16px 0 8px;">Basic Navigation</h4>
+                <${ItemNavigator}
+                  items=${this.state.navigatorItems}
+                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
+                  onSelect=${this.handleNavigatorSelect}
+                />
+                <p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">
+                  Selected: ${(this.state.navigatorSelected || this.state.navigatorItems[0])?.name}
+                </p>
+                
+                <h4 style="margin: 16px 0 8px;">With First/Last Buttons</h4>
+                <${ItemNavigator}
+                  items=${this.state.navigatorItems}
+                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
+                  onSelect=${this.handleNavigatorSelect}
+                  showFirstLast=${true}
+                />
+                
+                <h4 style="margin: 16px 0 8px;">With Keyboard Navigation (click to focus, use arrow keys)</h4>
+                <${ItemNavigator}
+                  items=${this.state.navigatorItems}
+                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
+                  onSelect=${this.handleNavigatorSelect}
+                  enableKeyboard=${true}
+                />
+                
+                <h4 style="margin: 16px 0 8px;">Empty State</h4>
+                <${ItemNavigator}
+                  items=${[]}
+                  selectedItem=${null}
+                  onSelect=${() => {}}
+                  emptyMessage="No images available"
+                />
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ImageCarousel Component (Deprecated)</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Legacy wrapper for backwards compatibility - now uses ItemNavigator internally</p>
+                <${ImageCarousel}
+                  items=${this.state.carouselItems}
+                  selectedItem=${this.state.carouselSelected || this.state.carouselItems[0]}
+                  onSelect=${this.handleCarouselSelect}
+                />
+                <p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">
+                  Selected: ${(this.state.carouselSelected || this.state.carouselItems[0])?.name}
+                </p>
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->

@@ -1,67 +1,143 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
+import { styled } from './goober-setup.mjs';
+import { currentTheme } from './theme.mjs';
+import { Button } from './button.mjs';
 
 /**
  * Stateless Pagination Controls Component (for use with usePagination hook)
- * Pure UI component that renders prev/next navigation buttons.
+ * 
+ * Pure UI component that renders prev/next navigation buttons with themed styling.
+ * 
+ * @param {Object} props
+ * @param {number} props.currentPage - Current zero-based page index
+ * @param {number} props.totalPages - Total number of pages
+ * @param {Function} [props.onNext] - Handler for next page
+ * @param {Function} [props.onPrev] - Handler for previous page
+ * @param {Function} [props.onFirst] - Handler for first page
+ * @param {Function} [props.onLast] - Handler for last page
+ * @returns {preact.VNode}
+ * 
+ * @example
+ * <PaginationControls 
+ *   currentPage={0} 
+ *   totalPages={5} 
+ *   onNext={handleNext} 
+ *   onPrev={handlePrev} 
+ * />
  */
-export function PaginationControls({
-  currentPage,
-  totalPages,
-  hasMultiplePages = true,
-  isFirstPage = false,
-  isLastPage = false,
-  onNext,
-  onPrev,
-  onFirst,
-  onLast,
-}) {
-  // Hide if no items (totalPages would be 1 with empty data)
-  if (totalPages === 0) {
-    return null;
+export class PaginationControls extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      theme: currentTheme.value
+    };
   }
 
-  const canGoPrev = hasMultiplePages && !isFirstPage;
-  const canGoNext = hasMultiplePages && !isLastPage;
+  componentDidMount() {
+    this.unsubscribe = currentTheme.subscribe((theme) => {
+      this.setState({ theme });
+    });
+  }
 
-  return html`
-    <div 
-      class="pagination-container"
-      role="navigation"
-      aria-label="Pagination navigation"
-    >
-      <div class="pagination-nav">
-        <button 
-          class="pagination-btn pagination-prev"
-          title="Previous page"
-          aria-label="Go to previous page"
-          disabled=${!canGoPrev}
-          aria-disabled=${!canGoPrev}
-          onClick=${onPrev}
-        >
-          <box-icon name='caret-left' color='#ffffff'></box-icon>
-        </button>
-        <div class="pagination-index" aria-live="polite">
-          <span class="pagination-current">${currentPage + 1}</span> / <span class="total-pages">${totalPages}</span>
-        </div>
-        <button 
-          class="pagination-btn pagination-next"
-          title="Next page"
-          aria-label="Go to next page"
-          disabled=${!canGoNext}
-          aria-disabled=${!canGoNext}
-          onClick=${onNext}
-        >
-          <box-icon name='caret-right' color='#ffffff'></box-icon>
-        </button>
-      </div>
-    </div>
-  `;
+  componentWillUnmount() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
+
+  render() {
+    const {
+      currentPage,
+      totalPages,
+      onNext,
+      onPrev,
+    } = this.props;
+    const { theme } = this.state;
+
+    // Hide if no pages
+    if (totalPages === 0) {
+      return null;
+    }
+
+    // Compute navigation state from currentPage and totalPages
+    const isFirstPage = currentPage === 0;
+    const isLastPage = currentPage >= totalPages - 1;
+    const hasMultiplePages = totalPages > 1;
+    const canGoPrev = hasMultiplePages && !isFirstPage;
+    const canGoNext = hasMultiplePages && !isLastPage;
+
+    const Container = styled('div')`
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `;
+
+    const Nav = styled('div')`
+      display: flex;
+      align-items: center;
+      gap: ${theme.spacing.small.gap};
+    `;
+
+    const PageIndex = styled('div')`
+      font-size: ${theme.typography.fontSize.medium};
+      font-weight: ${theme.typography.fontWeight.medium};
+      color: ${theme.colors.text.primary};
+      min-width: 60px;
+      text-align: center;
+    `;
+
+    return html`
+      <${Container}
+        role="navigation"
+        aria-label="Pagination navigation"
+      >
+        <${Nav}>
+          <${Button}
+            variant="medium-icon"
+            color="secondary"
+            icon="chevron-left"
+            title="Previous page"
+            aria-label="Go to previous page"
+            disabled=${!canGoPrev}
+            onClick=${onPrev}
+          />
+          <${PageIndex} aria-live="polite">
+            <span>${currentPage + 1}</span> / <span>${totalPages}</span>
+          <//>
+          <${Button}
+            variant="medium-icon"
+            color="secondary"
+            icon="chevron-right"
+            title="Next page"
+            aria-label="Go to next page"
+            disabled=${!canGoNext}
+            onClick=${onNext}
+          />
+        <//>
+      <//>
+    `;
+  }
 }
 
 /**
  * Carousel-style Pagination Component using Preact
- * Provides carousel-style pagination with prev/next buttons and current/total index display
+ * 
+ * Provides carousel-style pagination with prev/next buttons and current/total index display.
+ * Manages its own data list and page state.
+ * 
+ * @param {Object} props
+ * @param {Array} [props.dataList=[]] - Array of data to paginate
+ * @param {number} [props.itemsPerPage=1] - Number of items per page
+ * @param {Function} [props.updateDisplay] - Callback function called with current page data
+ * @returns {preact.VNode}
+ * 
+ * @example
+ * <PaginationComponent 
+ *   dataList={items}
+ *   itemsPerPage={10}
+ *   updateDisplay={(pageData) => renderItems(pageData)}
+ * />
  */
 export class PaginationComponent extends Component {
   constructor(props) {
@@ -85,7 +161,8 @@ export class PaginationComponent extends Component {
       dataList: [...(props.dataList || [])],
       itemsPerPage: props.itemsPerPage || 1,
       currentPage: 0,
-      totalPages: Math.max(1, Math.ceil((props.dataList || []).length / (props.itemsPerPage || 1)))
+      totalPages: Math.max(1, Math.ceil((props.dataList || []).length / (props.itemsPerPage || 1))),
+      theme: currentTheme.value
     };
     
     this.updateDisplay = props.updateDisplay;
@@ -98,6 +175,11 @@ export class PaginationComponent extends Component {
   }
   
   componentDidMount() {
+    // Subscribe to theme changes
+    this.unsubscribeTheme = currentTheme.subscribe((theme) => {
+      this.setState({ theme });
+    });
+
     // Set up keyboard navigation on the container
     if (this.containerRef) {
       this.containerRef.addEventListener('keydown', this.handleKeyDown);
@@ -109,6 +191,11 @@ export class PaginationComponent extends Component {
   }
 
   componentWillUnmount() {
+    // Clean up theme subscription
+    if (this.unsubscribeTheme) {
+      this.unsubscribeTheme();
+    }
+
     // Clean up event listener
     if (this.containerRef) {
       this.containerRef.removeEventListener('keydown', this.handleKeyDown);
@@ -330,61 +417,88 @@ export class PaginationComponent extends Component {
   }
 
   render() {
-    const { currentPage, totalPages, dataList } = this.state;
+    const { currentPage, totalPages, dataList, theme } = this.state;
     const hasItems = dataList.length > 0;
     const hasMultiplePages = totalPages > 1;
     const isFirstPage = currentPage === 0;
     const isLastPage = currentPage === totalPages - 1;
+
+    const Container = styled('div')`
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `;
+
+    const Nav = styled('div')`
+      display: flex;
+      align-items: center;
+      gap: ${theme.spacing.small.gap};
+    `;
+
+    const PageIndex = styled('div')`
+      font-size: ${theme.typography.fontSize.medium};
+      font-weight: ${theme.typography.fontWeight.medium};
+      color: ${theme.colors.text.primary};
+      min-width: 60px;
+      text-align: center;
+    `;
     
     // Hide component if no items
     if (!hasItems) {
-      return html`<div class="pagination-container" style=${{ display: 'none' }}></div>`;
+      return html`<${Container} style=${{ display: 'none' }}><//>`;
     }
 
     return html`
-      <div 
-        class="pagination-container"
+      <${Container}
         role="navigation"
         aria-label="Pagination navigation"
         ref=${(ref) => { this.containerRef = ref; }}
       >
-        <div class="pagination-nav">
-          <button 
-            class="pagination-btn pagination-prev"
+        <${Nav}>
+          <${Button}
+            variant="medium-icon"
+            color="secondary"
+            icon="chevron-left"
             title="Previous page"
             aria-label="Go to previous page"
             disabled=${!hasMultiplePages || isFirstPage}
-            aria-disabled=${!hasMultiplePages || isFirstPage}
             onClick=${this.goToPreviousPage}
-          >
-            <box-icon name='caret-left' color='#ffffff'></box-icon>
-          </button>
-          <div class="pagination-index" aria-live="polite">
-            <span class="pagination-current">${currentPage + 1}</span> / <span class="total-pages">${totalPages}</span>
-          </div>
-          <button 
-            class="pagination-btn pagination-next"
+          />
+          <${PageIndex} aria-live="polite">
+            <span>${currentPage + 1}</span> / <span>${totalPages}</span>
+          <//>
+          <${Button}
+            variant="medium-icon"
+            color="secondary"
+            icon="chevron-right"
             title="Next page"
             aria-label="Go to next page"
             disabled=${!hasMultiplePages || isLastPage}
-            aria-disabled=${!hasMultiplePages || isLastPage}
             onClick=${this.goToNextPage}
-          >
-            <box-icon name='caret-right' color='#ffffff'></box-icon>
-          </button>
-        </div>
-      </div>
+          />
+        <//>
+      <//>
     `;
   }
 }
 
 /**
  * Factory function to create a pagination component
+ * 
  * @param {HTMLElement} container - Container element to append pagination to
- * @param {Array} dataList - Array of data to paginate
- * @param {number} itemsPerPage - Number of items per page
- * @param {Function} updateDisplay - Callback function for data updates
+ * @param {Array} [dataList=[]] - Array of data to paginate
+ * @param {number} [itemsPerPage=1] - Number of items per page
+ * @param {Function} [updateDisplay=null] - Callback function for data updates
  * @returns {Object} Object with methods to control the pagination component
+ * 
+ * @example
+ * const pagination = createPagination(
+ *   document.getElementById('pagination'),
+ *   items,
+ *   10,
+ *   (pageData) => renderItems(pageData)
+ * );
+ * pagination.goToPage(2);
  */
 export function createPagination(container, dataList = [], itemsPerPage = 1, updateDisplay = null) {
   if (!container || !(container instanceof HTMLElement)) {

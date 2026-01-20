@@ -16,107 +16,7 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 
 ## Implementation Notes
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
-
-## Component Transition Guide
-This section documents how to migrate existing app code from old component APIs to the new Goober-styled versions.
-
-### Panel (NEW)
-Panel is a new component. No migration needed - just start using it.
-```javascript
-// Usage
-import { Panel } from './custom-ui/panel.mjs';
-<Panel variant="default|elevated|outlined|glass">content</Panel>
-```
-
-### Button
-**Old API → New API:**
-| Old Prop | New Prop | Notes |
-|----------|----------|-------|
-| `variant="primary"` | `color="primary"` | Color is now separate from size |
-| `variant="secondary"` | `color="secondary"` | Default color |
-| `variant="success"` | `color="success"` | |
-| `variant="danger"` | `color="danger"` | |
-| `variant="icon"` | `variant="small-icon"` | Small square icon button (28x28) |
-| `variant="icon-nav"` | `variant="medium-icon"` | Medium square icon button (44x44) |
-| `variant="small-text"` | `variant="small-text"` | Same |
-| `variant="primary-small-text"` | `variant="small-text" color="primary"` | Split into variant + color |
-| (default with text) | `variant="medium-text"` | Default, explicit name |
-| (with icon + text) | `variant="medium-icon-text"` | Explicit icon+text variant |
-
-```javascript
-// Old
-<Button variant="primary" icon="play">Play</Button>
-<Button variant="icon">X</Button>
-
-// New
-<Button variant="medium-icon-text" color="primary" icon="play">Play</Button>
-<Button variant="small-icon" icon="x" color="secondary" />
-```
-
-### Input
-**Old API → New API:**
-| Old Prop | New Prop | Notes |
-|----------|----------|-------|
-| `className` | (removed) | Use styled wrapper if needed |
-| All other props | Same | No changes needed |
-
-```javascript
-// Old
-<Input label="Name" className="custom-class" />
-
-// New  
-<Input label="Name" />
-// If custom styling needed, wrap in a styled container
-```
-
-### Select
-**Old API → New API:**
-| Old Prop | New Prop | Notes |
-|----------|----------|---------|
-| `className` | (removed) | Use styled wrapper if needed |
-| All other props | Same | No changes needed |
-
-```javascript
-// Old
-<Select label="Category" className="custom-class" options={options} />
-
-// New  
-<Select label="Category" options={options} />
-// If custom styling needed, wrap in a styled container
-```
-
-### Textarea
-**Old API → New API:**
-| Old Prop | New Prop | Notes |
-|----------|----------|-------|
-| `className` | (removed) | Use styled wrapper if needed |
-| `fullWidth=true` | `fullWidth=true` | Default is now true (unchanged) |
-| All other props | Same | No changes needed |
-
-```javascript
-// Old
-<Textarea label="Notes" className="custom-class" />
-
-// New  
-<Textarea label="Notes" />
-// Additional props: rows (default 4)
-```
-
-### Checkbox
-**Old API → New API:**
-| Old Prop | New Prop | Notes |
-|----------|----------|-------|
-| `className` | (removed) | Use styled wrapper if needed |
-| All other props | Same | No changes needed |
-
-```javascript
-// Old
-<Checkbox label="Accept" className="custom-class" />
-
-// New  
-<Checkbox label="Accept" />
-// Supports: labelPosition ('left' or 'right')
-```
+- **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
 
 ## Tasks
 [x] Install Goober and configure for Preact integration
@@ -289,26 +189,27 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with checkbox examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Tags component to Goober
+[x] Refactor Tags component to Goober
 1. Update `public/js/custom-ui/tags.mjs` to use goober styling, renaming the component to `button-group.mjs`
 2. Apply theme colors for tag chips
 3. Document all props with JSDoc
 4. Update test page with tags examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Pagination component to Goober
+[x] Refactor Pagination component to Goober
 1. Update `public/js/custom-ui/pagination.mjs` to use goober styling
 2. Style navigation buttons and page indicators with theme
 3. Document all props with JSDoc
 4. Update test page with pagination examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor ImageCarousel component to Goober
-1. Update `public/js/custom-ui/image-carousel.mjs` to use goober styling
-2. Style carousel container, navigation, and indicators
-3. Document all props with JSDoc
-4. Update test page with carousel examples
-5. Add transition notes to "Component Transition Guide" section above
+[x] Refactor ImageCarousel component to Goober → Unified with ItemNavigator
+1. Created `public/js/custom-ui/item-navigator.mjs` as unified component
+2. Updated `image-carousel.mjs` to re-export ItemNavigator for backwards compatibility
+3. ItemNavigator uses chevron icons universally
+4. Added optional props: `showFirstLast`, `enableKeyboard`, `compareItems`
+5. Updated test page with all ItemNavigator variants
+6. Added transition notes to "Component Transition Guide" section above
 
 [] Refactor ListSelect component to Goober
 1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
@@ -444,4 +345,10 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Delete `custom-ui.css` only when empty or containing only comments
 6. Delete `variables.css` only when all color variables have been migrated
 7. Final verification: compare original before-screenshots with final state to ensure no visual regressions
+
+[] Remove deprecated component files
+1. Delete `public/js/custom-ui/tags.mjs` - replaced by button-group.mjs
+2. Delete `public/js/custom-ui/image-carousel.mjs` - replaced by item-navigator.mjs
+3. Verify no imports remain in the codebase for these files
+4. Update any remaining references to use the new components
 
