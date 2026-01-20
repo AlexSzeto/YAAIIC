@@ -462,3 +462,31 @@ import { AudioSelect } from './custom-ui/audio-select.mjs';
 - Album art background displayed when media data object includes `imageUrl`
 - Maintains full backwards compatibility with existing API
 
+## AudioPlayer
+**Old API → New API:**
+
+The AudioPlayer component has been refactored to use Goober styling with theme subscription.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `variant="icon-nav"` (button) | `variant="medium-icon"` | Button variant updated |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old (still works, but now styled with Goober)
+import { AudioPlayer } from './custom-ui/audio-player.mjs';
+
+<AudioPlayer audioUrl="/path/to/audio.mp3" />
+
+// New (same API, uses Goober internally)
+import { AudioPlayer } from './custom-ui/audio-player.mjs';
+
+<AudioPlayer audioUrl="/path/to/audio.mp3" />
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Internal button variant updated: `variant="icon-nav"` → `variant="medium-icon"`
+- Theme-responsive colors and transitions
+- Progress bar hover effect for better UX
+- Maintains full backwards compatibility with existing API

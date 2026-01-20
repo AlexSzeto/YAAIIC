@@ -44,17 +44,15 @@
 const spacingSubTheme = {
   spacing: {
     small: {
-      padding: '4px 8px',
-      paddingVertical: '4px',
-      paddingHorizontal: '8px',
+      padding: '4px',
+      buttonPadding: '0 8px',
       margin: '4px',
       borderRadius: '4px',
       gap: '4px'
     },
     medium: {
-      padding: '8px 16px',
-      paddingVertical: '8px',
-      paddingHorizontal: '16px',
+      padding: '8px',
+      buttonPadding: '8px 16px',
       margin: '8px',
       borderRadius: '8px',
       gap: '8px'
@@ -164,7 +162,8 @@ const lightColors = {
     secondary: '#495057',
     muted: '#6c757d',
     placeholder: '#adb5bd',
-    disabled: '#868e96'
+    disabled: '#868e96',
+    inverse: '#ffffff'
   },
   // UI Component Colors
   overlay: {
@@ -245,7 +244,8 @@ const darkColors = {
     secondary: '#cccccc',
     muted: '#999999',
     placeholder: '#666666',
-    disabled: '#888888'
+    disabled: '#888888',
+    inverse: '#121212'
   },
   // UI Component Colors
   overlay: {

@@ -3,7 +3,76 @@ import { Component } from 'preact';
 import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
+import { Panel } from './panel.mjs';
 import { globalAudioPlayer } from '../global-audio-player.mjs';
+
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const Container = styled('div')`
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+`;
+
+const Label = styled('label')`
+  margin-bottom: 5px;
+`;
+
+const SelectArea = styled('div')`
+  position: relative;
+  width: 152px;
+  height: 152px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Header = styled('div')`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+`;
+
+const AudioName = styled('span')`
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+`;
+
+const OverlayWrapper = styled('div')`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  
+  ${SelectArea}:hover & {
+    opacity: 1;
+  }
+`;
+
+const OverlayContent = styled('div')`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const EmptyState = styled('div')`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+`;
+
+const EmptyText = styled('div')``;
 
 /**
  * AudioSelect Component
@@ -140,149 +209,102 @@ export class AudioSelect extends Component {
     const { label, disabled = false } = this.props;
     const { theme, audioUrl, audioName, albumImageUrl, isPlaying } = this.state;
 
-    const Container = styled('div')`
-      display: flex;
-      flex-direction: column;
-      min-width: 200px;
-    `;
+    const labelStyle = {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSize.medium,
+      fontWeight: theme.typography.fontWeight.medium,
+    };
 
-    const Label = styled('label')`
-      color: ${theme.colors.text.secondary};
-      font-size: ${theme.typography.fontSize.medium};
-      margin-bottom: 5px;
-      font-weight: ${theme.typography.fontWeight.medium};
-    `;
+    const selectAreaStyle = {
+      border: audioUrl 
+        ? `2px solid ${theme.colors.border.primary}` 
+        : `2px dashed ${theme.colors.border.secondary}`,
+      borderRadius: theme.spacing.medium.borderRadius,
+      backgroundColor: theme.colors.background.tertiary,
+      cursor: disabled ? 'default' : 'pointer',
+      transition: `border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`,
+      opacity: disabled ? '0.4' : '1',
+      backgroundImage: audioUrl && albumImageUrl ? `url('${albumImageUrl}')` : undefined,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
 
-    const SelectArea = styled('div')`
-      position: relative;
-      width: 152px;
-      height: 152px;
-      border: 2px dashed ${theme.colors.border.secondary};
-      border-radius: ${theme.spacing.medium.borderRadius};
-      background-color: ${theme.colors.background.tertiary};
-      cursor: ${disabled ? 'default' : 'pointer'};
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      transition: border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast};
-      opacity: ${disabled ? '0.4' : '1'};
-      
-      ${!disabled && !audioUrl ? `
-        &:hover {
-          border-color: ${theme.colors.primary.background};
-          background-color: ${theme.colors.background.hover};
-        }
-      ` : ''}
-      
-      ${audioUrl ? `
-        border-style: solid;
-        border-color: ${theme.colors.border.primary};
-        ${albumImageUrl ? `
-          background-image: url('${albumImageUrl}');
-          background-size: cover;
-          background-position: center;
-        ` : ''}
-      ` : ''}
-    `;
+    const headerStyle = {
+      gap: theme.spacing.small.gap,
+      padding: theme.spacing.small.padding,
+      background: `linear-gradient(${theme.colors.overlay.backgroundStrong}, transparent)`,
+    };
 
-    const Header = styled('div')`
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      align-items: center;
-      gap: ${theme.spacing.small.gap};
-      padding: ${theme.spacing.small.padding};
-      background: linear-gradient(${theme.colors.overlay.backgroundStrong}, transparent);
-    `;
+    const audioNameStyle = {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSize.small,
+    };
 
-    const AudioName = styled('span')`
-      color: ${theme.colors.text.inverse};
-      font-size: ${theme.typography.fontSize.small};
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      flex: 1;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    `;
+    const overlayWrapperStyle = {
+      padding: theme.spacing.small.padding,
+      transition: `opacity ${theme.transitions.fast}`,
+    };
 
-    const Overlay = styled('div')`
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: flex-end;
-      padding: ${theme.spacing.small.padding};
-      gap: ${theme.spacing.small.gap};
-      background: linear-gradient(transparent, ${theme.colors.overlay.backgroundStrong});
-      opacity: 0;
-      transition: opacity ${theme.transitions.fast};
-      
-      ${SelectArea}:hover & {
-        opacity: 1;
-      }
-    `;
+    const overlayContentStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
-    const EmptyState = styled('div')`
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: ${theme.spacing.small.gap};
-    `;
+    const emptyStateStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
-    const EmptyText = styled('div')`
-      color: ${theme.colors.text.muted};
-      font-size: ${theme.typography.fontSize.small};
-    `;
+    const emptyTextStyle = {
+      color: theme.colors.text.muted,
+      fontSize: theme.typography.fontSize.small,
+    };
 
     return html`
       <${Container}>
-        ${label ? html`<${Label}>${label}</${Label}>` : ''}
+        ${label ? html`<${Label} style=${labelStyle}>${label}</${Label}>` : ''}
         
-        <${SelectArea} onClick=${audioUrl ? null : this.handleBrowseClick}>
+        <${SelectArea} style=${selectAreaStyle} onClick=${audioUrl ? null : this.handleBrowseClick}>
           ${audioUrl ? html`
             <!-- Audio Selected State with Album Background -->
-            <${Header}>
+            <${Header} style=${headerStyle}>
               <box-icon name='music' color='white' size='20px'></box-icon>
-              <${AudioName}>${audioName}</${AudioName}>
+              <${AudioName} style=${audioNameStyle}>${audioName}</${AudioName}>
             </${Header}>
             
             <!-- Control Buttons at Bottom -->
             ${!disabled ? html`
-              <${Overlay}>
-                <${Button}
-                  variant="small-icon"
-                  color="secondary"
-                  icon=${isPlaying ? 'pause' : 'play'}
-                  onClick=${this.handlePlayPauseClick}
-                  title=${isPlaying ? 'Pause' : 'Play'}
-                />
-                <${Button}
-                  variant="small-icon"
-                  color="secondary"
-                  icon="music"
-                  onClick=${this.handleReplaceClick}
-                  title="Replace audio"
-                />
-                <${Button}
-                  variant="small-icon"
-                  color="danger"
-                  icon="x"
-                  onClick=${this.handleClearClick}
-                  title="Clear audio"
-                />
-              </${Overlay}>
+              <${OverlayWrapper} style=${overlayWrapperStyle}>
+                <${Panel} variant="glass">
+                  <${OverlayContent} style=${overlayContentStyle}>
+                    <${Button}
+                      variant="small-icon"
+                      color="secondary"
+                      icon=${isPlaying ? 'pause' : 'play'}
+                      onClick=${this.handlePlayPauseClick}
+                      title=${isPlaying ? 'Pause' : 'Play'}
+                    />
+                    <${Button}
+                      variant="small-icon"
+                      color="secondary"
+                      icon="music"
+                      onClick=${this.handleReplaceClick}
+                      title="Replace audio"
+                    />
+                    <${Button}
+                      variant="small-icon"
+                      color="danger"
+                      icon="x"
+                      onClick=${this.handleClearClick}
+                      title="Clear audio"
+                    />
+                  </${OverlayContent}>
+                </${Panel}>
+              </${OverlayWrapper}>
             ` : ''}
           ` : html`
             <!-- Empty State -->
-            <${EmptyState}>
+            <${EmptyState} style=${emptyStateStyle}>
               <box-icon name='music' color=${theme.colors.text.muted} size='48px'></box-icon>
-              <${EmptyText}>Select Audio</${EmptyText}>
+              <${EmptyText} style=${emptyTextStyle}>Select Audio</${EmptyText}>
             </${EmptyState}>
           `}
         </${SelectArea}>

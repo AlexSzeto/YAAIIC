@@ -19,6 +19,7 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 - **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
 - **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-icon-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
 - **Disabled opacity**: Use `opacity: 0.4` for opacity-based disabled states on components. This provides sufficient visual distinction while maintaining readability.
+- **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 
 ## Tasks
 [x] Install Goober and configure for Preact integration
@@ -54,8 +55,8 @@ export { styled, css, keyframes };
 // theme.mjs - Theme Structure
 const spacingSubTheme = {
   spacing: {
-    small: { padding: '4px 8px', margin: '4px', borderRadius: '4px' },
-    medium: { padding: '8px 16px', margin: '8px', borderRadius: '8px' }
+    small: { padding: '4px', margin: '4px', borderRadius: '4px' },
+    medium: { padding: '8px', margin: '8px', borderRadius: '8px' }
   },
   border: { width: '1px' }
 };
@@ -240,7 +241,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with audio-select examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor AudioPlayer component to Goober
+[x] Refactor AudioPlayer component to Goober
 1. Update `public/js/custom-ui/audio-player.mjs` to use goober styling
 2. Style player controls, progress bar, volume
 3. Document all props with JSDoc

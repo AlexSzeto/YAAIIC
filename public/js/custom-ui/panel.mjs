@@ -3,6 +3,16 @@ import { Component } from 'preact';
 import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const StyledPanel = styled('div')`
+  transition: background-color 0.2s ease, 
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+`;
+
 /**
  * Panel - Container component with rounded corners and themed background
  * 
@@ -51,41 +61,48 @@ export class Panel extends Component {
   }
 
   render() {
-    const { variant = 'default', children, ...rest } = this.props;
+    const { variant = 'default', children, style: propStyle, ...rest } = this.props;
     const { theme } = this.state;
 
-    const StyledPanel = styled('div')`
-      padding: ${theme.spacing.medium.padding};
-      border-radius: ${theme.spacing.medium.borderRadius};
-      transition: background-color ${theme.transitions.normal}, 
-                  border-color ${theme.transitions.normal},
-                  box-shadow ${theme.transitions.normal};
-      
-      ${variant === 'default' ? `
-        background-color: ${theme.colors.background.card};
-        border: ${theme.border.width} ${theme.border.style} ${theme.colors.border.primary};
-      ` : ''}
-      
-      ${variant === 'elevated' ? `
-        background-color: ${theme.colors.background.card};
-        border: none;
-        box-shadow: 0 4px 12px ${theme.colors.shadow.color}, 
-                    0 2px 4px ${theme.colors.shadow.color};
-      ` : ''}
-      
-      ${variant === 'outlined' ? `
-        background-color: transparent;
-        border: 2px ${theme.border.style} ${theme.colors.border.secondary};
-      ` : ''}
-      
-      ${variant === 'glass' ? `
-        background-color: ${theme.colors.overlay.glass};
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        border: none;
-      ` : ''}
-    `;
+    // Build dynamic styles based on variant and theme
+    const baseStyle = {
+      padding: theme.spacing.medium.padding,
+      borderRadius: theme.spacing.medium.borderRadius,
+    };
 
-    return html`<${StyledPanel} ...${rest}>${children}</${StyledPanel}>`;
+    let variantStyle = {};
+    switch (variant) {
+      case 'default':
+        variantStyle = {
+          backgroundColor: theme.colors.background.card,
+          border: `${theme.border.width} ${theme.border.style} ${theme.colors.border.primary}`,
+        };
+        break;
+      case 'elevated':
+        variantStyle = {
+          backgroundColor: theme.colors.background.card,
+          border: 'none',
+          boxShadow: `0 4px 12px ${theme.colors.shadow.color}, 0 2px 4px ${theme.colors.shadow.color}`,
+        };
+        break;
+      case 'outlined':
+        variantStyle = {
+          backgroundColor: 'transparent',
+          border: `2px ${theme.border.style} ${theme.colors.border.secondary}`,
+        };
+        break;
+      case 'glass':
+        variantStyle = {
+          backgroundColor: theme.colors.overlay.glass,
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          border: 'none',
+        };
+        break;
+    }
+
+    const combinedStyle = { ...baseStyle, ...variantStyle, ...propStyle };
+
+    return html`<${StyledPanel} style=${combinedStyle} ...${rest}>${children}</${StyledPanel}>`;
   }
 }

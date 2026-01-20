@@ -3,6 +3,39 @@ import { Component } from 'preact';
 import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const FormGroup = styled('div')`
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+`;
+
+const Label = styled('label')`
+  margin-bottom: 5px;
+`;
+
+const StyledSelect = styled('select')`
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`;
+
+const ErrorMessage = styled('span')`
+  margin-top: 4px;
+`;
+
 /**
  * Select - Themed dropdown select with label and error state support
  * 
@@ -73,69 +106,42 @@ export class Select extends Component {
 
     const inputId = id || rest.name;
 
-    const FormGroup = styled('div')`
-      display: flex;
-      flex-direction: column;
-      min-width: 200px;
-      width: ${fullWidth ? '100%' : '200px'};
-      ${fullWidth ? 'flex: 1 0 0;' : ''}
-    `;
+    const formGroupStyle = {
+      width: fullWidth ? '100%' : '200px',
+      flex: fullWidth ? '1 0 0' : undefined,
+    };
 
-    const Label = styled('label')`
-      color: ${theme.colors.text.secondary};
-      font-size: ${theme.typography.fontSize.medium};
-      margin-bottom: 5px;
-      font-weight: ${theme.typography.fontWeight.medium};
-    `;
+    const labelStyle = {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSize.medium,
+      fontWeight: theme.typography.fontWeight.medium,
+    };
 
-    const StyledSelect = styled('select')`
-      padding: 8px 12px;
-      border: 2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary};
-      border-radius: 6px;
-      background-color: ${theme.colors.background.tertiary};
-      color: ${theme.colors.text.primary};
-      font-size: ${theme.typography.fontSize.medium};
-      font-family: ${theme.typography.fontFamily};
-      transition: border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast};
-      cursor: pointer;
-      
-      &:focus {
-        outline: none;
-        border-color: ${error ? theme.colors.danger.border : theme.colors.border.focus};
-        box-shadow: 0 0 0 2px ${error ? theme.colors.danger.focus : theme.colors.focus.shadowPrimary};
-      }
-      
-      &:disabled {
-        background-color: ${theme.colors.background.tertiary};
-        border-color: ${theme.colors.border.secondary};
-        color: ${theme.colors.text.muted};
-        opacity: 0.6;
-        cursor: default;
-      }
-      
-      option {
-        background-color: ${theme.colors.background.tertiary};
-        color: ${theme.colors.text.primary};
-      }
-    `;
+    const selectStyle = {
+      border: `2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`,
+      backgroundColor: theme.colors.background.tertiary,
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.fontSize.medium,
+      fontFamily: theme.typography.fontFamily,
+      transition: `border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`,
+    };
 
-    const ErrorMessage = styled('span')`
-      color: ${theme.colors.danger.background};
-      font-size: ${theme.typography.fontSize.small};
-      margin-top: 4px;
-    `;
+    const errorStyle = {
+      color: theme.colors.danger.background,
+      fontSize: theme.typography.fontSize.small,
+    };
 
     return html`
-      <${FormGroup}>
-        ${label ? html`<${Label} for=${inputId}>${label}</${Label}>` : ''}
-        <${StyledSelect} id=${inputId} disabled=${disabled} ...${rest}>
+      <${FormGroup} style=${formGroupStyle}>
+        ${label ? html`<${Label} style=${labelStyle} for=${inputId}>${label}</${Label}>` : ''}
+        <${StyledSelect} id=${inputId} disabled=${disabled} style=${selectStyle} ...${rest}>
           ${options.map(opt => html`
             <option value=${opt.value} selected=${opt.value === value}>
               ${opt.label}
             </option>
           `)}
         </${StyledSelect}>
-        ${error ? html`<${ErrorMessage}>${error}</${ErrorMessage}>` : ''}
+        ${error ? html`<${ErrorMessage} style=${errorStyle}>${error}</${ErrorMessage}>` : ''}
       </${FormGroup}>
     `;
   }

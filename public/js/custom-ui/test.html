@@ -41,6 +41,7 @@
     import { showListSelect } from './list-select.mjs';
     import { ImageSelect } from './image-select.mjs';
     import { AudioSelect } from './audio-select.mjs';
+    import { AudioPlayer } from './audio-player.mjs';
     
     // =========================================================================
     // Styled Components
@@ -619,6 +620,26 @@
                     disabled=${true}
                   />
                 <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioPlayer Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio player overlay with play/pause, progress bar, and time display</p>
+                
+                <${ComponentGrid}>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                  </div>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                  </div>
+                <//${ComponentGrid}>
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->

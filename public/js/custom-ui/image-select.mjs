@@ -4,6 +4,63 @@ import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { createImageModal } from './modal.mjs';
 import { Button } from './button.mjs';
+import { Panel } from './panel.mjs';
+
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const Container = styled('div')`
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+`;
+
+const Label = styled('label')`
+  margin-bottom: 5px;
+`;
+
+const SelectArea = styled('div')`
+  position: relative;
+  width: 152px;
+  height: 152px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Preview = styled('img')`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const OverlayWrapper = styled('div')`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  
+  ${SelectArea}:hover & {
+    opacity: 1;
+  }
+`;
+
+const OverlayContent = styled('div')`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const EmptyState = styled('div')`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+`;
+
+const EmptyText = styled('div')``;
 
 /**
  * ImageSelect Component
@@ -157,87 +214,44 @@ export class ImageSelect extends Component {
     const { label, disabled = false } = this.props;
     const { theme, previewUrl } = this.state;
 
-    const Container = styled('div')`
-      display: flex;
-      flex-direction: column;
-      min-width: 200px;
-    `;
+    const labelStyle = {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSize.medium,
+      fontWeight: theme.typography.fontWeight.medium,
+    };
 
-    const Label = styled('label')`
-      color: ${theme.colors.text.secondary};
-      font-size: ${theme.typography.fontSize.medium};
-      margin-bottom: 5px;
-      font-weight: ${theme.typography.fontWeight.medium};
-    `;
+    const selectAreaStyle = {
+      border: previewUrl 
+        ? `2px solid ${theme.colors.border.primary}` 
+        : `2px dashed ${theme.colors.border.secondary}`,
+      borderRadius: theme.spacing.medium.borderRadius,
+      backgroundColor: theme.colors.background.tertiary,
+      cursor: disabled ? 'default' : 'pointer',
+      transition: `border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`,
+      opacity: disabled ? '0.4' : '1',
+    };
 
-    const SelectArea = styled('div')`
-      position: relative;
-      width: 152px;
-      height: 152px;
-      border: 2px dashed ${theme.colors.border.secondary};
-      border-radius: ${theme.spacing.medium.borderRadius};
-      background-color: ${theme.colors.background.tertiary};
-      cursor: ${disabled ? 'default' : 'pointer'};
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast};
-      opacity: ${disabled ? '0.4' : '1'};
-      
-      ${!disabled && !previewUrl ? `
-        &:hover {
-          border-color: ${theme.colors.primary.background};
-          background-color: ${theme.colors.background.hover};
-        }
-      ` : ''}
-      
-      ${previewUrl ? `
-        border-style: solid;
-        border-color: ${theme.colors.border.primary};
-      ` : ''}
-    `;
+    const overlayWrapperStyle = {
+      padding: theme.spacing.small.padding,
+      transition: `opacity ${theme.transitions.fast}`,
+    };
 
-    const Preview = styled('img')`
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    `;
+    const overlayContentStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
-    const Overlay = styled('div')`
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: flex-end;
-      padding: ${theme.spacing.small.padding};
-      gap: ${theme.spacing.small.gap};
-      background: linear-gradient(transparent, ${theme.colors.overlay.backgroundStrong});
-      opacity: 0;
-      transition: opacity ${theme.transitions.fast};
-      
-      ${SelectArea}:hover & {
-        opacity: 1;
-      }
-    `;
+    const emptyStateStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
-    const EmptyState = styled('div')`
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: ${theme.spacing.small.gap};
-    `;
-
-    const EmptyText = styled('div')`
-      color: ${theme.colors.text.muted};
-      font-size: ${theme.typography.fontSize.small};
-    `;
+    const emptyTextStyle = {
+      color: theme.colors.text.muted,
+      fontSize: theme.typography.fontSize.small,
+    };
 
     return html`
       <${Container}>
-        ${label ? html`<${Label}>${label}</${Label}>` : ''}
+        ${label ? html`<${Label} style=${labelStyle}>${label}</${Label}>` : ''}
         <input
           type="file"
           ref=${(el) => { this.fileInputRef = el; }}
@@ -247,35 +261,39 @@ export class ImageSelect extends Component {
           disabled=${disabled}
         />
         
-        <${SelectArea} onClick=${this.handleBoxClick}>
+        <${SelectArea} style=${selectAreaStyle} onClick=${this.handleBoxClick}>
           ${previewUrl ? html`
             <!-- Image Preview -->
             <${Preview} src=${previewUrl} alt="Selected image" />
             
             <!-- Overlay Buttons (hidden when disabled) -->
             ${!disabled ? html`
-              <${Overlay}>
-                <${Button}
-                  variant="small-icon"
-                  color="secondary"
-                  icon="image"
-                  onClick=${this.handleReplaceClick}
-                  title="Replace image"
-                />
-                <${Button}
-                  variant="small-icon"
-                  color="danger"
-                  icon="x"
-                  onClick=${this.handleClearClick}
-                  title="Clear image"
-                />
-              </${Overlay}>
+              <${OverlayWrapper} style=${overlayWrapperStyle}>
+                <${Panel} variant="glass">
+                  <${OverlayContent} style=${overlayContentStyle}>
+                    <${Button}
+                      variant="small-icon"
+                      color="secondary"
+                      icon="image"
+                      onClick=${this.handleReplaceClick}
+                      title="Replace image"
+                    />
+                    <${Button}
+                      variant="small-icon"
+                      color="danger"
+                      icon="x"
+                      onClick=${this.handleClearClick}
+                      title="Clear image"
+                    />
+                  </${OverlayContent}>
+                </${Panel}>
+              </${OverlayWrapper}>
             ` : ''}
           ` : html`
             <!-- Empty State -->
-            <${EmptyState}>
+            <${EmptyState} style=${emptyStateStyle}>
               <box-icon name='image-add' color=${theme.colors.text.muted} size='48px'></box-icon>
-              <${EmptyText}>Select Image</${EmptyText}>
+              <${EmptyText} style=${emptyTextStyle}>Select Image</${EmptyText}>
             </${EmptyState}>
           `}
         </${SelectArea}>

@@ -4,6 +4,16 @@ import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
 
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const Container = styled('div')`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
 /**
  * ButtonGroup - Container for a row of selectable button items
  * 
@@ -66,15 +76,12 @@ export class ButtonGroup extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const Container = styled('div')`
-      display: flex;
-      flex-wrap: wrap;
-      gap: ${theme.spacing.small.gap};
-      align-items: center;
-    `;
+    const containerStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
     return html`
-      <${Container} ...${rest}>
+      <${Container} style=${containerStyle} ...${rest}>
         ${items.map(item => {
           const isSelected = selected.includes(item.id);
           

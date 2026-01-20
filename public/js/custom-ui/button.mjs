@@ -1,7 +1,36 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled, css, keyframes } from './goober-setup.mjs';
+import { styled, keyframes } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
+
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const StyledButton = styled('button')`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  
+  &:focus {
+    outline: none;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`;
+
+const TextSpan = styled('span')`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+`;
 
 /**
  * Button - Themed button with multiple variants and states
@@ -85,7 +114,7 @@ export class Button extends Component {
       small: {
         height: '28px',
         minWidth: isIconOnly ? '28px' : 'auto',
-        padding: isIconOnly ? '0' : '0 12px',
+        padding: isIconOnly ? '0' : theme.spacing.small.buttonPadding,
         fontSize: theme.typography.fontSize.small,
         iconSize: '16px',
         borderRadius: theme.spacing.small.borderRadius,
@@ -94,7 +123,7 @@ export class Button extends Component {
       medium: {
         height: isIconOnly ? '32px' : '44px',
         minWidth: isIconOnly ? '32px' : '120px',
-        padding: isIconOnly ? '0' : theme.spacing.medium.padding,
+        padding: isIconOnly ? '0' : theme.spacing.medium.buttonPadding,
         fontSize: theme.typography.fontSize.medium,
         iconSize: isIconOnly ? '20px' : '18px',
         borderRadius: isIconOnly ? theme.spacing.small.borderRadius : theme.spacing.medium.borderRadius,
@@ -117,62 +146,29 @@ export class Button extends Component {
 
     const colorStyles = getColorStyles(color);
 
-    // Spin animation for loading
-    const spin = keyframes`
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    `;
+    // Build style object
+    const buttonStyle = {
+      gap: size.gap,
+      height: size.height,
+      minWidth: size.minWidth,
+      padding: size.padding,
+      fontSize: size.fontSize,
+      fontWeight: theme.typography.fontWeight.medium,
+      fontFamily: theme.typography.fontFamily,
+      border: `${theme.border.width} ${theme.border.style} ${colorStyles.bg}`,
+      borderRadius: size.borderRadius,
+      transition: `background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`,
+      backgroundColor: colorStyles.bg,
+      color: colorStyles.text,
+      width: isIconOnly ? size.height : undefined,
+    };
 
-    const StyledButton = styled('button')`
-      /* Base styles */
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: ${size.gap};
-      height: ${size.height};
-      min-width: ${size.minWidth};
-      padding: ${size.padding};
-      font-size: ${size.fontSize};
-      font-weight: ${theme.typography.fontWeight.medium};
-      font-family: ${theme.typography.fontFamily};
-      border: ${theme.border.width} ${theme.border.style} transparent;
-      border-radius: ${size.borderRadius};
-      cursor: pointer;
-      transition: background-color ${theme.transitions.fast}, 
-                  border-color ${theme.transitions.fast},
-                  box-shadow ${theme.transitions.fast};
-      flex-shrink: 0;
-      
-      /* Color styles */
-      background-color: ${colorStyles.bg};
-      color: ${colorStyles.text};
-      border-color: ${colorStyles.bg};
-      
-      &:hover:not(:disabled) {
-        background-color: ${colorStyles.hover};
-        border-color: ${colorStyles.hover};
-      }
-      
-      &:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px ${colorStyles.focus};
-      }
-      
-      &:disabled {
-        background-color: ${theme.colors.background.disabled};
-        border-color: ${theme.colors.border.secondary};
-        color: ${theme.colors.text.disabled};
-        opacity: 0.6;
-        cursor: default;
-      }
-      
-      /* Icon-only adjustments */
-      ${isIconOnly ? `
-        width: ${size.height};
-        min-width: ${size.height};
-        padding: 0;
-      ` : ''}
-    `;
+    // Disabled styling override
+    if (disabled || loading) {
+      buttonStyle.backgroundColor = theme.colors.background.disabled;
+      buttonStyle.borderColor = theme.colors.border.secondary;
+      buttonStyle.color = theme.colors.text.disabled;
+    }
 
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
     // Use theme spinner color for loading state for better visibility across themes
@@ -183,18 +179,10 @@ export class Button extends Component {
         ? html`<box-icon name=${icon} size=${size.iconSize} color=${iconColor}></box-icon>`
         : null;
 
-    // Text container for proper ellipsis handling
-    const TextSpan = styled('span')`
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-      min-width: 0;
-    `;
-
     return html`
       <${StyledButton} 
         disabled=${disabled || loading} 
+        style=${buttonStyle}
         ...${rest}
       >
         ${iconElement}

@@ -4,6 +4,31 @@ import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
 
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const Container = styled('div')`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const Nav = styled('div')`
+  display: flex;
+  align-items: center;
+`;
+
+const PageIndex = styled('div')`
+  min-width: 60px;
+  text-align: center;
+`;
+
+const EmptyMessage = styled('div')`
+  text-align: center;
+  padding: 20px;
+`;
+
 /**
  * ItemNavigator - Unified navigation for selecting items from a list
  * 
@@ -179,31 +204,19 @@ export class ItemNavigator extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const Container = styled('div')`
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    `;
+    const navStyle = {
+      gap: theme.spacing.small.gap,
+    };
 
-    const Nav = styled('div')`
-      display: flex;
-      align-items: center;
-      gap: ${theme.spacing.small.gap};
-    `;
+    const pageIndexStyle = {
+      fontSize: theme.typography.fontSize.medium,
+      fontWeight: theme.typography.fontWeight.medium,
+      color: theme.colors.text.primary,
+    };
 
-    const PageIndex = styled('div')`
-      font-size: ${theme.typography.fontSize.medium};
-      font-weight: ${theme.typography.fontWeight.medium};
-      color: ${theme.colors.text.primary};
-      min-width: 60px;
-      text-align: center;
-    `;
-
-    const EmptyMessage = styled('div')`
-      text-align: center;
-      color: ${theme.colors.text.secondary};
-      padding: 20px;
-    `;
+    const emptyMessageStyle = {
+      color: theme.colors.text.secondary,
+    };
 
     // Determine mode and get navigation state
     let currentIndex, totalItems, isFirstItem, isLastItem;
@@ -217,14 +230,14 @@ export class ItemNavigator extends Component {
       isLastItem = currentPage >= totalPages - 1;
       
       if (totalPages === 0) {
-        return html`<${EmptyMessage}>${emptyMessage}<//>`;
+        return html`<${EmptyMessage} style=${emptyMessageStyle}>${emptyMessage}<//>`;
       }
     } else {
       // Item mode
       const { items = [] } = this.props;
       
       if (items.length === 0) {
-        return html`<${EmptyMessage}>${emptyMessage}<//>`;
+        return html`<${EmptyMessage} style=${emptyMessageStyle}>${emptyMessage}<//>`;
       }
       
       currentIndex = this.getCurrentIndex();
@@ -238,7 +251,7 @@ export class ItemNavigator extends Component {
         role="navigation"
         aria-label=${this.isPageMode() ? "Page navigation" : "Item navigation"}
       >
-        <${Nav}>
+        <${Nav} style=${navStyle}>
           ${showFirstLast ? html`
             <${Button} 
               variant="medium-icon" 
@@ -261,7 +274,7 @@ export class ItemNavigator extends Component {
             aria-label=${this.isPageMode() ? "Go to previous page" : "Go to previous item"}
           />
           
-          <${PageIndex} aria-live="polite">
+          <${PageIndex} style=${pageIndexStyle} aria-live="polite">
             <span>${currentIndex + 1}</span> / <span>${totalItems}</span>
           <//>
           
