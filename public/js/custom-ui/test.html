@@ -34,6 +34,7 @@
     import { Input } from './input.mjs';
     import { Select } from './select.mjs';
     import { Textarea } from './textarea.mjs';
+    import { Checkbox } from './checkbox.mjs';
     
     // =========================================================================
     // Styled Components
@@ -118,7 +119,11 @@
       constructor(props) {
         super(props);
         this.state = {
-          themeName: currentTheme.value.name
+          themeName: currentTheme.value.name,
+          // Checkbox states
+          checkbox1: false,
+          checkbox2: true,
+          checkbox3: true
         };
       }
       
@@ -137,6 +142,10 @@
       
       handleToggleTheme = () => {
         toggleTheme();
+      };
+      
+      handleCheckbox = (key) => () => {
+        this.setState(prev => ({ [key]: !prev[key] }));
       };
       
       render() {
@@ -306,6 +315,18 @@
                 <div style="margin-top: 16px;">
                   <${Textarea} label="Full Width Textarea (default)" name="fullWidth" placeholder="This spans the full width by default..." rows=${6} />
                 </div>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Checkbox Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Checkbox} label="Click to toggle" checked=${this.state.checkbox1} onChange=${this.handleCheckbox('checkbox1')} />
+                  <${Checkbox} label="Initially checked" checked=${this.state.checkbox2} onChange=${this.handleCheckbox('checkbox2')} />
+                  <${Checkbox} label="Disabled Unchecked" disabled=${true} />
+                  <${Checkbox} label="Disabled Checked" checked=${true} disabled=${true} />
+                  <${Checkbox} label="Label on Left" labelPosition="left" checked=${this.state.checkbox3} onChange=${this.handleCheckbox('checkbox3')} />
+                  <${Checkbox} checked=${this.state.checkbox1} onChange=${this.handleCheckbox('checkbox1')} />
+                </${ComponentGrid}>
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->

@@ -102,6 +102,22 @@ import { Panel } from './custom-ui/panel.mjs';
 // Additional props: rows (default 4)
 ```
 
+### Checkbox
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `className` | (removed) | Use styled wrapper if needed |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old
+<Checkbox label="Accept" className="custom-class" />
+
+// New  
+<Checkbox label="Accept" />
+// Supports: labelPosition ('left' or 'right')
+```
+
 ## Tasks
 [x] Install Goober and configure for Preact integration
 1. Install goober via npm (`npm install goober`)
@@ -266,7 +282,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with textarea examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Checkbox component to Goober
+[x] Refactor Checkbox component to Goober
 1. Update `public/js/custom-ui/checkbox.mjs` to use goober styling
 2. Apply theme colors for checked/unchecked states
 3. Document all props with JSDoc
@@ -274,7 +290,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor Tags component to Goober
-1. Update `public/js/custom-ui/tags.mjs` to use goober styling
+1. Update `public/js/custom-ui/tags.mjs` to use goober styling, renaming the component to `button-group.mjs`
 2. Apply theme colors for tag chips
 3. Document all props with JSDoc
 4. Update test page with tags examples
