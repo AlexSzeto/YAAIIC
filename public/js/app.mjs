@@ -14,7 +14,7 @@ import { fetchJson, extractNameFromFilename } from './util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
 
-import { Gallery } from './custom-ui/gallery.mjs';
+import { Gallery } from './app-ui/gallery.mjs';
 import { ImageCarousel } from './custom-ui/image-carousel.mjs';
 import { createGalleryPreview } from './gallery-preview.mjs';
 import { Button } from './custom-ui/button.mjs';

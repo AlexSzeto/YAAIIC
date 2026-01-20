@@ -532,3 +532,54 @@ import { ProgressBanner } from './custom-ui/progress-banner.mjs';
 - Auto-dismiss after completion (2s) or error (5s)
 - Updates page title with progress percentage during generation
 - Maintains full backwards compatibility with existing API
+
+## Gallery
+**Old API → New API:**
+
+The Gallery component has been refactored to use Goober styling with theme subscription and **moved to the app-ui folder** as it is application-specific.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed |
+
+```javascript
+// Old (custom-ui location, CSS-based styling)
+import { Gallery } from './custom-ui/gallery.mjs';
+
+<Gallery
+  isOpen={isOpen}
+  onClose={handleClose}
+  queryPath="/media-data"
+  previewFactory={createPreview}
+  onLoad={handleLoad}
+  selectionMode={false}
+  fileTypeFilter={['image', 'video']}
+  folder="folder-uid"
+/>
+
+// New (moved to app-ui, Goober styling)
+import { Gallery } from './app-ui/gallery.mjs';
+
+<Gallery
+  isOpen={isOpen}
+  onClose={handleClose}
+  queryPath="/media-data"
+  previewFactory={createPreview}
+  onLoad={handleLoad}
+  selectionMode={false}
+  fileTypeFilter={['image', 'video']}
+  folder="folder-uid"
+/>
+```
+
+**Key Changes:**
+- **Component moved from `custom-ui/` to `app-ui/`** - Update all imports accordingly
+- All styling now handled by Goober (no CSS classes needed)
+- Theme-responsive colors for all UI elements (background, borders, buttons, text)
+- Responsive grid layout (8/6/4/3 columns) using CSS Grid
+- Search input with themed focus states and shadows
+- Action buttons use theme colors (danger for delete, primary for move, secondary for others)
+- Hover effects and transitions use theme timing values
+- Smooth transform animations on grid items
+- Maintains full backwards compatibility with existing API
+- All internal buttons and controls styled with theme

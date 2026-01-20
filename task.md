@@ -255,7 +255,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with progress-banner examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Gallery component to Goober
+[x] Refactor Gallery component to Goober
 1. Update `public/js/custom-ui/gallery.mjs` to use goober styling
 2. Style grid layout, item cards, overlays, and controls
 3. Document all props with JSDoc
@@ -352,6 +352,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 1. Delete `public/js/custom-ui/tags.mjs` - replaced by button-group.mjs
 2. Delete `public/js/custom-ui/image-carousel.mjs` - replaced by item-navigator.mjs
 3. Delete `public/js/custom-ui/folder-select.mjs` - moved to app-ui
-4. Verify no imports remain in the codebase for these files
-5. Update any remaining references to use the new components
+4. Delete `public/js/custom-ui/gallery.mjs` - moved to app-ui
+5. Verify no imports remain in the codebase for these files
+6. Update any remaining references to use the new components
 
