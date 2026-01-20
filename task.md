@@ -17,6 +17,7 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 ## Implementation Notes
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
 - **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
+- **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-icon-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
 
 ## Tasks
 [x] Install Goober and configure for Preact integration
@@ -211,7 +212,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Updated test page with all ItemNavigator variants
 6. Added transition notes to "Component Transition Guide" section above
 
-[] Refactor ListSelect component to Goober
+[x] Refactor ListSelect component to Goober
 1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
 2. Style list items, hover, and selected states
 3. Document all props with JSDoc
@@ -219,11 +220,12 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor FolderSelect component to Goober
-1. Update `public/js/custom-ui/folder-select.mjs` to use goober styling
-2. Style folder tree, icons, and selection states
-3. Document all props with JSDoc
-4. Update test page with folder-select examples
-5. Add transition notes to "Component Transition Guide" section above
+1. Move the FolderSelect component into the app-ui folder
+2. Update `public/js/custom-ui/folder-select.mjs` to use list-select as its base component. If there are missing features, implement it inside list-select.
+3. Style folder tree, icons, and selection states
+4. Document all props with JSDoc
+5. Update test page with folder-select examples
+6. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ImageSelect component to Goober
 1. Update `public/js/custom-ui/image-select.mjs` to use goober styling

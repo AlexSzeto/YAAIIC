@@ -293,3 +293,50 @@ import { ItemNavigator } from './item-navigator.mjs';
   compareItems={(a, b) => a.id === b.id}  // Custom equality
 />
 ```
+
+## ListSelect
+**Old API → New API:**
+
+The ListSelect component has been refactored to use Goober styling, but maintains the same API.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed |
+
+```javascript
+// Old (still works, but now styled with Goober)
+import { showListSelect } from './list-select.mjs';
+
+showListSelect({
+  title: 'Select Item',
+  items: [{ id: '1', label: 'Item 1' }],
+  itemIcon: 'list-ul',
+  onSelectItem: (item) => handleSelect(item)
+});
+
+// New (same API, just uses Goober internally)
+import { showListSelect } from './list-select.mjs';
+
+showListSelect({
+  title: 'Select Item',
+  items: [{ id: '1', label: 'Item 1', icon: 'file', disabled: false }],
+  itemIcon: 'list-ul',       // Default icon if item doesn't specify
+  actionLabel: 'New Item',   // Optional footer action button
+  showActions: true,         // Show edit/delete buttons on items
+  showActionButton: true,    // Show the footer action button
+  selectedId: '1',           // Initially selected item
+  emptyMessage: 'No items',  // Custom message for empty state (use 'Loading...' for loading)
+  onSelectItem: (item) => console.log('Selected:', item),
+  onEdit: (item) => console.log('Edit:', item),
+  onDelete: (item) => console.log('Delete:', item),
+  onAction: () => console.log('Create new'),
+  onClose: () => console.log('Closed')
+});
+```
+
+**Key Features:**
+- All styling now handled by Goober (no CSS classes needed)
+- Button variant updated: `variant="icon"` → `variant="small-icon"`
+- Danger color added to delete button: `color="danger"`
+- Theme-responsive colors and transitions
+- Maintains backwards compatibility with existing code

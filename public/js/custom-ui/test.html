@@ -39,6 +39,7 @@
     import { PaginationControls } from './pagination.mjs';
     import { ImageCarousel } from './image-carousel.mjs';
     import { ItemNavigator } from './item-navigator.mjs';
+    import { showListSelect } from './list-select.mjs';
     
     // =========================================================================
     // Styled Components
@@ -463,6 +464,118 @@
                 <p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">
                   Selected: ${(this.state.carouselSelected || this.state.carouselItems[0])?.name}
                 </p>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ListSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Modal list selection with optional actions</p>
+                
+                <${ComponentGrid}>
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="list-ul" 
+                    color="primary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Select Item',
+                        items: [
+                          { id: '1', label: 'Option 1' },
+                          { id: '2', label: 'Option 2' },
+                          { id: '3', label: 'Option 3' },
+                          { id: '4', label: 'Disabled Option', disabled: true }
+                        ],
+                        itemIcon: 'check-circle',
+                        onSelectItem: (item) => {
+                          console.log('Selected:', item);
+                        }
+                      });
+                    }}
+                  >
+                    Basic List Select
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="folder" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Select Folder',
+                        items: [
+                          { id: 'f1', label: 'Documents', icon: 'folder' },
+                          { id: 'f2', label: 'Images', icon: 'folder' },
+                          { id: 'f3', label: 'Videos', icon: 'folder' }
+                        ],
+                        onSelectItem: (item) => {
+                          console.log('Selected folder:', item);
+                        }
+                      });
+                    }}
+                  >
+                    Folder Select
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="cog" 
+                    color="success"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Manage Items',
+                        items: [
+                          { id: 'i1', label: 'Editable Item 1', icon: 'file' },
+                          { id: 'i2', label: 'Editable Item 2', icon: 'file' },
+                          { id: 'i3', label: 'Protected Item', icon: 'lock-alt', disabled: true }
+                        ],
+                        showActions: true,
+                        actionLabel: 'New Item',
+                        onSelectItem: (item) => {
+                          console.log('Selected:', item);
+                        },
+                        onEdit: (item) => {
+                          console.log('Edit:', item);
+                        },
+                        onDelete: (item) => {
+                          console.log('Delete:', item);
+                        },
+                        onAction: () => {
+                          console.log('Create new item');
+                        }
+                      });
+                    }}
+                  >
+                    With Actions
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="loader" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Loading State',
+                        items: [],
+                        emptyMessage: 'Loading...'
+                      });
+                    }}
+                  >
+                    Loading State
+                  </>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="x-circle" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Empty List',
+                        items: []
+                      });
+                    }}
+                  >
+                    Empty State
+                  <//>
+                <//>
               </${Section}>
               
               <!-- More component sections will be added as they are refactored -->
