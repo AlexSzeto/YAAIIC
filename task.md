@@ -69,6 +69,39 @@ import { Panel } from './custom-ui/panel.mjs';
 // If custom styling needed, wrap in a styled container
 ```
 
+### Select
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|---------|
+| `className` | (removed) | Use styled wrapper if needed |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old
+<Select label="Category" className="custom-class" options={options} />
+
+// New  
+<Select label="Category" options={options} />
+// If custom styling needed, wrap in a styled container
+```
+
+### Textarea
+**Old API → New API:**
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `className` | (removed) | Use styled wrapper if needed |
+| `fullWidth=true` | `fullWidth=true` | Default is now true (unchanged) |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old
+<Textarea label="Notes" className="custom-class" />
+
+// New  
+<Textarea label="Notes" />
+// Additional props: rows (default 4)
+```
+
 ## Tasks
 [x] Install Goober and configure for Preact integration
 1. Install goober via npm (`npm install goober`)
@@ -218,14 +251,15 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Document all props with JSDoc
 5. Update test page with input examples
 
-[] Refactor Select component to Goober
+[x] Refactor Select component to Goober
 1. Update `public/js/custom-ui/select.mjs` to use goober styling
 2. Match input styling for consistency
 3. Document all props with JSDoc
 4. Update test page with select examples
-5. Add transition notes to "Component Transition Guide" section above
+5. Add transition notes to "Component Transition Guide" section above for select component
 
-[] Refactor Textarea component to Goober
+[x] Refactor Textarea component to Goober
+5. Add transition notes to "Component Transition Guide" section above for select component
 1. Update `public/js/custom-ui/textarea.mjs` to use goober styling
 2. Match input styling for consistency
 3. Document all props with JSDoc

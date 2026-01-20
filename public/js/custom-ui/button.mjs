@@ -175,8 +175,10 @@ export class Button extends Component {
     `;
 
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
+    // Use theme spinner color for loading state for better visibility across themes
+    const spinnerColor = theme.colors.spinner.color;
     const iconElement = loading 
-      ? html`<box-icon name='loader-alt' animation='spin' size=${size.iconSize} color=${iconColor}></box-icon>`
+      ? html`<box-icon name='loader-alt' animation='spin' size=${size.iconSize} color=${spinnerColor}></box-icon>`
       : (hasIcon && icon) 
         ? html`<box-icon name=${icon} size=${size.iconSize} color=${iconColor}></box-icon>`
         : null;

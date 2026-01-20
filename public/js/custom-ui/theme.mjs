@@ -170,7 +170,7 @@ const lightColors = {
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
-    glass: 'rgba(40, 40, 40, 0.8)'
+    glass: 'rgba(255, 255, 255, 0.85)'
   },
   shadow: {
     color: 'rgba(0, 0, 0, 0.15)',
@@ -184,6 +184,10 @@ const lightColors = {
     track: '#f1f1f1',
     thumb: '#c1c1c1',
     thumbHover: '#a1a1a1'
+  },
+  // Loading spinner color (darker for light backgrounds)
+  spinner: {
+    color: '#333333'
   }
 };
 
@@ -261,6 +265,10 @@ const darkColors = {
     track: '#1e1e1e',
     thumb: '#555555',
     thumbHover: '#666666'
+  },
+  // Loading spinner color (lighter for dark backgrounds)
+  spinner: {
+    color: '#ffffff'
   }
 };
 
