@@ -4,6 +4,7 @@ import { html } from 'htm/preact';
 import { styled, keyframes } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { PageTitleManager } from '../util.mjs';
+import { Panel } from './panel.mjs';
 
 // Animations
 const slideUp = keyframes`
@@ -18,33 +19,22 @@ const slideUp = keyframes`
 `;
 
 // Styled components
-const BannerContainer = styled('div')`
+const BannerWrapper = styled('div')`
   position: fixed;
   bottom: 1rem;
   right: 1rem;
   z-index: 9999;
   max-width: 400px;
   min-width: 320px;
-  background-color: ${() => currentTheme.value.colors.background.card};
-  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.secondary};
-  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
-  box-shadow: 0 4px 12px ${() => currentTheme.value.colors.shadow.colorStrong}, 0 2px 4px ${() => currentTheme.value.colors.shadow.color};
+  animation: ${slideUp} 0.3s ease-out;
+`;
+
+const BannerContent = styled('div')`
   padding: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  animation: ${slideUp} 0.3s ease-out;
-
-  ${props => props.status === 'success' ? `
-    background-color: ${currentTheme.value.colors.success.backgroundLight};
-    border-color: ${currentTheme.value.colors.success.border};
-  ` : ''}
-
-  ${props => props.status === 'error' ? `
-    background-color: ${currentTheme.value.colors.danger.backgroundLight};
-    border-color: ${currentTheme.value.colors.danger.border};
-  ` : ''}
 `;
 
 const Content = styled('div')`
@@ -61,11 +51,7 @@ const Info = styled('div')`
 `;
 
 const Message = styled('span')`
-  color: ${props => {
-    if (props.status === 'success') return currentTheme.value.colors.success.background;
-    if (props.status === 'error') return currentTheme.value.colors.danger.background;
-    return currentTheme.value.colors.text.primary;
-  }};
+  color: ${() => currentTheme.value.colors.text.primary};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
   flex: 1;
@@ -85,7 +71,7 @@ const Percentage = styled('span')`
 const BarContainer = styled('div')`
   width: 100%;
   height: 6px;
-  background-color: ${() => currentTheme.value.colors.background.hover};
+  background-color: ${() => currentTheme.value.colors.overlay.background};
   border-radius: 3px;
   overflow: hidden;
 `;
@@ -300,28 +286,33 @@ export function ProgressBanner({
   if (!state.isVisible) return null;
 
   const statusType = state.status === 'completed' ? 'success' : state.status;
+  const panelColor = statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : 'secondary';
 
   return html`
-    <${BannerContainer} status=${statusType}>
-      <${Content}>
-        <${Info}>
-          <${Message} status=${statusType}>${state.message}<//>
-          ${state.percentage > 0 ? html`<${Percentage}>${Math.round(state.percentage)}%<//>` : null}
-        <//>
-        ${state.percentage > 0 ? html`
-          <${BarContainer}>
-            <${Bar} 
-              percentage=${state.percentage}
-              status=${statusType}
-            />
+    <${BannerWrapper}>
+      <${Panel} variant="elevated" color=${panelColor}>
+        <${BannerContent}>
+          <${Content}>
+            <${Info}>
+              <${Message} status=${statusType}>${state.message}<//>
+              ${state.percentage > 0 ? html`<${Percentage}>${Math.round(state.percentage)}%<//>` : null}
+            <//>
+            ${state.percentage > 0 ? html`
+              <${BarContainer}>
+                <${Bar} 
+                  percentage=${state.percentage}
+                  status=${statusType}
+                />
+              <//>
+            ` : null}
           <//>
-        ` : null}
-      <//>
-      <${DismissButton}
-        onClick=${() => setState(prev => ({ ...prev, isVisible: false }))}
-        aria-label="Dismiss"
-      >
-        <box-icon name='x' color='currentColor'></box-icon>
+          <${DismissButton}
+            onClick=${() => setState(prev => ({ ...prev, isVisible: false }))}
+            aria-label="Dismiss"
+          >
+            <box-icon name='x' color='currentColor'></box-icon>
+          <//>
+        <//>
       <//>
     <//>
   `;

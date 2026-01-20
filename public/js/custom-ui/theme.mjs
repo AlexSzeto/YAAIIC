@@ -115,6 +115,8 @@ const lightColors = {
     hover: '#0056b3',
     focus: 'rgba(0, 123, 255, 0.5)',
     highlight: '#007acc',
+    backgroundLight: '#e7f3ff',
+    border: '#99ccff',
     text: '#ffffff'
   },
   // Secondary Color Theme
@@ -122,6 +124,8 @@ const lightColors = {
     background: '#6c757d',
     hover: '#545b62',
     focus: 'rgba(108, 117, 125, 0.5)',
+    backgroundLight: '#e9ecef',
+    border: '#ced4da',
     text: '#ffffff'
   },
   // Success Color Theme
@@ -129,8 +133,8 @@ const lightColors = {
     background: '#28a745',
     hover: '#218838',
     focus: 'rgba(40, 167, 69, 0.5)',
-    backgroundLight: 'rgba(34, 197, 94, 0.1)',
-    border: 'rgba(34, 197, 94, 0.3)',
+    backgroundLight: '#d4edda',
+    border: '#9fdfb0',
     text: '#ffffff'
   },
   // Danger Color Theme
@@ -139,7 +143,7 @@ const lightColors = {
     hover: '#c82333',
     border: '#dc3545',
     borderHover: '#c82333',
-    backgroundLight: 'rgba(239, 68, 68, 0.1)',
+    backgroundLight: '#f8d7da',
     focus: 'rgba(220, 53, 69, 0.5)',
     text: '#ffffff'
   },
@@ -200,6 +204,8 @@ const darkColors = {
     hover: '#0056b3',
     focus: 'rgba(0, 123, 255, 0.5)',
     highlight: '#007acc',
+    backgroundLight: '#1a3a52',
+    border: '#2d5a8c',
     text: '#ffffff'
   },
   // Secondary Color Theme
@@ -207,6 +213,8 @@ const darkColors = {
     background: '#6c757d',
     hover: '#545b62',
     focus: 'rgba(108, 117, 125, 0.5)',
+    backgroundLight: '#3a3f44',
+    border: '#5a6268',
     text: '#ffffff'
   },
   // Success Color Theme
@@ -214,8 +222,8 @@ const darkColors = {
     background: '#28a745',
     hover: '#218838',
     focus: 'rgba(40, 167, 69, 0.5)',
-    backgroundLight: 'rgba(34, 197, 94, 0.1)',
-    border: 'rgba(34, 197, 94, 0.3)',
+    backgroundLight: '#1e4d2b',
+    border: '#2d7a3f',
     text: '#ffffff'
   },
   // Danger Color Theme
@@ -224,7 +232,7 @@ const darkColors = {
     hover: '#c82333',
     border: '#dc3545',
     borderHover: '#c82333',
-    backgroundLight: 'rgba(239, 68, 68, 0.1)',
+    backgroundLight: '#4d1f23',
     focus: 'rgba(220, 53, 69, 0.5)',
     text: '#ffffff'
   },

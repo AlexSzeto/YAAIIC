@@ -2,11 +2,26 @@
 This document provides instructions on how to migrate existing app code from old component APIs to the new Goober-styled versions.
 
 ## Panel (NEW)
-Panel is a new component. No migration needed - just start using it.
+Panel is a new component with optional color theming support.
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| `variant` | `'default'\|'elevated'\|'outlined'\|'glass'` | Visual style variant (default: `'default'`) |
+| `color` | `'primary'\|'secondary'\|'success'\|'danger'\|'info'\|'warning'` | Optional color theme |
+
 ```javascript
-// Usage
+// Basic usage
 import { Panel } from './custom-ui/panel.mjs';
-<Panel variant="default|elevated|outlined|glass">content</Panel>
+<Panel variant="elevated">Content here</Panel>
+
+// With color theming (applies color's backgroundLight and border)
+<Panel variant="elevated" color="success">Success message</Panel>
+<Panel variant="outlined" color="danger">Error message</Panel>
+
+// All variants support color prop
+<Panel color="info">Default panel with info color</Panel>
+<Panel variant="glass" color="warning">Glass panel with warning color</Panel>
 ```
 
 ## Button
@@ -525,9 +540,12 @@ import { ProgressBanner } from './custom-ui/progress-banner.mjs';
 ```
 
 **Key Changes:**
-- All styling now handled by Goober (no CSS classes needed)
-- Uses theme colors for success/error states (green for complete, red for error)
-- Theme-responsive background, borders, shadows, and text colors
+- Now uses `<Panel variant="elevated" color={statusColor}>` for consistent theming
+- Success state uses Panel color="success"
+- Error state uses Panel color="danger"
+- In-progress state uses default Panel styling (no color)
+- All styling now handled by Goober through Panel component
+- Theme-responsive shadows and borders from elevated Panel
 - Smooth slide-up animation and transitions
 - Auto-dismiss after completion (2s) or error (5s)
 - Updates page title with progress percentage during generation
@@ -583,3 +601,50 @@ import { Gallery } from './app-ui/gallery.mjs';
 - Smooth transform animations on grid items
 - Maintains full backwards compatibility with existing API
 - All internal buttons and controls styled with theme
+
+## Toast
+**Old API → New API:**
+
+The Toast component now uses elevated Panel with color property for themed styling.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed |
+| `toast.warning()` | NEW | Added warning variant |
+
+```javascript
+// Usage (unchanged API)
+import { ToastProvider, useToast } from './custom-ui/toast.mjs';
+
+const toast = useToast();
+toast.success('Success message');   // Uses Panel color="success"
+toast.error('Error message');       // Uses Panel color="danger"
+toast.info('Info message');         // Uses Panel color="info"
+toast.warning('Warning message');   // Uses Panel color="warning"
+toast.show('Custom', { type: 'warning', duration: 5000 });
+```
+
+**Key Changes:**
+- Now uses `<Panel variant="elevated" color={type}>` for consistent theming
+- Removed custom background/border color logic in favor of Panel's color property
+- Success maps to Panel color="success"
+- Error maps to Panel color="danger"
+- Info maps to Panel color="info"
+- Warning maps to Panel color="warning"
+- Maintains full backwards compatibility with existing API
+- Inherits Panel's elevated shadow and theme-responsive styling
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Added new `warning` variant with themed colors
+- Uses theme colors for all variants:
+  - Success: `theme.colors.success.backgroundLight` with `success.border`
+  - Error: `theme.colors.danger.backgroundLight` with `danger.border`
+  - Info: `theme.colors.info.backgroundLight` with `info.border`
+  - Warning: `theme.colors.warning.backgroundLight` with `warning.border`
+- Smooth slide-in/slide-out animations using Goober keyframes
+- Click-to-dismiss now triggers exit animation before removal
+- Auto-dismiss triggers same exit animation
+- Theme-responsive text colors, shadows, and borders
+- Portal rendering to document.body maintained
+- Maintains full backwards compatibility with existing API

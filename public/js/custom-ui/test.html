@@ -43,6 +43,7 @@
     import { AudioSelect } from './audio-select.mjs';
     import { AudioPlayer } from './audio-player.mjs';
     import { ProgressBanner } from './progress-banner.mjs';
+    import { ToastProvider, useToast } from './toast.mjs';
     
     // =========================================================================
     // Styled Components
@@ -114,6 +115,50 @@
     const ComingSoon = styled('p')`
       opacity: 0.6;
     `;
+    
+    // =========================================================================
+    // Toast Test Component
+    // =========================================================================
+    
+    /**
+     * ToastTriggers - Component with buttons to trigger different toast variants
+     */
+    function ToastTriggers() {
+      const toast = useToast();
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="success"
+            onClick=${() => toast.success('Operation completed successfully!')}
+          >
+            Show Success Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${() => toast.error('An error occurred!')}
+          >
+            Show Error Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${() => toast.show('This is an informational message.')}
+          >
+            Show Info Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${() => toast.show('Custom duration message', { type: 'info', duration: 8000 })}
+          >
+            Show Long Duration Toast (8s)
+          <//>
+        </div>
+      `;
+    }
     
     // =========================================================================
     // Test Application
@@ -317,25 +362,26 @@
         const { themeName } = this.state;
         
         return html`
-          <${Page}>
-            <${Container}>
-              <${Header}>
-                <${Title}>Custom UI Component Test Page<//>
-                <${Button} 
-                  variant="medium-icon-text"
-                  color="primary" 
-                  icon=${themeName === 'dark' ? 'sun' : 'moon'}
-                  onClick=${this.handleToggleTheme}
-                >
-                  ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          <${ToastProvider}>
+            <${Page}>
+              <${Container}>
+                <${Header}>
+                  <${Title}>Custom UI Component Test Page<//>
+                  <${Button} 
+                    variant="medium-icon-text"
+                    color="primary" 
+                    icon=${themeName === 'dark' ? 'sun' : 'moon'}
+                    onClick=${this.handleToggleTheme}
+                  >
+                    ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  <//>
                 <//>
-              <//>
-              
-              <${MutedText}>
-                Current theme: <strong>${themeName}</strong>
-              <//>
-              
-              <!-- Component Sections -->
+                
+                <${MutedText}>
+                  Current theme: <strong>${themeName}</strong>
+                <//>
+                
+                <!-- Component Sections -->
               <${Section}>
                 <${SectionTitle}>Page Component<//>
                 <p>The Page component provides global styles including:</p>
@@ -397,6 +443,9 @@
               
               <${Section}>
                 <${SectionTitle}>Panel Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Versatile container with variants and optional color theming</p>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Variants (Default Colors)</h3>
                 <${ComponentGrid}>
                   <${Panel}>
                     <strong>Default Panel</strong>
@@ -404,11 +453,11 @@
                   <//>
                   <${Panel} variant="elevated">
                     <strong>Elevated Panel</strong>
-                    <p>Raised appearance with shadow, no border.</p>
+                    <p>Raised appearance with shadow.</p>
                   <//>
                   <${Panel} variant="outlined">
                     <strong>Outlined Panel</strong>
-                    <p>Transparent background with prominent border.</p>
+                    <p>Transparent background with border.</p>
                   <//>
                   <div style="position: relative; background: linear-gradient(45deg, #007bff, #28a745); padding: 20px; border-radius: 8px;">
                     <${Panel} variant="glass">
@@ -416,6 +465,58 @@
                       <p>Semi-transparent with blur effect.</p>
                     <//>
                   </div>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Elevated Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} variant="elevated" color="success">
+                    <strong>Success</strong>
+                    <p>Positive feedback or completed states.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="danger">
+                    <strong>Danger</strong>
+                    <p>Errors or destructive actions.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="primary">
+                    <strong>Primary</strong>
+                    <p>Primary brand color.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="secondary">
+                    <strong>Secondary</strong>
+                    <p>Secondary brand color.</p>
+                  <//>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Default Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} color="success">
+                    <strong>Success Default</strong>
+                  <//>
+                  <${Panel} color="danger">
+                    <strong>Danger Default</strong>
+                  <//>
+                  <${Panel} color="primary">
+                    <strong>Primary Default</strong>
+                  <//>
+                  <${Panel} color="secondary">
+                    <strong>Secondary Default</strong>
+                  <//>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Outlined Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} variant="outlined" color="success">
+                    <strong>Success Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="danger">
+                    <strong>Danger Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="primary">
+                    <strong>Primary Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="secondary">
+                    <strong>Secondary Outlined</strong>
+                  <//>
                 </>
               </${Section}>
               
@@ -776,9 +877,19 @@
                 ` : null}
               </${Section}>
               
+              <${Section}>
+                <${SectionTitle}>Toast Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Global notification system with success, error, info, and warning variants</p>
+                
+                <${ComponentGrid}>
+                  <${ToastTriggers} />
+                <//>
+              </${Section}>
+              
               <!-- More component sections will be added as they are refactored -->
               
             <//>
+          <//>
           <//>
         `;
       }

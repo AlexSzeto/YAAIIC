@@ -262,9 +262,9 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with gallery examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Toast component to Goober (global)
+[x] Refactor Toast component to Goober (global)
 1. Update `public/js/custom-ui/toast.mjs` to use goober styling
-2. Style toast container, animations, and variants (success, error, info, warning)
+2. Style toast container, animations, and variants (success, error)
 3. Ensure portal rendering works with goober styles
 4. Document all props with JSDoc
 5. Update test page with toast trigger buttons
