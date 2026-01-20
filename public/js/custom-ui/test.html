@@ -39,6 +39,7 @@
     import { PaginationControls } from './pagination.mjs';
     import { ItemNavigator } from './item-navigator.mjs';
     import { showListSelect } from './list-select.mjs';
+    import { ImageSelect } from './image-select.mjs';
     
     // =========================================================================
     // Styled Components
@@ -141,6 +142,9 @@
             { id: '5', name: 'Image 5' }
           ],
           navigatorSelected: null,
+          // ImageSelect states
+          imageSelectValue1: null,
+          imageSelectValue2: 'https://picsum.photos/200',
         };
       }
       
@@ -183,6 +187,14 @@
       
       handleNavigatorSelect = (item) => {
         this.setState({ navigatorSelected: item });
+      };
+      
+      handleImageChange1 = (value) => {
+        this.setState({ imageSelectValue1: value });
+      };
+      
+      handleImageChange2 = (value) => {
+        this.setState({ imageSelectValue2: value });
       };
       
 
@@ -426,14 +438,6 @@
                   showFirstLast=${true}
                 />
                 
-                <h4 style="margin: 16px 0 8px;">With Keyboard Navigation (click to focus, use arrow keys)</h4>
-                <${ItemNavigator}
-                  items=${this.state.navigatorItems}
-                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
-                  onSelect=${this.handleNavigatorSelect}
-                  enableKeyboard=${true}
-                />
-                
                 <h4 style="margin: 16px 0 8px;">Empty State</h4>
                 <${ItemNavigator}
                   items=${[]}
@@ -557,6 +561,28 @@
                 <//>
               </${Section}>
               
+              <${Section}>
+                <${SectionTitle}>ImageSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Image selection with preview, upload, and overlay controls</p>
+                
+                <${ComponentGrid}>
+                  <${ImageSelect}
+                    label="Empty State"
+                    value=${this.state.imageSelectValue1}
+                    onChange=${this.handleImageChange1}
+                  />
+                  <${ImageSelect}
+                    label="With Image"
+                    value=${this.state.imageSelectValue2}
+                    onChange=${this.handleImageChange2}
+                  />
+                  <${ImageSelect}
+                    label="Disabled"
+                    value=${this.state.imageSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
               
               <!-- More component sections will be added as they are refactored -->
               

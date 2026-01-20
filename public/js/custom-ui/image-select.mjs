@@ -1,40 +1,104 @@
 import { html } from 'htm/preact';
-import { useState, useRef, useEffect } from 'preact/hooks';
+import { Component } from 'preact';
+import { styled } from './goober-setup.mjs';
+import { currentTheme } from './theme.mjs';
 import { createImageModal } from './modal.mjs';
 import { Button } from './button.mjs';
 
 /**
- * ImageSelect Component (formerly ImageUpload)
- * A reusable component for selecting images via gallery or upload.
+ * ImageSelect Component
+ * A reusable component for selecting images via gallery or file upload.
+ * Displays a preview area with overlay controls for clearing, replacing,
+ * or previewing the selected image.
+ * 
+ * @param {Object} props
+ * @param {string} [props.label] - Label text displayed above the select area
+ * @param {string|Blob|File} [props.value] - Current image value (URL string or Blob/File)
+ * @param {Function} [props.onChange] - Called with new file/URL or null when cleared: (fileOrUrl) => void
+ * @param {Function} [props.onSelectFromGallery] - Called when user wants to select from gallery
+ * @param {boolean} [props.disabled=false] - Disables all interactions
+ * @returns {preact.VNode}
+ * 
+ * @example
+ * // Basic file upload
+ * <ImageSelect 
+ *   label="Profile Image"
+ *   value={imageFile}
+ *   onChange={(file) => setImageFile(file)}
+ * />
+ * 
+ * @example
+ * // With gallery selection
+ * <ImageSelect 
+ *   label="Cover Image"
+ *   value={imageUrl}
+ *   onChange={handleChange}
+ *   onSelectFromGallery={() => openGalleryModal()}
+ * />
  */
-export function ImageSelect({ 
-  label,
-  value, // string (URL) or Blob/File
-  onChange, // (fileOrUrl) => void
-  onSelectFromGallery,
-  disabled = false
-}) {
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const fileInputRef = useRef(null);
+export class ImageSelect extends Component {
+  constructor(props) {
+    super(props);
+    // Initialize previewUrl from value prop if it's a string URL
+    const initialPreviewUrl = typeof props.value === 'string' ? props.value : null;
+    this.state = {
+      theme: currentTheme.value,
+      previewUrl: initialPreviewUrl
+    };
+    this.fileInputRef = null;
+    this.prevValueWasBlob = false;
+  }
 
-  // Update preview when value changes
-  useEffect(() => {
+  componentDidMount() {
+    this.unsubscribe = currentTheme.subscribe((theme) => {
+      this.setState({ theme });
+    });
+    this.updatePreviewUrl();
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+    // Cleanup object URL if we created one
+    if (this.state.previewUrl && this.props.value instanceof Blob) {
+      URL.revokeObjectURL(this.state.previewUrl);
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.value !== this.props.value) {
+      this.updatePreviewUrl();
+    }
+  }
+
+  updatePreviewUrl() {
+    const { value } = this.props;
+    const { previewUrl } = this.state;
+
+    // Revoke previous object URL if it was created from a Blob
+    if (previewUrl && this.prevValueWasBlob) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
     if (!value) {
-      setPreviewUrl(null);
+      this.prevValueWasBlob = false;
+      this.setState({ previewUrl: null });
       return;
     }
 
     if (typeof value === 'string') {
-      setPreviewUrl(value);
+      this.prevValueWasBlob = false;
+      this.setState({ previewUrl: value });
     } else if (value instanceof Blob || value instanceof File) {
+      this.prevValueWasBlob = true;
       const url = URL.createObjectURL(value);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
+      this.setState({ previewUrl: url });
     }
-  }, [value]);
+  }
 
-  const handleFileSelect = (e) => {
-    if (disabled) return;
+  handleFileSelect = (e) => {
+    if (this.props.disabled) return;
     const file = e.target.files[0];
     if (!file) return;
 
@@ -43,97 +107,179 @@ export function ImageSelect({
       return;
     }
     
-    // Pass the file up
-    if (onChange) onChange(file);
+    if (this.props.onChange) {
+      this.props.onChange(file);
+    }
     
     // Clear input so same file can be selected again if needed
     e.target.value = '';
   };
 
-  const handleBoxClick = (e) => {
+  handleBoxClick = (e) => {
     e.stopPropagation();
-    if (disabled) return;
+    if (this.props.disabled) return;
     
-    if (previewUrl) {
-      // Preview logic
-      if (typeof value === 'string') {
-        createImageModal(value, true);
-      } else if (previewUrl) {
-         createImageModal(previewUrl, true);
+    if (this.state.previewUrl) {
+      // Preview the image
+      if (typeof this.props.value === 'string') {
+        createImageModal(this.props.value, true);
+      } else if (this.state.previewUrl) {
+        createImageModal(this.state.previewUrl, true);
       }
     } else {
-        // Empty state click
-        if (onSelectFromGallery) {
-            onSelectFromGallery();
-        } else {
-            fileInputRef.current.click();
-        }
+      // Empty state click
+      if (this.props.onSelectFromGallery) {
+        this.props.onSelectFromGallery();
+      } else {
+        this.fileInputRef?.click();
+      }
     }
   };
 
-  const handleClearClick = (e) => {
+  handleClearClick = (e) => {
     e.stopPropagation();
-    if (disabled) return;
-    if (onChange) onChange(null);
+    if (this.props.disabled) return;
+    if (this.props.onChange) {
+      this.props.onChange(null);
+    }
   };
 
-  const handleReplaceClick = (e) => {
+  handleReplaceClick = (e) => {
     e.stopPropagation();
-    if (onSelectFromGallery) {
-      onSelectFromGallery();
+    if (this.props.onSelectFromGallery) {
+      this.props.onSelectFromGallery();
     } else {
-      fileInputRef.current.click();
+      this.fileInputRef?.click();
     }
   };
 
-  return html`
-    <div class="image-select-component">
-      ${label && html`<label class="input-label">${label}</label>`}
-      <input
-        type="file"
-        ref=${fileInputRef}
-        accept="image/*"
-        style="display: none;"
-        onChange=${handleFileSelect}
-        disabled=${disabled}
-      />
+  render() {
+    const { label, disabled = false } = this.props;
+    const { theme, previewUrl } = this.state;
+
+    const Container = styled('div')`
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    `;
+
+    const Label = styled('label')`
+      color: ${theme.colors.text.secondary};
+      font-size: ${theme.typography.fontSize.medium};
+      margin-bottom: 5px;
+      font-weight: ${theme.typography.fontWeight.medium};
+    `;
+
+    const SelectArea = styled('div')`
+      position: relative;
+      width: 152px;
+      height: 152px;
+      border: 2px dashed ${theme.colors.border.secondary};
+      border-radius: ${theme.spacing.medium.borderRadius};
+      background-color: ${theme.colors.background.tertiary};
+      cursor: ${disabled ? 'default' : 'pointer'};
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast};
+      opacity: ${disabled ? '0.4' : '1'};
       
-      <div 
-        class="image-select-area ${previewUrl ? 'has-image' : ''} ${disabled ? 'disabled' : ''}"
-        onClick=${handleBoxClick}
-      >
-        ${previewUrl ? html`
-          <!-- Image Preview -->
-          <img 
-            src=${previewUrl} 
-            alt="Selected image" 
-            class="image-select-preview"
-          />
-          
-          <!-- Overlay Buttons -->
-          <div class="image-select-overlay">
-            <${Button}
-              variant="icon-danger"
-              icon="x"
-              onClick=${handleClearClick}
-              title="Clear image"
-            />
-            <${Button}
-              variant="icon"
-              icon="image"
-              onClick=${handleReplaceClick}
-              title="Replace image"
-              style=${{ marginRight: '8px' }}
-            />
-          </div>
-        ` : html`
-          <!-- Empty State -->
-          <div class="image-select-empty">
-            <box-icon name='image-add' color='white' size='48px'></box-icon>
-            <div class="image-select-text">Select Image</div>
-          </div>
-        `}
-      </div>
-    </div>
-  `;
+      ${!disabled && !previewUrl ? `
+        &:hover {
+          border-color: ${theme.colors.primary.background};
+          background-color: ${theme.colors.background.hover};
+        }
+      ` : ''}
+      
+      ${previewUrl ? `
+        border-style: solid;
+        border-color: ${theme.colors.border.primary};
+      ` : ''}
+    `;
+
+    const Preview = styled('img')`
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    `;
+
+    const Overlay = styled('div')`
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: flex-end;
+      padding: ${theme.spacing.small.padding};
+      gap: ${theme.spacing.small.gap};
+      background: linear-gradient(transparent, ${theme.colors.overlay.backgroundStrong});
+      opacity: 0;
+      transition: opacity ${theme.transitions.fast};
+      
+      ${SelectArea}:hover & {
+        opacity: 1;
+      }
+    `;
+
+    const EmptyState = styled('div')`
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: ${theme.spacing.small.gap};
+    `;
+
+    const EmptyText = styled('div')`
+      color: ${theme.colors.text.muted};
+      font-size: ${theme.typography.fontSize.small};
+    `;
+
+    return html`
+      <${Container}>
+        ${label ? html`<${Label}>${label}</${Label}>` : ''}
+        <input
+          type="file"
+          ref=${(el) => { this.fileInputRef = el; }}
+          accept="image/*"
+          style="display: none;"
+          onChange=${this.handleFileSelect}
+          disabled=${disabled}
+        />
+        
+        <${SelectArea} onClick=${this.handleBoxClick}>
+          ${previewUrl ? html`
+            <!-- Image Preview -->
+            <${Preview} src=${previewUrl} alt="Selected image" />
+            
+            <!-- Overlay Buttons (hidden when disabled) -->
+            ${!disabled ? html`
+              <${Overlay}>
+                <${Button}
+                  variant="small-icon"
+                  color="secondary"
+                  icon="image"
+                  onClick=${this.handleReplaceClick}
+                  title="Replace image"
+                />
+                <${Button}
+                  variant="small-icon"
+                  color="danger"
+                  icon="x"
+                  onClick=${this.handleClearClick}
+                  title="Clear image"
+                />
+              </${Overlay}>
+            ` : ''}
+          ` : html`
+            <!-- Empty State -->
+            <${EmptyState}>
+              <box-icon name='image-add' color=${theme.colors.text.muted} size='48px'></box-icon>
+              <${EmptyText}>Select Image</${EmptyText}>
+            </${EmptyState}>
+          `}
+        </${SelectArea}>
+      </${Container}>
+    `;
+  }
 }

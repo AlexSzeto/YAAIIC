@@ -18,6 +18,7 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
 - **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
 - **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-icon-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
+- **Disabled opacity**: Use `opacity: 0.4` for opacity-based disabled states on components. This provides sufficient visual distinction while maintaining readability.
 
 ## Tasks
 [x] Install Goober and configure for Preact integration
@@ -225,7 +226,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Document all props with JSDoc
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor ImageSelect component to Goober
+[x] Refactor ImageSelect component to Goober
 1. Update `public/js/custom-ui/image-select.mjs` to use goober styling
 2. Style image grid, preview, and selection
 3. Document all props with JSDoc

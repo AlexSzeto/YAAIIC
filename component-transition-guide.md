@@ -171,18 +171,6 @@ import { ItemNavigator } from './item-navigator.mjs';
 />
 ```
 
-**With Keyboard Navigation**
-
-```javascript
-<ItemNavigator
-  currentPage=${pagination.currentPage}
-  totalPages=${pagination.totalPages}
-  onNext=${pagination.goToNext}
-  onPrev=${pagination.goToPrev}
-  enableKeyboard=${true}  // Enables Arrow keys, Home/End
-/>
-```
-
 **Complete Example: Gallery with Pagination**
 
 ```javascript
@@ -204,7 +192,6 @@ function Gallery() {
         totalPages=${pagination.totalPages}
         onNext=${pagination.goToNext}
         onPrev=${pagination.goToPrev}
-        enableKeyboard=${true}
       />
     </div>
   `;
@@ -231,7 +218,6 @@ function ImageViewer() {
         selectedItem=${selectedImage}
         onSelect=${setSelectedImage}
         showFirstLast=${true}
-        enableKeyboard=${true}
       />
     </div>
   `;
@@ -246,9 +232,11 @@ function ImageViewer() {
 | Item navigation | ❌ | ❌ | ✅ |
 | Stateless | ✅ | ✅ | ✅ |
 | First/Last buttons | ❌ | ✅ (optional) | ✅ (optional) |
-| Keyboard navigation | ❌ | ✅ (optional) | ✅ (optional) |
 | Custom item comparison | ❌ | ❌ | ✅ |
 | Theme-responsive | ✅ | ✅ | ✅ |
+
+> [!NOTE]
+> **Keyboard navigation removed**: The `enableKeyboard` prop has been removed from ItemNavigator due to implementation complexity with styled components. If keyboard navigation is required, implement it at the parent component level.
 
 **Recommendation:** Use ItemNavigator in page mode as a direct replacement for PaginationControls. It provides the same API with additional optional features.
 
@@ -283,16 +271,18 @@ import { ItemNavigator } from './item-navigator.mjs';
   onSelect={(item) => setCurrentImage(item)}
 />
 
-// Enhanced features
+// With first/last buttons
 <ItemNavigator 
   items={images}
   selectedItem={currentImage}
   onSelect={(item, index) => setCurrentImage(item)}
   showFirstLast={true}      // Add first/last buttons
-  enableKeyboard={true}     // Arrow keys, Home/End
   compareItems={(a, b) => a.id === b.id}  // Custom equality
 />
 ```
+
+> [!NOTE]
+> **Keyboard navigation removed**: The `enableKeyboard` prop has been removed. If keyboard navigation is needed, implement it at the parent component level.
 
 ## ListSelect
 **Old API → New API:**
@@ -385,3 +375,45 @@ showFolderSelect(
 - Theme-responsive colors and transitions
 - Maintains full backwards compatibility with existing API
 
+## ImageSelect
+**Old API → New API:**
+
+The ImageSelect component has been refactored to use Goober styling, converting from a functional component with hooks to a class-based component with theme subscription.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `variant="icon"` (buttons) | `variant="small-icon"` | Button variants updated |
+| `variant="icon-danger"` (buttons) | `variant="small-icon" color="danger"` | Danger color now separate |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old (still works, but now styled with Goober)
+import { ImageSelect } from './custom-ui/image-select.mjs';
+
+<ImageSelect
+  label="Profile Image"
+  value={imageFile}
+  onChange={(file) => handleChange(file)}
+  onSelectFromGallery={() => openGallery()}
+  disabled={false}
+/>
+
+// New (same API, uses Goober internally)
+import { ImageSelect } from './custom-ui/image-select.mjs';
+
+<ImageSelect
+  label="Profile Image"
+  value={imageFile}           // URL string or Blob/File
+  onChange={handleChange}     // (fileOrUrl | null) => void
+  onSelectFromGallery={openGallery}  // Optional gallery callback
+  disabled={false}
+/>
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Component converted from functional (hooks) to class-based for theme subscription
+- Internal button variants updated: `variant="icon"` → `variant="small-icon"`
+- Danger button now uses `color="danger"` instead of `variant="icon-danger"`
+- Theme-responsive colors, borders, and transitions
+- Maintains full backwards compatibility with existing API

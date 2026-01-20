@@ -33,7 +33,6 @@ import { Button } from './button.mjs';
  * --- Common Props ---
  * @param {string} [props.emptyMessage='No items'] - Message shown when items array is empty or totalPages is 0
  * @param {boolean} [props.showFirstLast=false] - Show first/last jump buttons
- * @param {boolean} [props.enableKeyboard=false] - Enable keyboard navigation (Arrow keys, Home/End)
  * @returns {preact.VNode}
  * 
  * @example
@@ -45,13 +44,12 @@ import { Button } from './button.mjs';
  * />
  * 
  * @example
- * // Item mode - With enhanced features
+ * // Item mode - With first/last buttons
  * <ItemNavigator 
  *   items={images}
  *   selectedItem={currentImage}
  *   onSelect={(item, index) => setCurrentImage(item)}
  *   showFirstLast={true}
- *   enableKeyboard={true}
  *   compareItems={(a, b) => a.id === b.id}
  * />
  * 
@@ -82,7 +80,6 @@ export class ItemNavigator extends Component {
     this.state = {
       theme: currentTheme.value
     };
-    this.containerRef = null;
   }
 
   /**
@@ -99,100 +96,14 @@ export class ItemNavigator extends Component {
     this.unsubscribe = currentTheme.subscribe((theme) => {
       this.setState({ theme });
     });
-    
-    // Set up keyboard navigation if enabled
-    if (this.props.enableKeyboard && this.containerRef) {
-      this.containerRef.addEventListener('keydown', this.handleKeyDown);
-      this.containerRef.setAttribute('tabindex', '0');
-    }
   }
 
   componentWillUnmount() {
     if (this.unsubscribe) {
       this.unsubscribe();
     }
-    if (this.containerRef) {
-      this.containerRef.removeEventListener('keydown', this.handleKeyDown);
-    }
   }
 
-  componentDidUpdate(prevProps) {
-    // Handle keyboard listener setup/teardown when enableKeyboard changes
-    if (prevProps.enableKeyboard !== this.props.enableKeyboard) {
-      if (this.props.enableKeyboard && this.containerRef) {
-        this.containerRef.addEventListener('keydown', this.handleKeyDown);
-        this.containerRef.setAttribute('tabindex', '0');
-      } else if (this.containerRef) {
-        this.containerRef.removeEventListener('keydown', this.handleKeyDown);
-        this.containerRef.removeAttribute('tabindex');
-      }
-    }
-  }
-
-  handleKeyDown = (e) => {
-    if (this.isPageMode()) {
-      // Page mode keyboard navigation
-      const { currentPage, totalPages, onPrev, onNext, onFirst, onLast } = this.props;
-      
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (currentPage > 0 && onPrev) {
-            onPrev();
-          }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          if (currentPage < totalPages - 1 && onNext) {
-            onNext();
-          }
-          break;
-        case 'Home':
-          e.preventDefault();
-          if (currentPage !== 0 && onFirst) {
-            onFirst();
-          }
-          break;
-        case 'End':
-          e.preventDefault();
-          if (currentPage !== totalPages - 1 && onLast) {
-            onLast();
-          }
-          break;
-      }
-    } else {
-      // Item mode keyboard navigation
-      const { items, onSelect } = this.props;
-      const currentIndex = this.getCurrentIndex();
-      
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (currentIndex > 0) {
-            onSelect(items[currentIndex - 1], currentIndex - 1);
-          }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          if (currentIndex < items.length - 1) {
-            onSelect(items[currentIndex + 1], currentIndex + 1);
-          }
-          break;
-        case 'Home':
-          e.preventDefault();
-          if (currentIndex !== 0) {
-            onSelect(items[0], 0);
-          }
-          break;
-        case 'End':
-          e.preventDefault();
-          if (currentIndex !== items.length - 1) {
-            onSelect(items[items.length - 1], items.length - 1);
-          }
-          break;
-      }
-    }
-  }
 
   /**
    * Default item comparison: by reference or by url property (for legacy support)
@@ -264,8 +175,7 @@ export class ItemNavigator extends Component {
   render() {
     const { 
       emptyMessage = 'No items',
-      showFirstLast = false,
-      enableKeyboard = false
+      showFirstLast = false
     } = this.props;
     const { theme } = this.state;
 
@@ -327,7 +237,6 @@ export class ItemNavigator extends Component {
       <${Container}
         role="navigation"
         aria-label=${this.isPageMode() ? "Page navigation" : "Item navigation"}
-        ref=${(ref) => { this.containerRef = ref; }}
       >
         <${Nav}>
           ${showFirstLast ? html`
