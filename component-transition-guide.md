@@ -417,3 +417,48 @@ import { ImageSelect } from './custom-ui/image-select.mjs';
 - Danger button now uses `color="danger"` instead of `variant="icon-danger"`
 - Theme-responsive colors, borders, and transitions
 - Maintains full backwards compatibility with existing API
+
+## AudioSelect
+**Old API → New API:**
+
+The AudioSelect component has been refactored to use Goober styling, converting from a functional component with hooks to a class-based component with theme subscription.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| `variant="icon"` (buttons) | `variant="small-icon"` | Button variants updated |
+| `variant="icon-danger"` (buttons) | `variant="small-icon" color="danger"` | Danger color now separate |
+| All other props | Same | No changes needed |
+
+```javascript
+// Old (still works, but now styled with Goober)
+import { AudioSelect } from './custom-ui/audio-select.mjs';
+
+<AudioSelect
+  label="Background Music"
+  value={audioUrl}
+  onChange={(url) => handleChange(url)}
+  onSelectFromGallery={() => openGallery()}
+  disabled={false}
+/>
+
+// New (same API, uses Goober internally)
+import { AudioSelect } from './custom-ui/audio-select.mjs';
+
+<AudioSelect
+  label="Background Music"
+  value={mediaData}           // URL string or object with { audioUrl, name, imageUrl }
+  onChange={handleChange}     // (null) => void (called when cleared)
+  onSelectFromGallery={openGallery}  // Called for gallery selection
+  disabled={false}
+/>
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Component converted from functional (hooks) to class-based for theme subscription
+- Internal button variants updated: `variant="icon"` → `variant="small-icon"`
+- Danger button now uses `color="danger"` instead of `variant="icon-danger"`
+- Theme-responsive colors, borders, and transitions
+- Album art background displayed when media data object includes `imageUrl`
+- Maintains full backwards compatibility with existing API
+

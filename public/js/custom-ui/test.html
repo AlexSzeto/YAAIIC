@@ -40,6 +40,7 @@
     import { ItemNavigator } from './item-navigator.mjs';
     import { showListSelect } from './list-select.mjs';
     import { ImageSelect } from './image-select.mjs';
+    import { AudioSelect } from './audio-select.mjs';
     
     // =========================================================================
     // Styled Components
@@ -145,6 +146,9 @@
           // ImageSelect states
           imageSelectValue1: null,
           imageSelectValue2: 'https://picsum.photos/200',
+          // AudioSelect states
+          audioSelectValue1: null,
+          audioSelectValue2: { audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', name: 'SoundHelix Song 1', imageUrl: 'https://picsum.photos/150' },
         };
       }
       
@@ -195,6 +199,14 @@
       
       handleImageChange2 = (value) => {
         this.setState({ imageSelectValue2: value });
+      };
+      
+      handleAudioChange1 = (value) => {
+        this.setState({ audioSelectValue1: value });
+      };
+      
+      handleAudioChange2 = (value) => {
+        this.setState({ audioSelectValue2: value });
       };
       
 
@@ -579,6 +591,31 @@
                   <${ImageSelect}
                     label="Disabled"
                     value=${this.state.imageSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio selection with album art preview, play controls, and overlay buttons</p>
+                
+                <${ComponentGrid}>
+                  <${AudioSelect}
+                    label="Empty State"
+                    value=${this.state.audioSelectValue1}
+                    onChange=${this.handleAudioChange1}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="With Audio (Album Art)"
+                    value=${this.state.audioSelectValue2}
+                    onChange=${this.handleAudioChange2}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="Disabled"
+                    value=${this.state.audioSelectValue2}
                     disabled=${true}
                   />
                 <//>

@@ -233,7 +233,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 4. Update test page with image-select examples
 5. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor AudioSelect component to Goober
+[x] Refactor AudioSelect component to Goober
 1. Update `public/js/custom-ui/audio-select.mjs` to use goober styling
 2. Match image-select styling for consistency
 3. Document all props with JSDoc
