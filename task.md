@@ -209,8 +209,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 2. Updated `image-carousel.mjs` to re-export ItemNavigator for backwards compatibility
 3. ItemNavigator uses chevron icons universally
 4. Added optional props: `showFirstLast`, `enableKeyboard`, `compareItems`
-5. Updated test page with all ItemNavigator variants
-6. Added transition notes to "Component Transition Guide" section above
+5. Added transition notes to "Component Transition Guide" section above
 
 [x] Refactor ListSelect component to Goober
 1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
@@ -224,8 +223,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 2. Update `public/js/custom-ui/folder-select.mjs` to use list-select as its base component. If there are missing features, implement it inside list-select.
 3. Style folder tree, icons, and selection states
 4. Document all props with JSDoc
-5. Update test page with folder-select examples
-6. Add transition notes to "Component Transition Guide" section above
+5. Add transition notes to "Component Transition Guide" section above
 
 [] Refactor ImageSelect component to Goober
 1. Update `public/js/custom-ui/image-select.mjs` to use goober styling

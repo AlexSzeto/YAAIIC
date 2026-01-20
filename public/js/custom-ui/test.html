@@ -37,7 +37,6 @@
     import { Checkbox } from './checkbox.mjs';
     import { ButtonGroup } from './button-group.mjs';
     import { PaginationControls } from './pagination.mjs';
-    import { ImageCarousel } from './image-carousel.mjs';
     import { ItemNavigator } from './item-navigator.mjs';
     import { showListSelect } from './list-select.mjs';
     
@@ -142,13 +141,6 @@
             { id: '5', name: 'Image 5' }
           ],
           navigatorSelected: null,
-          // ImageCarousel state (deprecated, kept for compatibility testing)
-          carouselItems: [
-            { id: '1', name: 'Item A' },
-            { id: '2', name: 'Item B' },
-            { id: '3', name: 'Item C' }
-          ],
-          carouselSelected: null
         };
       }
       
@@ -193,9 +185,7 @@
         this.setState({ navigatorSelected: item });
       };
       
-      handleCarouselSelect = (item) => {
-        this.setState({ carouselSelected: item });
-      };
+
       
       render() {
         const { themeName } = this.state;
@@ -453,18 +443,7 @@
                 />
               </${Section}>
               
-              <${Section}>
-                <${SectionTitle}>ImageCarousel Component (Deprecated)</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Legacy wrapper for backwards compatibility - now uses ItemNavigator internally</p>
-                <${ImageCarousel}
-                  items=${this.state.carouselItems}
-                  selectedItem=${this.state.carouselSelected || this.state.carouselItems[0]}
-                  onSelect=${this.handleCarouselSelect}
-                />
-                <p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">
-                  Selected: ${(this.state.carouselSelected || this.state.carouselItems[0])?.name}
-                </p>
-              </${Section}>
+
               
               <${Section}>
                 <${SectionTitle}>ListSelect Component</${SectionTitle}>
@@ -578,36 +557,6 @@
                 <//>
               </${Section}>
               
-              <${Section}>
-                <${SectionTitle}>FolderSelect Component (App-Specific)</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">
-                  Folder selection modal using ListSelect as base. <strong>Requires running server</strong> for API calls.
-                </p>
-                
-                <${ComponentGrid}>
-                  <${Button} 
-                    variant="medium-icon-text" 
-                    icon="folder" 
-                    color="primary"
-                    onClick=${() => {
-                      import('../app-ui/folder-select.mjs').then(({ showFolderSelect }) => {
-                        showFolderSelect(
-                          (uid) => console.log('Selected folder:', uid),
-                          (uid, newLabel) => console.log('Renamed:', uid, newLabel),
-                          (uid) => console.log('Deleted:', uid),
-                          (newFolder) => console.log('Created:', newFolder)
-                        );
-                      });
-                    }}
-                  >
-                    Open Folder Select
-                  <//>
-                <//>
-                <p style="margin-top: 8px; opacity: 0.5; font-size: 12px;">
-                  Note: This component fetches folder data from /folder API endpoint. 
-                  Run the dev server to test full functionality.
-                </p>
-              </${Section}>
               
               <!-- More component sections will be added as they are refactored -->
               
