@@ -1,14 +1,75 @@
 // Custom Dialog Module
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
+import { createPortal } from 'preact/compat'
+import { styled } from './goober-setup.mjs'
+import { currentTheme } from './theme.mjs'
+import { Button } from './button.mjs'
+import { Input } from './input.mjs'
+
+// ============================================================================
+// Styled Components
+// ============================================================================
+
+const Overlay = styled('div')`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const DialogBox = styled('div')`
+  padding: 20px;
+  border-radius: ${props => props.theme.spacing.medium.borderRadius};
+  max-width: 500px;
+  max-height: 400px;
+  overflow: auto;
+  box-shadow: 0 4px 12px ${props => props.theme.colors.shadow.colorStrong};
+  border: ${props => props.theme.border.width} ${props => props.theme.border.style} ${props => props.theme.colors.border.secondary};
+  min-width: ${props => props.minWidth || 'auto'};
+`;
+
+const DialogTitle = styled('h3')`
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+`;
+
+const DialogContent = styled('p')`
+  margin-bottom: 20px;
+  line-height: 1.5;
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.medium};
+  
+  ${props => props.isEmpty ? `
+    font-style: italic;
+  ` : ''}
+`;
+
+const DialogButtons = styled('div')`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+`;
+
+
+
+// ============================================================================
+// Dialog Component
+// ============================================================================
 
 // Dialog component
 class Dialog extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      isVisible: true
-    };
   }
 
   componentDidMount() {
@@ -52,53 +113,88 @@ class Dialog extends Component {
     const { options } = this.props;
     
     if (options && Array.isArray(options) && options.length > 0) {
-      // Create option buttons
-      return options.map((optionText, index) => html`
-        <button
-          key=${optionText}
-          class="dialog-option-button"
-          onClick=${() => this.handleOptionClick(optionText)}
-          ref=${index === 0 ? (btn) => { if (btn) setTimeout(() => btn.focus(), 0); } : null}
-        >
-          ${optionText}
-        </button>
-      `);
+      // Create option buttons - first option is danger (destructive action), rest are primary
+      return options.map((optionText, index) => {
+        const color = index === 0 ? 'danger' : 'primary';
+        return html`
+          <${Button}
+            key=${optionText}
+            variant="medium-text"
+            color=${color}
+            onClick=${() => this.handleOptionClick(optionText)}
+            ref=${index === 0 ? (btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); } : null}
+          >
+            ${optionText}
+          <//>
+        `;
+      });
     } else {
       // Create default close button for backward compatibility
       return html`
-        <button
-          class="dialog-close-button"
+        <${Button}
+          variant="medium-text"
+          color="secondary"
           onClick=${this.handleClose}
-          ref=${(btn) => { if (btn) setTimeout(() => btn.focus(), 0); }}
+          ref=${(btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); }}
         >
           Close
-        </button>
+        <//>
       `;
     }
   }
 
   render() {
     const { text, title } = this.props;
+    const theme = currentTheme.value;
     
     // Process content text
     const contentText = text.trim() 
       ? text
       : '';
-    const contentClass = text.trim() ? 'dialog-content' : 'dialog-content empty';
+    const isEmpty = !text.trim();
 
-    return html`
-      <div class="dialog-overlay" onClick=${this.handleOverlayClick}>
-        <div class="dialog-box">
-          <h3 class="dialog-title">${title}</h3>
-          <p class=${contentClass}>${contentText}</p>
-          <div class="dialog-buttons">
-            ${this.renderButtons()}
-          </div>
-        </div>
-      </div>
-    `;
+    return createPortal(
+      html`
+        <${Overlay}
+          theme=${theme}
+          onClick=${this.handleOverlayClick}
+          style=${{ backgroundColor: theme.colors.overlay.background }}
+          class="dialog-overlay"
+        >
+          <${DialogBox}
+            theme=${theme}
+            style=${{
+              backgroundColor: theme.colors.background.card,
+              color: theme.colors.text.primary
+            }}
+          >
+            <${DialogTitle}
+              theme=${theme}
+              style=${{ color: theme.colors.text.primary }}
+            >
+              ${title}
+            <//>
+            <${DialogContent}
+              theme=${theme}
+              isEmpty=${isEmpty}
+              style=${{ color: isEmpty ? theme.colors.text.muted : theme.colors.text.secondary }}
+            >
+              ${contentText}
+            <//>
+            <${DialogButtons} theme=${theme}>
+              ${this.renderButtons()}
+            <//>
+          <//>
+        <//>
+      `,
+      document.body
+    );
   }
 }
+
+// ============================================================================
+// TextPromptDialog Component
+// ============================================================================
 
 // TextPromptDialog component
 class TextPromptDialog extends Component {
@@ -107,14 +203,9 @@ class TextPromptDialog extends Component {
     this.state = {
       inputValue: props.initialValue || ''
     };
-    this.inputRef = null;
   }
 
   componentDidMount() {
-    // Focus input after render
-    if (this.inputRef) {
-      setTimeout(() => this.inputRef.focus(), 0);
-    }
     // Set up keyboard listeners
     document.addEventListener('keydown', this.handleKeyDown);
   }
@@ -158,40 +249,105 @@ class TextPromptDialog extends Component {
   render() {
     const { title, placeholder } = this.props;
     const { inputValue } = this.state;
+    const theme = currentTheme.value;
 
-    return html`
-      <div class="dialog-overlay" onClick=${this.handleOverlayClick}>
-        <div class="dialog-box text-prompt-dialog">
-          <h3 class="dialog-title">${title}</h3>
-          <div class="dialog-content">
-            <input
-              type="text"
-              class="text-prompt-input"
-              value=${inputValue}
-              placeholder=${placeholder || ''}
-              onInput=${this.handleInputChange}
-              ref=${(el) => { this.inputRef = el; }}
-            />
-          </div>
-          <div class="dialog-buttons">
-            <button
-              class="dialog-option-button cancel-button"
-              onClick=${this.handleCancel}
+    return createPortal(
+      html`
+        <${Overlay}
+          theme=${theme}
+          onClick=${this.handleOverlayClick}
+          style=${{ backgroundColor: theme.colors.overlay.background }}
+          class="dialog-overlay"
+        >
+          <${DialogBox}
+            theme=${theme}
+            minWidth="400px"
+            style=${{
+              backgroundColor: theme.colors.background.card,
+              color: theme.colors.text.primary
+            }}
+          >
+            <${DialogTitle}
+              theme=${theme}
+              style=${{ color: theme.colors.text.primary }}
             >
-              Cancel
-            </button>
-            <button
-              class="dialog-option-button confirm-button"
-              onClick=${this.handleConfirm}
+              ${title}
+            <//>
+            <${DialogContent}
+              as="div"
+              theme=${theme}
             >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+              <${Input}
+                type="text"
+                value=${inputValue}
+                placeholder=${placeholder || ''}
+                onInput=${this.handleInputChange}
+                fullWidth=${true}
+              />
+            <//>
+            <${DialogButtons} theme=${theme}>
+              <${Button}
+                variant="medium-text"
+                color="secondary"
+                onClick=${this.handleCancel}
+              >
+                Cancel
+              <//>
+              <${Button}
+                variant="medium-text"
+                color="primary"
+                onClick=${this.handleConfirm}
+                ref=${(btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); }}
+              >
+                OK
+              <//>
+            <//>
+          <//>
+        <//>
+      `,
+      document.body
+    );
   }
 }
+
+// ============================================================================
+// Exported Functions
+// ============================================================================
+
+/**
+ * Dialog - Modal dialog component with overlay
+ * 
+ * Displays a custom modal dialog with title, content text, and action buttons.
+ * The dialog is automatically centered on screen with an overlay background.
+ * Users can close the dialog by clicking buttons, clicking the overlay, or pressing Escape.
+ * Supports portal rendering to ensure proper z-index stacking.
+ * 
+ * Internal component - use showDialog() or showTextPrompt() functions to display.
+ * 
+ * @param {Object} props
+ * @param {string} props.text - The main content text to display (required)
+ * @param {string} [props.title='Generate Image'] - The title displayed in header
+ * @param {Array<string>} [props.options] - Array of button labels. First option is styled as danger (destructive).
+ * @param {Function} props.onClose - Callback when dialog closes, receives selected option or null (required)
+ * @returns {preact.VNode}
+ */
+
+/**
+ * TextPromptDialog - Text input dialog component
+ * 
+ * Displays a modal dialog with a text input field for user entry.
+ * Includes Cancel and OK buttons. Enter key confirms, Escape key cancels.
+ * 
+ * Internal component - use showTextPrompt() function to display.
+ * 
+ * @param {Object} props
+ * @param {string} props.title - Dialog title (required)
+ * @param {string} [props.initialValue=''] - Initial value for text input
+ * @param {string} [props.placeholder=''] - Placeholder text for input field
+ * @param {Function} props.onConfirm - Callback when OK clicked, receives input value (required)
+ * @param {Function} props.onCancel - Callback when cancelled (required)
+ * @returns {preact.VNode}
+ */
 
 /**
  * Displays a custom modal dialog with the provided text and title.
@@ -234,6 +390,9 @@ export function showDialog(text, title = 'Generate Image', options = null) {
 
   // Function to clean up dialog
   const cleanup = () => {
+    // First unmount the component
+    render(null, container);
+    // Then remove the container
     if (container && container.parentNode) {
       document.body.removeChild(container);
     }
@@ -296,6 +455,9 @@ export function showTextPrompt(title, initialValue = '', placeholder = '') {
 
   // Function to clean up dialog
   const cleanup = () => {
+    // First unmount the component
+    render(null, container);
+    // Then remove the container
     if (container && container.parentNode) {
       document.body.removeChild(container);
     }

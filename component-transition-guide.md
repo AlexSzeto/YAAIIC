@@ -648,3 +648,54 @@ toast.show('Custom', { type: 'warning', duration: 5000 });
 - Theme-responsive text colors, shadows, and borders
 - Portal rendering to document.body maintained
 - Maintains full backwards compatibility with existing API
+## Dialog
+**Old API → New API:**
+
+The Dialog component now uses Goober styling and the Button component for all action buttons.
+
+| Old Prop | New Prop | Notes |
+|----------|----------|-------|
+| All props | Same | No changes needed for showDialog() and showTextPrompt() |
+
+```javascript
+// Usage (unchanged API)
+import { showDialog, showTextPrompt } from './custom-ui/dialog.mjs';
+
+// Basic dialog with default close button
+showDialog('Dialog content here', 'Dialog Title');
+
+// Confirmation dialog with options (first option is danger/destructive)
+const result = await showDialog(
+  'Are you sure you want to delete this?',
+  'Confirm Delete',
+  ['Delete', 'Cancel']
+);
+if (result === 'Delete') {
+  // User confirmed
+}
+
+// Text prompt dialog
+const folderName = await showTextPrompt(
+  'Enter folder name',
+  'Default Name',
+  'Placeholder text...'
+);
+if (folderName) {
+  // User entered a value
+}
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes needed)
+- Uses `<Button>` component for all action buttons:
+  - Default close button: `variant="medium-text" color="secondary"`
+  - First option in options array: `variant="medium-text" color="danger"` (destructive action)
+  - Other options: `variant="medium-text" color="primary"`
+  - Cancel button in text prompt: `variant="medium-text" color="secondary"`
+  - OK button in text prompt: `variant="medium-text" color="primary"`
+- Portal rendering to document.body using `createPortal` from preact/compat
+- Theme-responsive colors for overlay, dialog box, borders, text, and input fields
+- Smooth transitions on border-color and box-shadow for input focus states
+- Maintains keyboard shortcuts (Escape to cancel, Enter to confirm)
+- Maintains overlay click-to-dismiss behavior
+- Full backwards compatibility with existing API (showDialog and showTextPrompt functions)

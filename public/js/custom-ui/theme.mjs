@@ -241,7 +241,7 @@ const darkColors = {
     primary: '#121212',
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
-    card: '#2d2d2d',
+    card: '#444444',
     hover: '#404040',
     disabled: '#2a2a2a'
   },

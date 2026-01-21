@@ -270,7 +270,7 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Update test page with toast trigger buttons
 6. Add transition notes to "Component Transition Guide" section above
 
-[] Refactor Dialog component to Goober (global)
+[x] Refactor Dialog component to Goober (global)
 1. Update `public/js/custom-ui/dialog.mjs` to use goober styling
 2. Style overlay, dialog box, buttons, and text prompt variant
 3. Ensure portal rendering works with goober styles
