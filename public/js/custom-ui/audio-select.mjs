@@ -74,13 +74,9 @@ const OverlayWrapper = styled('div')`
   bottom: 0;
   left: 0;
   right: 0;
-  opacity: 0;
+  opacity: ${props => props.opacity};
   padding: ${props => props.padding};
   transition: ${props => props.transition};
-  
-  ${SelectArea}:hover & {
-    opacity: 1;
-  }
 `;
 
 const OverlayContent = styled('div')`
@@ -142,7 +138,8 @@ export class AudioSelect extends Component {
       audioUrl: null,
       audioName: null,
       albumImageUrl: null,
-      isPlaying: false
+      isPlaying: false,
+      isHovered: false
     };
   }
 
@@ -235,7 +232,7 @@ export class AudioSelect extends Component {
 
   render() {
     const { label, disabled = false } = this.props;
-    const { theme, audioUrl, audioName, albumImageUrl, isPlaying } = this.state;
+    const { theme, audioUrl, audioName, albumImageUrl, isPlaying, isHovered } = this.state;
 
     return html`
       <${Container}>
@@ -261,6 +258,8 @@ export class AudioSelect extends Component {
           backgroundPosition="center"
           hoverBorderColor=${theme.colors.primary.background}
           onClick=${audioUrl ? null : this.handleBrowseClick}
+          onMouseEnter=${() => this.setState({ isHovered: true })}
+          onMouseLeave=${() => this.setState({ isHovered: false })}
         >
           ${audioUrl ? html`
             <!-- Audio Selected State with Album Background -->
@@ -281,6 +280,7 @@ export class AudioSelect extends Component {
               <${OverlayWrapper} 
                 padding=${theme.spacing.small.padding}
                 transition=${`opacity ${theme.transitions.fast}`}
+                opacity=${isHovered ? '1' : '0'}
               >
                 <${Panel} variant="glass">
                   <${OverlayContent} gap=${theme.spacing.small.gap}>

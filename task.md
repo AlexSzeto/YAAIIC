@@ -16,8 +16,9 @@ Refactor all existing custom UI components to use Goober for styling. Do the rep
 
 ## Implementation Notes
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
+- **Goober subcomponent targeting limitation**: Goober does NOT support targeting styled subcomponents in parent selectors (e.g., `${ParentComponent}:hover &`). This syntax, which works in styled-components, does not function in Goober. **Workarounds**: Use component state to track hover status and conditionally apply props, or restructure styles to use direct pseudo-selectors and descendant selectors without interpolated component names.
 - **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
-- **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-icon-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
+- **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
 - **Disabled opacity**: Use `opacity: 0.4` for opacity-based disabled states on components. This provides sufficient visual distinction while maintaining readability.
 - **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 

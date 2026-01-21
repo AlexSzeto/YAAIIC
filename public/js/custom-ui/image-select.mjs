@@ -54,13 +54,9 @@ const OverlayWrapper = styled('div')`
   bottom: 0;
   left: 0;
   right: 0;
-  opacity: 0;
+  opacity: ${props => props.opacity};
   padding: ${props => props.padding};
   transition: ${props => props.transition};
-  
-  ${SelectArea}:hover & {
-    opacity: 1;
-  }
 `;
 
 const OverlayContent = styled('div')`
@@ -120,7 +116,8 @@ export class ImageSelect extends Component {
     const initialPreviewUrl = typeof props.value === 'string' ? props.value : null;
     this.state = {
       theme: currentTheme.value,
-      previewUrl: initialPreviewUrl
+      previewUrl: initialPreviewUrl,
+      isHovered: false
     };
     this.fileInputRef = null;
     this.prevValueWasBlob = false;
@@ -232,7 +229,7 @@ export class ImageSelect extends Component {
 
   render() {
     const { label, disabled = false } = this.props;
-    const { theme, previewUrl } = this.state;
+    const { theme, previewUrl, isHovered } = this.state;
 
     return html`
       <${Container}>
@@ -263,6 +260,9 @@ export class ImageSelect extends Component {
           opacity=${disabled ? '0.4' : '1'}
           hoverBorderColor=${theme.colors.primary.background}
           onClick=${this.handleBoxClick}
+          onMouseEnter=${() => this.setState({ isHovered: true })}
+          onMouseLeave=${() => this.setState({ isHovered: false })}
+          onClick=${this.handleBoxClick}
         >
           ${previewUrl ? html`
             <!-- Image Preview -->
@@ -271,6 +271,7 @@ export class ImageSelect extends Component {
             <!-- Overlay Buttons (hidden when disabled) -->
             ${!disabled ? html`
               <${OverlayWrapper} 
+                opacity=${isHovered ? '1' : '0'}
                 padding=${theme.spacing.small.padding}
                 transition=${`opacity ${theme.transitions.fast}`}
               >

@@ -44,6 +44,16 @@ const CheckboxVisual = styled('div')`
   border-radius: ${props => props.borderRadius};
   background-color: ${props => props.backgroundColor};
   transition: ${props => props.transition};
+
+  ${props => !props.disabled ? `
+    &:hover {
+      background-color: ${props.hoverBackgroundColor};
+    }
+    
+    &:active {
+      background-color: ${props.activeBackgroundColor};
+    }
+  ` : ''}
 `;
 
 const LabelText = styled('span')`
@@ -123,6 +133,9 @@ export class Checkbox extends Component {
         borderRadius=${theme.spacing.small.borderRadius}
         backgroundColor=${checked ? theme.colors.primary.background : 'transparent'}
         transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+        hoverBackgroundColor=${checked ? theme.colors.primary.hover : theme.colors.background.hover}
+        activeBackgroundColor=${checked ? theme.colors.primary.background : theme.colors.background.tertiary}
+        disabled=${disabled}
       >
         ${checked ? html`<box-icon name='check' size='16px' color='#ffffff'></box-icon>` : ''}
       </${CheckboxVisual}>
