@@ -268,8 +268,8 @@ const darkColors = {
     glass: 'rgba(40, 40, 40, 0.8)'
   },
   shadow: {
-    color: 'rgba(0, 0, 0, 0.3)',
-    colorStrong: 'rgba(0, 0, 0, 0.3)'
+    color: 'rgba(255, 255, 255, 0.1)',
+    colorStrong: 'rgba(255, 255, 255, 0.1)'
   },
   focus: {
     shadowPrimary: 'rgba(255, 255, 255, 0.6)',
