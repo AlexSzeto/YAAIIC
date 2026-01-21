@@ -699,3 +699,69 @@ if (folderName) {
 - Maintains keyboard shortcuts (Escape to cancel, Enter to confirm)
 - Maintains overlay click-to-dismiss behavior
 - Full backwards compatibility with existing API (showDialog and showTextPrompt functions)
+
+## Modal
+**Old API → New API:**
+No changes to API - all styling migrated to Goober internally.
+
+**Props (unchanged):**
+| Prop | Type | Description |
+|------|------|-------------|
+| `isOpen` | `boolean` | Whether the modal is open (required) |
+| `onClose` | `Function` | Callback when modal is closed (required) |
+| `title` | `string` | Modal title text (required) |
+| `size` | `'small'\|'medium'\|'large'\|'full'` | Size variant (default: `'medium'`) |
+| `children` | `preact.ComponentChildren` | Modal body content |
+| `footer` | `preact.VNode\|string` | Optional footer content (typically buttons) |
+| `className` | `string` | Additional CSS class name (default: `''`) |
+
+**Usage (unchanged):**
+```javascript
+import { Modal } from './custom-ui/modal.mjs';
+
+// Declarative Modal
+<Modal
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  title="Confirm Action"
+  size="small"
+  footer={html`
+    <${Button} variant="medium-text" color="secondary" onClick=${onCancel}>Cancel<//>
+    <${Button} variant="medium-text" color="primary" onClick=${onConfirm}>Confirm<//>
+  `}
+>
+  <p>Are you sure you want to proceed?</p>
+</Modal>
+
+// Imperative Image Modal
+import { createImageModal } from './custom-ui/modal.mjs';
+
+// Basic image modal
+createImageModal('https://example.com/image.jpg', false, 'Image Title');
+
+// Image modal with select button
+createImageModal(
+  'https://example.com/image.jpg',
+  true,
+  'Image Title',
+  () => console.log('Selected!'),
+  'Select This Image'
+);
+```
+
+**Key Changes:**
+- All styling now handled by Goober (no CSS classes like `dialog-overlay`, `dialog-box` needed)
+- Size variants now map to specific max-width/max-height values:
+  - `small`: 400px max-width, 80vh max-height
+  - `medium`: 500px max-width, 80vh max-height
+  - `large`: 800px max-width, 80vh max-height
+  - `full`: 95vw max-width, 95vh max-height
+- Image modal title now uses overlay glass effect for better readability
+- All buttons use standard Button component variants (`medium-text`)
+- Theme-responsive colors for overlay, modal box, borders, text, shadows
+- Close button hover/focus states handled via pseudo-classes in styled component
+- Portal rendering to document.body using `createPortal` from preact/compat
+- Maintains keyboard shortcuts (Escape to close)
+- Maintains overlay click-to-dismiss behavior
+- Maintains body scroll locking when modal is open
+- Full backwards compatibility with existing declarative and imperative APIs

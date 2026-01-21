@@ -348,7 +348,7 @@ export function Gallery({
   return html`
     <div 
       class="gallery-modal"
-      onClick=${(e) => { if (e.target.classList.contains('gallery-modal')) onClose(); }}
+      onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div class="gallery-content">
         <div class="gallery-grid">

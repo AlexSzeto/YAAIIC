@@ -2,66 +2,17 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createPortal } from 'preact/compat'
-import { styled } from './goober-setup.mjs'
 import { currentTheme } from './theme.mjs'
 import { Button } from './button.mjs'
 import { Input } from './input.mjs'
-
-// ============================================================================
-// Styled Components
-// ============================================================================
-
-const Overlay = styled('div')`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: ${props => props.backgroundColor};
-`;
-
-const DialogBox = styled('div')`
-  padding: 16px;
-  border-radius: ${props => props.theme.spacing.medium.borderRadius};
-  max-width: 500px;
-  max-height: 400px;
-  overflow: auto;
-  box-shadow: 0 4px 12px ${props => props.theme.colors.shadow.colorStrong};
-  min-width: ${props => props.minWidth || 'auto'};
-  background-color: ${props => props.backgroundColor};
-  color: ${props => props.color};
-`;
-
-const DialogTitle = styled('h3')`
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.color};
-`;
-
-const DialogContent = styled('p')`
-  margin-bottom: 20px;
-  line-height: 1.5;
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  color: ${props => props.color};
-  
-  ${props => props.isEmpty ? `
-    font-style: italic;
-  ` : ''}
-`;
-
-const DialogButtons = styled('div')`
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 20px;
-`;
+import { 
+  BaseOverlay, 
+  BaseContainer, 
+  BaseHeader,
+  BaseTitle, 
+  BaseContent, 
+  BaseFooter 
+} from './modal-base.mjs'
 
 
 
@@ -95,7 +46,7 @@ class Dialog extends Component {
   }
 
   handleOverlayClick = (e) => {
-    if (e.target.classList.contains('dialog-overlay')) {
+    if (e.target === e.currentTarget) {
       this.handleClose();
     }
   }
@@ -158,31 +109,41 @@ class Dialog extends Component {
 
     return createPortal(
       html`
-        <${Overlay}
-          theme=${theme}
+        <${BaseOverlay}
+          bgColor=${theme.colors.overlay.background}
           onClick=${this.handleOverlayClick}
-          backgroundColor=${theme.colors.overlay.background}
           class="dialog-overlay"
         >
-          <${DialogBox}
-            theme=${theme}
-            backgroundColor=${theme.colors.background.card}
-            color=${theme.colors.text.primary}
+          <${BaseContainer}
+            bgColor=${theme.colors.background.card}
+            textColor=${theme.colors.text.primary}
+            borderRadius=${theme.spacing.medium.borderRadius}
+            maxWidth="500px"
+            maxHeight="400px"
+            shadowColor=${theme.colors.shadow.colorStrong}
           >
-            <${DialogTitle}
-              theme=${theme}
-              color=${theme.colors.text.primary}
-            >
-              ${title}
+            <${BaseHeader} marginBottom="16px">
+              <${BaseTitle} 
+                color=${theme.colors.text.primary}
+                fontFamily=${theme.typography.fontFamily}
+                fontWeight=${theme.typography.fontWeight.bold}
+              >
+                ${title}
+              <//>
             <//>
-            <${DialogContent}
-              theme=${theme}
+            <${BaseContent}
               isEmpty=${isEmpty}
               color=${isEmpty ? theme.colors.text.muted : theme.colors.text.secondary}
+              fontFamily=${theme.typography.fontFamily}
+              fontSize=${theme.typography.fontSize.medium}
+              marginBottom="20px"
             >
               ${contentText}
             <//>
-            <${DialogButtons} theme=${theme}>
+            <${BaseFooter} 
+              gap="10px"
+              marginTop="20px"
+            >
               ${this.renderButtons()}
             <//>
           <//>
@@ -226,7 +187,7 @@ class TextPromptDialog extends Component {
   }
 
   handleOverlayClick = (e) => {
-    if (e.target.classList.contains('dialog-overlay')) {
+    if (e.target === e.currentTarget) {
       this.handleCancel();
     }
   }
@@ -254,27 +215,32 @@ class TextPromptDialog extends Component {
 
     return createPortal(
       html`
-        <${Overlay}
-          theme=${theme}
+        <${BaseOverlay}
+          bgColor=${theme.colors.overlay.background}
           onClick=${this.handleOverlayClick}
-          backgroundColor=${theme.colors.overlay.background}
-          class="dialog-overlay"
         >
-          <${DialogBox}
-            theme=${theme}
+          <${BaseContainer}
+            bgColor=${theme.colors.background.card}
+            textColor=${theme.colors.text.primary}
+            borderRadius=${theme.spacing.medium.borderRadius}
+            maxWidth="500px"
+            maxHeight="400px"
             minWidth="400px"
-            backgroundColor=${theme.colors.background.card}
-            color=${theme.colors.text.primary}
+            shadowColor=${theme.colors.shadow.colorStrong}
           >
-            <${DialogTitle}
-              theme=${theme}
+            <${BaseTitle}
               color=${theme.colors.text.primary}
+              fontFamily=${theme.typography.fontFamily}
+              fontWeight=${theme.typography.fontWeight.bold}
             >
               ${title}
             <//>
-            <${DialogContent}
+            <${BaseContent}
               as="div"
-              theme=${theme}
+              color=${theme.colors.text.secondary}
+              fontFamily=${theme.typography.fontFamily}
+              fontSize=${theme.typography.fontSize.medium}
+              marginBottom="20px"
             >
               <${Input}
                 type="text"
@@ -284,7 +250,10 @@ class TextPromptDialog extends Component {
                 fullWidth=${true}
               />
             <//>
-            <${DialogButtons} theme=${theme}>
+            <${BaseFooter}
+              gap="10px"
+              marginTop="20px"
+            >
               <${Button}
                 variant="medium-text"
                 color="secondary"

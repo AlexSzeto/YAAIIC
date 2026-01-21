@@ -1,19 +1,45 @@
 import { html } from 'htm/preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
+import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
+import { Panel } from './panel.mjs';
+import { 
+  BaseOverlay, 
+  BaseContainer, 
+  BaseHeader, 
+  BaseTitle, 
+  BaseContent, 
+  BaseFooter,
+  CloseButton 
+} from './modal-base.mjs';
 
 /**
- * Modal Component
- * Declarative modal that renders via Portal to document.body
+ * Modal Component - Declarative modal that renders via Portal to document.body
  * 
  * @param {Object} props
- * @param {boolean} props.isOpen
- * @param {Function} props.onClose
- * @param {string} props.title
- * @param {string} [props.size='medium'] - 'small', 'medium', 'large', 'full'
- * @param {VNode|string} [props.footer] - Optional footer content (buttons)
- * @param {VNode} props.children
+ * @param {boolean} props.isOpen - Whether the modal is open (required)
+ * @param {Function} props.onClose - Callback when modal is closed (required)
+ * @param {string} props.title - Modal title text (required)
+ * @param {string} [props.size='medium'] - Size variant: 'small', 'medium', 'large', 'full'
+ * @param {preact.ComponentChildren} [props.children] - Modal body content
+ * @param {preact.VNode|string} [props.footer] - Optional footer content (typically buttons)
+ * @param {string} [props.className=''] - Additional CSS class name
+ * @returns {preact.VNode|null}
+ * 
+ * @example
+ * <Modal
+ *   isOpen={isOpen}
+ *   onClose={() => setIsOpen(false)}
+ *   title="Confirm Action"
+ *   size="small"
+ *   footer={html`
+ *     <${Button} variant="secondary" onClick=${onCancel}>Cancel<//>
+ *     <${Button} variant="primary" onClick=${onConfirm}>Confirm<//>
+ *   `}
+ * >
+ *   <p>Are you sure you want to proceed?</p>
+ * </Modal>
  */
 export function Modal({ 
   isOpen, 
@@ -25,6 +51,7 @@ export function Modal({
   className = ''
 }) {
   const overlayRef = useRef(null);
+  const theme = currentTheme.value;
 
   // Close on Escape
   useEffect(() => {
@@ -48,55 +75,85 @@ export function Modal({
   if (!isOpen) return null;
 
   const handleOverlayClick = (e) => {
-    if (e.target === overlayRef.current) {
+    // Check if click was directly on the overlay element (not bubbled from children)
+    if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
-  const getSizeClass = () => {
+  // Size-based max widths
+  const getSizeMaxWidth = () => {
     switch (size) {
-      case 'small': return 'modal-sm';
-      case 'large': return 'modal-lg';
-      case 'full': return 'modal-full';
-      default: return ''; // medium is default
+      case 'small': return '400px';
+      case 'large': return '800px';
+      case 'full': return '95vw';
+      default: return '500px'; // medium
+    }
+  };
+
+  const getSizeMaxHeight = () => {
+    switch (size) {
+      case 'full': return '95vh';
+      default: return '80vh';
     }
   };
 
   const modalContent = html`
-    <div 
-      class="dialog-overlay" 
-      onClick=${handleOverlayClick} 
+    <${BaseOverlay}
+      bgColor=${theme.colors.overlay.background}
+      onClick=${handleOverlayClick}
       ref=${overlayRef}
-      style="display: flex;"
     >
-      <div 
-        class="dialog-box ${getSizeClass()} ${className}" 
+      <${BaseContainer}
+        bgColor=${theme.colors.background.card}
+        textColor=${theme.colors.text.primary}
+        borderRadius=${theme.spacing.medium.borderRadius}
+        maxWidth=${getSizeMaxWidth()}
+        maxHeight=${getSizeMaxHeight()}
+        shadowColor=${theme.colors.shadow.colorStrong}
+        class=${className}
         role="dialog" 
         aria-modal="true" 
         aria-labelledby="modal-title"
       >
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 id="modal-title" class="dialog-title" style="margin: 0;">${title}</h3>
-          <button 
+        <${BaseHeader} marginBottom="16px">
+          <${BaseTitle} 
+            id="modal-title" 
+            color=${theme.colors.text.primary}
+            fontFamily=${theme.typography.fontFamily}
+            fontWeight=${theme.typography.fontWeight.bold}
+          >
+            ${title}
+          <//>
+          <${CloseButton}
             onClick=${onClose}
-            style="background: none; border: none; color: var(--dark-text-secondary); cursor: pointer; padding: 5px;"
+            color=${theme.colors.text.secondary}
+            transition=${theme.transitions.fast}
             aria-label="Close"
           >
-            <box-icon name='x' color='var(--dark-text-secondary)'></box-icon>
-          </button>
-        </div>
+            <box-icon name='x' color='${theme.colors.text.secondary}'></box-icon>
+          <//>
+        <//>
         
-        <div class="dialog-content" style="margin-bottom: ${footer ? '20px' : '0'};">
+        <${BaseContent}
+          marginBottom=${footer ? '20px' : '0'}
+          color=${theme.colors.text.secondary}
+          fontFamily=${theme.typography.fontFamily}
+          fontSize=${theme.typography.fontSize.medium}
+        >
           ${children}
-        </div>
+        <//>
 
         ${footer && html`
-          <div class="dialog-buttons" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <${BaseFooter}
+            marginTop="20px"
+            gap=${theme.spacing.medium.gap}
+          >
             ${footer}
-          </div>
+          <//>
         `}
-      </div>
-    </div>
+      <//>
+    <//>
   `;
 
   return createPortal(modalContent, document.body);
@@ -104,13 +161,56 @@ export function Modal({
 
 /**
  * Helper to imperatively show an image modal (backward compatibility)
- * @param {string} imageUrl 
- * @param {boolean} allowSelect - Not used in V2 modal logic directly but kept for signature compat
- * @param {string} title 
- * @param {Function} onSelect - Callback if a "Select" button/action is desired (legacy behavior)
- * @param {string} selectButtonText - Custom text for the select button (default: 'View')
+ * @param {string} imageUrl - URL of the image to display
+ * @param {boolean} [allowSelect=false] - Show a select/action button
+ * @param {string} [title=null] - Optional title overlay on the image
+ * @param {Function} [onSelect=null] - Callback when select button is clicked
+ * @param {string} [selectButtonText='View'] - Custom text for the select button
  */
 import { render } from 'preact';
+import { styled } from './goober-setup.mjs';
+
+const ImageModalWrapper = styled('div')`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vh - 80px);
+  padding-bottom: ${props => props.hasActionButton ? '60px' : '0'};
+`;
+
+const ImageModalContent = styled('div')`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ImageModalPreview = styled('img')`
+  max-width: 100%;
+  max-height: ${props => props.maxHeight};
+  display: block;
+  object-fit: contain;
+  border-radius: ${props => props.borderRadius};
+`;
+
+const ImageModalTitleWrapper = styled('div')`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  max-width: ${props => props.hasActionButton ? 'calc(100% - 140px)' : 'calc(100% - 20px)'};
+`;
+
+const ImageModalActionArea = styled('div')`
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+`;
 
 export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null, selectButtonText = 'View') {
   const container = document.createElement('div');
@@ -132,10 +232,11 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
   };
 
   const ImperativeImageModal = () => {
-    const overlayRef = useRef(null);
+    const theme = currentTheme.value;
 
     const handleOverlayClick = (e) => {
-      if (e.target === overlayRef.current) {
+      // Check if click was directly on the overlay element (not bubbled from children)
+      if (e.target === e.currentTarget) {
         close();
       }
     };
@@ -148,41 +249,51 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
     }, []);
 
     return html`
-      <div 
-        class="image-modal-overlay" 
-        ref=${overlayRef}
+      <${BaseOverlay}
+        bgColor=${theme.colors.overlay.backgroundStrong}
         onClick=${handleOverlayClick}
       >
-        <div class="image-modal-container ${allowSelect && onSelect ? 'has-action-button' : ''}">
+        <${BaseContainer}
+          bgColor=${theme.colors.background.secondary}
+          textColor=${theme.colors.text.primary}
+          borderRadius=${theme.spacing.medium.borderRadius}
+          maxWidth="calc(100vw - 40px)"
+          maxHeight="calc(100vh - 40px)"
+          shadowColor=${theme.colors.shadow.colorStrong}
+        >
+          <${ImageModalWrapper} hasActionButton=${allowSelect && onSelect}>
+            <${ImageModalContent}>
+            <${ImageModalPreview}
+              src=${imageUrl}
+              alt=${title || 'Preview'}
+              maxHeight=${allowSelect && onSelect ? 'calc(100vh - 120px)' : 'calc(100vh - 60px)'}
+              borderRadius=${theme.spacing.medium.borderRadius}
+              shadowColor=${theme.colors.shadow.colorStrong}
+            />
+            
+            ${title && html`
+              <${ImageModalTitleWrapper} hasActionButton=${allowSelect && onSelect}>
+                <${Panel} variant="glass">
+                  ${title}
+                </>
+              </>
+            `}
+          <//>
 
-           <div class="image-modal-content">
-             <img 
-               src=${imageUrl} 
-               alt=${title || 'Preview'} 
-               class="image-modal-preview"
-               style="max-width: 100%; max-height: ${allowSelect && onSelect ? 'calc(100vh - 120px)' : 'calc(100vh - 60px)'}; display: block; object-fit: contain;" 
-             />
-             
-             ${title && html`
-               <div class="image-modal-title overlay-panel">
-                 ${title}
-               </div>
-             `}
-           </div>
-
-           ${allowSelect && onSelect && html`
-             <div class="image-modal-action-area">
-               <${Button}
-                 variant="secondary"
-                 onClick=${handleSelect}
-                 className="image-modal-select"
-               >
-                 ${selectButtonText}
-               <//>
-             </div>
-           `}
-        </div>
-      </div>
+            ${allowSelect && onSelect && html`
+              <${ImageModalActionArea}>
+                <${Button}
+                  variant="medium-text"
+                  color="secondary"
+                  onClick=${handleSelect}
+                >
+                  ${selectButtonText}
+                </>
+              </>
+            `}
+          </>
+        <//>
+      <//>
     `;
   };
 

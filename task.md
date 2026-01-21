@@ -305,13 +305,18 @@ Apply the same pattern used in Button to eliminate inline styles across all refa
 15. **Dialog component** - Audit and move any inline styles to styled component props
 Pattern: For each component, (a) identify all inline style objects, (b) convert style properties to styled component props, (c) update styled component template to use props, (d) add hover/focus pseudo-classes where needed, (e) remove inline style attribute
 
-[] Refactor Modal component to Goober (global)
+[x] Refactor Modal component to Goober (global)
 1. Update `public/js/custom-ui/modal.mjs` to use goober styling
 2. Style overlay, modal box, header, footer, and size variants
 3. Handle image modal styling
 4. Document all props with JSDoc
 5. Update test page with modal trigger buttons
 6. Add transition notes to "Component Transition Guide" section above
+7. Create baseline styled container components in `modal-base.mjs` for reuse across Modal and Dialog
+8. Fix click-outside-to-close functionality using CSS class checking
+9. Standardize BaseContainer padding to 16px (no padding prop needed)
+10. Remove all border properties from BaseContainer (no borders on modal/dialog containers)
+11. Apply base container pattern to list-select component for consistency
 
 [] Refactor use-pagination hook to Goober
 1. Update `public/js/custom-ui/use-pagination.mjs` for theme integration

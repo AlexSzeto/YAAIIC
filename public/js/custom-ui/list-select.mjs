@@ -8,28 +8,13 @@ import { html } from 'htm/preact';
 import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
+import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle } from './modal-base.mjs';
 
 // ============================================================================
 // Styled Components
 // ============================================================================
 
-const Overlay = styled('div')`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: ${props => props.theme.colors.overlay.background};
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Modal = styled('div')`
-  background-color: ${props => props.theme.colors.background.card};
-  border-radius: ${props => props.theme.spacing.medium.borderRadius};
-  box-shadow: 0 4px 12px ${props => props.theme.colors.shadow};
+const ModalWrapper = styled('div')`
   width: 500px;
   max-width: 90vw;
   max-height: 80vh;
@@ -37,18 +22,10 @@ const Modal = styled('div')`
   flex-direction: column;
 `;
 
-const Header = styled('div')`
-  padding: 20px 20px 0 20px;
-`;
-
-const Title = styled('h3')`
-  margin: 0 0 15px 0;
-  color: ${props => props.theme.colors.text.primary};
-`;
-
 const Content = styled('div')`
   flex: 1;
   overflow-y: auto;
+  margin: 0 -16px;
   padding: 10px 0;
   min-height: 200px;
   max-height: 400px;
@@ -75,6 +52,7 @@ const ItemContainer = styled('div')`
   cursor: ${props => props.disabled ? 'default' : 'pointer'};
   transition: background-color ${props => props.theme.transitions.fast};
   opacity: ${props => props.disabled ? 0.5 : 1};
+  border-radius: ${props => props.theme.spacing.medium.borderRadius};
   
   ${props => !props.disabled ? `
     &:hover {
@@ -111,7 +89,8 @@ const Footer = styled('div')`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 15px 20px;
+  padding-top: 15px;
+  margin-top: 10px;
 `;
 
 // ============================================================================
@@ -252,6 +231,7 @@ class ListSelectModal extends Component {
   }
 
   handleOverlayClick = (e) => {
+    // Check if click was directly on the overlay element (not bubbled from children)
     if (e.target === e.currentTarget) {
       this.handleClose();
     }
@@ -307,54 +287,73 @@ class ListSelectModal extends Component {
     }
 
     return html`
-      <${Overlay} theme=${theme} onClick=${this.handleOverlayClick}>
-        <${Modal} theme=${theme}>
-          <${Header} theme=${theme}>
-            <${Title} theme=${theme}>${title}<//>
-          <//>
-          
-          <${Content} theme=${theme}>
-            ${isLoading ? html`
-              <${LoadingMessage} theme=${theme}>Loading...<//>
-            ` : items.length === 0 ? html`
-              <${LoadingMessage} theme=${theme}>No items available<//>
-            ` : html`
-              <${List} theme=${theme}>
-                ${items.map(item => html`
-                  <${ListItem}
-                    key=${item.id}
-                    item=${item}
-                    itemIcon=${itemIcon}
-                    isSelected=${item.id === selectedId}
-                    onSelect=${this.handleItemSelect}
-                    onEdit=${showActions ? this.handleEdit : null}
-                    onDelete=${showActions ? this.handleDelete : null}
-                    showActions=${showActions}
-                    theme=${theme}
-                  />
-                `)}
+      <${BaseOverlay} 
+        bgColor=${theme.colors.overlay.background}
+        onClick=${this.handleOverlayClick}
+      >
+        <${BaseContainer}
+          bgColor=${theme.colors.background.card}
+          textColor=${theme.colors.text.primary}
+          borderRadius=${theme.spacing.medium.borderRadius}
+          maxWidth="90vw"
+          maxHeight="80vh"
+          minWidth="auto"
+          shadowColor=${theme.colors.shadow.colorStrong}
+        >
+          <${ModalWrapper}>
+            <${BaseHeader} marginBottom="16px">
+              <${BaseTitle}
+                color=${theme.colors.text.primary}
+                fontFamily=${theme.typography.fontFamily}
+                fontWeight=${theme.typography.fontWeight.bold}
+              >
+                ${title}
               <//>
-            `}
-          <//>
-          
-          <${Footer} theme=${theme}>
-            <${Button} 
-              variant="medium-text"
-              color="secondary"
-              onClick=${this.handleClose}
-            >
-              Cancel
-            </>
-            ${showActionButton && actionLabel ? html`
+            <//>
+            
+            <${Content} theme=${theme}>
+              ${isLoading ? html`
+                <${LoadingMessage} theme=${theme}>Loading...<//>
+              ` : items.length === 0 ? html`
+                <${LoadingMessage} theme=${theme}>No items available<//>
+              ` : html`
+                <${List} theme=${theme}>
+                  ${items.map(item => html`
+                    <${ListItem}
+                      key=${item.id}
+                      item=${item}
+                      itemIcon=${itemIcon}
+                      isSelected=${item.id === selectedId}
+                      onSelect=${this.handleItemSelect}
+                      onEdit=${showActions ? this.handleEdit : null}
+                      onDelete=${showActions ? this.handleDelete : null}
+                      showActions=${showActions}
+                      theme=${theme}
+                    />
+                  `)}
+                <//>
+              `}
+            <//>
+            
+            <${Footer} theme=${theme}>
               <${Button} 
                 variant="medium-text"
-                color="primary"
-                onClick=${this.handleAction}
+                color="secondary"
+                onClick=${this.handleClose}
               >
-                ${actionLabel}
+                Cancel
               </>
-            ` : null}
-          </>
+              ${showActionButton && actionLabel ? html`
+                <${Button} 
+                  variant="medium-text"
+                  color="primary"
+                  onClick=${this.handleAction}
+                >
+                  ${actionLabel}
+                </>
+              ` : null}
+            <//>
+          <//>
         <//>
       <//>
     `;

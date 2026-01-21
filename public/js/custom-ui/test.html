@@ -45,6 +45,7 @@
     import { ProgressBanner } from './progress-banner.mjs';
     import { ToastProvider, useToast } from './toast.mjs';
     import { showDialog, showTextPrompt } from './dialog.mjs';
+    import { Modal, createImageModal } from './modal.mjs';
     
     // =========================================================================
     // Styled Components
@@ -297,6 +298,9 @@
           // ProgressBanner states
           progressBannerVisible: false,
           progressBannerKey: 0,
+          // Modal states
+          modalOpen: false,
+          modalSize: 'medium',
         };
         
         // Mock SSE manager for testing ProgressBanner
@@ -990,6 +994,93 @@
                 
                 <${ComponentGrid}>
                   <${DialogTriggers} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Modal Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Declarative modal component with customizable size, header, content, and footer</p>
+                
+                <${ComponentGrid}>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'small' })}
+                    >
+                      Show Small Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'medium' })}
+                    >
+                      Show Medium Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'large' })}
+                    >
+                      Show Large Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => createImageModal('https://picsum.photos/800/600', false, 'Sample Image')}
+                    >
+                      Show Image Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="success"
+                      onClick=${() => createImageModal(
+                        'https://picsum.photos/800/600',
+                        true,
+                        'Selectable Image',
+                        () => alert('Image selected!'),
+                        'Select This Image'
+                      )}
+                    >
+                      Show Image Modal with Select
+                    <//>
+                  </div>
+                <//>
+                
+                <${Modal}
+                  isOpen=${this.state.modalOpen}
+                  onClose=${() => this.setState({ modalOpen: false })}
+                  title=${`Modal Example (${this.state.modalSize})`}
+                  size=${this.state.modalSize}
+                  footer=${html`
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => this.setState({ modalOpen: false })}
+                    >
+                      Cancel
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => {
+                        alert('Action confirmed!');
+                        this.setState({ modalOpen: false });
+                      }}
+                    >
+                      Confirm
+                    <//>
+                  `}
+                >
+                  <p>This is a ${this.state.modalSize} size modal with custom footer buttons.</p>
+                  <p style="margin-top: 16px;">The Modal component supports:</p>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Multiple size variants (small, medium, large, full)</li>
+                    <li>Custom header, content, and footer</li>
+                    <li>Escape key to close</li>
+                    <li>Click outside to close</li>
+                    <li>Body scroll locking when open</li>
+                  </ul>
                 <//>
               </${Section}>
               
