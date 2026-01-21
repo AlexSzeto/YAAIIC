@@ -41,7 +41,12 @@ const StyledButton = styled('button')`
   
   &:hover:not(:disabled) {
     background-color: ${props => props.hoverBg};
-    border-color: ${props => props.hoverBg};
+    border-color: ${props => props.hoverBorder};
+  }
+  
+  &:active:not(:disabled) {
+    background-color: ${props => props.activeBg};
+    border-color: ${props => props.activeBorder};
   }
   
   &:focus {
@@ -169,6 +174,9 @@ export class Button extends Component {
       return {
         bg: colorTheme.background,
         hover: colorTheme.hover,
+        active: colorTheme.active,
+        hoverBorder: colorTheme.background,
+        activeBorder: colorTheme.hover,
         focus: colorTheme.focus,
         text: colorTheme.text || '#ffffff'
       };
@@ -215,6 +223,9 @@ export class Button extends Component {
         borderRadius=${size.borderRadius}
         bgColor=${bgColor}
         hoverBg=${colorStyles.hover}
+        hoverBorder=${colorStyles.hoverBorder}
+        activeBg=${colorStyles.active}
+        activeBorder=${colorStyles.activeBorder}
         transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
         ...${rest}
       >

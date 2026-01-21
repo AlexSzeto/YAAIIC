@@ -34,7 +34,6 @@ const TimelineWrapper = styled('div')`
 const Time = styled('span')`
   font-family: monospace;
   min-width: 40px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   text-align: center;
   color: ${props => props.color};
   font-size: ${props => props.fontSize};

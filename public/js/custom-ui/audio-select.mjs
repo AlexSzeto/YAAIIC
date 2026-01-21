@@ -270,7 +270,7 @@ export class AudioSelect extends Component {
             >
               <box-icon name='music' color='white' size='20px'></box-icon>
               <${AudioName} 
-                color=${theme.colors.text.secondary}
+                color=white
                 fontSize=${theme.typography.fontSize.small}
               >${audioName}</${AudioName}>
             </${Header}>

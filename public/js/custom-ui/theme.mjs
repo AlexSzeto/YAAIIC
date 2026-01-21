@@ -59,7 +59,7 @@ const spacingSubTheme = {
     }
   },
   border: {
-    width: '1px',
+    width: '2px',
     style: 'solid'
   },
   transitions: {
@@ -113,6 +113,7 @@ const lightColors = {
   primary: {
     background: '#007bff',
     hover: '#0056b3',
+    active: '#004085',
     focus: 'rgba(0, 123, 255, 0.5)',
     highlight: '#007acc',
     backgroundLight: '#e7f3ff',
@@ -123,6 +124,7 @@ const lightColors = {
   secondary: {
     background: '#6c757d',
     hover: '#545b62',
+    active: '#3d4449',
     focus: 'rgba(108, 117, 125, 0.5)',
     backgroundLight: '#e9ecef',
     border: '#ced4da',
@@ -132,6 +134,7 @@ const lightColors = {
   success: {
     background: '#28a745',
     hover: '#218838',
+    active: '#1e7e34',
     focus: 'rgba(40, 167, 69, 0.5)',
     backgroundLight: '#d4edda',
     border: '#9fdfb0',
@@ -141,6 +144,7 @@ const lightColors = {
   danger: {
     background: '#dc3545',
     hover: '#c82333',
+    active: '#bd2130',
     border: '#dc3545',
     borderHover: '#c82333',
     backgroundLight: '#f8d7da',
@@ -202,6 +206,7 @@ const darkColors = {
   primary: {
     background: '#007bff',
     hover: '#0056b3',
+    active: '#004085',
     focus: 'rgba(0, 123, 255, 0.5)',
     highlight: '#007acc',
     backgroundLight: '#1a3a52',
@@ -212,6 +217,7 @@ const darkColors = {
   secondary: {
     background: '#6c757d',
     hover: '#545b62',
+    active: '#3d4449',
     focus: 'rgba(108, 117, 125, 0.5)',
     backgroundLight: '#3a3f44',
     border: '#5a6268',
@@ -221,6 +227,7 @@ const darkColors = {
   success: {
     background: '#28a745',
     hover: '#218838',
+    active: '#1e7e34',
     focus: 'rgba(40, 167, 69, 0.5)',
     backgroundLight: '#1e4d2b',
     border: '#2d7a3f',
@@ -230,6 +237,7 @@ const darkColors = {
   danger: {
     background: '#dc3545',
     hover: '#c82333',
+    active: '#bd2130',
     border: '#dc3545',
     borderHover: '#c82333',
     backgroundLight: '#4d1f23',
