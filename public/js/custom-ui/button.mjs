@@ -14,6 +14,36 @@ const StyledButton = styled('button')`
   cursor: pointer;
   flex-shrink: 0;
   
+  /* Layout */
+  gap: ${props => props.gap};
+  height: ${props => props.height};
+  min-width: ${props => props.minWidth};
+  padding: ${props => props.padding};
+  width: ${props => props.width || 'auto'};
+  
+  /* Typography */
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+  font-family: ${props => props.fontFamily};
+  color: ${props => props.textColor};
+  
+  /* Border */
+  border-width: ${props => props.borderWidth};
+  border-style: ${props => props.borderStyle};
+  border-color: ${props => props.borderColor};
+  border-radius: ${props => props.borderRadius};
+  
+  /* Colors */
+  background-color: ${props => props.bgColor};
+  
+  /* Transitions */
+  transition: ${props => props.transition};
+  
+  &:hover:not(:disabled) {
+    background-color: ${props => props.hoverBg};
+    border-color: ${props => props.hoverBg};
+  }
+  
   &:focus {
     outline: none;
   }
@@ -146,30 +176,16 @@ export class Button extends Component {
 
     const colorStyles = getColorStyles(color);
 
-    // Build style object
-    const buttonStyle = {
-      gap: size.gap,
-      height: size.height,
-      minWidth: size.minWidth,
-      padding: size.padding,
-      fontSize: size.fontSize,
-      fontWeight: theme.typography.fontWeight.medium,
-      fontFamily: theme.typography.fontFamily,
-      borderWidth: theme.border.width,
-      borderStyle: theme.border.style,
-      borderColor: colorStyles.bg,
-      borderRadius: size.borderRadius,
-      transition: `background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`,
-      backgroundColor: colorStyles.bg,
-      color: colorStyles.text,
-      width: isIconOnly ? size.height : undefined,
-    };
-
+    // Prepare props for styled component
+    let bgColor = colorStyles.bg;
+    let borderColor = colorStyles.bg;
+    let textColor = colorStyles.text;
+    
     // Disabled styling override
     if (disabled || loading) {
-      buttonStyle.backgroundColor = theme.colors.background.disabled;
-      buttonStyle.borderColor = theme.colors.border.secondary;
-      buttonStyle.color = theme.colors.text.disabled;
+      bgColor = theme.colors.background.disabled;
+      borderColor = theme.colors.border.secondary;
+      textColor = theme.colors.text.disabled;
     }
 
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
@@ -183,8 +199,23 @@ export class Button extends Component {
 
     return html`
       <${StyledButton} 
-        disabled=${disabled || loading} 
-        style=${buttonStyle}
+        disabled=${disabled || loading}
+        gap=${size.gap}
+        height=${size.height}
+        minWidth=${size.minWidth}
+        padding=${size.padding}
+        width=${isIconOnly ? size.height : undefined}
+        fontSize=${size.fontSize}
+        fontWeight=${theme.typography.fontWeight.medium}
+        fontFamily=${theme.typography.fontFamily}
+        textColor=${textColor}
+        borderWidth=${theme.border.width}
+        borderStyle=${theme.border.style}
+        borderColor=${borderColor}
+        borderRadius=${size.borderRadius}
+        bgColor=${bgColor}
+        hoverBg=${colorStyles.hover}
+        transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
         ...${rest}
       >
         ${iconElement}

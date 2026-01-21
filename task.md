@@ -278,6 +278,32 @@ export function Button({ variant, color, loading, disabled, icon, children, ...p
 5. Update test page with dialog trigger buttons
 6. Add transition notes to "Component Transition Guide" section above
 
+[x] Consolidate Button component styling into styled component
+1. Identified that Button had a mix of inline styles and styled component properties
+2. Moved all dynamic styles (layout, typography, colors, borders) from inline `style` object to styled component props
+3. Updated `StyledButton` to accept props for: gap, height, minWidth, padding, width, fontSize, fontWeight, fontFamily, textColor, borderWidth, borderStyle, borderColor, borderRadius, bgColor, transition
+4. Removed inline `style` attribute entirely - all styling now handled in styled component
+5. Benefits: Eliminates specificity issues, enables proper pseudo-class styling (`:hover`, `:focus`), maintains dynamic theme switching through props
+
+[] Apply styled component consolidation pattern to all refactored components
+Apply the same pattern used in Button to eliminate inline styles across all refactored components:
+1. **Input component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+2. **Select component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+3. **Textarea component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+4. **Checkbox component** - Move border, borderRadius, backgroundColor, transition from inline to CheckboxVisual styled component props
+5. **ButtonGroup component** - Audit and move any inline styles to styled component props
+6. **Pagination component** - Audit and move any inline styles to styled component props
+7. **ItemNavigator component** - Audit and move any inline styles to styled component props
+8. **ListSelect component** - Move backgroundColor, color from inline to styled component props; add hover states
+9. **ImageSelect component** - Audit and move any inline styles to styled component props; add hover states
+10. **AudioSelect component** - Audit and move any inline styles to styled component props; add hover states
+11. **AudioPlayer component** - Audit and move any inline styles to styled component props; ensure hover states work
+12. **ProgressBanner component** - Audit and move any inline styles to styled component props; ensure hover states work
+13. **Gallery component** - Audit and move any inline styles to styled component props; add hover states where appropriate
+14. **Toast component** - Verify styled component handles all states properly
+15. **Dialog component** - Audit and move any inline styles to styled component props
+Pattern: For each component, (a) identify all inline style objects, (b) convert style properties to styled component props, (c) update styled component template to use props, (d) add hover/focus pseudo-classes where needed, (e) remove inline style attribute
+
 [] Refactor Modal component to Goober (global)
 1. Update `public/js/custom-ui/modal.mjs` to use goober styling
 2. Style overlay, modal box, header, footer, and size variants
