@@ -1,27 +1,40 @@
 import { ItemNavigator } from './item-navigator.mjs';
 
 /**
- * @deprecated Use ItemNavigator instead. ImageCarousel is now a thin wrapper for backwards compatibility.
+ * @deprecated ImageCarousel and ItemNavigator are both deprecated.
  * 
- * ImageCarousel - Carousel navigation for selecting items from a list
+ * MIGRATION GUIDE:
+ * Use useItemNavigation hook with PaginationControls instead:
  * 
- * This component is deprecated. Use ItemNavigator for new code.
+ * OLD:
+ *   import { ImageCarousel } from './image-carousel.mjs';
+ *   <ImageCarousel items={images} selectedItem={current} onSelect={setImage} />
  * 
- * @param {Object} props
- * @param {Array} props.items - Array of items (objects with url property, or strings)
- * @param {*} props.selectedItem - Currently selected item from the items array
- * @param {Function} props.onSelect - Callback when an item is selected, receives (item, index)
- * @param {string} [props.emptyMessage='No items'] - Message shown when items array is empty
- * @returns {preact.VNode}
+ * NEW:
+ *   import { useItemNavigation } from './use-item-navigation.mjs';
+ *   import { PaginationControls } from './pagination.mjs';
+ *   
+ *   const nav = useItemNavigation(images, current);
+ *   useEffect(() => {
+ *     if (nav.currentItem !== current) {
+ *       setImage(nav.currentItem);
+ *     }
+ *   }, [nav.currentItem]);
+ *   
+ *   <PaginationControls
+ *     currentPage={nav.currentIndex}
+ *     totalPages={nav.totalItems}
+ *     onNext={nav.selectNext}
+ *     onPrev={nav.selectPrev}
+ *     onFirst={nav.selectFirst}
+ *     onLast={nav.selectLast}
+ *     showFirstLast={true}
+ *   />
  * 
- * @example
- * // Migration: Replace ImageCarousel with ItemNavigator
- * // Old:
- * <ImageCarousel items={images} selectedItem={current} onSelect={setImage} />
- * 
- * // New:
- * <ItemNavigator items={images} selectedItem={current} onSelect={setImage} />
+ * This provides better separation of logic (hook) and UI (component).
  */
+
+// Re-export ItemNavigator as ImageCarousel for backwards compatibility
 export { ItemNavigator as ImageCarousel };
 
 // Also export ItemNavigator for direct use

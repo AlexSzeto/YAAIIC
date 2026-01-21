@@ -5,8 +5,25 @@ import { useState, useMemo, useCallback } from 'preact/hooks';
  * Manages current page state and derives the current page's data slice.
  * 
  * @param {Array} dataList - The full array of data to paginate
- * @param {number} itemsPerPage - Number of items per page (default: 32)
+ * @param {number} [itemsPerPage=32] - Number of items per page
  * @returns {Object} Pagination state and controls
+ * @returns {number} returns.currentPage - Current page index (0-based, auto-clamped to valid range)
+ * @returns {number} returns.totalPages - Total number of pages
+ * @returns {Array} returns.currentPageData - Data slice for the current page
+ * @returns {number} returns.itemsPerPage - Items per page (echoes input parameter)
+ * @returns {number} returns.totalItems - Total number of items in dataList
+ * @returns {boolean} returns.hasMultiplePages - True if there is more than one page
+ * @returns {boolean} returns.isFirstPage - True if currently on the first page
+ * @returns {boolean} returns.isLastPage - True if currently on the last page
+ * @returns {function(number): void} returns.goToPage - Navigate to specific page (auto-clamped)
+ * @returns {function(): void} returns.goToNext - Navigate to next page
+ * @returns {function(): void} returns.goToPrev - Navigate to previous page
+ * @returns {function(): void} returns.goToFirst - Navigate to first page
+ * @returns {function(): void} returns.goToLast - Navigate to last page
+ * 
+ * @example
+ * const { currentPageData, currentPage, totalPages, goToNext, goToPrev } = usePagination(items, 10);
+ * // currentPageData contains items 0-9 for page 0, 10-19 for page 1, etc.
  */
 export function usePagination(dataList, itemsPerPage = 32) {
   const [currentPage, setCurrentPage] = useState(0);

@@ -138,59 +138,21 @@ import { ButtonGroup } from './button-group.mjs';
 // Note: Tags export still available for backward compatibility
 ```
 
-## Pagination → ItemNavigator
-**ItemNavigator now fully replaces PaginationControls** as a drop-in replacement with enhanced features.
+## Pagination System - Enhanced Navigation
 
-ItemNavigator supports two operating modes:
-1. **Page Mode**: Stateless navigation for pages (direct replacement for PaginationControls)
-2. **Item Mode**: Item-centric navigation through actual data items
+The pagination system has been enhanced with new hooks and features. `ItemNavigator` is now deprecated in favor of using hooks (`usePagination` or `useItemNavigation`) combined with the enhanced `PaginationControls` component.
 
-### Replacing PaginationControls with ItemNavigator
+### New Approach: Hooks + PaginationControls
 
-**Simple Drop-in Replacement (Page Mode)**
+**Two Navigation Patterns:**
+1. **Page-based Navigation**: Use `usePagination` hook with `PaginationControls`
+2. **Item-based Navigation**: Use `useItemNavigation` hook with `PaginationControls`
 
-```javascript
-// OLD: Using PaginationControls
-import { PaginationControls } from './pagination.mjs';
-
-<PaginationControls
-  currentPage=${pagination.currentPage}
-  totalPages=${pagination.totalPages}
-  onNext=${pagination.goToNext}
-  onPrev=${pagination.goToPrev}
-/>
-
-// NEW: Using ItemNavigator in page mode
-import { ItemNavigator } from './item-navigator.mjs';
-
-<ItemNavigator
-  currentPage=${pagination.currentPage}
-  totalPages=${pagination.totalPages}
-  onNext=${pagination.goToNext}
-  onPrev=${pagination.goToPrev}
-/>
-```
-
-**With Optional First/Last Buttons**
+### Page-Based Navigation (usePagination)
 
 ```javascript
-// If your pagination object has goToFirst/goToLast methods:
-<ItemNavigator
-  currentPage=${pagination.currentPage}
-  totalPages=${pagination.totalPages}
-  onNext=${pagination.goToNext}
-  onPrev=${pagination.goToPrev}
-  onFirst=${pagination.goToFirst}
-  onLast=${pagination.goToLast}
-  showFirstLast=${true}
-/>
-```
-
-**Complete Example: Gallery with Pagination**
-
-```javascript
-import { ItemNavigator } from './item-navigator.mjs';
 import { usePagination } from './use-pagination.mjs';
+import { PaginationControls } from './pagination.mjs';
 
 function Gallery() {
   const [data, setData] = useState([]);
@@ -202,36 +164,13 @@ function Gallery() {
         ${pagination.currentPageData.map(item => renderItem(item))}
       </div>
       
-      <${ItemNavigator}
+      <${PaginationControls}
         currentPage=${pagination.currentPage}
         totalPages=${pagination.totalPages}
         onNext=${pagination.goToNext}
         onPrev=${pagination.goToPrev}
-      />
-    </div>
-  `;
-}
-```
-
-### Alternative: Item-Centric Navigation (Item Mode)
-
-If your use case allows, consider using ItemNavigator in its native item mode for a more direct navigation experience:
-
-```javascript
-import { ItemNavigator } from './item-navigator.mjs';
-
-function ImageViewer() {
-  const [images, setImages] = useState([]);
-  const [selectedImage, setSelectedImage] = useState(null);
-  
-  return html`
-    <div>
-      ${selectedImage && html`<img src=${selectedImage.url} />`}
-      
-      <${ItemNavigator}
-        items=${images}
-        selectedItem=${selectedImage}
-        onSelect=${setSelectedImage}
+        onFirst=${pagination.goToFirst}
+        onLast=${pagination.goToLast}
         showFirstLast=${true}
       />
     </div>
@@ -239,21 +178,116 @@ function ImageViewer() {
 }
 ```
 
-### PaginationControls vs ItemNavigator Feature Comparison
+### Item-Based Navigation (useItemNavigation)
 
-| Feature | PaginationControls | ItemNavigator (Page Mode) | ItemNavigator (Item Mode) |
-|---------|-------------------|---------------------------|---------------------------|
-| Page navigation | ✅ | ✅ | ❌ |
-| Item navigation | ❌ | ❌ | ✅ |
-| Stateless | ✅ | ✅ | ✅ |
-| First/Last buttons | ❌ | ✅ (optional) | ✅ (optional) |
-| Custom item comparison | ❌ | ❌ | ✅ |
-| Theme-responsive | ✅ | ✅ | ✅ |
+```javascript
+import { useItemNavigation } from './use-item-navigation.mjs';
+import { PaginationControls } from './pagination.mjs';
+
+function ImageViewer() {
+  const [images, setImages] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  
+  const nav = useItemNavigation(images, selectedImage);
+  
+  // Sync current item with state
+  useEffect(() => {
+    if (nav.currentItem !== selectedImage) {
+      setSelectedImage(nav.currentItem);
+    }
+  }, [nav.currentItem]);
+  
+  return html`
+    <div>
+      ${selectedImage && html`<img src=${selectedImage.url} />`}
+      
+      <${PaginationControls}
+        currentPage=${nav.currentIndex}
+        totalPages=${nav.totalItems}
+        onNext=${nav.selectNext}
+        onPrev=${nav.selectPrev}
+        onFirst=${nav.selectFirst}
+        onLast=${nav.selectLast}
+        showFirstLast=${true}
+        emptyMessage="No images available"
+      />
+    </div>
+  `;
+}
+```
+
+### Migrating from ItemNavigator
+
+**OLD (ItemNavigator - Item Mode):**
+```javascript
+import { ItemNavigator } from './item-navigator.mjs';
+
+<ItemNavigator 
+  items={images} 
+  selectedItem={current}
+  onSelect={(item) => setCurrent(item)}
+  showFirstLast={true}
+/>
+```
+
+**NEW (useItemNavigation + PaginationControls):**
+```javascript
+import { useItemNavigation } from './use-item-navigation.mjs';
+import { PaginationControls } from './pagination.mjs';
+
+const nav = useItemNavigation(images, current);
+
+useEffect(() => {
+  if (nav.currentItem !== current) {
+    setCurrent(nav.currentItem);
+  }
+}, [nav.currentItem]);
+
+<PaginationControls
+  currentPage=${nav.currentIndex}
+  totalPages=${nav.totalItems}
+  onNext=${nav.selectNext}
+  onPrev=${nav.selectPrev}
+  onFirst=${nav.selectFirst}
+  onLast=${nav.selectLast}
+  showFirstLast=${true}
+/>
+```
+
+**OLD (ItemNavigator - Page Mode):**
+```javascript
+<ItemNavigator
+  currentPage={page}
+  totalPages={total}
+  onNext={handleNext}
+  onPrev={handlePrev}
+  showFirstLast={true}
+/>
+```
+
+**NEW (Direct PaginationControls):**
+```javascript
+<PaginationControls
+  currentPage={page}
+  totalPages={total}
+  onNext={handleNext}
+  onPrev={handlePrev}
+  onFirst={handleFirst}
+  onLast={handleLast}
+  showFirstLast={true}
+/>
+```
+
+### PaginationControls New Features
+
+| Feature | Description |
+|---------|-------------|
+| `showFirstLast` | Show first/last jump buttons (optional) |
+| `onFirst` / `onLast` | Callbacks for first/last navigation |
+| `emptyMessage` | Custom message when totalPages/totalItems is 0 |
 
 > [!NOTE]
-> **Keyboard navigation removed**: The `enableKeyboard` prop has been removed from ItemNavigator due to implementation complexity with styled components. If keyboard navigation is required, implement it at the parent component level.
-
-**Recommendation:** Use ItemNavigator in page mode as a direct replacement for PaginationControls. It provides the same API with additional optional features.
+> **ItemNavigator deprecated**: The unified `ItemNavigator` component is now deprecated. Use `usePagination` or `useItemNavigation` hooks with `PaginationControls` for better separation of logic and UI.
 
 ## ImageCarousel → ItemNavigator
 **Component deprecated.** `ImageCarousel` is now a thin wrapper around `ItemNavigator`.
@@ -272,32 +306,12 @@ import { ItemNavigator } from './item-navigator.mjs';
 <ItemNavigator items={images} selectedItem={current} onSelect={setImage} />
 ```
 
-## ItemNavigator (NEW)
-**Unified navigation component** combining `ImageCarousel` and item-centric pagination.
+## ItemNavigator (DEPRECATED)
 
-```javascript
-// Import
-import { ItemNavigator } from './item-navigator.mjs';
+> [!WARNING]
+> **ItemNavigator is deprecated**. Use `usePagination` or `useItemNavigation` hooks with `PaginationControls` instead. See the "Pagination System - Enhanced Navigation" section above for migration guide.
 
-// Basic usage (same API as ImageCarousel)
-<ItemNavigator 
-  items={images}
-  selectedItem={currentImage}
-  onSelect={(item) => setCurrentImage(item)}
-/>
-
-// With first/last buttons
-<ItemNavigator 
-  items={images}
-  selectedItem={currentImage}
-  onSelect={(item, index) => setCurrentImage(item)}
-  showFirstLast={true}      // Add first/last buttons
-  compareItems={(a, b) => a.id === b.id}  // Custom equality
-/>
-```
-
-> [!NOTE]
-> **Keyboard navigation removed**: The `enableKeyboard` prop has been removed. If keyboard navigation is needed, implement it at the parent component level.
+The ItemNavigator component has been deprecated in favor of a cleaner separation between logic (hooks) and UI (PaginationControls). This provides better composability and easier testing.
 
 ## ListSelect
 **Old API → New API:**

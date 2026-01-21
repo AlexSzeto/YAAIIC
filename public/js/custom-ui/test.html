@@ -36,8 +36,9 @@
     import { Textarea } from './textarea.mjs';
     import { Checkbox } from './checkbox.mjs';
     import { ButtonGroup } from './button-group.mjs';
-    import { PaginationControls } from './pagination.mjs';
-    import { ItemNavigator } from './item-navigator.mjs';
+    import { NavigatorControl } from './navigator.mjs';
+    import { usePagination } from './use-pagination.mjs';
+    import { useItemNavigation } from './use-item-navigation.mjs';
     import { showListSelect } from './list-select.mjs';
     import { ImageSelect } from './image-select.mjs';
     import { AudioSelect } from './audio-select.mjs';
@@ -163,6 +164,64 @@
     }
     
     // =========================================================================
+    // Navigation Demo Components
+    // =========================================================================
+    
+    /**
+     * PageBasedNavigationDemo - Demonstrates usePagination hook with PaginationControls
+     */
+    function PageBasedNavigationDemo() {
+      const mockData = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
+      const pagination = usePagination(mockData, 10);
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p style="opacity: 0.7; font-size: 14px;">
+            Showing items ${pagination.currentPage * pagination.itemsPerPage + 1}-${Math.min((pagination.currentPage + 1) * pagination.itemsPerPage, pagination.totalItems)} of ${pagination.totalItems}
+          </p>
+          <${NavigatorControl}
+            currentPage=${pagination.currentPage}
+            totalPages=${pagination.totalPages}
+            onPrev=${pagination.goToPrev}
+            onNext=${pagination.goToNext}
+            onFirst=${pagination.goToFirst}
+            onLast=${pagination.goToLast}
+            showFirstLast=${true}
+          />
+        </div>
+      `;
+    }
+    
+    /**
+     * ItemBasedNavigationDemo - Demonstrates useItemNavigation hook with PaginationControls
+     */
+    function ItemBasedNavigationDemo({ items, selected, onSelect }) {
+      const nav = useItemNavigation(items, selected || items[0]);
+      
+      // Sync nav.currentItem with parent's selected state
+      if (nav.currentItem && nav.currentItem !== selected) {
+        onSelect(nav.currentItem);
+      }
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p style="opacity: 0.7; font-size: 14px;">
+            Current: ${nav.currentItem?.name || 'None'} (${nav.currentIndex + 1} of ${nav.totalItems})
+          </p>
+          <${NavigatorControl}
+            currentPage=${nav.currentIndex}
+            totalPages=${nav.totalItems}
+            onPrev=${nav.selectPrev}
+            onNext=${nav.selectNext}
+            onFirst=${nav.selectFirst}
+            onLast=${nav.selectLast}
+            showFirstLast=${false}
+          />
+        </div>
+      `;
+    }
+    
+    // =========================================================================
     // Dialog Test Component
     // =========================================================================
     
@@ -280,15 +339,15 @@
           selectedTags: ['tag2'],
           // Pagination state
           paginationPage: 0,
-          // ItemNavigator state
-          navigatorItems: [
-            { id: '1', name: 'Image 1' },
-            { id: '2', name: 'Image 2' },
-            { id: '3', name: 'Image 3' },
-            { id: '4', name: 'Image 4' },
-            { id: '5', name: 'Image 5' }
+          // Item navigation state (for useItemNavigation demo)
+          itemNavItems: [
+            { id: '1', name: 'Image 1', url: '/img1.jpg' },
+            { id: '2', name: 'Image 2', url: '/img2.jpg' },
+            { id: '3', name: 'Image 3', url: '/img3.jpg' },
+            { id: '4', name: 'Image 4', url: '/img4.jpg' },
+            { id: '5', name: 'Image 5', url: '/img5.jpg' }
           ],
-          navigatorSelected: null,
+          itemNavSelected: null,
           // ImageSelect states
           imageSelectValue1: null,
           imageSelectValue2: 'https://picsum.photos/200',
@@ -412,8 +471,8 @@
         this.setState(prev => ({ paginationPage: Math.min(4, prev.paginationPage + 1) }));
       };
       
-      handleNavigatorSelect = (item) => {
-        this.setState({ navigatorSelected: item });
+      handleItemNavSelect = (item) => {
+        this.setState({ itemNavSelected: item });
       };
       
       handleImageChange1 = (value) => {
@@ -723,44 +782,17 @@
               </${Section}>
               
               <${Section}>
-                <${SectionTitle}>Pagination Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Interactive pagination controls</p>
-                <${PaginationControls}
-                  currentPage=${this.state.paginationPage}
-                  totalPages=${5}
-                  onPrev=${this.handlePaginationPrev}
-                  onNext=${this.handlePaginationNext}
-                />
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>ItemNavigator Component (NEW)</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Unified navigation component replacing ImageCarousel and item-centric pagination</p>
+                <${SectionTitle}>Navigation Hooks Demo</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Demonstrating usePagination (page-based) and useItemNavigation (item-based) hooks with PaginationControls</p>
                 
-                <h4 style="margin: 16px 0 8px;">Basic Navigation</h4>
-                <${ItemNavigator}
-                  items=${this.state.navigatorItems}
-                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
-                  onSelect=${this.handleNavigatorSelect}
-                />
-                <p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">
-                  Selected: ${(this.state.navigatorSelected || this.state.navigatorItems[0])?.name}
-                </p>
+                <h4 style="margin: 16px 0 8px;">usePagination + PaginationControls (Page-based)</h4>
+                <${PageBasedNavigationDemo} />
                 
-                <h4 style="margin: 16px 0 8px;">With First/Last Buttons</h4>
-                <${ItemNavigator}
-                  items=${this.state.navigatorItems}
-                  selectedItem=${this.state.navigatorSelected || this.state.navigatorItems[0]}
-                  onSelect=${this.handleNavigatorSelect}
-                  showFirstLast=${true}
-                />
-                
-                <h4 style="margin: 16px 0 8px;">Empty State</h4>
-                <${ItemNavigator}
-                  items=${[]}
-                  selectedItem=${null}
-                  onSelect=${() => {}}
-                  emptyMessage="No images available"
+                <h4 style="margin: 16px 0 8px;">useItemNavigation + PaginationControls (Item-based)</h4>
+                <${ItemBasedNavigationDemo} 
+                  items=${this.state.itemNavItems}
+                  selected=${this.state.itemNavSelected}
+                  onSelect=${this.handleItemNavSelect}
                 />
               </${Section}>
               

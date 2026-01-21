@@ -3,6 +3,18 @@ import { html } from 'htm/preact'
 import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
+/**
+ * MIGRATION NOTE:
+ * This file was renamed from pagination.mjs to navigator.mjs
+ * Component renames:
+ * - PaginationControls → NavigatorControl
+ * - PaginationComponent → NavigatorComponent  
+ * - createPagination → createNavigator
+ * 
+ * For backward compatibility during migration, consider importing:
+ * import { NavigatorControl as PaginationControls } from './navigator.mjs';
+ */
+
 
 // =========================================================================
 // Styled Components
@@ -29,29 +41,53 @@ const PageIndex = styled('div')`
   color: ${props => props.color};
 `;
 
+const EmptyMessage = styled('div')`
+  text-align: center;
+  padding: 20px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-style: italic;
+`;
+
 /**
  * Stateless Pagination Controls Component (for use with usePagination hook)
  * 
  * Pure UI component that renders prev/next navigation buttons with themed styling.
+ * Optionally displays first/last jump buttons and handles empty state.
  * 
  * @param {Object} props
  * @param {number} props.currentPage - Current zero-based page index
  * @param {number} props.totalPages - Total number of pages
  * @param {Function} [props.onNext] - Handler for next page
  * @param {Function} [props.onPrev] - Handler for previous page
- * @param {Function} [props.onFirst] - Handler for first page
- * @param {Function} [props.onLast] - Handler for last page
+ * @param {Function} [props.onFirst] - Handler for first page (required if showFirstLast is true)
+ * @param {Function} [props.onLast] - Handler for last page (required if showFirstLast is true)
+ * @param {boolean} [props.showFirstLast=false] - Show first/last jump buttons
+ * @param {string} [props.emptyMessage='No items'] - Message to display when totalPages is 0
  * @returns {preact.VNode}
  * 
  * @example
- * <PaginationControls 
+ * // Basic usage
+ * <NavigatorControl 
  *   currentPage={0} 
  *   totalPages={5} 
  *   onNext={handleNext} 
  *   onPrev={handlePrev} 
  * />
+ * 
+ * @example
+ * // With first/last buttons
+ * <NavigatorControl 
+ *   currentPage={2} 
+ *   totalPages={10} 
+ *   onNext={handleNext} 
+ *   onPrev={handlePrev}
+ *   onFirst={handleFirst}
+ *   onLast={handleLast}
+ *   showFirstLast={true}
+ * />
  */
-export class PaginationControls extends Component {
+export class NavigatorControl extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -77,12 +113,21 @@ export class PaginationControls extends Component {
       totalPages,
       onNext,
       onPrev,
+      onFirst,
+      onLast,
+      showFirstLast = false,
+      emptyMessage = 'No items',
     } = this.props;
     const { theme } = this.state;
 
-    // Hide if no pages
+    // Show empty message if no pages
     if (totalPages === 0) {
-      return null;
+      return html`
+        <${EmptyMessage} 
+          color=${theme.colors.text.secondary}
+          fontSize=${theme.typography.fontSize.medium}
+        >${emptyMessage}</>
+      `;
     }
 
     // Compute navigation state from currentPage and totalPages
@@ -91,16 +136,8 @@ export class PaginationControls extends Component {
     const hasMultiplePages = totalPages > 1;
     const canGoPrev = hasMultiplePages && !isFirstPage;
     const canGoNext = hasMultiplePages && !isLastPage;
-
-    const navStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const pageIndexStyle = {
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors.text.primary,
-    };
+    const canGoFirst = hasMultiplePages && !isFirstPage;
+    const canGoLast = hasMultiplePages && !isLastPage;
 
     return html`
       <${Container}
@@ -108,6 +145,18 @@ export class PaginationControls extends Component {
         aria-label="Pagination navigation"
       >
         <${Nav} gap=${theme.spacing.small.gap}>
+          ${showFirstLast ? html`
+            <${Button}
+              variant="medium-icon"
+              color="secondary"
+              icon="chevrons-left"
+              title="First page"
+              aria-label="Go to first page"
+              disabled=${!canGoFirst}
+              onClick=${onFirst}
+            />
+          ` : ''}
+          
           <${Button}
             variant="medium-icon"
             color="secondary"
@@ -134,14 +183,27 @@ export class PaginationControls extends Component {
             disabled=${!canGoNext}
             onClick=${onNext}
           />
+          
+          ${showFirstLast ? html`
+            <${Button}
+              variant="medium-icon"
+              color="secondary"
+              icon="chevrons-right"
+              title="Last page"
+              aria-label="Go to last page"
+              disabled=${!canGoLast}
+              onClick=${onLast}
+            />
+          ` : ''}
         <//>
       <//>
     `;
   }
 }
 
+
 /**
- * Carousel-style Pagination Component using Preact
+ * Navigator Component using Preact
  * 
  * Provides carousel-style pagination with prev/next buttons and current/total index display.
  * Manages its own data list and page state.
@@ -153,13 +215,13 @@ export class PaginationControls extends Component {
  * @returns {preact.VNode}
  * 
  * @example
- * <PaginationComponent 
+ * <NavigatorComponent 
  *   dataList={items}
  *   itemsPerPage={10}
  *   updateDisplay={(pageData) => renderItems(pageData)}
  * />
  */
-export class PaginationComponent extends Component {
+export class NavigatorComponent extends Component {
   constructor(props) {
     super(props);
     
@@ -187,7 +249,7 @@ export class PaginationComponent extends Component {
     
     this.updateDisplay = props.updateDisplay;
     
-    console.log('PaginationComponent initialized:', {
+    console.log('NavigatorComponent initialized:', {
       dataLength: this.state.dataList.length,
       itemsPerPage: this.state.itemsPerPage,
       totalPages: this.state.totalPages
@@ -234,7 +296,7 @@ export class PaginationComponent extends Component {
         totalPages,
         currentPage
       });
-      console.log('PaginationComponent props.dataList changed, synced to state:', {
+      console.log('NavigatorComponent props.dataList changed, synced to state:', {
         dataLength: newDataList.length,
         totalPages,
         currentPage
@@ -292,7 +354,7 @@ export class PaginationComponent extends Component {
       totalPages,
       currentPage
     }, () => {
-      console.log('PaginationComponent data updated:', {
+      console.log('NavigatorComponent data updated:', {
         dataLength: newDataList.length,
         totalPages,
         currentPage
@@ -488,16 +550,16 @@ export class PaginationComponent extends Component {
 }
 
 /**
- * Factory function to create a pagination component
+ * Factory function to create a navigator component
  * 
  * @param {HTMLElement} container - Container element to append pagination to
  * @param {Array} [dataList=[]] - Array of data to paginate
  * @param {number} [itemsPerPage=1] - Number of items per page
  * @param {Function} [updateDisplay=null] - Callback function for data updates
- * @returns {Object} Object with methods to control the pagination component
+ * @returns {Object} Object with methods to control the navigator component
  * 
  * @example
- * const pagination = createPagination(
+ * const pagination = createNavigator(
  *   document.getElementById('pagination'),
  *   items,
  *   10,
@@ -505,20 +567,20 @@ export class PaginationComponent extends Component {
  * );
  * pagination.goToPage(2);
  */
-export function createPagination(container, dataList = [], itemsPerPage = 1, updateDisplay = null) {
+export function createNavigator(container, dataList = [], itemsPerPage = 1, updateDisplay = null) {
   if (!container || !(container instanceof HTMLElement)) {
     throw new Error('container must be a valid HTML element');
   }
   
-  let paginationRef = null;
+  let navigatorRef = null;
   
   // Render the Preact component
   render(
-    html`<${PaginationComponent} 
+    html`<${NavigatorComponent} 
       dataList=${dataList}
       itemsPerPage=${itemsPerPage}
       updateDisplay=${updateDisplay}
-      ref=${(ref) => { paginationRef = ref; }}
+      ref=${(ref) => { navigatorRef = ref; }}
     />`, 
     container
   );
@@ -526,58 +588,58 @@ export function createPagination(container, dataList = [], itemsPerPage = 1, upd
   // Return an object that provides access to the component methods
   return {
     setDataList(newDataList, callback) {
-      if (paginationRef) {
-        paginationRef.setDataList(newDataList, callback);
+      if (navigatorRef) {
+        navigatorRef.setDataList(newDataList, callback);
       }
     },
     setItemsPerPage(newItemsPerPage) {
-      if (paginationRef) {
-        paginationRef.setItemsPerPage(newItemsPerPage);
+      if (navigatorRef) {
+        navigatorRef.setItemsPerPage(newItemsPerPage);
       }
     },
     setUpdateDisplay(callback) {
-      if (paginationRef) {
-        paginationRef.setUpdateDisplay(callback);
+      if (navigatorRef) {
+        navigatorRef.setUpdateDisplay(callback);
       }
     },
     goToPage(pageIndex) {
-      if (paginationRef) {
-        paginationRef.goToPage(pageIndex);
+      if (navigatorRef) {
+        navigatorRef.goToPage(pageIndex);
       }
     },
     goToPreviousPage() {
-      if (paginationRef) {
-        paginationRef.goToPreviousPage();
+      if (navigatorRef) {
+        navigatorRef.goToPreviousPage();
       }
     },
     goToNextPage() {
-      if (paginationRef) {
-        paginationRef.goToNextPage();
+      if (navigatorRef) {
+        navigatorRef.goToNextPage();
       }
     },
     goToFirstPage() {
-      if (paginationRef) {
-        paginationRef.goToFirstPage();
+      if (navigatorRef) {
+        navigatorRef.goToFirstPage();
       }
     },
     goToLastPage() {
-      if (paginationRef) {
-        paginationRef.goToLastPage();
+      if (navigatorRef) {
+        navigatorRef.goToLastPage();
       }
     },
     getCurrentPageData() {
-      return paginationRef ? paginationRef.getCurrentPageData() : [];
+      return navigatorRef ? navigatorRef.getCurrentPageData() : [];
     },
     getState() {
-      return paginationRef ? paginationRef.getState() : null;
+      return navigatorRef ? navigatorRef.getState() : null;
     },
     destroy() {
       // Clean up by removing from DOM
       if (container && container.firstChild) {
         render(null, container);
       }
-      paginationRef = null;
-      console.log('PaginationComponent destroyed');
+      navigatorRef = null;
+      console.log('NavigatorComponent destroyed');
     }
   };
 }

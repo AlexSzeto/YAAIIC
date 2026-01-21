@@ -318,7 +318,7 @@ Pattern: For each component, (a) identify all inline style objects, (b) convert 
 10. Remove all border properties from BaseContainer (no borders on modal/dialog containers)
 11. Apply base container pattern to list-select component for consistency
 
-[] Refactor use-pagination hook to Goober
+[x] Refactor use-pagination hook to Goober
 1. Update `public/js/custom-ui/use-pagination.mjs` for theme integration
 2. Document all exported functions/hooks with JSDoc
 

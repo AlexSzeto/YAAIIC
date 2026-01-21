@@ -4,6 +4,42 @@ import { styled } from './goober-setup.mjs';
 import { currentTheme } from './theme.mjs';
 import { Button } from './button.mjs';
 
+/**
+ * @deprecated ItemNavigator is deprecated.
+ * 
+ * MIGRATION GUIDE:
+ * 
+ * For ITEM-BASED navigation, use:
+ *   import { useItemNavigation } from './use-item-navigation.mjs';
+ *   import { PaginationControls } from './pagination.mjs';
+ *   
+ *   const nav = useItemNavigation(items, selectedItem);
+ *   <PaginationControls
+ *     currentPage={nav.currentIndex}
+ *     totalPages={nav.totalItems}
+ *     onNext={nav.selectNext}
+ *     onPrev={nav.selectPrev}
+ *     onFirst={nav.selectFirst}
+ *     onLast={nav.selectLast}
+ *     showFirstLast={true}
+ *   />
+ * 
+ * For PAGE-BASED navigation, use:
+ *   import { PaginationControls } from './pagination.mjs';
+ *   
+ *   <PaginationControls
+ *     currentPage={page}
+ *     totalPages={total}
+ *     onNext={handleNext}
+ *     onPrev={handlePrev}
+ *     onFirst={handleFirst}
+ *     onLast={handleLast}
+ *     showFirstLast={true}
+ *   />
+ * 
+ * This component will be removed in a future release.
+ */
+
 // =========================================================================
 // Styled Components
 // =========================================================================
