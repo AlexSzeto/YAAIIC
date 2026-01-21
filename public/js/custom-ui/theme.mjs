@@ -241,7 +241,7 @@ const darkColors = {
     primary: '#121212',
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
-    card: '#444444',
+    card: '#1e1e1e',
     hover: '#404040',
     disabled: '#2a2a2a'
   },
@@ -265,11 +265,11 @@ const darkColors = {
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
-    glass: 'rgba(40, 40, 40, 0.8)'
+    glass: 'rgba(40, 40, 40, 0.6)'
   },
   shadow: {
-    color: 'rgba(255, 255, 255, 0.1)',
-    colorStrong: 'rgba(255, 255, 255, 0.1)'
+    color: 'rgba(0, 0, 0, 0.3)',
+    colorStrong: 'rgba(0, 0, 0, 0.3)'
   },
   focus: {
     shadowPrimary: 'rgba(255, 255, 255, 0.6)',

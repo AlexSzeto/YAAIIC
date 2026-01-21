@@ -24,20 +24,18 @@ const Overlay = styled('div')`
 `;
 
 const DialogBox = styled('div')`
-  padding: 20px;
+  padding: 16px;
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   max-width: 500px;
   max-height: 400px;
   overflow: auto;
   box-shadow: 0 4px 12px ${props => props.theme.colors.shadow.colorStrong};
-  border: ${props => props.theme.border.width} ${props => props.theme.border.style} ${props => props.theme.colors.border.secondary};
   min-width: ${props => props.minWidth || 'auto'};
 `;
 
 const DialogTitle = styled('h3')`
   margin-top: 0;
   margin-bottom: 15px;
-  font-size: 1.2em;
   font-family: ${props => props.theme.typography.fontFamily};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
 `;

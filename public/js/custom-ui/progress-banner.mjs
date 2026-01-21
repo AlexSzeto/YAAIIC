@@ -30,7 +30,7 @@ const BannerWrapper = styled('div')`
 `;
 
 const BannerContent = styled('div')`
-  padding: 16px;
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;

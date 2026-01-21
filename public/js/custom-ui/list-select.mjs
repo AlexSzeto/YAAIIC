@@ -30,7 +30,6 @@ const Modal = styled('div')`
   background-color: ${props => props.theme.colors.background.card};
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   box-shadow: 0 4px 12px ${props => props.theme.colors.shadow};
-  border: ${props => props.theme.border.width} ${props => props.theme.border.style} ${props => props.theme.colors.border.secondary};
   width: 500px;
   max-width: 90vw;
   max-height: 80vh;

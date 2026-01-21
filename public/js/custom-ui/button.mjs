@@ -155,7 +155,7 @@ export class Button extends Component {
         minWidth: isIconOnly ? '32px' : '120px',
         padding: isIconOnly ? '0' : theme.spacing.medium.buttonPadding,
         fontSize: theme.typography.fontSize.medium,
-        iconSize: isIconOnly ? '20px' : '18px',
+        iconSize: '24px',
         borderRadius: isIconOnly ? theme.spacing.small.borderRadius : theme.spacing.medium.borderRadius,
         gap: '8px'
       }

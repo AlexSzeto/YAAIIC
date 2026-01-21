@@ -28,7 +28,6 @@ function applyGlobalStyles(theme) {
       line-height: 1.5;
       background-color: ${theme.colors.background.primary};
       color: ${theme.colors.text.primary};
-      transition: background-color ${theme.transitions.normal}, color ${theme.transitions.normal};
     }
 
     /* Scrollbar styling */

@@ -85,7 +85,6 @@ export class Panel extends Component {
       case 'default':
         variantStyle = {
           backgroundColor: bgColor,
-          border: `${theme.border.width} ${theme.border.style} ${theme.colors.border.primary}`,
         };
         break;
       case 'elevated':
@@ -97,7 +96,7 @@ export class Panel extends Component {
         break;
       case 'outlined':
         variantStyle = {
-          backgroundColor: color ? bgColor : 'transparent',
+          backgroundColor: theme.colors.background.card,
           border: `2px ${theme.border.style} ${color && theme.colors[color] ? theme.colors[color].border : theme.colors.border.secondary}`,
         };
         break;
