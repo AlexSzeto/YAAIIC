@@ -12,6 +12,13 @@ const Container = styled('label')`
   flex-direction: row;
   align-items: center;
   user-select: none;
+  cursor: ${props => props.cursor};
+  opacity: ${props => props.opacity};
+  gap: ${props => props.gap};
+  min-width: ${props => props.minWidth};
+  justify-content: ${props => props.justifyContent};
+  width: ${props => props.width};
+  flex: ${props => props.flex};
 `;
 
 const HiddenInput = styled('input')`
@@ -33,9 +40,17 @@ const CheckboxVisual = styled('div')`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: ${props => props.border};
+  border-radius: ${props => props.borderRadius};
+  background-color: ${props => props.backgroundColor};
+  transition: ${props => props.transition};
 `;
 
-const LabelText = styled('span')``;
+const LabelText = styled('span')`
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+  color: ${props => props.color};
+`;
 
 /**
  * Checkbox - Themed checkbox with label and custom visual styling
@@ -102,41 +117,35 @@ export class Checkbox extends Component {
 
     const hasLabel = label != null && String(label).trim() !== '';
 
-    const containerStyle = {
-      cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? '0.6' : '1',
-      gap: hasLabel ? '8px' : '0',
-      minWidth: hasLabel ? '0' : 'auto',
-      justifyContent: hasLabel ? 'flex-start' : 'center',
-      width: hasLabel ? 'auto' : 'min-content',
-      flex: hasLabel ? '1' : '0 0 auto',
-    };
-
-    const checkboxVisualStyle = {
-      border: `2px ${theme.border.style} ${checked ? theme.colors.primary.background : theme.colors.border.secondary}`,
-      borderRadius: theme.spacing.small.borderRadius,
-      backgroundColor: checked ? theme.colors.primary.background : 'transparent',
-      transition: `background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`,
-    };
-
-    const labelTextStyle = {
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors.text.secondary,
-    };
-
     const checkboxVisual = html`
-      <${CheckboxVisual} style=${checkboxVisualStyle}>
+      <${CheckboxVisual} 
+        border=${`2px ${theme.border.style} ${checked ? theme.colors.primary.background : theme.colors.border.secondary}`}
+        borderRadius=${theme.spacing.small.borderRadius}
+        backgroundColor=${checked ? theme.colors.primary.background : 'transparent'}
+        transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+      >
         ${checked ? html`<box-icon name='check' size='16px' color='#ffffff'></box-icon>` : ''}
       </${CheckboxVisual}>
     `;
 
     const labelElement = hasLabel ? html`
-      <${LabelText} style=${labelTextStyle}>${label}</${LabelText}>
+      <${LabelText} 
+        fontSize=${theme.typography.fontSize.medium}
+        fontWeight=${theme.typography.fontWeight.medium}
+        color=${theme.colors.text.secondary}
+      >${label}</${LabelText}>
     ` : null;
 
     return html`
-      <${Container} style=${containerStyle}>
+      <${Container} 
+        cursor=${disabled ? 'default' : 'pointer'}
+        opacity=${disabled ? '0.6' : '1'}
+        gap=${hasLabel ? '8px' : '0'}
+        minWidth=${hasLabel ? '0' : 'auto'}
+        justifyContent=${hasLabel ? 'flex-start' : 'center'}
+        width=${hasLabel ? 'auto' : 'min-content'}
+        flex=${hasLabel ? '1' : '0 0 auto'}
+      >
         <${HiddenInput} 
           type="checkbox" 
           checked=${checked} 

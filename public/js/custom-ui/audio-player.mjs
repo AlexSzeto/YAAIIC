@@ -14,18 +14,21 @@ const Wrapper = styled('div')`
   bottom: 0;
   left: 0;
   right: 0;
+  padding: ${props => props.padding};
 `;
 
 const Controls = styled('div')`
   display: flex;
   align-items: center;
   width: 100%;
+  gap: ${props => props.gap};
 `;
 
 const TimelineWrapper = styled('div')`
   display: flex;
   align-items: center;
   flex: 1;
+  gap: ${props => props.gap};
 `;
 
 const Time = styled('span')`
@@ -33,6 +36,8 @@ const Time = styled('span')`
   min-width: 40px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   text-align: center;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
 `;
 
 const ProgressBar = styled('div')`
@@ -41,6 +46,8 @@ const ProgressBar = styled('div')`
   border-radius: 3px;
   cursor: pointer;
   overflow: hidden;
+  background-color: ${props => props.backgroundColor};
+  transition: ${props => props.transition};
   
   &:hover {
     height: 8px;
@@ -51,6 +58,8 @@ const ProgressFill = styled('div')`
   height: 100%;
   border-radius: 3px;
   transition: width 0.1s linear;
+  width: ${props => props.width};
+  background-color: ${props => props.backgroundColor};
 `;
 
 // =========================================================================
@@ -144,34 +153,28 @@ class AudioTimeline extends Component {
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-    const timelineStyle = {
-      gap: theme.spacing.small.gap
-    };
-
-    const timeStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.small
-    };
-
-    const progressBarStyle = {
-      backgroundColor: theme.colors.overlay.background,
-      transition: `height ${theme.transitions.fast}`
-    };
-
-    const progressFillStyle = {
-      width: `${progress}%`,
-      backgroundColor: theme.colors.primary.background
-    };
-
     return html`
-      <${TimelineWrapper} style=${timelineStyle}>
-        <${Time} style=${timeStyle}>${this.formatTime(currentTime)}</${Time}>
+      <${TimelineWrapper} gap=${theme.spacing.small.gap}>
+        <${Time} 
+          color=${theme.colors.text.secondary}
+          fontSize=${theme.typography.fontSize.small}
+        >${this.formatTime(currentTime)}</${Time}>
         
-        <${ProgressBar} style=${progressBarStyle} onClick=${this.handleProgressClick}>
-          <${ProgressFill} style=${progressFillStyle} />
+        <${ProgressBar} 
+          backgroundColor=${theme.colors.overlay.background}
+          transition=${`height ${theme.transitions.fast}`}
+          onClick=${this.handleProgressClick}
+        >
+          <${ProgressFill} 
+            width=${`${progress}%`}
+            backgroundColor=${theme.colors.primary.background}
+          />
         </${ProgressBar}>
         
-        <${Time} style=${timeStyle}>${this.formatTime(duration)}</${Time}>
+        <${Time} 
+          color=${theme.colors.text.secondary}
+          fontSize=${theme.typography.fontSize.small}
+        >${this.formatTime(duration)}</${Time}>
       </${TimelineWrapper}>
     `;
   }
@@ -277,17 +280,8 @@ export class AudioPlayer extends Component {
 
     if (!audioUrl) return null;
 
-    // Dynamic styles based on theme
-    const wrapperStyle = {
-      padding: theme.spacing.small.padding
-    };
-
-    const controlsStyle = {
-      gap: theme.spacing.medium.gap
-    };
-
     return html`
-      <${Wrapper} style=${wrapperStyle}>
+      <${Wrapper} padding=${theme.spacing.small.padding}>
         <audio 
           ref=${this.audioRef}
           src=${audioUrl}
@@ -295,7 +289,7 @@ export class AudioPlayer extends Component {
         />
         
         <${Panel} variant="glass">
-          <${Controls} style=${controlsStyle}>
+          <${Controls} gap=${theme.spacing.medium.gap}>
             <${Button}
               variant="medium-icon"
               color="secondary"

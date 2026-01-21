@@ -18,6 +18,9 @@ const Container = styled('div')`
 
 const Label = styled('label')`
   margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
 `;
 
 const SelectArea = styled('div')`
@@ -28,6 +31,16 @@ const SelectArea = styled('div')`
   display: flex;
   align-items: center;
   justify-content: center;
+  border: ${props => props.border};
+  border-radius: ${props => props.borderRadius};
+  background-color: ${props => props.backgroundColor};
+  cursor: ${props => props.cursor};
+  transition: ${props => props.transition};
+  opacity: ${props => props.opacity};
+  
+  &:hover {
+    border-color: ${props => props.hoverBorderColor};
+  }
 `;
 
 const Preview = styled('img')`
@@ -42,6 +55,8 @@ const OverlayWrapper = styled('div')`
   left: 0;
   right: 0;
   opacity: 0;
+  padding: ${props => props.padding};
+  transition: ${props => props.transition};
   
   ${SelectArea}:hover & {
     opacity: 1;
@@ -51,6 +66,7 @@ const OverlayWrapper = styled('div')`
 const OverlayContent = styled('div')`
   display: flex;
   justify-content: flex-end;
+  gap: ${props => props.gap};
 `;
 
 const EmptyState = styled('div')`
@@ -58,9 +74,13 @@ const EmptyState = styled('div')`
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: ${props => props.gap};
 `;
 
-const EmptyText = styled('div')``;
+const EmptyText = styled('div')`
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+`;
 
 /**
  * ImageSelect Component
@@ -214,44 +234,15 @@ export class ImageSelect extends Component {
     const { label, disabled = false } = this.props;
     const { theme, previewUrl } = this.state;
 
-    const labelStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-    };
-
-    const selectAreaStyle = {
-      border: previewUrl 
-        ? `2px solid ${theme.colors.border.primary}` 
-        : `2px dashed ${theme.colors.border.secondary}`,
-      borderRadius: theme.spacing.medium.borderRadius,
-      backgroundColor: theme.colors.background.tertiary,
-      cursor: disabled ? 'default' : 'pointer',
-      transition: `border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`,
-      opacity: disabled ? '0.4' : '1',
-    };
-
-    const overlayWrapperStyle = {
-      padding: theme.spacing.small.padding,
-      transition: `opacity ${theme.transitions.fast}`,
-    };
-
-    const overlayContentStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const emptyStateStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const emptyTextStyle = {
-      color: theme.colors.text.muted,
-      fontSize: theme.typography.fontSize.small,
-    };
-
     return html`
       <${Container}>
-        ${label ? html`<${Label} style=${labelStyle}>${label}</${Label}>` : ''}
+        ${label ? html`
+          <${Label} 
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+          >${label}</${Label}>
+        ` : ''}
         <input
           type="file"
           ref=${(el) => { this.fileInputRef = el; }}
@@ -261,16 +252,30 @@ export class ImageSelect extends Component {
           disabled=${disabled}
         />
         
-        <${SelectArea} style=${selectAreaStyle} onClick=${this.handleBoxClick}>
+        <${SelectArea} 
+          border=${previewUrl 
+            ? `2px solid ${theme.colors.border.primary}` 
+            : `2px dashed ${theme.colors.border.secondary}`}
+          borderRadius=${theme.spacing.medium.borderRadius}
+          backgroundColor=${theme.colors.background.tertiary}
+          cursor=${disabled ? 'default' : 'pointer'}
+          transition=${`border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`}
+          opacity=${disabled ? '0.4' : '1'}
+          hoverBorderColor=${theme.colors.primary.background}
+          onClick=${this.handleBoxClick}
+        >
           ${previewUrl ? html`
             <!-- Image Preview -->
             <${Preview} src=${previewUrl} alt="Selected image" />
             
             <!-- Overlay Buttons (hidden when disabled) -->
             ${!disabled ? html`
-              <${OverlayWrapper} style=${overlayWrapperStyle}>
+              <${OverlayWrapper} 
+                padding=${theme.spacing.small.padding}
+                transition=${`opacity ${theme.transitions.fast}`}
+              >
                 <${Panel} variant="glass">
-                  <${OverlayContent} style=${overlayContentStyle}>
+                  <${OverlayContent} gap=${theme.spacing.small.gap}>
                     <${Button}
                       variant="small-icon"
                       color="secondary"
@@ -291,9 +296,12 @@ export class ImageSelect extends Component {
             ` : ''}
           ` : html`
             <!-- Empty State -->
-            <${EmptyState} style=${emptyStateStyle}>
+            <${EmptyState} gap=${theme.spacing.small.gap}>
               <box-icon name='image-add' color=${theme.colors.text.muted} size='48px'></box-icon>
-              <${EmptyText} style=${emptyTextStyle}>Select Image</${EmptyText}>
+              <${EmptyText} 
+                color=${theme.colors.text.muted}
+                fontSize=${theme.typography.fontSize.small}
+              >Select Image</${EmptyText}>
             </${EmptyState}>
           `}
         </${SelectArea}>

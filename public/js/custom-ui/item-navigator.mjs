@@ -17,16 +17,23 @@ const Container = styled('div')`
 const Nav = styled('div')`
   display: flex;
   align-items: center;
+  gap: ${props => props.gap};
 `;
 
 const PageIndex = styled('div')`
   min-width: 60px;
   text-align: center;
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+  color: ${props => props.color};
 `;
 
 const EmptyMessage = styled('div')`
   text-align: center;
   padding: 20px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-style: italic;
 `;
 
 /**
@@ -204,20 +211,6 @@ export class ItemNavigator extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const navStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const pageIndexStyle = {
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors.text.primary,
-    };
-
-    const emptyMessageStyle = {
-      color: theme.colors.text.secondary,
-    };
-
     // Determine mode and get navigation state
     let currentIndex, totalItems, isFirstItem, isLastItem;
     
@@ -230,14 +223,24 @@ export class ItemNavigator extends Component {
       isLastItem = currentPage >= totalPages - 1;
       
       if (totalPages === 0) {
-        return html`<${EmptyMessage} style=${emptyMessageStyle}>${emptyMessage}<//>`;
+        return html`
+          <${EmptyMessage} 
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+          >${emptyMessage}<//>
+        `;
       }
     } else {
       // Item mode
       const { items = [] } = this.props;
       
       if (items.length === 0) {
-        return html`<${EmptyMessage} style=${emptyMessageStyle}>${emptyMessage}<//>`;
+        return html`
+          <${EmptyMessage} 
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+          >${emptyMessage}<//>
+        `;
       }
       
       currentIndex = this.getCurrentIndex();
@@ -251,7 +254,7 @@ export class ItemNavigator extends Component {
         role="navigation"
         aria-label=${this.isPageMode() ? "Page navigation" : "Item navigation"}
       >
-        <${Nav} style=${navStyle}>
+        <${Nav} gap=${theme.spacing.small.gap}>
           ${showFirstLast ? html`
             <${Button} 
               variant="medium-icon" 
@@ -274,7 +277,12 @@ export class ItemNavigator extends Component {
             aria-label=${this.isPageMode() ? "Go to previous page" : "Go to previous item"}
           />
           
-          <${PageIndex} style=${pageIndexStyle} aria-live="polite">
+          <${PageIndex} 
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+            color=${theme.colors.text.primary}
+            aria-live="polite"
+          >
             <span>${currentIndex + 1}</span> / <span>${totalItems}</span>
           <//>
           

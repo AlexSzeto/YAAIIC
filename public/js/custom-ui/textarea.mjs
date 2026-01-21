@@ -11,10 +11,15 @@ const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
   min-width: 200px;
+  width: ${props => props.width};
+  flex: ${props => props.flex};
 `;
 
 const Label = styled('label')`
   margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
 `;
 
 const StyledTextarea = styled('textarea')`
@@ -22,9 +27,16 @@ const StyledTextarea = styled('textarea')`
   border-radius: 6px;
   resize: vertical;
   min-height: 80px;
+  border: ${props => props.border};
+  background-color: ${props => props.backgroundColor};
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-family: ${props => props.fontFamily};
+  transition: ${props => props.transition};
   
   &:focus {
     outline: none;
+    box-shadow: 0 0 0 2px ${props => props.focusColor};
   }
   
   &:disabled {
@@ -35,6 +47,8 @@ const StyledTextarea = styled('textarea')`
 
 const ErrorMessage = styled('span')`
   margin-top: 4px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
 `;
 
 /**
@@ -103,36 +117,38 @@ export class Textarea extends Component {
 
     const inputId = id || rest.name;
 
-    const formGroupStyle = {
-      width: fullWidth ? '100%' : '200px',
-      flex: fullWidth ? '1 0 0' : undefined,
-    };
-
-    const labelStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-    };
-
-    const textareaStyle = {
-      border: `2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`,
-      backgroundColor: theme.colors.background.tertiary,
-      color: theme.colors.text.primary,
-      fontSize: theme.typography.fontSize.medium,
-      fontFamily: theme.typography.fontFamily,
-      transition: `border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`,
-    };
-
-    const errorStyle = {
-      color: theme.colors.danger.background,
-      fontSize: theme.typography.fontSize.small,
-    };
-
     return html`
-      <${FormGroup} style=${formGroupStyle}>
-        ${label ? html`<${Label} style=${labelStyle} for=${inputId}>${label}</${Label}>` : ''}
-        <${StyledTextarea} id=${inputId} disabled=${disabled} rows=${rows} style=${textareaStyle} ...${rest} />
-        ${error ? html`<${ErrorMessage} style=${errorStyle}>${error}</${ErrorMessage}>` : ''}
+      <${FormGroup} 
+        width=${fullWidth ? '100%' : '200px'}
+        flex=${fullWidth ? '1 0 0' : undefined}
+      >
+        ${label ? html`
+          <${Label} 
+            for=${inputId}
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+          >${label}</${Label}>
+        ` : ''}
+        <${StyledTextarea} 
+          id=${inputId} 
+          disabled=${disabled} 
+          rows=${rows}
+          border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
+          backgroundColor=${theme.colors.background.tertiary}
+          color=${theme.colors.text.primary}
+          fontSize=${theme.typography.fontSize.medium}
+          fontFamily=${theme.typography.fontFamily}
+          transition=${`border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+          focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}
+          ...${rest} 
+        />
+        ${error ? html`
+          <${ErrorMessage} 
+            color=${theme.colors.danger.background}
+            fontSize=${theme.typography.fontSize.small}
+          >${error}</${ErrorMessage}>
+        ` : ''}
       </${FormGroup}>
     `;
   }

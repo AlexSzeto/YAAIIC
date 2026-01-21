@@ -12,16 +12,21 @@ const Container = styled('div')`
   display: flex;
   flex-direction: column;
   align-items: center;
+  display: ${props => props.display};
 `;
 
 const Nav = styled('div')`
   display: flex;
   align-items: center;
+  gap: ${props => props.gap};
 `;
 
 const PageIndex = styled('div')`
   min-width: 60px;
   text-align: center;
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+  color: ${props => props.color};
 `;
 
 /**
@@ -102,7 +107,7 @@ export class PaginationControls extends Component {
         role="navigation"
         aria-label="Pagination navigation"
       >
-        <${Nav} style=${navStyle}>
+        <${Nav} gap=${theme.spacing.small.gap}>
           <${Button}
             variant="medium-icon"
             color="secondary"
@@ -112,7 +117,12 @@ export class PaginationControls extends Component {
             disabled=${!canGoPrev}
             onClick=${onPrev}
           />
-          <${PageIndex} style=${pageIndexStyle} aria-live="polite">
+          <${PageIndex} 
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+            color=${theme.colors.text.primary}
+            aria-live="polite"
+          >
             <span>${currentPage + 1}</span> / <span>${totalPages}</span>
           <//>
           <${Button}
@@ -432,20 +442,10 @@ export class PaginationComponent extends Component {
     const hasMultiplePages = totalPages > 1;
     const isFirstPage = currentPage === 0;
     const isLastPage = currentPage === totalPages - 1;
-
-    const navStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const pageIndexStyle = {
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors.text.primary,
-    };
     
     // Hide component if no items
     if (!hasItems) {
-      return html`<${Container} style=${{ display: 'none' }}><//>`;
+      return html`<${Container} display="none"><//>`;
     }
 
     return html`
@@ -454,7 +454,7 @@ export class PaginationComponent extends Component {
         aria-label="Pagination navigation"
         ref=${(ref) => { this.containerRef = ref; }}
       >
-        <${Nav} style=${navStyle}>
+        <${Nav} gap=${theme.spacing.small.gap}>
           <${Button}
             variant="medium-icon"
             color="secondary"
@@ -464,7 +464,12 @@ export class PaginationComponent extends Component {
             disabled=${!hasMultiplePages || isFirstPage}
             onClick=${this.goToPreviousPage}
           />
-          <${PageIndex} style=${pageIndexStyle} aria-live="polite">
+          <${PageIndex} 
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+            color=${theme.colors.text.primary}
+            aria-live="polite"
+          >
             <span>${currentPage + 1}</span> / <span>${totalPages}</span>
           <//>
           <${Button}

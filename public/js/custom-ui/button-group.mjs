@@ -12,6 +12,7 @@ const Container = styled('div')`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: ${props => props.gap};
 `;
 
 /**
@@ -76,12 +77,8 @@ export class ButtonGroup extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const containerStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
     return html`
-      <${Container} style=${containerStyle} ...${rest}>
+      <${Container} gap=${theme.spacing.small.gap} ...${rest}>
         ${items.map(item => {
           const isSelected = selected.includes(item.id);
           

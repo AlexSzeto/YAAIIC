@@ -18,6 +18,9 @@ const Container = styled('div')`
 
 const Label = styled('label')`
   margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
 `;
 
 const SelectArea = styled('div')`
@@ -29,6 +32,19 @@ const SelectArea = styled('div')`
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border: ${props => props.border};
+  border-radius: ${props => props.borderRadius};
+  background-color: ${props => props.backgroundColor};
+  cursor: ${props => props.cursor};
+  transition: ${props => props.transition};
+  opacity: ${props => props.opacity};
+  background-image: ${props => props.backgroundImage};
+  background-size: ${props => props.backgroundSize};
+  background-position: ${props => props.backgroundPosition};
+  
+  &:hover {
+    border-color: ${props => props.hoverBorderColor};
+  }
 `;
 
 const Header = styled('div')`
@@ -38,6 +54,9 @@ const Header = styled('div')`
   right: 0;
   display: flex;
   align-items: center;
+  gap: ${props => props.gap};
+  padding: ${props => props.padding};
+  background: ${props => props.background};
 `;
 
 const AudioName = styled('span')`
@@ -46,6 +65,8 @@ const AudioName = styled('span')`
   white-space: nowrap;
   flex: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
 `;
 
 const OverlayWrapper = styled('div')`
@@ -54,6 +75,8 @@ const OverlayWrapper = styled('div')`
   left: 0;
   right: 0;
   opacity: 0;
+  padding: ${props => props.padding};
+  transition: ${props => props.transition};
   
   ${SelectArea}:hover & {
     opacity: 1;
@@ -63,6 +86,7 @@ const OverlayWrapper = styled('div')`
 const OverlayContent = styled('div')`
   display: flex;
   justify-content: flex-end;
+  gap: ${props => props.gap};
 `;
 
 const EmptyState = styled('div')`
@@ -70,9 +94,13 @@ const EmptyState = styled('div')`
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: ${props => props.gap};
 `;
 
-const EmptyText = styled('div')``;
+const EmptyText = styled('div')`
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+`;
 
 /**
  * AudioSelect Component
@@ -209,72 +237,53 @@ export class AudioSelect extends Component {
     const { label, disabled = false } = this.props;
     const { theme, audioUrl, audioName, albumImageUrl, isPlaying } = this.state;
 
-    const labelStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.medium,
-      fontWeight: theme.typography.fontWeight.medium,
-    };
-
-    const selectAreaStyle = {
-      border: audioUrl 
-        ? `2px solid ${theme.colors.border.primary}` 
-        : `2px dashed ${theme.colors.border.secondary}`,
-      borderRadius: theme.spacing.medium.borderRadius,
-      backgroundColor: theme.colors.background.tertiary,
-      cursor: disabled ? 'default' : 'pointer',
-      transition: `border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`,
-      opacity: disabled ? '0.4' : '1',
-      backgroundImage: audioUrl && albumImageUrl ? `url('${albumImageUrl}')` : undefined,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    };
-
-    const headerStyle = {
-      gap: theme.spacing.small.gap,
-      padding: theme.spacing.small.padding,
-      background: `linear-gradient(${theme.colors.overlay.backgroundStrong}, transparent)`,
-    };
-
-    const audioNameStyle = {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.fontSize.small,
-    };
-
-    const overlayWrapperStyle = {
-      padding: theme.spacing.small.padding,
-      transition: `opacity ${theme.transitions.fast}`,
-    };
-
-    const overlayContentStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const emptyStateStyle = {
-      gap: theme.spacing.small.gap,
-    };
-
-    const emptyTextStyle = {
-      color: theme.colors.text.muted,
-      fontSize: theme.typography.fontSize.small,
-    };
-
     return html`
       <${Container}>
-        ${label ? html`<${Label} style=${labelStyle}>${label}</${Label}>` : ''}
+        ${label ? html`
+          <${Label} 
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+          >${label}</${Label}>
+        ` : ''}
         
-        <${SelectArea} style=${selectAreaStyle} onClick=${audioUrl ? null : this.handleBrowseClick}>
+        <${SelectArea} 
+          border=${audioUrl 
+            ? `2px solid ${theme.colors.border.primary}` 
+            : `2px dashed ${theme.colors.border.secondary}`}
+          borderRadius=${theme.spacing.medium.borderRadius}
+          backgroundColor=${theme.colors.background.tertiary}
+          cursor=${disabled ? 'default' : 'pointer'}
+          transition=${`border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`}
+          opacity=${disabled ? '0.4' : '1'}
+          backgroundImage=${audioUrl && albumImageUrl ? `url('${albumImageUrl}')` : 'none'}
+          backgroundSize="cover"
+          backgroundPosition="center"
+          hoverBorderColor=${theme.colors.primary.background}
+          onClick=${audioUrl ? null : this.handleBrowseClick}
+        >
           ${audioUrl ? html`
             <!-- Audio Selected State with Album Background -->
-            <${Header} style=${headerStyle}>
+            <${Header} 
+              gap=${theme.spacing.small.gap}
+              padding=${theme.spacing.small.padding}
+              background=${`linear-gradient(${theme.colors.overlay.backgroundStrong}, transparent)`}
+            >
               <box-icon name='music' color='white' size='20px'></box-icon>
-              <${AudioName} style=${audioNameStyle}>${audioName}</${AudioName}>
+              <${AudioName} 
+                color=${theme.colors.text.secondary}
+                fontSize=${theme.typography.fontSize.small}
+              >${audioName}</${AudioName}>
             </${Header}>
             
             <!-- Control Buttons at Bottom -->
             ${!disabled ? html`
-              <${OverlayWrapper} style=${overlayWrapperStyle}>
+              <${OverlayWrapper} 
+                padding=${theme.spacing.small.padding}
+                transition=${`opacity ${theme.transitions.fast}`}
+              >
                 <${Panel} variant="glass">
-                  <${OverlayContent} style=${overlayContentStyle}>
+                  <${OverlayContent} gap=${theme.spacing.small.gap}>
                     <${Button}
                       variant="small-icon"
                       color="secondary"
@@ -302,9 +311,12 @@ export class AudioSelect extends Component {
             ` : ''}
           ` : html`
             <!-- Empty State -->
-            <${EmptyState} style=${emptyStateStyle}>
+            <${EmptyState} gap=${theme.spacing.small.gap}>
               <box-icon name='music' color=${theme.colors.text.muted} size='48px'></box-icon>
-              <${EmptyText} style=${emptyTextStyle}>Select Audio</${EmptyText}>
+              <${EmptyText} 
+                color=${theme.colors.text.muted}
+                fontSize=${theme.typography.fontSize.small}
+              >Select Audio</${EmptyText}>
             </${EmptyState}>
           `}
         </${SelectArea}>

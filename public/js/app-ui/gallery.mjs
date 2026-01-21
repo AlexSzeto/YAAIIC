@@ -78,6 +78,7 @@ const ItemWrapper = styled('div')`
   align-items: center;
   justify-content: center;
   position: relative;
+  opacity: ${props => props.opacity || '1'};
 
   &:hover {
     transform: scale(1.05);
@@ -223,7 +224,7 @@ const ButtonGroup = styled('div')`
 `;
 
 const ActionButton = styled('button')`
-  background-color: ${() => currentTheme.value.colors.secondary.background};
+  background-color: ${props => props.backgroundColor || currentTheme.value.colors.secondary.background};
   color: ${() => currentTheme.value.colors.text.primary};
   border: none;
   padding: ${() => currentTheme.value.spacing.medium.padding};
@@ -234,6 +235,7 @@ const ActionButton = styled('button')`
   gap: ${() => currentTheme.value.spacing.small.gap};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   transition: background-color ${() => currentTheme.value.transitions.fast};
+  margin-left: ${props => props.marginLeft || '0'};
 
   &:hover {
     background-color: ${() => currentTheme.value.colors.secondary.hover};
@@ -618,7 +620,7 @@ export function Gallery({
     // Fill empty slots
     const emptySlots = maxItems - itemsToShow.length;
     for (let i = 0; i < emptySlots; i++) {
-      items.push(html`<${ItemWrapper} key=${`empty-${i}`} style=${{ opacity: '0.3' }} />`);
+      items.push(html`<${ItemWrapper} key=${`empty-${i}`} opacity="0.3" />`);
     }
 
     return items;
@@ -644,7 +646,7 @@ export function Gallery({
                 onClick=${deleteSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
-                style=${{ backgroundColor: hasSelectedItems ? currentTheme.value.colors.danger.background : undefined }}
+                backgroundColor=${hasSelectedItems ? currentTheme.value.colors.danger.background : undefined}
               >
                 <box-icon name="trash" color="#ffffff"></box-icon>
                 Delete
@@ -653,7 +655,8 @@ export function Gallery({
                 onClick=${moveSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Move ${selectedItems.length} selected ${selectedText} to folder` : 'No items selected'}
-                style=${{ marginLeft: '10px', backgroundColor: hasSelectedItems ? currentTheme.value.colors.primary.background : undefined }}
+                marginLeft="10px"
+                backgroundColor=${hasSelectedItems ? currentTheme.value.colors.primary.background : undefined}
               >
                 <box-icon name="folder" color="#ffffff"></box-icon>
                 Move

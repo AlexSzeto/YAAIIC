@@ -96,7 +96,7 @@ export class Panel extends Component {
         break;
       case 'outlined':
         variantStyle = {
-          backgroundColor: theme.colors.background.card,
+          backgroundColor: color ? bgColor : theme.colors.background.card,
           border: `2px ${theme.border.style} ${color && theme.colors[color] ? theme.colors[color].border : theme.colors.border.secondary}`,
         };
         break;

@@ -21,6 +21,7 @@ const Overlay = styled('div')`
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: ${props => props.backgroundColor};
 `;
 
 const DialogBox = styled('div')`
@@ -31,6 +32,8 @@ const DialogBox = styled('div')`
   overflow: auto;
   box-shadow: 0 4px 12px ${props => props.theme.colors.shadow.colorStrong};
   min-width: ${props => props.minWidth || 'auto'};
+  background-color: ${props => props.backgroundColor};
+  color: ${props => props.color};
 `;
 
 const DialogTitle = styled('h3')`
@@ -38,6 +41,7 @@ const DialogTitle = styled('h3')`
   margin-bottom: 15px;
   font-family: ${props => props.theme.typography.fontFamily};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.color};
 `;
 
 const DialogContent = styled('p')`
@@ -45,6 +49,7 @@ const DialogContent = styled('p')`
   line-height: 1.5;
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
+  color: ${props => props.color};
   
   ${props => props.isEmpty ? `
     font-style: italic;
@@ -156,26 +161,24 @@ class Dialog extends Component {
         <${Overlay}
           theme=${theme}
           onClick=${this.handleOverlayClick}
-          style=${{ backgroundColor: theme.colors.overlay.background }}
+          backgroundColor=${theme.colors.overlay.background}
           class="dialog-overlay"
         >
           <${DialogBox}
             theme=${theme}
-            style=${{
-              backgroundColor: theme.colors.background.card,
-              color: theme.colors.text.primary
-            }}
+            backgroundColor=${theme.colors.background.card}
+            color=${theme.colors.text.primary}
           >
             <${DialogTitle}
               theme=${theme}
-              style=${{ color: theme.colors.text.primary }}
+              color=${theme.colors.text.primary}
             >
               ${title}
             <//>
             <${DialogContent}
               theme=${theme}
               isEmpty=${isEmpty}
-              style=${{ color: isEmpty ? theme.colors.text.muted : theme.colors.text.secondary }}
+              color=${isEmpty ? theme.colors.text.muted : theme.colors.text.secondary}
             >
               ${contentText}
             <//>
@@ -254,20 +257,18 @@ class TextPromptDialog extends Component {
         <${Overlay}
           theme=${theme}
           onClick=${this.handleOverlayClick}
-          style=${{ backgroundColor: theme.colors.overlay.background }}
+          backgroundColor=${theme.colors.overlay.background}
           class="dialog-overlay"
         >
           <${DialogBox}
             theme=${theme}
             minWidth="400px"
-            style=${{
-              backgroundColor: theme.colors.background.card,
-              color: theme.colors.text.primary
-            }}
+            backgroundColor=${theme.colors.background.card}
+            color=${theme.colors.text.primary}
           >
             <${DialogTitle}
               theme=${theme}
-              style=${{ color: theme.colors.text.primary }}
+              color=${theme.colors.text.primary}
             >
               ${title}
             <//>
