@@ -1,10 +1,10 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { styled, keyframes } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { PageTitleManager } from '../util.mjs';
-import { Panel } from './panel.mjs';
+import { styled, keyframes } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { PageTitleManager } from '../../util.mjs';
+import { Panel } from '../layout/panel.mjs';
 
 // Animations
 const slideUp = keyframes`

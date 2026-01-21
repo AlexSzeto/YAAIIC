@@ -1,10 +1,10 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { createImageModal } from './modal.mjs';
-import { Button } from './button.mjs';
-import { Panel } from './panel.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { createImageModal } from '../overlays/modal.mjs';
+import { Button } from '../io/button.mjs';
+import { Panel } from '../layout/panel.mjs';
 
 // =========================================================================
 // Styled Components

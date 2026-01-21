@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled, keyframes } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
+import { styled, keyframes } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
 
 // =========================================================================
 // Styled Components

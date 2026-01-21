@@ -27,26 +27,27 @@
   <script type="module">
     import { html, render, Component } from 'htm/preact';
     import { styled, css } from './goober-setup.mjs';
-    import { Page } from './page.mjs';
+    import { Page } from './layout/page.mjs';
     import { currentTheme, toggleTheme } from './theme.mjs';
-    import { Button } from './button.mjs';
-    import { Panel } from './panel.mjs';
-    import { Input } from './input.mjs';
-    import { Select } from './select.mjs';
-    import { Textarea } from './textarea.mjs';
-    import { Checkbox } from './checkbox.mjs';
-    import { ButtonGroup } from './button-group.mjs';
-    import { NavigatorControl } from './navigator.mjs';
-    import { usePagination } from './use-pagination.mjs';
-    import { useItemNavigation } from './use-item-navigation.mjs';
-    import { showListSelect } from './list-select.mjs';
-    import { ImageSelect } from './image-select.mjs';
-    import { AudioSelect } from './audio-select.mjs';
-    import { AudioPlayer } from './audio-player.mjs';
-    import { ProgressBanner } from './progress-banner.mjs';
-    import { ToastProvider, useToast } from './toast.mjs';
-    import { showDialog, showTextPrompt } from './dialog.mjs';
-    import { Modal, createImageModal } from './modal.mjs';
+    import { Button } from './io/button.mjs';
+    import { Panel } from './layout/panel.mjs';
+    import { Input } from './io/input.mjs';
+    import { Select } from './io/select.mjs';
+    import { Textarea } from './io/textarea.mjs';
+    import { Checkbox } from './io/checkbox.mjs';
+    import { ButtonGroup } from './nav/button-group.mjs';
+    import { NavigatorControl } from './nav/navigator.mjs';
+    import { usePagination } from './nav/use-pagination.mjs';
+    import { useItemNavigation } from './nav/use-item-navigation.mjs';
+    import { showListSelect } from './overlays/list-select.mjs';
+    import { ImageSelect } from './media/image-select.mjs';
+    import { AudioSelect } from './media/audio-select.mjs';
+    import { AudioPlayer } from './media/audio-player.mjs';
+    import { ProgressBanner } from './msg/progress-banner.mjs';
+    import { ToastProvider, useToast } from './msg/toast.mjs';
+    import { showDialog, showTextPrompt } from './overlays/dialog.mjs';
+    import { Modal, createImageModal } from './overlays/modal.mjs';
+
     
     // =========================================================================
     // Styled Components

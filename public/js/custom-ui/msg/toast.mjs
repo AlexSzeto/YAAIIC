@@ -2,9 +2,9 @@ import { html } from 'htm/preact';
 import { createContext } from 'preact';
 import { useContext, useState, useCallback } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
-import { styled, keyframes } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { Panel } from './panel.mjs';
+import { styled, keyframes } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Panel } from '../layout/panel.mjs';
 
 // ============================================================================
 // Styled Components

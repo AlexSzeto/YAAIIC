@@ -4,7 +4,7 @@
  * Provides a modal dialog for selecting, creating, renaming, and deleting folders.
  * Uses the generic ListSelectModal component for consistent styling and behavior.
  */
-import { showListSelect } from '../custom-ui/list-select.mjs';
+import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
 import { showTextPrompt, showDialog } from '../custom-ui/dialog.mjs';
 
 /**

@@ -1,9 +1,9 @@
 import { html } from 'htm/preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
-import { currentTheme } from './theme.mjs';
-import { Button } from './button.mjs';
-import { Panel } from './panel.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Button } from '../io/button.mjs';
+import { Panel } from '../layout/panel.mjs';
 import { 
   BaseOverlay, 
   BaseContainer, 
@@ -168,7 +168,7 @@ export function Modal({
  * @param {string} [selectButtonText='View'] - Custom text for the select button
  */
 import { render } from 'preact';
-import { styled } from './goober-setup.mjs';
+import { styled } from '../goober-setup.mjs';
 
 const ImageModalWrapper = styled('div')`
   position: relative;

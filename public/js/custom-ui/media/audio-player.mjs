@@ -1,9 +1,9 @@
 import { html } from 'htm/preact';
 import { Component, createRef } from 'preact';
-import { styled, css } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { Button } from './button.mjs';
-import { Panel } from './panel.mjs';
+import { styled, css } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Button } from '../io/button.mjs';
+import { Panel } from '../layout/panel.mjs';
 
 // =========================================================================
 // Styled Components

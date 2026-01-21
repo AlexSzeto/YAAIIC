@@ -5,7 +5,7 @@
  * to ensure consistent styling and behavior.
  */
 
-import { styled } from './goober-setup.mjs';
+import { styled } from '../goober-setup.mjs';
 
 /**
  * BaseOverlay - Fixed overlay that covers the entire viewport

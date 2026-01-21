@@ -1,10 +1,10 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { Button } from './button.mjs';
-import { Panel } from './panel.mjs';
-import { globalAudioPlayer } from '../global-audio-player.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Button } from '../io/button.mjs';
+import { Panel } from '../layout/panel.mjs';
+import { globalAudioPlayer } from '../../global-audio-player.mjs';
 
 // =========================================================================
 // Styled Components

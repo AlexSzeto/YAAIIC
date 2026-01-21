@@ -1,12 +1,19 @@
+/**
+ * gallery.mjs - DEPRECATED: Re-exports from app-ui/gallery.mjs
+ * 
+ * @deprecated Import from '../app-ui/gallery.mjs' instead.
+ * This file is kept for backward compatibility only.
+ */
+
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { PaginationControls } from './pagination.mjs';
-import { usePagination } from './use-pagination.mjs';
-import { fetchJson, FetchError } from '../util.mjs';
+import { usePagination } from '../nav/use-pagination.mjs';
+import { fetchJson, FetchError } from '../../util.mjs';
 import { showDialog } from './dialog.mjs';
-import { createImageModal } from './modal.mjs';
-import { showFolderSelect } from '../app-ui/folder-select.mjs';
+import { createImageModal } from '../overlays/modal.mjs';
+import { showFolderSelect } from '../../app-ui/folder-select.mjs';
 
 /**
  * Gallery Component

@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { glob } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
+import { glob } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
 
 /**
  * Applies global styles to the document body and base elements.

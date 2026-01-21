@@ -1,8 +1,8 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { Button } from './button.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Button } from '../io/button.mjs';
 /**
  * MIGRATION NOTE:
  * This file was renamed from pagination.mjs to navigator.mjs

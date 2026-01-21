@@ -4,4 +4,4 @@
  * @deprecated Import from '../app-ui/folder-select.mjs' instead.
  * This file is kept for backward compatibility only.
  */
-export { showFolderSelect, default } from '../app-ui/folder-select.mjs';
+export { showFolderSelect, default } from '../../app-ui/folder-select.mjs';

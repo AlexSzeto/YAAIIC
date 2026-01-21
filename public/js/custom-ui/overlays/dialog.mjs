@@ -2,9 +2,9 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
 import { createPortal } from 'preact/compat'
-import { currentTheme } from './theme.mjs'
-import { Button } from './button.mjs'
-import { Input } from './input.mjs'
+import { currentTheme } from '../theme.mjs'
+import { Button } from '../io/button.mjs'
+import { Input } from '../io/input.mjs'
 import { 
   BaseOverlay, 
   BaseContainer, 

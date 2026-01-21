@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
 
 // =========================================================================
 // Styled Components
@@ -22,11 +22,9 @@ const Label = styled('label')`
   font-weight: ${props => props.fontWeight};
 `;
 
-const StyledTextarea = styled('textarea')`
+const StyledInput = styled('input')`
   padding: 8px 12px;
   border-radius: 6px;
-  resize: vertical;
-  min-height: 80px;
   border: ${props => props.border};
   background-color: ${props => props.backgroundColor};
   color: ${props => props.color};
@@ -52,38 +50,37 @@ const ErrorMessage = styled('span')`
 `;
 
 /**
- * Textarea - Themed multi-line text input with label and error state support
+ * Input - Themed text input with label and error state support
  * 
- * A styled textarea component with optional label, error message display,
- * and full theme integration for all states. Matches Input component styling
- * for visual consistency.
+ * A styled text input component with optional label, error message display,
+ * and full theme integration for all states.
  * 
  * @param {Object} props
- * @param {string} [props.label] - Label text displayed above the textarea
- * @param {string} [props.error] - Error message displayed below the textarea
+ * @param {string} [props.label] - Label text displayed above the input
+ * @param {string} [props.error] - Error message displayed below the input
  * @param {string} [props.id] - ID for label association (falls back to name prop)
- * @param {boolean} [props.fullWidth=true] - Whether to span full container width (default true for textareas)
+ * @param {boolean} [props.fullWidth=false] - Whether to span full container width
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {string} [props.placeholder] - Placeholder text
- * @param {number} [props.rows=4] - Number of visible text lines
- * @param {string} [props.name] - Textarea name attribute
- * @param {*} [props.value] - Textarea value
+ * @param {string} [props.type='text'] - Input type (text, password, email, number, etc.)
+ * @param {string} [props.name] - Input name attribute
+ * @param {*} [props.value] - Input value
  * @param {Function} [props.onChange] - Change handler
  * @returns {preact.VNode}
  * 
  * @example
- * // Basic textarea with label
- * <Textarea label="Description" name="description" />
+ * // Basic input with label
+ * <Input label="Username" name="username" />
  * 
  * @example
- * // Textarea with error state
- * <Textarea label="Comments" error="Comments are required" />
+ * // Input with error state
+ * <Input label="Email" error="Invalid email format" />
  * 
  * @example
- * // Textarea with custom rows
- * <Textarea label="Notes" rows={6} />
+ * // Full width input
+ * <Input label="Description" fullWidth={true} />
  */
-export class Textarea extends Component {
+export class Input extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -108,9 +105,8 @@ export class Textarea extends Component {
       label, 
       error, 
       id, 
-      fullWidth = true, 
+      fullWidth = false, 
       disabled = false,
-      rows = 4,
       ...rest 
     } = this.props;
     const { theme } = this.state;
@@ -130,10 +126,9 @@ export class Textarea extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <${StyledTextarea} 
+        <${StyledInput} 
           id=${inputId} 
-          disabled=${disabled} 
-          rows=${rows}
+          disabled=${disabled}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
           backgroundColor=${theme.colors.background.tertiary}
           color=${theme.colors.text.primary}

@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
 
 // =========================================================================
 // Styled Components
@@ -22,9 +22,10 @@ const Label = styled('label')`
   font-weight: ${props => props.fontWeight};
 `;
 
-const StyledInput = styled('input')`
+const StyledSelect = styled('select')`
   padding: 8px 12px;
   border-radius: 6px;
+  cursor: pointer;
   border: ${props => props.border};
   background-color: ${props => props.backgroundColor};
   color: ${props => props.color};
@@ -50,37 +51,41 @@ const ErrorMessage = styled('span')`
 `;
 
 /**
- * Input - Themed text input with label and error state support
+ * Select - Themed dropdown select with label and error state support
  * 
- * A styled text input component with optional label, error message display,
- * and full theme integration for all states.
+ * A styled select dropdown component with optional label, error message display,
+ * and full theme integration. Matches Input component styling for consistency.
  * 
  * @param {Object} props
- * @param {string} [props.label] - Label text displayed above the input
- * @param {string} [props.error] - Error message displayed below the input
+ * @param {string} [props.label] - Label text displayed above the select
+ * @param {Array<{label: string, value: any}>} [props.options=[]] - Array of option objects
+ * @param {string} [props.error] - Error message displayed below the select
  * @param {string} [props.id] - ID for label association (falls back to name prop)
  * @param {boolean} [props.fullWidth=false] - Whether to span full container width
  * @param {boolean} [props.disabled=false] - Disabled state
- * @param {string} [props.placeholder] - Placeholder text
- * @param {string} [props.type='text'] - Input type (text, password, email, number, etc.)
- * @param {string} [props.name] - Input name attribute
- * @param {*} [props.value] - Input value
+ * @param {*} [props.value] - Currently selected value
  * @param {Function} [props.onChange] - Change handler
  * @returns {preact.VNode}
  * 
  * @example
- * // Basic input with label
- * <Input label="Username" name="username" />
+ * // Basic select with options
+ * <Select 
+ *   label="Country" 
+ *   options={[
+ *     { label: 'USA', value: 'us' },
+ *     { label: 'Canada', value: 'ca' }
+ *   ]} 
+ * />
  * 
  * @example
- * // Input with error state
- * <Input label="Email" error="Invalid email format" />
+ * // Select with error state
+ * <Select label="Category" options={[...]} error="Please select a category" />
  * 
  * @example
- * // Full width input
- * <Input label="Description" fullWidth={true} />
+ * // Full width select
+ * <Select label="Type" options={[...]} fullWidth={true} />
  */
-export class Input extends Component {
+export class Select extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -103,10 +108,12 @@ export class Input extends Component {
   render() {
     const { 
       label, 
+      options = [],
       error, 
       id, 
       fullWidth = false, 
       disabled = false,
+      value,
       ...rest 
     } = this.props;
     const { theme } = this.state;
@@ -126,7 +133,7 @@ export class Input extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <${StyledInput} 
+        <${StyledSelect} 
           id=${inputId} 
           disabled=${disabled}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
@@ -136,8 +143,14 @@ export class Input extends Component {
           fontFamily=${theme.typography.fontFamily}
           transition=${`border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
           focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}
-          ...${rest} 
-        />
+          ...${rest}
+        >
+          ${options.map(opt => html`
+            <option value=${opt.value} selected=${opt.value === value}>
+              ${opt.label}
+            </option>
+          `)}
+        </${StyledSelect}>
         ${error ? html`
           <${ErrorMessage} 
             color=${theme.colors.danger.background}

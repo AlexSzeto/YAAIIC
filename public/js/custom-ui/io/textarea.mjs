@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
 
 // =========================================================================
 // Styled Components
@@ -22,10 +22,11 @@ const Label = styled('label')`
   font-weight: ${props => props.fontWeight};
 `;
 
-const StyledSelect = styled('select')`
+const StyledTextarea = styled('textarea')`
   padding: 8px 12px;
   border-radius: 6px;
-  cursor: pointer;
+  resize: vertical;
+  min-height: 80px;
   border: ${props => props.border};
   background-color: ${props => props.backgroundColor};
   color: ${props => props.color};
@@ -51,41 +52,38 @@ const ErrorMessage = styled('span')`
 `;
 
 /**
- * Select - Themed dropdown select with label and error state support
+ * Textarea - Themed multi-line text input with label and error state support
  * 
- * A styled select dropdown component with optional label, error message display,
- * and full theme integration. Matches Input component styling for consistency.
+ * A styled textarea component with optional label, error message display,
+ * and full theme integration for all states. Matches Input component styling
+ * for visual consistency.
  * 
  * @param {Object} props
- * @param {string} [props.label] - Label text displayed above the select
- * @param {Array<{label: string, value: any}>} [props.options=[]] - Array of option objects
- * @param {string} [props.error] - Error message displayed below the select
+ * @param {string} [props.label] - Label text displayed above the textarea
+ * @param {string} [props.error] - Error message displayed below the textarea
  * @param {string} [props.id] - ID for label association (falls back to name prop)
- * @param {boolean} [props.fullWidth=false] - Whether to span full container width
+ * @param {boolean} [props.fullWidth=true] - Whether to span full container width (default true for textareas)
  * @param {boolean} [props.disabled=false] - Disabled state
- * @param {*} [props.value] - Currently selected value
+ * @param {string} [props.placeholder] - Placeholder text
+ * @param {number} [props.rows=4] - Number of visible text lines
+ * @param {string} [props.name] - Textarea name attribute
+ * @param {*} [props.value] - Textarea value
  * @param {Function} [props.onChange] - Change handler
  * @returns {preact.VNode}
  * 
  * @example
- * // Basic select with options
- * <Select 
- *   label="Country" 
- *   options={[
- *     { label: 'USA', value: 'us' },
- *     { label: 'Canada', value: 'ca' }
- *   ]} 
- * />
+ * // Basic textarea with label
+ * <Textarea label="Description" name="description" />
  * 
  * @example
- * // Select with error state
- * <Select label="Category" options={[...]} error="Please select a category" />
+ * // Textarea with error state
+ * <Textarea label="Comments" error="Comments are required" />
  * 
  * @example
- * // Full width select
- * <Select label="Type" options={[...]} fullWidth={true} />
+ * // Textarea with custom rows
+ * <Textarea label="Notes" rows={6} />
  */
-export class Select extends Component {
+export class Textarea extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -108,12 +106,11 @@ export class Select extends Component {
   render() {
     const { 
       label, 
-      options = [],
       error, 
       id, 
-      fullWidth = false, 
+      fullWidth = true, 
       disabled = false,
-      value,
+      rows = 4,
       ...rest 
     } = this.props;
     const { theme } = this.state;
@@ -133,9 +130,10 @@ export class Select extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <${StyledSelect} 
+        <${StyledTextarea} 
           id=${inputId} 
-          disabled=${disabled}
+          disabled=${disabled} 
+          rows=${rows}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
           backgroundColor=${theme.colors.background.tertiary}
           color=${theme.colors.text.primary}
@@ -143,14 +141,8 @@ export class Select extends Component {
           fontFamily=${theme.typography.fontFamily}
           transition=${`border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
           focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}
-          ...${rest}
-        >
-          ${options.map(opt => html`
-            <option value=${opt.value} selected=${opt.value === value}>
-              ${opt.label}
-            </option>
-          `)}
-        </${StyledSelect}>
+          ...${rest} 
+        />
         ${error ? html`
           <${ErrorMessage} 
             color=${theme.colors.danger.background}
