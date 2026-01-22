@@ -299,3 +299,106 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
 
   render(html`<${ImperativeImageModal} />`, container);
 }
+
+/**
+ * showModal - Shows a modal dialog imperatively
+ * 
+ * A convenience function that creates and renders a Modal component.
+ * Returns a promise that resolves when the modal is closed.
+ * 
+ * @param {Object} options - Configuration options
+ * @param {string} options.title - Modal title (required)
+ * @param {preact.VNode|string} options.content - Modal body content (required)
+ * @param {preact.VNode|Array<Object>} [options.footer] - Footer content or button configs
+ *   - If array: [{ label: 'OK', color: 'primary', onClick: () => {...} }, ...]
+ *   - If VNode: Custom footer content
+ * @param {string} [options.size='medium'] - Size variant: 'small', 'medium', 'large', 'full'
+ * @param {Function} [options.onClose] - Callback when modal closes
+ * 
+ * @returns {Object} Control object with close() method
+ * 
+ * @example
+ * // Basic modal
+ * const modal = showModal({
+ *   title: 'Confirmation',
+ *   content: html`<p>Are you sure?</p>`
+ * });
+ * 
+ * @example
+ * // Modal with buttons
+ * showModal({
+ *   title: 'Delete Item',
+ *   content: 'This action cannot be undone.',
+ *   footer: [
+ *     { label: 'Cancel', color: 'secondary', onClick: () => console.log('Cancelled') },
+ *     { label: 'Delete', color: 'danger', onClick: () => console.log('Deleted') }
+ *   ]
+ * });
+ * 
+ * @example
+ * // Manually close
+ * const modal = showModal({ title: 'Loading', content: 'Please wait...' });
+ * setTimeout(() => modal.close(), 2000);
+ */
+export function showModal(options) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  let isOpen = true;
+
+  const cleanup = () => {
+    render(null, container);
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
+    isOpen = false;
+  };
+
+  const handleClose = () => {
+    if (options.onClose) {
+      options.onClose();
+    }
+    cleanup();
+  };
+
+  // Convert footer array to VNode if needed
+  let footerContent = options.footer;
+  if (Array.isArray(options.footer)) {
+    footerContent = html`
+      ${options.footer.map(btn => html`
+        <${Button}
+          key=${btn.label}
+          variant="medium-text"
+          color=${btn.color || 'primary'}
+          onClick=${() => {
+            if (btn.onClick) btn.onClick();
+            if (btn.close !== false) handleClose();
+          }}
+        >
+          ${btn.label}
+        <//>
+      `)}
+    `;
+  }
+
+  // Render modal
+  const ModalWrapper = () => {
+    return html`
+      <${Modal}
+        isOpen=${isOpen}
+        onClose=${handleClose}
+        title=${options.title}
+        size=${options.size || 'medium'}
+        footer=${footerContent}
+      >
+        ${options.content}
+      <//>
+    `;
+  };
+
+  render(html`<${ModalWrapper} />`, container);
+
+  return {
+    close: handleClose
+  };
+}

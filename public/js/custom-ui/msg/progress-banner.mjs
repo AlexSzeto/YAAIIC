@@ -153,8 +153,8 @@ function getStepName(nodeType) {
  * a fixed banner at the bottom-right of the screen. It automatically maps ComfyUI node types
  * to human-readable step names and updates the browser page title with progress percentage.
  * 
- * The banner automatically dismisses after completion (2 seconds) or error (5 seconds), and
- * can be manually dismissed by clicking the X button.
+ * The banner calls onDismiss after completion (2 seconds) or error (5 seconds), and
+ * when manually dismissed by clicking the X button. Parent controls mounting/unmounting.
  * 
  * @param {Object} props
  * @param {string} props.taskId - The unique task ID to monitor (required)
@@ -162,26 +162,27 @@ function getStepName(nodeType) {
  * @param {Function} [props.onComplete] - Callback when generation completes successfully
  * @param {Function} [props.onError] - Callback when generation fails
  * @param {string} [props.defaultTitle] - Default page title to restore after completion
- * @returns {preact.VNode|null}
+ * @param {Function} [props.onDismiss] - Callback when banner should be dismissed (required for provider pattern)
+ * @returns {preact.VNode}
  * 
  * @example
- * <ProgressBanner 
- *   taskId="task-123" 
- *   sseManager={sseManager}
- *   onComplete={(data) => console.log('Done!', data)}
- *   onError={(data) => console.error('Failed!', data)}
- *   defaultTitle="Image Generator"
- * />
+ * // Used with ProgressProvider (recommended)
+ * const progress = useProgress();
+ * progress.show('task-123', {
+ *   onComplete: (data) => console.log('Done!', data),
+ *   onError: (data) => console.error('Failed!', data),
+ *   defaultTitle: 'Image Generator'
+ * });
  */
 export function ProgressBanner({ 
   taskId, 
   sseManager, 
   onComplete, 
   onError,
-  defaultTitle
+  defaultTitle,
+  onDismiss
 }) {
   const [state, setState] = useState({
-    isVisible: true,
     status: 'starting', // starting, in-progress, completed, error
     percentage: 0,
     message: 'Starting generation...',
@@ -245,9 +246,9 @@ export function ProgressBanner({
 
       if (onComplete) onComplete(data);
 
-      // Auto-hide
+      // Auto-hide after 2 seconds
       setTimeout(() => {
-        setState(prev => ({ ...prev, isVisible: false }));
+        if (onDismiss) onDismiss();
       }, 2000);
     };
 
@@ -263,9 +264,9 @@ export function ProgressBanner({
 
       if (onError) onError(data);
 
-      // Auto-hide
+      // Auto-hide after 5 seconds
       setTimeout(() => {
-        setState(prev => ({ ...prev, isVisible: false }));
+        if (onDismiss) onDismiss();
       }, 5000);
     };
 
@@ -281,9 +282,7 @@ export function ProgressBanner({
       sseManager.unsubscribe(taskId);
       pageTitleManager.reset();
     };
-  }, [taskId, sseManager, onComplete, onError, defaultTitle]);
-
-  if (!state.isVisible) return null;
+  }, [taskId, sseManager, onComplete, onError, defaultTitle, onDismiss]);
 
   const statusType = state.status === 'completed' ? 'success' : state.status;
   const panelColor = statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : 'secondary';
@@ -307,7 +306,7 @@ export function ProgressBanner({
             ` : null}
           <//>
           <${DismissButton}
-            onClick=${() => setState(prev => ({ ...prev, isVisible: false }))}
+            onClick=${() => onDismiss && onDismiss()}
             aria-label="Dismiss"
           >
             <box-icon name='x' color='currentColor'></box-icon>

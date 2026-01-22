@@ -43,10 +43,10 @@
     import { ImageSelect } from './media/image-select.mjs';
     import { AudioSelect } from './media/audio-select.mjs';
     import { AudioPlayer } from './media/audio-player.mjs';
-    import { ProgressBanner } from './msg/progress-banner.mjs';
+    import { ProgressProvider, useProgress } from './msg/progress-context.mjs';
     import { ToastProvider, useToast } from './msg/toast.mjs';
     import { showDialog, showTextPrompt } from './overlays/dialog.mjs';
-    import { Modal, createImageModal } from './overlays/modal.mjs';
+    import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
 
     
     // =========================================================================
@@ -320,6 +320,64 @@
     }
     
     // =========================================================================
+    // Progress Banner Test Component
+    // =========================================================================
+    
+    /**
+     * ProgressTriggers - Component with buttons to trigger progress simulations
+     */
+    function ProgressTriggers({ mockSSEManager }) {
+      const progress = useProgress();
+      
+      const handleSimulateProgress = () => {
+        const taskId = 'test-task-' + Date.now();
+        progress.show(taskId, {
+          onComplete: (data) => console.log('Progress complete!', data),
+          onError: (data) => console.error('Progress error!', data),
+          defaultTitle: 'Component Test Page'
+        });
+        
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          mockSSEManager.simulateProgress(taskId);
+        }, 100);
+      };
+      
+      const handleSimulateError = () => {
+        const taskId = 'test-task-error-' + Date.now();
+        progress.show(taskId, {
+          onComplete: (data) => console.log('Progress complete!', data),
+          onError: (data) => console.error('Progress error!', data),
+          defaultTitle: 'Component Test Page'
+        });
+        
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          mockSSEManager.simulateError(taskId);
+        }, 100);
+      };
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${handleSimulateProgress}
+          >
+            Simulate Progress
+          </>
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${handleSimulateError}
+          >
+            Simulate Error
+          </>
+        </div>
+      `;
+    }
+    
+    // =========================================================================
     // Test Application
     // =========================================================================
     
@@ -492,32 +550,14 @@
         this.setState({ audioSelectValue2: value });
       };
       
+      
       handleSimulateProgress = () => {
-        const taskId = 'test-task-' + Date.now();
-        this.setState({ 
-          progressBannerVisible: true,
-          progressBannerKey: this.state.progressBannerKey + 1,
-          currentTaskId: taskId
-        });
-        // Delay simulation to allow component to subscribe first
-        setTimeout(() => {
-          this.mockSSEManager.simulateProgress(taskId);
-        }, 100);
+        // Moved to ProgressTriggers component
       };
       
       handleSimulateError = () => {
-        const taskId = 'test-task-error-' + Date.now();
-        this.setState({ 
-          progressBannerVisible: true,
-          progressBannerKey: this.state.progressBannerKey + 1,
-          currentTaskId: taskId
-        });
-        // Delay simulation to allow component to subscribe first
-        setTimeout(() => {
-          this.mockSSEManager.simulateError(taskId);
-        }, 100);
+        // Moved to ProgressTriggers component
       };
-      
 
       
       render() {
@@ -525,26 +565,27 @@
         
         return html`
           <${ToastProvider}>
-            <${Page}>
-              <${Container}>
-                <${Header}>
-                  <${Title}>Custom UI Component Test Page<//>
-                  <${Button} 
-                    variant="medium-icon-text"
-                    color="primary" 
-                    icon=${themeName === 'dark' ? 'sun' : 'moon'}
-                    onClick=${this.handleToggleTheme}
-                  >
-                    ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            <${ProgressProvider} sseManager=${this.mockSSEManager}>
+              <${Page}>
+                <${Container}>
+                  <${Header}>
+                    <${Title}>Custom UI Component Test Page<//>
+                    <${Button} 
+                      variant="medium-icon-text"
+                      color="primary" 
+                      icon=${themeName === 'dark' ? 'sun' : 'moon'}
+                      onClick=${this.handleToggleTheme}
+                    >
+                      ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    <//>
                   <//>
-                <//>
-                
-                <${MutedText}>
-                  Current theme: <strong>${themeName}</strong>
-                <//>
-                
-                <!-- Component Sections -->
-              <${Section}>
+                  
+                  <${MutedText}>
+                    Current theme: <strong>${themeName}</strong>
+                  <//>
+                  
+                  <!-- Component Sections -->
+                <${Section}>
                 <${SectionTitle}>Page Component<//>
                 <p>The Page component provides global styles including:</p>
                 <ul>
@@ -981,35 +1022,11 @@
               
               <${Section}>
                 <${SectionTitle}>ProgressBanner Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error</p>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error. Now uses provider pattern with useProgress hook.</p>
                 
                 <${ComponentGrid}>
-                  <${Button} 
-                    variant="medium-text"
-                    color="primary"
-                    onClick=${this.handleSimulateProgress}
-                  >
-                    Simulate Progress
-                  <//>
-                  <${Button} 
-                    variant="medium-text"
-                    color="danger"
-                    onClick=${this.handleSimulateError}
-                  >
-                    Simulate Error
-                  <//>
+                  <${ProgressTriggers} mockSSEManager=${this.mockSSEManager} />
                 <//>
-                
-                ${this.state.progressBannerVisible ? html`
-                  <${ProgressBanner}
-                    key=${this.state.progressBannerKey}
-                    taskId=${this.state.currentTaskId}
-                    sseManager=${this.mockSSEManager}
-                    defaultTitle="Component Test Page"
-                    onComplete=${() => console.log('Progress complete!')}
-                    onError=${() => console.log('Progress error!')}
-                  />
-                ` : null}
               </${Section}>
               
               <${Section}>
@@ -1121,7 +1138,8 @@
               
             <//>
           <//>
-          <//>
+        <//>
+      <//>
         `;
       }
     }
