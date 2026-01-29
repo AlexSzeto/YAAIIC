@@ -7,6 +7,7 @@ import { Page } from './custom-ui/layout/page.mjs';
 import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { SeedControl } from './app-ui/seed-control.mjs';
 import { createExtraInputsRenderer } from './app-ui/extra-inputs-renderer.mjs';
+import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 // import { GenerationForm } from './app-ui/generation-form.mjs'; // Temporarily commented - depends on unrefactored components
 
 /**
@@ -21,6 +22,16 @@ function generateRandomSeed() {
  */
 function App() {
   const toast = useToast();
+
+  // State for WorkflowSelector demo
+  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+
+  const handleWorkflowChange = (workflow) => {
+    setSelectedWorkflow(workflow);
+    if (workflow) {
+      toast.show(`Workflow selected: ${workflow.name}`);
+    }
+  };
 
   // State for SeedControl demo
   const [seed, setSeed] = useState(generateRandomSeed());
@@ -152,11 +163,18 @@ function App() {
         V2 Main Page - Components will appear here as they are refactored.
       </p>
       
-      <!-- Placeholder for WorkflowSelector (not yet refactored) -->
+      <!-- Refactored WorkflowSelector -->
       <div style="margin: 20px 0; padding: 15px; background: var(--background-secondary); border-radius: 8px;">
-        <p style="color: var(--text-secondary);">
-          <strong>WorkflowSelector</strong> - Not yet refactored
-        </p>
+        <h3 style="margin-top: 0;">WorkflowSelector (Refactored)</h3>
+        <${WorkflowSelector}
+          value=${selectedWorkflow}
+          onChange=${handleWorkflowChange}
+        />
+        ${selectedWorkflow && html`
+          <p style="margin-top: 10px; color: var(--text-secondary);">
+            Selected: <strong>${selectedWorkflow.name}</strong> (${selectedWorkflow.type})
+          </p>
+        `}
       </div>
       
       <!-- Refactored SeedControl -->
