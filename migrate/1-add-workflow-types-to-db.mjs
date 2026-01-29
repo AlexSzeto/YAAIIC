@@ -5,6 +5,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Check if old database file exists and rename it
+const oldMediaDataPath = path.join(__dirname, '..', 'server', 'database', 'image-data.json');
+const newMediaDataPath = path.join(__dirname, '..', 'server', 'database', 'media-data.json');
+
+if (fs.existsSync(oldMediaDataPath) && !fs.existsSync(newMediaDataPath)) {
+  console.log('Renaming image-data.json to media-data.json...');
+  fs.renameSync(oldMediaDataPath, newMediaDataPath);
+  console.log('Database file renamed successfully.');
+}
+
 // Path to the media data JSON file
 const mediaDataPath = path.join(__dirname, '..', 'server', 'database', 'media-data.json');
 
@@ -59,6 +69,12 @@ mediaData.forEach((entry, index) => {
   updatedCount++;
   
   console.log(`Entry ${index + 1}: UID ${entry.uid} -> Type: ${detectedType}`);
+
+  // Migrate imageUrl from "image/" to "media/" if needed
+  if (entry.imageUrl && entry.imageUrl.startsWith('/image/')) {
+    entry.imageUrl = entry.imageUrl.replace(/^\/image\//, '/media/');
+    console.log(`  -> Migrated imageUrl: ${entry.imageUrl}`);
+  }
 });
 
 // Write updated data back to the file
