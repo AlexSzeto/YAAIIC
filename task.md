@@ -9,7 +9,9 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 - Remove all inline styles from components
 - Clean up CSS files while maintaining visual parity
 - Delete deprecated component files
+
 ## Implementation Notes
+- app-ui refactored components are not added to the custom-ui test html.
 - **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
 - **Goober subcomponent targeting limitation**: Goober does NOT support targeting styled subcomponents in parent selectors (e.g., `${ParentComponent}:hover &`). This syntax, which works in styled-components, does not function in Goober. **Workarounds**: Use component state to track hover status and conditionally apply props, or restructure styles to use direct pseudo-selectors and descendant selectors without interpolated component names.
 - **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
@@ -18,29 +20,37 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 - **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 
 ## Tasks
+[] Rebuild v2 main page skeleton
+1. Start with a blank page. As components are being refactored, port over the UI section from v1 of the page over to v2 to show the newly refactored component.
+
 [] Refactor GenerationForm app component to Goober
 1. Update `public/v2/js/app-ui/generation-form.mjs` to use Goober styling
 2. Replace all inline flexbox styles with styled components
 3. Remove CSS class dependencies (generation-form, form-row)
 4. Use theme values for all spacing (gap, padding)
+5. Port component to v2 main page. use placeholders for sections where the components are not yet refactored.
 
 [] Refactor GeneratedResult app component to Goober
 1. Update `public/v2/js/app-ui/generated-result.mjs` to use Goober styling
 2. Replace inline styles with styled components
 3. Migrate hardcoded colors (#28a745, #dc3545) to theme colors (success, danger)
 4. Remove CSS class dependencies (generated-image-display, etc.)
+5. Port component to v2 main page
 
 [] Refactor SeedControl app component to Goober
 1. Update `public/v2/js/app-ui/seed-control.mjs` to use Goober styling
 2. Replace inline margin styles with styled components
+3. Port component to v2 main page
 
 [] Refactor ExtraInputsRenderer app component to Goober
 1. Update `public/v2/js/app-ui/extra-inputs-renderer.mjs` to use Goober styling
 2. Replace inline margin styles with styled components
+3. Port component to v2 main page
 
 [] Refactor WorkflowSelector app component to Goober
 1. Update `public/v2/js/app-ui/workflow-selector.mjs` to use Goober styling
 2. Remove CSS class dependency (workflow-selector-container)
+3. port component to v2 main page
 
 [] Refactor v2 main page (app.mjs)
 > NOTE: all supporting files (autocomplete-setup, gallery-preview, global-audio-player, sse-manager, and tags had been moved to the `app-ui` folder)
