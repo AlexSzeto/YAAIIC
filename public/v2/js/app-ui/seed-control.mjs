@@ -1,6 +1,12 @@
 import { html } from 'htm/preact';
-import { Input } from '../custom-ui/input.mjs';
-import { Checkbox } from '../custom-ui/checkbox.mjs';
+import { styled } from 'goober';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Checkbox } from '../custom-ui/io/checkbox.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+const CheckboxWrapper = styled('div')`
+  margin-bottom: ${getThemeValue('spacing.small.margin')};
+`;
 
 /**
  * Seed Control Component
@@ -37,14 +43,14 @@ export function SeedControl({ seed, setSeed, locked, setLocked, disabled = false
       disabled=${disabled}
     />
     
-    <div style="margin-bottom: 6px;">
+    <${CheckboxWrapper}>
       <${Checkbox}
         label="Lock seed"
         checked=${locked}
         onChange=${handleLockChange}
         disabled=${disabled}
       />
-    </div>
+    <//>
   `;
 }
 

@@ -5,6 +5,8 @@ import { useState, useEffect } from 'preact/hooks';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { Page } from './custom-ui/layout/page.mjs';
 import { GeneratedResult } from './app-ui/generated-result.mjs';
+import { SeedControl } from './app-ui/seed-control.mjs';
+import { createExtraInputsRenderer } from './app-ui/extra-inputs-renderer.mjs';
 // import { GenerationForm } from './app-ui/generation-form.mjs'; // Temporarily commented - depends on unrefactored components
 
 /**
@@ -19,6 +21,39 @@ function generateRandomSeed() {
  */
 function App() {
   const toast = useToast();
+
+  // State for SeedControl demo
+  const [seed, setSeed] = useState(generateRandomSeed());
+  const [seedLocked, setSeedLocked] = useState(false);
+
+  // State for ExtraInputsRenderer demo
+  const [extraFormState, setExtraFormState] = useState({
+    customText: 'Sample text',
+    customNumber: 42,
+    customSelect: 'option1',
+    customCheckbox: true,
+    customTextarea: 'Sample textarea content'
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleExtraFieldChange = (fieldName, value) => {
+    setExtraFormState(prev => ({ ...prev, [fieldName]: value }));
+  };
+
+  const renderExtraInputs = createExtraInputsRenderer(extraFormState, handleExtraFieldChange, isGenerating);
+
+  // Demo extra inputs configuration
+  const demoExtraInputs = [
+    { id: 'customText', label: 'Text Input', type: 'text' },
+    { id: 'customNumber', label: 'Number Input', type: 'number', default: 0 },
+    { id: 'customSelect', label: 'Select Input', type: 'select', options: [
+      { value: 'option1', label: 'Option 1' },
+      { value: 'option2', label: 'Option 2' },
+      { value: 'option3', label: 'Option 3' }
+    ]},
+    { id: 'customCheckbox', label: 'Checkbox Input', type: 'checkbox', default: false },
+    { id: 'customTextarea', label: 'Textarea Input', type: 'textarea' }
+  ];
 
   // State for GeneratedResult demo
   const [generatedImage, setGeneratedImage] = useState({
@@ -124,10 +159,34 @@ function App() {
         </p>
       </div>
       
+      <!-- Refactored SeedControl -->
+      <div style="margin: 20px 0; padding: 15px; background: var(--background-secondary); border-radius: 8px;">
+        <h3 style="margin-top: 0;">SeedControl (Refactored)</h3>
+        <${SeedControl}
+          seed=${seed}
+          setSeed=${setSeed}
+          locked=${seedLocked}
+          setLocked=${setSeedLocked}
+        />
+      </div>
+      
+      <!-- Refactored ExtraInputsRenderer -->
+      <div style="margin: 20px 0; padding: 15px; background: var(--background-secondary); border-radius: 8px;">
+        <h3 style="margin-top: 0;">ExtraInputsRenderer (Refactored)</h3>
+        <div>
+          <h4 style="margin: 10px 0;">Standard Inputs:</h4>
+          ${renderExtraInputs(demoExtraInputs, 'standard')}
+        </div>
+        <div style="margin-top: 20px;">
+          <h4 style="margin: 10px 0;">Textarea Inputs:</h4>
+          ${renderExtraInputs(demoExtraInputs, 'textarea')}
+        </div>
+      </div>
+      
       <!-- GenerationForm - Refactored but temporarily disabled until dependencies are refactored -->
       <div style="margin: 20px 0; padding: 15px; background: var(--background-secondary); border-radius: 8px;">
         <p style="color: var(--text-secondary);">
-          <strong>GenerationForm</strong> - Refactored but depends on SeedControl and ExtraInputsRenderer (not yet refactored)
+          <strong>GenerationForm</strong> - Refactored and ready to be integrated
         </p>
       </div>
       

@@ -37,12 +37,12 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 4. Remove CSS class dependencies (generated-image-display, etc.)
 5. Port component to v2 main page
 
-[] Refactor SeedControl app component to Goober
+[x] Refactor SeedControl app component to Goober
 1. Update `public/v2/js/app-ui/seed-control.mjs` to use Goober styling
 2. Replace inline margin styles with styled components
 3. Add refactored component to v2 main page
 
-[] Refactor ExtraInputsRenderer app component to Goober
+[x] Refactor ExtraInputsRenderer app component to Goober
 1. Update `public/v2/js/app-ui/extra-inputs-renderer.mjs` to use Goober styling
 2. Replace inline margin styles with styled components
 3. Add refactored component to v2 main page

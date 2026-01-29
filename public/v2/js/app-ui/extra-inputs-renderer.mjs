@@ -1,8 +1,14 @@
 import { html } from 'htm/preact';
-import { Textarea } from '../custom-ui/textarea.mjs';
-import { Input } from '../custom-ui/input.mjs';
-import { Select } from '../custom-ui/select.mjs';
-import { Checkbox } from '../custom-ui/checkbox.mjs';
+import { styled } from 'goober';
+import { Textarea } from '../custom-ui/io/textarea.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Select } from '../custom-ui/io/select.mjs';
+import { Checkbox } from '../custom-ui/io/checkbox.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+const CheckboxWrapper = styled('div')`
+  margin-bottom: ${getThemeValue('spacing.small.margin')};
+`;
 
 /**
  * Creates an extra inputs renderer function
@@ -79,7 +85,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
             
           case 'checkbox':
             return html`
-              <div style="margin-bottom: 6px;">
+              <${CheckboxWrapper}>
               <${Checkbox}
                 key=${input.id}
                 label=${input.label}
@@ -87,7 +93,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
                 onChange=${handleCheckboxChange(input.id)}
                 disabled=${isGenerating}
               />
-              </div>
+              <//>
             `;
             
           case 'textarea':
