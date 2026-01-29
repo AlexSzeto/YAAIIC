@@ -1,12 +1,149 @@
 import { useState } from 'preact/hooks';
 import { html, Component } from 'htm/preact';
-import { Button } from '../custom-ui/button.mjs';
-import { Tags } from '../custom-ui/tags.mjs';
-import { AudioPlayer } from '../custom-ui/audio-player.mjs';
-import { sendToClipboard } from '../util.mjs';
-import { createImageModal } from '../custom-ui/modal.mjs';
-import { showListSelect } from '../custom-ui/list-select.mjs';
-import { useToast } from '../custom-ui/toast.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
+import { ButtonGroup } from '../custom-ui/nav/button-group.mjs';
+import { AudioPlayer } from '../custom-ui/media/audio-player.mjs';
+import { sendToClipboard } from '../custom-ui/util.mjs';
+import { createImageModal } from '../custom-ui/overlays/modal.mjs';
+import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
+import { useToast } from '../custom-ui/msg/toast.mjs';
+import { currentTheme } from '../custom-ui/theme.mjs';
+
+// Styled components
+const Container = styled('div')`
+  display: block;
+`;
+
+const Title = styled('h3')`
+  color: ${() => currentTheme.value.colors.text.primary};
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+`;
+
+const Content = styled('div')`
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+`;
+
+const LeftColumn = styled('div')`
+  flex: 0 0 auto;
+  max-width: 50%;
+  position: relative;
+`;
+
+const GeneratedImage = styled('img')`
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+  border-radius: 4px;
+  display: block;
+  cursor: pointer;
+`;
+
+const RightColumn = styled('div')`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+
+const ActionContainer = styled('div')`
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 15px;
+`;
+
+// InfoSection styled components
+const InfoSection = styled('div')`
+  display: flex;
+  flex-direction: column;
+`;
+
+const InfoHeader = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 10px;
+`;
+
+const InfoLabel = styled('label')`
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+`;
+
+const InfoButtons = styled('div')`
+  display: flex;
+  gap: 5px;
+`;
+
+const InfoInput = styled('input')`
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid ${() => currentTheme.value.colors.border.primary};
+  border-radius: 4px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-family: ${() => currentTheme.value.typography.fontFamily};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  
+  ${props => props.isEditing ? `
+    border-color: ${currentTheme.value.colors.primary.background};
+    background-color: ${currentTheme.value.colors.background.primary};
+    box-shadow: 0 0 0 2px ${currentTheme.value.colors.primary.focus};
+  ` : ''}
+
+  &:focus {
+    outline: none;
+    border-color: ${() => currentTheme.value.colors.primary.background};
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
+  }
+`;
+
+const InfoTextarea = styled('textarea')`
+  width: 100%;
+  min-height: 80px;
+  padding: 8px 10px;
+  border: 2px solid ${() => currentTheme.value.colors.border.primary};
+  border-radius: 4px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-family: ${() => currentTheme.value.typography.fontFamily};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  resize: vertical;
+  
+  ${props => props.isEditing ? `
+    border-color: ${currentTheme.value.colors.primary.background};
+    background-color: ${currentTheme.value.colors.background.primary};
+    box-shadow: 0 0 0 2px ${currentTheme.value.colors.primary.focus};
+  ` : ''}
+
+  &:focus {
+    outline: none;
+    border-color: ${() => currentTheme.value.colors.primary.background};
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
+  }
+`;
+
+// TabbedInfoSection styled components
+const TabbedInfoSection = styled('div')`
+  display: flex;
+  flex-direction: column;
+`;
+
+const TabbedInfoHeader = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 10px;
+`;
 
 export function GeneratedResult({ 
   image, 
@@ -108,24 +245,22 @@ export function GeneratedResult({
   };
 
   return html`
-    <div className="generated-image-display content-container" style="display: block;">
-      <h3 className="generated-result-title">Generated Result</h3>
+    <${Container}>
+      <${Title}>Generated Result<//>
       
-      <div className="generated-image-content">
-        <div className="generated-image-left" style="position: relative;">
-          <img 
+      <${Content}>
+        <${LeftColumn}>
+          <${GeneratedImage}
             src=${image.imageUrl} 
             alt=${image.name || 'Generated Image'} 
-            className="generated-image"
-            style="cursor: pointer;"
             onClick=${() => createImageModal(image.imageUrl, true)}
           />
           ${image.audioUrl ? html`
             <${AudioPlayer} audioUrl=${image.audioUrl} />
           ` : null}
-        </div>
+        <//>
 
-        <div className="generated-image-right">
+        <${RightColumn}>
           <${InfoField} 
             label="Workflow" 
             field="workflow"
@@ -157,7 +292,7 @@ export function GeneratedResult({
                 name: 'Tags',
                 value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
                 canEdit: true,
-                onUse: null, // No use button for tags
+                onUse: null,
                 useTitle: ''
               },
               {
@@ -203,10 +338,10 @@ export function GeneratedResult({
             useTitle="Use this seed"
             canEdit=${false}
           />
-        </div>
-      </div>
+        <//>
+      <//>
 
-      <div className="image-action-container">
+      <${ActionContainer}>
         <${Button} 
           variant="success"
           icon="check-circle"
@@ -224,7 +359,7 @@ export function GeneratedResult({
           title="Inpaint this image"
         >
           Inpaint
-        <//Button>
+        <//>
         <${Button}
           variant="primary"
           icon="export"
@@ -243,8 +378,8 @@ export function GeneratedResult({
         >
           Delete
         <//>
-      </div>
-    </div>
+      <//>
+    <//>
   `;
 }
 
@@ -322,38 +457,38 @@ class TabbedInfoField extends Component {
     const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'description' || activeTab.id === 'summary');
 
     return html`
-      <div className="tabbed-info-section">
-        <div className="tabbed-info-header">
-          <${Tags}
+      <${TabbedInfoSection}>
+        <${TabbedInfoHeader}>
+          <${ButtonGroup}
             items=${tabItems}
             selected=${[selectedTab]}
             onSelect=${this.handleTabSelect}
           />
-          <div className="info-buttons">
+          <${InfoButtons}>
             ${!isEditing ? html`
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="revision"
                 onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
                 title="Regenerate ${activeTab.name}"
                 disabled=${!canRegenerate}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="copy"
                 onClick=${() => onCopy(activeTab.value, activeTab.name)}
                 title="Copy ${activeTab.name}"
                 disabled=${!onCopy || !activeTab.value}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="up-arrow-circle"
                 onClick=${activeTab.onUse}
                 title=${activeTab.useTitle || `Use ${activeTab.name}`}
                 disabled=${!activeTab.onUse}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="pencil"
                 onClick=${activeTab.canEdit ? this.handleEditClick : null}
                 title="Edit"
@@ -361,29 +496,29 @@ class TabbedInfoField extends Component {
               />
             ` : html`
               <${Button}
-                variant="icon"
+                variant="small-icon"
+                color="success"
                 icon="check"
                 onClick=${this.handleSaveClick}
                 title="Save"
-                style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
+                color="danger"
                 icon="x"
                 onClick=${onCancel}
                 title="Cancel"
-                style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
               />
             `}
-          </div>
-        </div>
-        <textarea 
-            className="info-field info-tabbed ${isEditing ? 'editing' : ''}" 
+          <//>
+        <//>
+        <${InfoTextarea}
+            isEditing=${isEditing}
             readOnly=${!isEditing} 
             value=${isEditing ? editValue : (activeTab.value || '')}
             onInput=${(e) => this.setState({ editValue: e.target.value })}
-        ></textarea>
-      </div>
+        />
+      <//>
     `;
   }
 }
@@ -416,31 +551,28 @@ function InfoField({
       onSave(editValue);
   };
 
-  const labelLower = label.toLowerCase();
-  const fieldClass = labelLower === 'tags' ? 'info-tags-field' : `info-${labelLower}`;
-
   return html`
-    <div className="info-section">
-      <div className="info-header">
-        <label className="info-label">${label}:</label>
-        <div className="info-buttons">
+    <${InfoSection}>
+      <${InfoHeader}>
+        <${InfoLabel}>${label}:<//>
+        <${InfoButtons}>
           ${!isEditing ? html`
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="copy"
               onClick=${onCopy}
               title="Copy ${label}"
               disabled=${!onCopy}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="up-arrow-circle"
               onClick=${onUse}
               title=${useTitle || `Use ${label}`}
               disabled=${!onUse}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="pencil"
               onClick=${canEdit ? handleEditClick : null}
               title="Edit"
@@ -448,39 +580,39 @@ function InfoField({
             />
           ` : html`
             <${Button}
-              variant="icon"
+              variant="small-icon"
+              color="success"
               icon="check"
               onClick=${handleSaveClick}
               title="Save"
-              style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
+              color="danger"
               icon="x"
               onClick=${onCancel}
               title="Cancel"
-              style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
             />
           `}
-        </div>
-      </div>
+        <//>
+      <//>
       ${isTextarea 
         ? html`
-            <textarea 
-                className="info-field ${fieldClass} ${isEditing ? 'editing' : ''}" 
+            <${InfoTextarea}
+                isEditing=${isEditing}
                 readOnly=${!isEditing} 
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
-            ></textarea>`
+            />`
         : html`
-            <input 
+            <${InfoInput}
                 type="text" 
-                className="info-field ${fieldClass} ${isEditing ? 'editing' : ''}" 
+                isEditing=${isEditing}
                 readOnly=${!isEditing} 
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
             />`
       }
-    </div>
+    <//>
   `;
 }

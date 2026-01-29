@@ -4,6 +4,7 @@ import { html } from 'htm/preact';
 import { useState, useEffect } from 'preact/hooks';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { Page } from './custom-ui/layout/page.mjs';
+import { GeneratedResult } from './app-ui/generated-result.mjs';
 // import { GenerationForm } from './app-ui/generation-form.mjs'; // Temporarily commented - depends on unrefactored components
 
 /**
@@ -18,6 +19,20 @@ function generateRandomSeed() {
  */
 function App() {
   const toast = useToast();
+
+  // State for GeneratedResult demo
+  const [generatedImage, setGeneratedImage] = useState({
+    uid: 'demo-1',
+    name: 'Sample Generated Image',
+    workflow: 'flux-dev',
+    prompt: 'A beautiful landscape with mountains and a lake at sunset',
+    description: 'A serene mountain landscape',
+    summary: 'Mountain landscape at sunset',
+    tags: ['landscape', 'mountain', 'sunset', 'nature'],
+    seed: '12345678',
+    imageUrl: 'https://via.placeholder.com/512x512.png?text=Generated+Image',
+    type: 'image'
+  });
 
   /* Temporarily commented - dependencies not yet refactored
   // State management
@@ -116,10 +131,30 @@ function App() {
         </p>
       </div>
       
+      <!-- Refactored GeneratedResult -->
+      <${GeneratedResult}
+        image=${generatedImage}
+        onUseSeed=${(seed) => toast.show(`Use seed: ${seed}`)}
+        onUsePrompt=${(prompt) => toast.show('Use prompt')}
+        onUseWorkflow=${(wf) => toast.show(`Use workflow: ${wf}`)}
+        onUseName=${(name) => toast.show(`Use name: ${name}`)}
+        onUseDescription=${(desc) => toast.show('Use description')}
+        onDelete=${(img) => toast.show('Delete clicked')}
+        onInpaint=${(img) => toast.show('Inpaint clicked')}
+        onSelectAsInput=${(img) => toast.show('Select as input clicked')}
+        onEdit=${(uid, field, value) => {
+          toast.show(`Edit ${field}`);
+          setGeneratedImage(prev => ({ ...prev, [field]: value }));
+        }}
+        onRegenerate=${(uid, field) => toast.show(`Regenerate ${field}`)}
+        isSelectDisabled=${true}
+        isInpaintDisabled=${false}
+      />
+      
       <!-- Placeholder for other components -->
       <div style="margin: 20px 0; padding: 15px; background: var(--background-secondary); border-radius: 8px;">
         <p style="color: var(--text-secondary);">
-          <strong>GeneratedResult, Gallery, etc.</strong> - Not yet refactored
+          <strong>Gallery, etc.</strong> - Not yet refactored
         </p>
       </div>
     </div>
