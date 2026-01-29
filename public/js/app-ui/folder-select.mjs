@@ -1,8 +1,8 @@
 // Folder Select Modal Component
 import { render, Component } from 'preact';
 import { html } from 'htm/preact';
-import { showTextPrompt, showDialog } from './dialog.mjs';
-import { Button } from './button.mjs';
+import { showTextPrompt, showDialog } from '../custom-ui/dialog.mjs';
+import { Button } from '../custom-ui/button.mjs';
 
 // FolderItem component - renders a single folder row
 function FolderItem({ folder, isSelected, onSelect, onRename, onDelete }) {

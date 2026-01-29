@@ -1,11 +1,11 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { PaginationControls } from './pagination.mjs';
-import { usePagination } from './use-pagination.mjs';
+import { PaginationControls } from '../custom-ui/pagination.mjs';
+import { usePagination } from '../custom-ui/use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
-import { showDialog } from './dialog.mjs';
-import { createImageModal } from './modal.mjs';
+import { showDialog } from '../custom-ui/dialog.mjs';
+import { createImageModal } from '../custom-ui/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 
 /**
