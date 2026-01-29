@@ -118,8 +118,6 @@ export class Textarea extends Component {
 
     const inputId = id || rest.name;
 
-    console.log('full Width', fullWidth);
-
     return html`
       <${FormGroup} 
         width=${fullWidth ? '100%' : '200px'}

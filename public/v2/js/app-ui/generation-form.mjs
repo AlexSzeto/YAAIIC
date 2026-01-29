@@ -94,7 +94,7 @@ export function GenerationForm({
     <${FormContainer}>
       
       <!-- Row 1: Name, Seed, Lock -->
-      <${FormRow}>
+      <${FormRow} key="name-seed-row">
         <div>
           <${Input}
             label="Name"
@@ -121,6 +121,7 @@ export function GenerationForm({
 
       <!-- Prompt -->
       <${Textarea}
+        key="description"
         label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}
@@ -135,7 +136,7 @@ export function GenerationForm({
 
       <!-- Row 3: Image Upload -->
       ${workflow?.inputImages > 0 && html`
-        <${FormRow}>
+        <${FormRow} key="image-uploads">
           ${Array.from({ length: workflow.inputImages }, (_, i) => html`
             <${ImageSelect}
               key=${i}
@@ -151,7 +152,7 @@ export function GenerationForm({
 
       <!-- Row 3.5: Audio Upload -->
       ${workflow?.inputAudios > 0 && html`
-        <${FormRow}>
+        <${FormRow} key="audio-uploads">
           ${Array.from({ length: workflow.inputAudios }, (_, i) => html`
             <${AudioSelect}
               key=${i}
@@ -166,7 +167,7 @@ export function GenerationForm({
       `}
 
       <!-- Row 4: Action Buttons -->
-      <${FormRow} justifyContent="flex-start">
+      <${FormRow} key="actions" justifyContent="flex-start">
         <${Button} 
           variant="primary"
           icon="play"

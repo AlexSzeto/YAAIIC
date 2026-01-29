@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from 'goober';
 import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
-import { Modal } from './custom-ui/overlays/modal.mjs';
+
 import { Button } from './custom-ui/io/button.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { getThemeValue } from './custom-ui/theme.mjs';
@@ -16,6 +16,7 @@ import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { Gallery } from './app-ui/gallery.mjs';
 import { NavigatorComponent } from './custom-ui/nav/navigator.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
+import { showDialog } from './custom-ui/overlays/dialog.mjs';
 
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './util.mjs';
@@ -210,13 +211,14 @@ function App() {
       
       // Update formState with new defaults, preserving existing values not from extraInputs
       setFormState(prev => {
-        // Remove old extraInput values that are no longer in the new workflow
-        const newState = { ...prev };
+        // // Remove old extraInput values that are no longer in the new workflow
+        // const newState = { ...prev };
         
-        // Add new extraInput defaults
-        Object.assign(newState, extraInputDefaults);
+        // // Add new extraInput defaults
+        // Object.assign(newState, extraInputDefaults);
         
-        return newState;
+        // return newState;
+        return prev;
       });
     }
   };
@@ -555,16 +557,16 @@ function App() {
     toast.show('Description copied');
   };
   
-  // Delete confirmation state
-  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, image: null });
-
-  const handleDeleteImage = (image) => {
-    setDeleteModalState({ isOpen: true, image });
-  };
-
-  const handleConfirmDelete = async () => {
-    const image = deleteModalState.image;
+  const handleDeleteImage = async (image) => {
     if (!image) return;
+
+    const result = await showDialog(
+      `Are you sure you want to delete "${image.name || 'this image'}"? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
+
+    if (result !== 'Delete') return;
 
     try {
       await fetchJson('/media-data/delete', {
@@ -593,8 +595,6 @@ function App() {
       toast.success('Image deleted');
     } catch (err) {
       toast.error(err.message || 'Failed to delete image');
-    } finally {
-      setDeleteModalState({ isOpen: false, image: null });
     }
   };
   
@@ -863,26 +863,6 @@ function App() {
         <//>
       <//>
       
-      ${taskId ? html`
-        <${ProgressBanner} 
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
-      ` : null}
-      
-      ${regenerateTaskId ? html`
-        <${ProgressBanner} 
-          key=${regenerateTaskId}
-          taskId=${regenerateTaskId}
-          sseManager=${sseManager}
-          onComplete=${handleRegenerateComplete}
-          onError=${handleRegenerateError}
-        />
-      ` : null}
-      
       <${WorkflowControlsContainer}>
         <${WorkflowSelector}
           value=${workflow}
@@ -955,61 +935,56 @@ function App() {
           />
         <//>
       `}
-
-      <${Gallery} 
-        isOpen=${isGalleryOpen}
-        onClose=${() => {
-            setIsGalleryOpen(false);
-            setGallerySelectionMode({ active: false, index: -1, type: null });
-        }}
-        queryPath="/media-data"
-        folder=${currentFolder.uid}
-        previewFactory=${createGalleryPreview}
-        onSelect=${handleGallerySelect}
-        onLoad=${(items) => {
-          if (items && items.length > 0) {
-             // Replace session history with loaded items
-             setHistory(items);
-             setGeneratedImage(items[0]);
-          }
-        }}
-        selectionMode=${gallerySelectionMode.active}
-        fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
-        onSelectAsInput=${handleSelectAsInput}
-      />
-      
-      <${HiddenFileInput} 
-        type="file" 
-        id="upload-file-input" 
-        accept="image/*,audio/*"
-        onChange=${handleUploadFile}
-      />
-      
-      <${Modal}
-        isOpen=${deleteModalState.isOpen}
-        onClose=${() => setDeleteModalState({ isOpen: false, image: null })}
-        title="Confirm Deletion"
-        size="small"
-        footer=${html`
-          <${Button} 
-            variant="secondary" 
-            onClick=${() => setDeleteModalState({ isOpen: false, image: null })}
-          >
-            Cancel
-          <//>
-          <${Button} 
-            variant="danger" 
-            onClick=${handleConfirmDelete}
-          >
-            <box-icon name='trash' color="white"></box-icon>
-            Delete
-          <//>
-        `}
-      >
-        <p>Are you sure you want to delete <strong>"${deleteModalState.image?.name || 'this image'}"</strong>?</p>
-        <p style="font-size: 0.9em; color: ${getThemeValue('colors.text.secondary')}; margin-top: 10px;">This action cannot be undone.</p>
-      <//>
     <//>
+
+    ${taskId ? html`
+      <${ProgressBanner} 
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        onComplete=${handleGenerationComplete}
+        onError=${handleGenerationError}
+      />
+    ` : null}
+    
+    ${regenerateTaskId ? html`
+      <${ProgressBanner} 
+        key=${regenerateTaskId}
+        taskId=${regenerateTaskId}
+        sseManager=${sseManager}
+        onComplete=${handleRegenerateComplete}
+        onError=${handleRegenerateError}
+      />
+    ` : null}
+
+    <${Gallery} 
+      isOpen=${isGalleryOpen}
+      onClose=${() => {
+          setIsGalleryOpen(false);
+          setGallerySelectionMode({ active: false, index: -1, type: null });
+      }}
+      queryPath="/media-data"
+      folder=${currentFolder.uid}
+      previewFactory=${createGalleryPreview}
+      onSelect=${handleGallerySelect}
+      onLoad=${(items) => {
+        if (items && items.length > 0) {
+            // Replace session history with loaded items
+            setHistory(items);
+            setGeneratedImage(items[0]);
+        }
+      }}
+      selectionMode=${gallerySelectionMode.active}
+      fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
+      onSelectAsInput=${handleSelectAsInput}
+    />
+    
+    <${HiddenFileInput} 
+      type="file" 
+      id="upload-file-input" 
+      accept="image/*,audio/*"
+      onChange=${handleUploadFile}
+    />
   `;
 }
 
