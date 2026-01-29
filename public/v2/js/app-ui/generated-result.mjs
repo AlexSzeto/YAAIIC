@@ -12,7 +12,10 @@ import { currentTheme } from '../custom-ui/theme.mjs';
 
 // Styled components
 const Container = styled('div')`
-  display: block;
+  padding: 20px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  border: 1px solid ${() => currentTheme.value.colors.border.secondary};
+  border-radius: 8px;
 `;
 
 const Title = styled('h3')`

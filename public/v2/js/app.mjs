@@ -28,14 +28,15 @@ import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
 // =========================================================================
 
 const AppContainer = styled('div')`
-  /* Container styles already handled by Page component */
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.large.gap')};
 `;
 
 const AppHeader = styled('div')`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${getThemeValue('spacing.large.gap')};
 `;
 
 const HeaderTitle = styled('h1')`
@@ -57,7 +58,6 @@ const WorkflowControlsContainer = styled('div')`
   display: flex;
   flex-wrap: wrap;
   gap: ${getThemeValue('spacing.medium.gap')};
-  margin-bottom: ${getThemeValue('spacing.medium.gap')};
   padding: ${getThemeValue('spacing.medium.padding')};
   background-color: ${getThemeValue('colors.background.secondary')};
   border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
@@ -66,7 +66,10 @@ const WorkflowControlsContainer = styled('div')`
 `;
 
 const HistoryContainer = styled('div')`
-  margin-top: ${getThemeValue('spacing.large.gap')};
+  padding: ${getThemeValue('spacing.medium.padding')};
+  background-color: ${getThemeValue('colors.background.secondary')};
+  border: 1px solid ${getThemeValue('colors.border.secondary')};
+  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
 `;
 
 const HistoryTitle = styled('h3')`
@@ -844,17 +847,17 @@ function App() {
           <${Button} 
             id="folder-btn"
             onClick=${handleOpenFolderSelect}
-            variant="small-icon"
+            variant="medium-icon-text"
+            icon="folder"
           >
-            <box-icon name='folder' color=${getThemeValue('colors.text.primary')}></box-icon>
             ${currentFolder.label}
           <//>
           <${Button} 
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
-            variant="small-icon"
+            variant="medium-icon-text"
+            icon="images"
           >
-            <box-icon name='images' color=${getThemeValue('colors.text.primary')}></box-icon>
             Gallery
           <//>
         <//>

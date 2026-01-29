@@ -28,6 +28,9 @@ function applyGlobalStyles(theme) {
       line-height: 1.5;
       background-color: ${theme.colors.background.primary};
       color: ${theme.colors.text.primary};
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     /* Scrollbar styling */

@@ -51,11 +51,18 @@ const spacingSubTheme = {
       gap: '4px'
     },
     medium: {
-      padding: '8px',
+      padding: '16px',
       buttonPadding: '8px 16px',
       margin: '8px',
       borderRadius: '8px',
       gap: '8px'
+    },
+    large: {
+      padding: '16px',
+      buttonPadding: '16px 32px',
+      margin: '16px',
+      borderRadius: '16px',
+      gap: '24px'
     }
   },
   border: {
