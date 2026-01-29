@@ -13,13 +13,13 @@ import { getThemeValue } from '../custom-ui/theme.mjs';
 const FormContainer = styled('div')`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: ${getThemeValue('spacing.medium.gap')};
   width: 100%;
 `;
 
 const FormRow = styled('div')`
   display: flex;
-  gap: 15px;
+  gap: ${getThemeValue('spacing.medium.gap')};
   align-items: ${props => props.alignItems || 'flex-end'};
   flex-wrap: wrap;
   ${props => props.justifyContent ? `justify-content: ${props.justifyContent};` : ''}

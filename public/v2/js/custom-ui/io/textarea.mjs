@@ -23,6 +23,7 @@ const Label = styled('label')`
 `;
 
 const StyledTextarea = styled('textarea')`
+  width: 100%;
   padding: 8px 12px;
   border-radius: 6px;
   resize: vertical;
@@ -116,6 +117,8 @@ export class Textarea extends Component {
     const { theme } = this.state;
 
     const inputId = id || rest.name;
+
+    console.log('full Width', fullWidth);
 
     return html`
       <${FormGroup} 

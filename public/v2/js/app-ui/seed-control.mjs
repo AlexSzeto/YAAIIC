@@ -6,6 +6,7 @@ import { getThemeValue } from '../custom-ui/theme.mjs';
 
 const CheckboxWrapper = styled('div')`
   margin-bottom: ${getThemeValue('spacing.small.margin')};
+  width: 200px;
 `;
 
 /**
