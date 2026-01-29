@@ -20,10 +20,10 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 - **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 
 ## Tasks
-[] Rebuild v2 main page skeleton
+[x] Rebuild v2 main page skeleton
 1. Start with a blank page. As components are being refactored, port over the UI section from v1 of the page over to v2 to show the newly refactored component.
 
-[] Refactor GenerationForm app component to Goober
+[x] Refactor GenerationForm app component to Goober
 1. Update `public/v2/js/app-ui/generation-form.mjs` to use Goober styling
 2. Replace all inline flexbox styles with styled components
 3. Remove CSS class dependencies (generation-form, form-row)

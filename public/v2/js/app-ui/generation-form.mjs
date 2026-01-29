@@ -1,11 +1,29 @@
 import { html } from 'htm/preact';
-import { Textarea } from '../custom-ui/textarea.mjs';
-import { Input } from '../custom-ui/input.mjs';
-import { Button } from '../custom-ui/button.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { Textarea } from '../custom-ui/io/textarea.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
 import { SeedControl } from './seed-control.mjs';
-import { ImageSelect } from '../custom-ui/image-select.mjs';
-import { AudioSelect } from '../custom-ui/audio-select.mjs';
+import { ImageSelect } from '../custom-ui/media/image-select.mjs';
+import { AudioSelect } from '../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+// Styled components
+const FormContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+`;
+
+const FormRow = styled('div')`
+  display: flex;
+  gap: 15px;
+  align-items: ${props => props.alignItems || 'flex-end'};
+  flex-wrap: wrap;
+  ${props => props.justifyContent ? `justify-content: ${props.justifyContent};` : ''}
+`;
 
 /**
  * Generation Form Component
@@ -73,10 +91,10 @@ export function GenerationForm({
   })();
 
   return html`
-    <div class="generation-form" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+    <${FormContainer}>
       
       <!-- Row 1: Name, Seed, Lock -->
-      <div class="form-row" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+      <${FormRow}>
         <div>
           <${Input}
             label="Name"
@@ -99,7 +117,7 @@ export function GenerationForm({
         ${workflow?.extraInputs ? html`
           ${renderExtraInputs(workflow.extraInputs, 'standard')}
       ` : null}
-      </div>
+      <//>
 
       <!-- Prompt -->
       <${Textarea}
@@ -117,7 +135,7 @@ export function GenerationForm({
 
       <!-- Row 3: Image Upload -->
       ${workflow?.inputImages > 0 && html`
-        <div id="image-upload-container" class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <${FormRow}>
           ${Array.from({ length: workflow.inputImages }, (_, i) => html`
             <${ImageSelect}
               key=${i}
@@ -128,12 +146,12 @@ export function GenerationForm({
               disabled=${isGenerating}
             />
           `)}
-        </div>
+        <//>
       `}
 
       <!-- Row 3.5: Audio Upload -->
       ${workflow?.inputAudios > 0 && html`
-        <div id="audio-upload-container" class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <${FormRow}>
           ${Array.from({ length: workflow.inputAudios }, (_, i) => html`
             <${AudioSelect}
               key=${i}
@@ -144,12 +162,11 @@ export function GenerationForm({
               disabled=${isGenerating}
             />
           `)}
-        </div>
+        <//>
       `}
 
       <!-- Row 4: Action Buttons -->
-      <!-- Row 4: Action Buttons (V1 Style) -->
-      <div id="action-buttons-container" class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-start;">
+      <${FormRow} justifyContent="flex-start">
         <${Button} 
           variant="primary"
           icon="play"
@@ -171,8 +188,8 @@ export function GenerationForm({
         >
           Upload
         <//>
-      </div>
+      <//>
 
-    </div>
+    <//>
   `;
 }
