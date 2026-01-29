@@ -5,7 +5,7 @@
  * Uses the generic ListSelectModal component for consistent styling and behavior.
  */
 import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
-import { showTextPrompt, showDialog } from '../custom-ui/dialog.mjs';
+import { showTextPrompt, showDialog } from '../custom-ui/overlays/dialog.mjs';
 
 /**
  * Internal helper to fetch folders from the server

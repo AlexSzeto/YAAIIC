@@ -2,18 +2,18 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
-import { ToastProvider, useToast } from './custom-ui/toast.mjs';
-import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
-import { InpaintCanvas } from './app-ui/inpaint-canvas.mjs';
-import { InpaintForm } from './app-ui/inpaint-form.mjs';
-import { ProgressBanner } from './custom-ui/progress-banner.mjs';
-import { ImageCarousel } from './custom-ui/image-carousel.mjs';
+import { ToastProvider, useToast } from '../custom-ui/msg/toast.mjs';
+import { WorkflowSelector } from './workflow-selector.mjs';
+import { InpaintCanvas } from './inpaint-canvas.mjs';
+import { InpaintForm } from './inpaint-form.mjs';
+import { ProgressBanner } from '../custom-ui/msg/progress-banner.mjs';
+import { NavigatorComponent as ImageCarousel } from '../custom-ui/nav/navigator.mjs';
 import { sseManager } from './sse-manager.mjs';
-import { fetchJson, fetchWithRetry, getQueryParam } from '../custom-ui/util.mjs';
+import { fetchJson, fetchWithRetry, getQueryParam } from '../util.mjs';
 import { initAutoComplete } from './autocomplete-setup.mjs';
 import { loadTags } from './tags.mjs';
-import { Button } from './custom-ui/button.mjs';
-import { showFolderSelect } from './app-ui/folder-select.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
+import { showFolderSelect } from './folder-select.mjs';
 
 /**
  * Helper function to generate random seed

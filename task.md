@@ -52,11 +52,14 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 2. Remove CSS class dependency (workflow-selector-container)
 3. Add refactored component to v2 main page
 
-[] Refactor v2 main page (app.mjs)
+[x] Refactor v2 main page (app.mjs)
 > NOTE: all supporting files (autocomplete-setup, gallery-preview, global-audio-player, sse-manager, and tags had been moved to the `app-ui` folder)
 1. Rebuild `public/v2/index.html` and `public/v2/js/app.mjs` using the existing version (from `public/index.html` and `public/js/app.mjs`) as reference
 2. Reference existing v1 css files and use Goober to build v2 of the main page. Do not create css files for v2.
 3. Once all components are refactored, uncomment and integrate GenerationForm into the page
+4. Copy util.mjs from public/js to public/v2/js
+5. Add textarea-caret-position-wrapper script to v2/index.html
+6. Fix import paths in gallery.mjs, folder-select.mjs, gallery-preview.mjs, workflow-selector.mjs, tags.mjs, and inpaint-page.mjs to use correct v2 paths
 
 [] Refactor InpaintForm app component to Goober
 1. Update `public/v2/js/app-ui/inpaint-form.mjs` to use Goober styling

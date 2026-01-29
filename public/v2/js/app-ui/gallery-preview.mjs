@@ -1,8 +1,8 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
-import { createImageModal } from './custom-ui/modal.mjs'
-import { Checkbox } from './custom-ui/checkbox.mjs'
-import { Button } from './custom-ui/button.mjs'
+import { createImageModal } from '../custom-ui/overlays/modal.mjs'
+import { Checkbox } from '../custom-ui/io/checkbox.mjs'
+import { Button } from '../custom-ui/io/button.mjs'
 import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs'
 
 // Gallery Preview Component

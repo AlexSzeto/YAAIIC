@@ -3,11 +3,11 @@ import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
-import { PaginationControls } from '../custom-ui/pagination.mjs';
-import { usePagination } from '../custom-ui/use-pagination.mjs';
+import { NavigatorControl as PaginationControls } from '../custom-ui/nav/navigator.mjs';
+import { usePagination } from '../custom-ui/nav/use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
-import { showDialog } from '../custom-ui/dialog.mjs';
-import { createImageModal } from '../custom-ui/modal.mjs';
+import { showDialog } from '../custom-ui/overlays/dialog.mjs';
+import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 
 // Styled Components
