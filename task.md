@@ -20,6 +20,15 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 - **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 
 ## Tasks
+[x] Isolate and debug WorkflowSelector
+1. Comment out everything except WorkflowSelector in App.mjs
+2. Verify page loads
+
+[x] Restore and verify GenerationForm
+1. Uncomment GenerationForm in App.mjs
+2. Verify workflow selection updates form
+
+
 [x] Rebuild v2 main page skeleton
 1. Start with a blank page. As components are being refactored, port over the UI section from v1 of the page over to v2 to show the newly refactored component.
 
