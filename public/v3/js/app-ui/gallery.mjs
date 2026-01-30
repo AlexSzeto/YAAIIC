@@ -9,6 +9,7 @@ import { fetchJson, FetchError } from '../util.mjs';
 import { showDialog } from '../custom-ui/overlays/dialog.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
 
 // Styled Components
 const ModalOverlay = styled('div')`
@@ -223,30 +224,6 @@ const ButtonGroup = styled('div')`
   gap: 10px;
 `;
 
-const ActionButton = styled('button')`
-  background-color: ${props => props.backgroundColor || currentTheme.value.colors.secondary.background};
-  color: ${() => currentTheme.value.colors.text.primary};
-  border: none;
-  padding: ${() => currentTheme.value.spacing.medium.padding};
-  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: ${() => currentTheme.value.spacing.small.gap};
-  font-size: ${() => currentTheme.value.typography.fontSize.medium};
-  transition: background-color ${() => currentTheme.value.transitions.fast};
-  margin-left: ${props => props.marginLeft || '0'};
-
-  &:hover {
-    background-color: ${() => currentTheme.value.colors.secondary.hover};
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-`;
-
 /**
  * Gallery Component
  * 
@@ -321,6 +298,7 @@ export function Gallery({
   const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // -- Data Fetching --
   const fetchGalleryData = useCallback(async () => {
@@ -393,6 +371,18 @@ export function Gallery({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Handle search input focus
+  useEffect(() => {
+    if (shouldFocusSearch && searchInputRef.current) {
+      // Goober styled components: access DOM element via .base property
+      const element = searchInputRef.current.base || searchInputRef.current;
+      if (element && element.focus) {
+        element.focus();
+      }
+      setShouldFocusSearch(false);
+    }
+  }, [shouldFocusSearch]);
 
   // Debounce search
   useEffect(() => {
@@ -608,8 +598,12 @@ export function Gallery({
             disabled=${shouldDisable}
             ref=${(ref) => {
               if (ref) {
-                ref.innerHTML = '';
-                ref.appendChild(preview);
+                // Goober styled components: access DOM element via .base property
+                const element = ref.base || ref;
+                if (element) {
+                  element.innerHTML = '';
+                  element.appendChild(preview);
+                }
               }
             }}
           />
@@ -642,23 +636,24 @@ export function Gallery({
         <${PaginationWrapper}>
           ${!selectionMode && html`
             <${BulkActions}>
-              <${ActionButton}
+              <${Button}
+                variant="medium-icon-text"
+                color=${hasSelectedItems ? 'danger' : 'secondary'}
                 onClick=${deleteSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
-                backgroundColor=${hasSelectedItems ? currentTheme.value.colors.danger.background : undefined}
+                icon="trash"
               >
-                <box-icon name="trash" color="#ffffff"></box-icon>
                 Delete
               <//>
-              <${ActionButton}
+              <${Button}
+                variant="medium-icon-text"
+                color=${hasSelectedItems ? 'primary' : 'secondary'}
                 onClick=${moveSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Move ${selectedItems.length} selected ${selectedText} to folder` : 'No items selected'}
-                marginLeft="10px"
-                backgroundColor=${hasSelectedItems ? currentTheme.value.colors.primary.background : undefined}
+                icon="folder"
               >
-                <box-icon name="folder" color="#ffffff"></box-icon>
                 Move
               <//>
             <//>
@@ -672,6 +667,7 @@ export function Gallery({
               isLastPage=${pagination.isLastPage}
               onNext=${pagination.goToNext}
               onPrev=${pagination.goToPrev}
+              showFirstLast=${true}
             />
           <//>
         <//>
@@ -682,12 +678,7 @@ export function Gallery({
               placeholder=${searchQuery.includes(',') ? 'Tag search (comma-separated)' : 'Search images...'}
               value=${searchQuery}
               onInput=${handleSearchInput}
-              ref=${(input) => { 
-                if (input && shouldFocusSearch) {
-                  input.focus();
-                  setShouldFocusSearch(false);
-                }
-              }}
+              ref=${searchInputRef}
             />
             <${SearchIcon}
               name=${searchQuery.includes(',') ? 'purchase-tag' : 'search'}
@@ -696,17 +687,21 @@ export function Gallery({
           <//>
           <${ButtonGroup}>
             ${!selectionMode && html`
-              <${ActionButton}
+              <${Button}
+                variant="medium-icon-text"
+                color="secondary"
                 onClick=${handleLoadClick}
+                icon="show"
               >
-                <box-icon name="show" color="#ffffff"></box-icon>
                 View
               <//>
             `}
-            <${ActionButton}
+            <${Button}
+              variant="medium-icon-text"
+              color="secondary"
               onClick=${onClose}
+              icon="x"
             >
-              <box-icon name="x" color="#ffffff"></box-icon>
               Cancel
             <//>
           <//>

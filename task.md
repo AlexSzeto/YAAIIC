@@ -82,8 +82,24 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 4. Restore Gallery component from app-backup.mjs (lines 960-980)
 5. Restore HiddenFileInput component from app-backup.mjs (lines 982-987)
 
-[] Refactor InpaintForm app component to Goober
-1. Update `public/v2/js/app-ui/inpaint-form.mjs` to use Goober styling
+[x] Fix v3 gallery focus error preventing gallery from displaying
+1. Investigate TypeError at gallery.mjs:687 - `input.focus is not a function`
+2. Replace callback ref pattern with useRef hook for SearchInput
+3. Call focus() on the ref.current element when shouldFocusSearch is true
+4. Verify gallery displays correctly and search input can be focused
+5. Fix ref access for Goober styled components using .base property
+6. Replace all ActionButton styled components with Button from custom-ui
+
+[x] Fix v3 folder selection - Unsorted folder should be selectable
+1. Review how Unsorted folder (uid === '') was handled in old folder-select.mjs
+2. Add new `unselectable` property to list-select for items that cannot be selected
+3. Update list-select to check `unselectable` instead of `disabled` for selection prevention
+4. Keep `disabled: folder.uid === ''` for Unsorted to disable edit/delete buttons
+5. Add guards in onEdit and onDelete handlers to prevent editing/deleting Unsorted folder
+6. Test that Unsorted folder can be selected but not edited or deleted
+
+[x] Refactor InpaintForm app component to Goober
+1. Update `public/v3/js/app-ui/inpaint-form.mjs` to use Goober styling
 2. Replace inline flexbox styles with styled components
 3. Remove CSS class dependencies (inpaint-form, form-row)
 

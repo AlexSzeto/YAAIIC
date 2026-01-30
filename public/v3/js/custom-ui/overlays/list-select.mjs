@@ -49,12 +49,12 @@ const ItemContainer = styled('div')`
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  cursor: ${props => props.disabled ? 'default' : 'pointer'};
+  cursor: ${props => props.unselectable ? 'default' : 'pointer'};
   transition: background-color ${props => props.theme.transitions.fast};
-  opacity: ${props => props.disabled ? 0.5 : 1};
+  opacity: ${props => props.unselectable ? 0.5 : 1};
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   
-  ${props => !props.disabled ? `
+  ${props => !props.unselectable ? `
     &:hover {
       background-color: ${props.theme.colors.background.hover};
     }
@@ -131,9 +131,9 @@ function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, show
   return html`
     <${ItemContainer} 
       isSelected=${isSelected}
-      disabled=${item.disabled}
+      unselectable=${item.unselectable}
       theme=${theme}
-      onClick=${() => !item.disabled && onSelect(item)}
+      onClick=${() => !item.unselectable && onSelect(item)}
     >
       <${ItemLabel} theme=${theme}>
         <box-icon 

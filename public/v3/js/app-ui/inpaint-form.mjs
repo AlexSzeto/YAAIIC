@@ -1,10 +1,27 @@
-// InpaintForm - Form component for inpaint parameters
 import { html } from 'htm/preact';
-import { Textarea } from '../custom-ui/textarea.mjs';
-import { Input } from '../custom-ui/input.mjs';
-import { Button } from '../custom-ui/button.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { Textarea } from '../custom-ui/io/textarea.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
 import { SeedControl } from './seed-control.mjs';
 import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+// Styled components
+const FormContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  width: 100%;
+`;
+
+const FormRow = styled('div')`
+  display: flex;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  align-items: ${props => props.alignItems || 'flex-end'};
+  flex-wrap: wrap;
+  ${props => props.justifyContent ? `justify-content: ${props.justifyContent};` : ''}
+`;
 
 /**
  * InpaintForm Component
@@ -49,10 +66,10 @@ export function InpaintForm({
   })();
 
   return html`
-    <div class="inpaint-form" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+    <${FormContainer}>
       
       <!-- Row 1: Name, Seed, Lock -->
-      <div class="form-row" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+      <${FormRow} key="name-seed-row">
         <div>
           <${Input}
             label="Name"
@@ -74,10 +91,11 @@ export function InpaintForm({
         
         <!-- Extra Inputs (standard types: text, number, select, checkbox) -->
         ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'standard') : null}
-      </div>
+      <//>
 
       <!-- Prompt -->
       <${Textarea}
+        key="description"
         label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}
@@ -91,7 +109,7 @@ export function InpaintForm({
       ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'textarea') : null}
 
       <!-- Action Buttons -->
-      <div class="form-row button-row" style="display: flex; gap: 15px; align-items: center; justify-content: flex-start;">
+      <${FormRow} key="button-row" justifyContent="flex-start">
         <${Button} 
           variant="primary"
           icon="play"
@@ -101,8 +119,8 @@ export function InpaintForm({
         >
           ${isGenerating ? 'Inpainting...' : 'Inpaint'}
         <//>
-      </div>
+      <//>
 
-    </div>
+    <//>
   `;
 }

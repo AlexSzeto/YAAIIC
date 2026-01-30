@@ -23,8 +23,9 @@ async function fetchFolderItems() {
       id: folder.uid,
       label: folder.label,
       icon: 'folder',
-      // Unsorted folder (empty uid) cannot be edited/deleted
-      disabled: folder.uid === ''
+      // Unsorted folder (empty uid) cannot be edited/deleted, but can be selected
+      disabled: folder.uid === '',
+      isUnsorted: folder.uid === ''
     }));
   } catch (error) {
     console.error('Error fetching folders:', error);
@@ -159,6 +160,11 @@ export function showFolderSelect(onSelectFolder, onRenameFolder, onDeleteFolder,
       },
       
       onEdit: async (item) => {
+        // Prevent editing Unsorted folder
+        if (item.isUnsorted) {
+          await showDialog('The Unsorted folder cannot be renamed.', 'Cannot Rename');
+          return;
+        }
         const newLabel = await showTextPrompt('Rename Folder', item.label, 'Folder name');
         if (newLabel && newLabel.trim() && newLabel !== item.label) {
           const success = await renameFolder(item.id, newLabel);
@@ -176,6 +182,11 @@ export function showFolderSelect(onSelectFolder, onRenameFolder, onDeleteFolder,
       },
       
       onDelete: async (item) => {
+        // Prevent deleting Unsorted folder
+        if (item.isUnsorted) {
+          await showDialog('The Unsorted folder cannot be deleted.', 'Cannot Delete');
+          return;
+        }
         const result = await showDialog(
           `Delete folder "${item.label}"? All images in this folder will be moved to Unsorted.`,
           'Confirm Delete',
