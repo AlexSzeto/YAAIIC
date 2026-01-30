@@ -1,4 +1,4 @@
-// Main application entry point for V2
+// Main application entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
@@ -150,10 +150,11 @@ function App() {
     async function init() {
       try {
         await loadTags();
-        setTimeout(() => {
-             initAutoComplete();
-             console.log('Autocomplete initialized in App V2');
-        }, 100);
+        // Textarea is currently missing, so autocomplete is not initialized.
+        // setTimeout(() => {
+        //      initAutoComplete();
+        //      console.log('Autocomplete initialized in App V3');
+        // }, 100);
 
         // Load workflows for lookup
         const workflowData = await fetchJson('/workflows');
@@ -841,27 +842,7 @@ function App() {
 
   return html`
     <${AppContainer}>
-      <${AppHeader}>
-        <${HeaderTitle}>YAAIIG <small>V2</small><//>
-        <${HeaderButtons}>
-          <${Button} 
-            id="folder-btn"
-            onClick=${handleOpenFolderSelect}
-            variant="medium-icon-text"
-            icon="folder"
-          >
-            ${currentFolder.label}
-          <//>
-          <${Button} 
-            id="gallery-btn"
-            onClick=${() => setIsGalleryOpen(true)}
-            variant="medium-icon-text"
-            icon="images"
-          >
-            Gallery
-          <//>
-        <//>
-      <//>
+      <!-- AppHeader commented out -->
       
       <${WorkflowControlsContainer}>
         <${WorkflowSelector}
@@ -892,99 +873,12 @@ function App() {
         />
       <//>
       
-      <${GeneratedResult} 
-        image=${generatedImage}
-        onUseSeed=${handleUseSeed}
-        onUsePrompt=${handleUsePrompt}
-        onUseWorkflow=${handleUseWorkflow}
-        onUseName=${handleUseName}
-        onUseDescription=${handleUseDescription}
-        onDelete=${handleDeleteImage}
-        onInpaint=${handleInpaint}
-        onEdit=${handleEdit}
-        onRegenerate=${handleRegenerate}
-        onSelectAsInput=${handleSelectAsInput}
-        isSelectDisabled=${(() => {
-          // Disable if no workflow or workflow doesn't need images
-          if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-          // Disable if the media type doesn't match the workflow type
-          const workflowType = workflow.type || 'image';
-          const mediaType = generatedImage?.type || 'image';
-          if (mediaType !== workflowType) return true;
-          // Disable if all slots are filled
-          const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
-          if (filledCount >= workflow.inputImages) return true;
-          return false;
-        })()}
-        isInpaintDisabled=${(() => {
-          // Disable if the media type is not an image
-          const mediaType = generatedImage?.type || 'image';
-          if (mediaType !== 'image') return true;
-          return false;
-        })()}
-      />
+      <!-- GeneratedResult commented out -->
 
-      ${history.length > 0 && html`
-        <${HistoryContainer}>
-          <${HistoryTitle}>Session History<//>
-          <${NavigatorComponent} 
-            items=${history} 
-            selectedItem=${generatedImage}
-            onSelect=${handleNavigatorSelect}
-            itemsPerPage=${24}
-          />
-        <//>
-      `}
+      <!-- HistoryContainer commented out -->
     <//>
 
-    ${taskId ? html`
-      <${ProgressBanner} 
-        key=${taskId}
-        taskId=${taskId}
-        sseManager=${sseManager}
-        onComplete=${handleGenerationComplete}
-        onError=${handleGenerationError}
-      />
-    ` : null}
-    
-    ${regenerateTaskId ? html`
-      <${ProgressBanner} 
-        key=${regenerateTaskId}
-        taskId=${regenerateTaskId}
-        sseManager=${sseManager}
-        onComplete=${handleRegenerateComplete}
-        onError=${handleRegenerateError}
-      />
-    ` : null}
-
-    <${Gallery} 
-      isOpen=${isGalleryOpen}
-      onClose=${() => {
-          setIsGalleryOpen(false);
-          setGallerySelectionMode({ active: false, index: -1, type: null });
-      }}
-      queryPath="/media-data"
-      folder=${currentFolder.uid}
-      previewFactory=${createGalleryPreview}
-      onSelect=${handleGallerySelect}
-      onLoad=${(items) => {
-        if (items && items.length > 0) {
-            // Replace session history with loaded items
-            setHistory(items);
-            setGeneratedImage(items[0]);
-        }
-      }}
-      selectionMode=${gallerySelectionMode.active}
-      fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
-      onSelectAsInput=${handleSelectAsInput}
-    />
-    
-    <${HiddenFileInput} 
-      type="file" 
-      id="upload-file-input" 
-      accept="image/*,audio/*"
-      onChange=${handleUploadFile}
-    />
+    <!-- ProgressBanners, Gallery and HiddenFileInput commented out -->
   `;
 }
 
@@ -999,7 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <//>
       <//>
     `, root);
-    console.log('App V2 mounted successfully');
+    console.log('App V3 mounted successfully');
   } else {
     console.error('Root element #app not found');
   }

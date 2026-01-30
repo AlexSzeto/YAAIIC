@@ -1,4 +1,4 @@
-// Inpaint page entry point for V2
+// Inpaint page entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
@@ -441,7 +441,7 @@ function InpaintApp() {
   return html`
     <div class="app-container">
       <div class="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">Inpaint V2</small></h1>
+        <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">Inpaint V3</small></h1>
         <div style="display: flex; gap: 10px;">
           <${Button}
             icon="folder"
@@ -545,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <${InpaintApp} />
       <//>
     `, root);
-    console.log('Inpaint App V2 mounted successfully');
+    console.log('Inpaint App V3 mounted successfully');
   } else {
     console.error('Root element #app not found');
   }
