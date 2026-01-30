@@ -70,6 +70,18 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 5. Add textarea-caret-position-wrapper script to v2/index.html
 6. Fix import paths in gallery.mjs, folder-select.mjs, gallery-preview.mjs, workflow-selector.mjs, tags.mjs, and inpaint-page.mjs to use correct v2 paths
 
+[x] Debug insertBefore issue - Restore GeneratedResult
+1. Restore GeneratedResult section from app-backup.mjs (lines 895-925)
+2. Test clicking Gallery button, Delete button, and changing Workflow
+3. If no error appears, mark as complete
+
+[x] Restore progress banner and hidden file input from backup
+1. Restore AppHeader section from app-backup.mjs (lines 844-864)
+2. Restore HistoryContainer section from app-backup.mjs (lines 927-937)
+3. Restore ProgressBanner components from app-backup.mjs (lines 940-958)
+4. Restore Gallery component from app-backup.mjs (lines 960-980)
+5. Restore HiddenFileInput component from app-backup.mjs (lines 982-987)
+
 [] Refactor InpaintForm app component to Goober
 1. Update `public/v2/js/app-ui/inpaint-form.mjs` to use Goober styling
 2. Replace inline flexbox styles with styled components

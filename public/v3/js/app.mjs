@@ -14,7 +14,8 @@ import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
 import { GeneratedResult } from './app-ui/generated-result.mjs';
 import { Gallery } from './app-ui/gallery.mjs';
-import { NavigatorComponent } from './custom-ui/nav/navigator.mjs';
+import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
+import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
 
@@ -787,10 +788,15 @@ function App() {
      }
   };
 
-  // Navigator handlers
-  const handleNavigatorSelect = (item) => {
-    setGeneratedImage(item);
-  };
+  // History navigation using useItemNavigation hook
+  const historyNav = useItemNavigation(history, generatedImage);
+  
+  // Sync navigation state with generatedImage
+  useEffect(() => {
+    if (historyNav.currentItem && historyNav.currentItem !== generatedImage) {
+      setGeneratedImage(historyNav.currentItem);
+    }
+  }, [historyNav.currentItem]);
 
   // Upload handler
   const handleUploadFile = async (e) => {
@@ -842,7 +848,27 @@ function App() {
 
   return html`
     <${AppContainer}>
-      <!-- AppHeader commented out -->
+      <${AppHeader}>
+        <${HeaderTitle}>YAAIIG <small>V3</small><//>>
+        <${HeaderButtons}>
+          <${Button} 
+            id="folder-btn"
+            onClick=${handleOpenFolderSelect}
+            variant="medium-icon-text"
+            icon="folder"
+          >
+            ${currentFolder.label}
+          </>
+          <${Button} 
+            id="gallery-btn"
+            onClick=${() => setIsGalleryOpen(true)}
+            variant="medium-icon-text"
+            icon="images"
+          >
+            Gallery
+          </>
+        </>
+      </>
       
       <${WorkflowControlsContainer}>
         <${WorkflowSelector}
@@ -873,12 +899,102 @@ function App() {
         />
       <//>
       
-      <!-- GeneratedResult commented out -->
+      <${GeneratedResult} 
+        image=${generatedImage}
+        onUseSeed=${handleUseSeed}
+        onUsePrompt=${handleUsePrompt}
+        onUseWorkflow=${handleUseWorkflow}
+        onUseName=${handleUseName}
+        onUseDescription=${handleUseDescription}
+        onDelete=${handleDeleteImage}
+        onInpaint=${handleInpaint}
+        onEdit=${handleEdit}
+        onRegenerate=${handleRegenerate}
+        onSelectAsInput=${handleSelectAsInput}
+        isSelectDisabled=${(() => {
+          // Disable if no workflow or workflow doesn't need images
+          if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
+          // Disable if the media type doesn't match the workflow type
+          const workflowType = workflow.type || 'image';
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== workflowType) return true;
+          // Disable if all slots are filled
+          const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
+          if (filledCount >= workflow.inputImages) return true;
+          return false;
+        })()}
+        isInpaintDisabled=${(() => {
+          // Disable if the media type is not an image
+          const mediaType = generatedImage?.type || 'image';
+          if (mediaType !== 'image') return true;
+          return false;
+        })()}
+      />
 
-      <!-- HistoryContainer commented out -->
+      ${history.length > 0 && html`
+        <${HistoryContainer}>
+          <${HistoryTitle}>Session History<//>
+          <${NavigatorControl} 
+            currentPage=${historyNav.currentIndex}
+            totalPages=${historyNav.totalItems}
+            onNext=${historyNav.selectNext}
+            onPrev=${historyNav.selectPrev}
+            onFirst=${historyNav.selectFirst}
+            onLast=${historyNav.selectLast}
+            showFirstLast=${true}
+          />
+        <//>
+      `}
     <//>
 
-    <!-- ProgressBanners, Gallery and HiddenFileInput commented out -->
+    ${taskId ? html`
+      <${ProgressBanner} 
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        onComplete=${handleGenerationComplete}
+        onError=${handleGenerationError}
+      />
+    ` : null}
+    
+    ${regenerateTaskId ? html`
+      <${ProgressBanner} 
+        key=${regenerateTaskId}
+        taskId=${regenerateTaskId}
+        sseManager=${sseManager}
+        onComplete=${handleRegenerateComplete}
+        onError=${handleRegenerateError}
+      />
+    ` : null}
+
+    <${Gallery} 
+      isOpen=${isGalleryOpen}
+      onClose=${() => {
+          setIsGalleryOpen(false);
+          setGallerySelectionMode({ active: false, index: -1, type: null });
+      }}
+      queryPath="/media-data"
+      folder=${currentFolder.uid}
+      previewFactory=${createGalleryPreview}
+      onSelect=${handleGallerySelect}
+      onLoad=${(items) => {
+        if (items && items.length > 0) {
+            // Replace session history with loaded items
+            setHistory(items);
+            setGeneratedImage(items[0]);
+        }
+      }}
+      selectionMode=${gallerySelectionMode.active}
+      fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
+      onSelectAsInput=${handleSelectAsInput}
+    />
+    
+    <${HiddenFileInput} 
+      type="file" 
+      id="upload-file-input" 
+      accept="image/*,audio/*"
+      onChange=${handleUploadFile}
+    />
   `;
 }
 
