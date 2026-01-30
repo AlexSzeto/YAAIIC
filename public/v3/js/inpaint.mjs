@@ -204,12 +204,6 @@ function InpaintApp() {
   useEffect(() => {
     async function init() {
       try {
-        // Load tags for autocomplete
-        await loadTags();
-        setTimeout(() => {
-          // initAutoComplete();
-          // console.log('Autocomplete initialized in Inpaint page');
-        }, 100);        
         // Load current folder
         const folderData = await fetchJson('/folder');
         if (folderData && folderData.current !== undefined) {
@@ -629,7 +623,7 @@ function InpaintApp() {
 }
 
 // Mount the app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
@@ -639,6 +633,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </>
       <//>
     `, root);
+    await loadTags();
+    initAutoComplete();
+    console.log('Autocomplete initialized in App V3');
     console.log('Inpaint App V3 mounted successfully');
   } else {
     console.error('Root element #app not found');

@@ -150,13 +150,6 @@ function App() {
   useEffect(() => {
     async function init() {
       try {
-        await loadTags();
-        // Textarea is currently missing, so autocomplete is not initialized.
-        // setTimeout(() => {
-        //      initAutoComplete();
-        //      console.log('Autocomplete initialized in App V3');
-        // }, 100);
-
         // Load workflows for lookup
         const workflowData = await fetchJson('/workflows');
         if (Array.isArray(workflowData)) {
@@ -1010,6 +1003,13 @@ document.addEventListener('DOMContentLoaded', () => {
       <//>
     `, root);
     console.log('App V3 mounted successfully');
+
+    setTimeout(() => {
+      loadTags().then(() => {
+        initAutoComplete();
+        console.log('Autocomplete initialized in App V3');
+      });
+    }, 100);    
   } else {
     console.error('Root element #app not found');
   }
