@@ -103,15 +103,32 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 2. Replace inline flexbox styles with styled components
 3. Remove CSS class dependencies (inpaint-form, form-row)
 
-[] Refactor InpaintCanvas app component to Goober
-1. Update `public/v2/js/app-ui/inpaint-canvas.mjs` to use Goober styling
+[x] Refactor InpaintCanvas app component to Goober
+1. Update `public/v3/js/app-ui/inpaint-canvas.mjs` to use Goober styling
 2. Replace inline styles with styled components
 3. Remove CSS class dependencies (inpaint-canvas-container, inpaint-loading, etc.)
 
-[] Refactor inpaint-page.mjs to Goober
-1. Update `public/v2/js/inpaint-page.mjs` to use Goober styling
+[x] Refactor inpaint-page.mjs to Goober
+1. Update `public/v3/js/inpaint-page.mjs` to use Goober styling
 2. Ensure all styling uses theme values
 3. Replace any inline styles or CSS class dependencies
+
+[x] Create v3 inpaint.html page
+1. Create `public/v3/inpaint.html` using v3/index.html and public/inpaint.html as guides
+2. Use v3 structure with Goober imports (goober, goober/prefixer)
+3. Point to v3/js/inpaint-page.mjs entry point
+4. Update textarea-caret-position-wrapper path to v3
+
+[x] Update v3 inpaint-page.mjs to use new v3 component structure
+1. Fix import paths: toast.mjs → msg/toast.mjs
+2. Fix import paths: progress-banner.mjs → msg/progress-banner.mjs
+3. Replace ImageCarousel with useItemNavigation hook + NavigatorControl
+4. Fix import paths: sse-manager.mjs → app-ui/sse-manager.mjs
+5. Fix import paths: autocomplete-setup.mjs → app-ui/autocomplete-setup.mjs
+6. Fix import paths: tags.mjs → app-ui/tags.mjs
+7. Update styled import from goober-setup.mjs to use 'goober' directly
+8. Wrap InpaintApp in Page component to initialize goober
+9. Fix canvas ref access in InpaintCanvas to use .base property for goober styled components
 
 [] Remove inline styles from all components
 1. Audit all custom-ui components for remaining inline `style=` attributes

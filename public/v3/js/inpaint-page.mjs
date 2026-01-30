@@ -2,18 +2,94 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
-import { ToastProvider, useToast } from './custom-ui/toast.mjs';
+import { styled } from 'goober';
+import { Page } from './custom-ui/layout/page.mjs';
+import { getThemeValue } from './custom-ui/theme.mjs';
+import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint-canvas.mjs';
 import { InpaintForm } from './app-ui/inpaint-form.mjs';
-import { ProgressBanner } from './custom-ui/progress-banner.mjs';
-import { ImageCarousel } from './custom-ui/image-carousel.mjs';
-import { sseManager } from './sse-manager.mjs';
+import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
+import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
+import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
+import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
-import { initAutoComplete } from './autocomplete-setup.mjs';
-import { loadTags } from './tags.mjs';
-import { Button } from './custom-ui/button.mjs';
+import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
+import { loadTags } from './app-ui/tags.mjs';
+import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
+
+// Styled components
+const AppContainer = styled('div')`
+  padding: ${getThemeValue('spacing.medium.padding')};
+  max-width: 1800px;
+  margin: 0 auto;
+`;
+
+const AppHeader = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${getThemeValue('spacing.medium.margin')};
+  
+  h1 {
+    margin: 0;
+    color: ${getThemeValue('colors.text.primary')};
+    font-size: ${getThemeValue('typography.fontSize.large')};
+    
+    small {
+      font-size: 0.5em;
+      opacity: 0.6;
+    }
+  }
+`;
+
+const HeaderActions = styled('div')`
+  display: flex;
+  gap: ${getThemeValue('spacing.small.gap')};
+`;
+
+const ProgressBannerContainer = styled('div')`
+  margin-bottom: ${getThemeValue('spacing.medium.margin')};
+`;
+
+const MainLayout = styled('div')`
+  display: grid;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 500px;
+  }
+`;
+
+const CanvasPanel = styled('div')`
+  background: ${getThemeValue('colors.background.secondary')};
+  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
+  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
+  padding: ${getThemeValue('spacing.medium.padding')};
+  
+  p {
+    margin: 0;
+    color: ${getThemeValue('colors.text.secondary')};
+  }
+`;
+
+const FormPanel = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.medium.gap')};
+`;
+
+const HistoryContainer = styled('div')`
+  margin-top: ${getThemeValue('spacing.medium.margin')};
+  
+  h3 {
+    margin: 0 0 ${getThemeValue('spacing.small.margin')} 0;
+    font-size: ${getThemeValue('typography.fontSize.medium')};
+    color: ${getThemeValue('colors.text.secondary')};
+    font-weight: ${getThemeValue('typography.fontWeight.medium')};
+  }
+`;
 
 /**
  * Helper function to generate random seed
@@ -433,16 +509,26 @@ function InpaintApp() {
     }
   };
 
+  // History navigation using useItemNavigation hook
+  const historyNav = useItemNavigation(history, mediaData);
+  
+  // Sync navigation state with mediaData
+  useEffect(() => {
+    if (historyNav.currentItem && historyNav.currentItem !== mediaData) {
+      handleCarouselSelect(historyNav.currentItem);
+    }
+  }, [historyNav.currentItem]);
+
   // Determine if we have a valid inpaint area
   const hasValidInpaintArea = inpaintArea && 
     inpaintArea.x1 !== inpaintArea.x2 && 
     inpaintArea.y1 !== inpaintArea.y2;
 
   return html`
-    <div class="app-container">
-      <div class="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">Inpaint V3</small></h1>
-        <div style="display: flex; gap: 10px;">
+    <${AppContainer}>
+      <${AppHeader}>
+        <h1>YAAIIG <small>Inpaint V3</small></h1>
+        <${HeaderActions}>
           <${Button}
             icon="folder"
             onClick=${handleOpenFolderSelect}
@@ -457,11 +543,11 @@ function InpaintApp() {
           >
             Home
           </>
-        </div>
-      </div>
+        </>
+      </>
       
       ${taskId ? html`
-        <div id="progress-banner-container">
+        <${ProgressBannerContainer}>
           <${ProgressBanner} 
             key=${taskId}
             taskId=${taskId}
@@ -469,13 +555,11 @@ function InpaintApp() {
             onComplete=${handleGenerationComplete}
             onError=${handleGenerationError}
           />
-        </div>
+        </>
       ` : null}
       
-      <!-- Main layout: Canvas left, Form right on wide screens -->
-      <div class="inpaint-main-layout">
-        <!-- Inpaint Canvas Area -->
-        <div class="inpaint-canvas-panel content-container">
+      <${MainLayout}>
+        <${CanvasPanel}>
           ${loading && html`
             <p>Loading image for inpainting...</p>
           `}
@@ -495,44 +579,44 @@ function InpaintApp() {
           ${!loading && !error && !mediaData?.imageUrl && html`
             <p>No image loaded for inpainting</p>
           `}
-        </div>
+        </>
         
-        <!-- Workflow Controls Panel -->
-        <div class="inpaint-form-panel">
-          <div class="workflow-controls inpaint-workflow-controls">
-            <${WorkflowSelector}
-              value=${workflow}
-              onChange=${handleWorkflowChange}
-              disabled=${isGenerating}
-              typeOptions=${[
-                { label: 'Inpaint', value: 'inpaint' }
-              ]}
-            />
-            
-            <${InpaintForm}
-              workflow=${workflow}
-              formState=${formState}
-              onFieldChange=${handleFieldChange}
-              isGenerating=${isGenerating}
-              onGenerate=${handleGenerate}
-              hasValidInpaintArea=${hasValidInpaintArea}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <!-- Session History Carousel -->
-      ${history.length > 0 && html`
-        <div class="history-carousel-container" style="margin-top: 20px;">
-          <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Session History</h3>
-          <${ImageCarousel} 
-            items=${history} 
-            selectedItem=${mediaData}
-            onSelect=${handleCarouselSelect}
+        <${FormPanel}>
+          <${WorkflowSelector}
+            value=${workflow}
+            onChange=${handleWorkflowChange}
+            disabled=${isGenerating}
+            typeOptions=${[
+              { label: 'Inpaint', value: 'inpaint' }
+            ]}
           />
-        </div>
+          
+          <${InpaintForm}
+            workflow=${workflow}
+            formState=${formState}
+            onFieldChange=${handleFieldChange}
+            isGenerating=${isGenerating}
+            onGenerate=${handleGenerate}
+            hasValidInpaintArea=${hasValidInpaintArea}
+          />
+        </>
+      </>
+      
+      ${history.length > 0 && html`
+        <${HistoryContainer}>
+          <h3>Session History</h3>
+          <${NavigatorControl} 
+            currentPage=${historyNav.currentIndex}
+            totalPages=${historyNav.totalItems}
+            onNext=${historyNav.selectNext}
+            onPrev=${historyNav.selectPrev}
+            onFirst=${historyNav.selectFirst}
+            onLast=${historyNav.selectLast}
+            showFirstLast=${true}
+          />
+        </>
       `}
-    </div>
+    </>
   `;
 }
 
@@ -541,8 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
-      <${ToastProvider}>
-        <${InpaintApp} />
+      <${Page}>
+        <${ToastProvider}>
+          <${InpaintApp} />
+        </>
       <//>
     `, root);
     console.log('Inpaint App V3 mounted successfully');

@@ -1,6 +1,63 @@
-// InpaintCanvas - Functional Preact component for inpainting canvas
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+// Styled components
+const CanvasContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  width: 100%;
+`;
+
+const CanvasTitle = styled('h3')`
+  margin: 0;
+  color: ${getThemeValue('colors.text.primary')};
+  font-size: ${getThemeValue('typography.fontSize.large')};
+  font-weight: ${getThemeValue('typography.fontWeight.bold')};
+`;
+
+const PlaceholderContainer = styled('div')`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${getThemeValue('spacing.large.padding')};
+  background: ${getThemeValue('colors.background.secondary')};
+  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
+  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
+  color: ${getThemeValue('colors.text.secondary')};
+`;
+
+const LoadingContainer = styled('div')`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${getThemeValue('spacing.large.padding')};
+  background: ${getThemeValue('colors.background.secondary')};
+  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
+  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
+  color: ${getThemeValue('colors.text.secondary')};
+`;
+
+const Canvas = styled('canvas')`
+  max-width: 100%;
+  height: auto;
+  cursor: crosshair;
+  border-radius: ${getThemeValue('spacing.small.borderRadius')};
+`;
+
+const InfoContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.small.gap')};
+  color: ${getThemeValue('colors.text.secondary')};
+  font-size: ${getThemeValue('typography.fontSize.small')};
+
+  p {
+    margin: 0;
+  }
+`;
 
 /**
  * InpaintCanvas Component
@@ -66,7 +123,8 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   useEffect(() => {
     if (!imageLoaded || !canvasRef.current || !imageRef.current) return;
     
-    const canvas = canvasRef.current;
+    // Goober styled components: access DOM element via .base property
+    const canvas = canvasRef.current.base || canvasRef.current;
     const ctx = canvas.getContext('2d');
     
     // Set canvas size
@@ -123,7 +181,8 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   const getCanvasCoordinates = useCallback((e) => {
     if (!canvasRef.current) return { x: 0, y: 0, isValid: false };
     
-    const canvas = canvasRef.current;
+    // Goober styled components: access DOM element via .base property
+    const canvas = canvasRef.current.base || canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -235,38 +294,36 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   };
   
   return html`
-    <div class="inpaint-canvas-container">
-      <h3>Inpaint Canvas</h3>
+    <${CanvasContainer}>
+      <${CanvasTitle}>Inpaint Canvas<//>
       ${!imageUrl && html`
-        <div class="inpaint-placeholder">
+        <${PlaceholderContainer}>
           <p>No image loaded for inpainting</p>
-        </div>
+        <//>
       `}
       ${imageUrl && !imageLoaded && html`
-        <div class="inpaint-loading">
+        <${LoadingContainer}>
           <p>Loading image...</p>
-        </div>
+        <//>
       `}
       ${imageLoaded && html`
-        <canvas 
+        <${Canvas}
           id="inpaint"
           ref=${canvasRef}
-          class="inpaint-canvas loaded"
-          style="max-width: 100%; height: auto; cursor: crosshair;"
           onMouseDown=${handleMouseDown}
           onContextMenu=${handleRightClick}
         />
       `}
       ${imageLoaded && html`
-        <div class="inpaint-info">
+        <${InfoContainer}>
           <p>Canvas size: ${canvasSize.width} x ${canvasSize.height}</p>
           ${inpaintArea ? html`
             <p>Inpaint area: ${getInpaintAreaDisplay()}</p>
           ` : html`
             <p>Left click and drag to select inpaint area, right click to clear selection</p>
           `}
-        </div>
+        <//>
       `}
-    </div>
+    <//>
   `;
 }
