@@ -78,6 +78,10 @@ const EmptyText = styled('div')`
   font-size: ${props => props.fontSize};
 `;
 
+const HiddenFileInput = styled('input')`
+  display: none;
+`;
+
 /**
  * ImageSelect Component
  * A reusable component for selecting images via gallery or file upload.
@@ -240,11 +244,10 @@ export class ImageSelect extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <input
+        <${HiddenFileInput}
           type="file"
           ref=${(el) => { this.fileInputRef = el; }}
           accept="image/*"
-          style="display: none;"
           onChange=${this.handleFileSelect}
           disabled=${disabled}
         />

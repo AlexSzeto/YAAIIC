@@ -130,30 +130,17 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 8. Wrap InpaintApp in Page component to initialize goober
 9. Fix canvas ref access in InpaintCanvas to use .base property for goober styled components
 
-[] Remove inline styles from all components
-1. Audit all custom-ui components for remaining inline `style=` attributes
-2. Audit all app-ui components for remaining inline `style=` attributes
+[x] Remove inline styles from all components
+1. Audit all V3 custom-ui components for remaining inline `style=` attributes
+2. Audit all V3 app-ui components for remaining inline `style=` attributes
 3. Replace with goober styled components or `css` template literals
 4. Verify all styling is handled by Goober
 
-[] Clean up CSS files and verify visual parity
-1. Take before-screenshots of all UI pages/components
-2. Audit `custom-ui.css` and remove all color/border/margin/padding properties that are now handled by Goober
-   - Take after-screenshot after each block removal
-   - Compare before-after to verify flexbox/grid layout remains intact
-   - Keep any layout-only CSS (display, flex, grid, position, etc.)
-3. Audit `variables.css` and remove color variables now managed by theme.mjs
-   - Compare before-after screenshots
-4. Leave `style.css` intact - it contains page layout and positioning CSS
-5. Delete `custom-ui.css` only when empty or containing only comments
-6. Delete `variables.css` only when all color variables have been migrated
-7. Final verification: compare original before-screenshots with final state to ensure no visual regressions
-
-[] Remove deprecated component files
-1. Delete `public/v2/js/custom-ui/tags.mjs` - replaced by button-group.mjs
-2. Delete `public/v2/js/custom-ui/image-carousel.mjs` - replaced by item-navigator.mjs
-3. Delete `public/v2/js/custom-ui/folder-select.mjs` - moved to app-ui
-4. Delete `public/v2/js/custom-ui/gallery.mjs` - moved to app-ui
-5. Verify no imports remain in the codebase for these files
-6. Update any remaining references to use the new components
+[x] Remove deprecated component files
+1. Remove all V3 imports for `public/v3/js/custom-ui/tags.mjs` - replaced by button-group.mjs
+2. Remove all V3 imports for `public/v3/js/custom-ui/image-carousel.mjs` - replaced by item-navigator.mjs
+3. Remove all V3 imports for `public/v3/js/custom-ui/folder-select.mjs` - moved to app-ui
+4. Remove all V3 imports for `public/v3/js/custom-ui/gallery.mjs` - moved to app-ui
+5. Verify no imports remain in the V3 codebase for these files
+6. Update any remaining V3 references to use the new components
 
