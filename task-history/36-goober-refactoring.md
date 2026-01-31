@@ -1,0 +1,323 @@
+# Goober Refactoring
+## Goals
+The ultimate intent of this refactoring is to separate the custom UI components into a reusable library that can be imported by future projects, allowing them to quickly establish a consistent look and feel without reimplementing the same component set.
+
+Refactor all existing custom UI components to use Goober for styling. Do the replacement component by component, utilizing a base light/dark theme futureproofed to be extendable for future themes. Tests would be performed after each refactoring on a test page showing all refactored components, with dynamic theme switching.
+## Implementation Details
+- Install Goober
+- Create the test page at js/custom-ui/test.html
+- Create the base theme at js/custom-ui/theme.js
+- Setup base case: Page custom component (covers base body font, background, etc.)
+- Panel component (simple container of a rectangle with rounded corners)
+- Button component adjustments: remove all implementation specific references (i.e. info-btn) and focus on features offered. The variants should be: (medium-text, medium-icon, medium-icon-text, small-text, small-icon)
+- Repeat for all other components, saving global features like toast and modals for last.
+- Refactor app to ONLY use custom-ui components, adding more custom components as needed.
+- Completely remove all inline styles and CSS files, verifying that the page looks identical before and after sections of the CSS file are removed.
+
+## Implementation Notes
+- **Goober conditional styling**: When using conditionals in Goober's `styled` template literals, always use ternary operators with empty strings: `${condition ? \`styles\` : ''}`. Do NOT use `&&` operators like `${condition && \`styles\`}` as this outputs the string `"false"` into the CSS when the condition is falsy.
+- **Goober subcomponent targeting limitation**: Goober does NOT support targeting styled subcomponents in parent selectors (e.g., `${ParentComponent}:hover &`). This syntax, which works in styled-components, does not function in Goober. **Workarounds**: Use component state to track hover status and conditionally apply props, or restructure styles to use direct pseudo-selectors and descendant selectors without interpolated component names.
+- **Component Migration**: For instructions on migrating from old component APIs to new Goober-styled versions, see [component-transition-guide.md](component-transition-guide.md).
+- **Button Usage**: All buttons in custom UI components should use the existing Button component with appropriate variants (medium-text, medium-icon, medium-text, small-text, small-icon) and colors (primary, secondary, success, danger). Do NOT create custom styled button elements.
+- **Disabled opacity**: Use `opacity: 0.4` for opacity-based disabled states on components. This provides sufficient visual distinction while maintaining readability.
+- **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
+
+## Tasks
+[x] Install Goober and configure for Preact integration
+1. Install goober via npm (`npm install goober`)
+2. Create `public/js/custom-ui/goober-setup.mjs` to configure goober with Preact's `h` function
+```javascript
+// goober-setup.mjs
+import { h } from 'preact';
+import { setup, styled, css, keyframes } from 'goober';
+
+// Configure goober to use Preact
+setup(h);
+
+export { styled, css, keyframes };
+```
+
+[x] Create the base theme system at `public/js/custom-ui/theme.mjs`
+1. Create spacing sub-theme with default values for small and medium component sizes:
+   - padding (small, medium)
+   - margin (small, medium)
+   - border width
+   - border-radius (small, medium)
+2. Create light color theme with all color tokens from `variables.css`
+3. Create dark color theme with all color tokens from `variables.css`
+4. Merge spacing sub-theme with each color theme to produce final `light` and `dark` themes
+5. Export a `currentTheme` reactive store for runtime switching
+6. Export helper functions for accessing theme values
+7. Document how non-custom-ui components can use theme values directly:
+   - How to import and access current theme colors/spacing
+   - How to subscribe to theme changes for dynamic re-styling
+   - Example code patterns for partial theme adaptation
+```javascript
+// theme.mjs - Theme Structure
+const spacingSubTheme = {
+  spacing: {
+    small: { padding: '4px', margin: '4px', borderRadius: '4px' },
+    medium: { padding: '8px', margin: '8px', borderRadius: '8px' }
+  },
+  border: { width: '1px' }
+};
+
+const lightColors = { /* colors for light theme */ };
+const darkColors = { /* colors for dark theme */ };
+
+// Final merged themes
+export const themes = {
+  light: { ...spacingSubTheme, colors: lightColors },
+  dark: { ...spacingSubTheme, colors: darkColors }
+};
+
+// Public API
+export let currentTheme; // reactive store
+export function setTheme(themeName);
+export function getThemeValue(path);
+
+// Partial adaptation example for non-custom-ui components:
+// import { currentTheme, getThemeValue } from './theme.mjs';
+// const color = getThemeValue('colors.primary.background');
+// // Subscribe to theme changes for dynamic updates
+```
+
+[x] Establish component documentation and property standards
+1. All styling (including positioning, flexbox, grid) MUST use Goober - no external CSS classes
+2. Each component MUST include comprehensive JSDoc documentation specifying:
+   - All props with types, whether required or optional, and default values
+   - Whether the component accepts `children` and how they are rendered
+   - Usage examples
+3. Standard JSDoc format:
+```javascript
+/**
+ * ComponentName - Brief description
+ * 
+ * @param {Object} props
+ * @param {string} [props.variant='default'] - Component variant
+ * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {preact.ComponentChildren} [props.children] - Child content, rendered inside container
+ * @returns {preact.VNode}
+ * 
+ * @example
+ * <ComponentName variant="primary">Content</ComponentName>
+ */
+```
+
+[x] Create the test page at `public/js/custom-ui/test.html`
+1. Create HTML page with Preact/htm setup and goober imports
+2. Add theme toggle using Button component (not a separate theme switcher component)
+3. Create sections for each component being refactored
+4. Import and render each component with various props/states
+
+[x] Create base Page component for global styles
+1. Create `public/js/custom-ui/page.mjs`
+2. Apply global styles: body font, background, text colors from theme
+3. Include CSS reset/normalize as needed
+4. Export as wrapper component for app root
+5. Document all props with JSDoc
+```javascript
+/**
+ * Page - Root wrapper providing global theme styles
+ * @param {Object} props
+ * @param {preact.ComponentChildren} props.children - App content (required)
+ */
+export function Page({ children });
+// Applies: font-family, background-color, color from theme
+// Includes: CSS reset, scrollbar styling
+```
+
+[x] Create Panel component
+1. Create or refactor `public/js/custom-ui/panel.mjs`
+2. Styled container with rounded corners, background, border from theme
+3. Support variants: default, elevated (with shadow), outlined
+4. Document all props with JSDoc
+```javascript
+/**
+ * Panel - Container with rounded corners and themed background
+ * @param {Object} props
+ * @param {'default'|'elevated'|'outlined'} [props.variant='default'] - Panel style variant
+ * @param {preact.ComponentChildren} [props.children] - Panel content
+ */
+export function Panel({ variant, children });
+```
+
+[x] Refactor Button component to Goober
+1. Remove CSS class-based styling from `button.mjs`
+2. Create styled button using goober's `styled` function
+3. Implement new variant system: medium-text, medium-icon, medium-icon-text, small-text, small-icon
+4. Apply theme colors for primary, secondary, success, danger states
+5. Include hover, focus, disabled states
+6. Document all props with JSDoc
+7. Update test page with all button variants
+```javascript
+/**
+ * Button - Themed button with multiple variants and states
+ * @param {Object} props
+ * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
+ * @param {'primary'|'secondary'|'success'|'danger'} [props.color='primary'] - Color theme
+ * @param {boolean} [props.loading=false] - Shows spinner, disables button
+ * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {string} [props.icon] - Box-icon name (e.g. 'play', 'trash')
+ * @param {preact.ComponentChildren} [props.children] - Button text (for text variants)
+ */
+export function Button({ variant, color, loading, disabled, icon, children, ...props });
+```
+
+[x] Refactor Input component to Goober
+1. Update `public/js/custom-ui/input.mjs` to use goober styling
+2. Apply theme colors for background, border, text, focus states
+3. Include disabled and error states
+4. Document all props with JSDoc
+5. Update test page with input examples
+
+[x] Refactor Select component to Goober
+1. Update `public/js/custom-ui/select.mjs` to use goober styling
+2. Match input styling for consistency
+3. Document all props with JSDoc
+4. Update test page with select examples
+5. Add transition notes to "Component Transition Guide" section above for select component
+
+[x] Refactor Textarea component to Goober
+5. Add transition notes to "Component Transition Guide" section above for select component
+1. Update `public/js/custom-ui/textarea.mjs` to use goober styling
+2. Match input styling for consistency
+3. Document all props with JSDoc
+4. Update test page with textarea examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Checkbox component to Goober
+1. Update `public/js/custom-ui/checkbox.mjs` to use goober styling
+2. Apply theme colors for checked/unchecked states
+3. Document all props with JSDoc
+4. Update test page with checkbox examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Tags component to Goober
+1. Update `public/js/custom-ui/tags.mjs` to use goober styling, renaming the component to `button-group.mjs`
+2. Apply theme colors for tag chips
+3. Document all props with JSDoc
+4. Update test page with tags examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Pagination component to Goober
+1. Update `public/js/custom-ui/pagination.mjs` to use goober styling
+2. Style navigation buttons and page indicators with theme
+3. Document all props with JSDoc
+4. Update test page with pagination examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor ImageCarousel component to Goober → Unified with ItemNavigator
+1. Created `public/js/custom-ui/item-navigator.mjs` as unified component
+2. Updated `image-carousel.mjs` to re-export ItemNavigator for backwards compatibility
+3. ItemNavigator uses chevron icons universally
+4. Added optional props: `showFirstLast`, `enableKeyboard`, `compareItems`
+5. Added transition notes to "Component Transition Guide" section above
+
+[x] Refactor ListSelect component to Goober
+1. Update `public/js/custom-ui/list-select.mjs` to use goober styling
+2. Style list items, hover, and selected states
+3. Document all props with JSDoc
+4. Update test page with list-select examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor FolderSelect component to Goober
+1. Move the FolderSelect component into the app-ui folder
+2. Update `public/js/custom-ui/folder-select.mjs` to use list-select as its base component. If there are missing features, implement it inside list-select.
+3. Style folder tree, icons, and selection states
+4. Document all props with JSDoc
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor ImageSelect component to Goober
+1. Update `public/js/custom-ui/image-select.mjs` to use goober styling
+2. Style image grid, preview, and selection
+3. Document all props with JSDoc
+4. Update test page with image-select examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor AudioSelect component to Goober
+1. Update `public/js/custom-ui/audio-select.mjs` to use goober styling
+2. Match image-select styling for consistency
+3. Document all props with JSDoc
+4. Update test page with audio-select examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor AudioPlayer component to Goober
+1. Update `public/js/custom-ui/audio-player.mjs` to use goober styling
+2. Style player controls, progress bar, volume
+3. Document all props with JSDoc
+4. Update test page with audio-player examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor ProgressBanner component to Goober
+1. Update `public/js/custom-ui/progress-banner.mjs` to use goober styling
+2. Style progress bar, text, and container
+3. Document all props with JSDoc
+4. Update test page with progress-banner examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Gallery component to Goober
+1. Update `public/js/custom-ui/gallery.mjs` to use goober styling
+2. Style grid layout, item cards, overlays, and controls
+3. Document all props with JSDoc
+4. Update test page with gallery examples
+5. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Toast component to Goober (global)
+1. Update `public/js/custom-ui/toast.mjs` to use goober styling
+2. Style toast container, animations, and variants (success, error)
+3. Ensure portal rendering works with goober styles
+4. Document all props with JSDoc
+5. Update test page with toast trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
+
+[x] Refactor Dialog component to Goober (global)
+1. Update `public/js/custom-ui/dialog.mjs` to use goober styling
+2. Style overlay, dialog box, buttons, and text prompt variant
+3. Ensure portal rendering works with goober styles
+4. Document all props with JSDoc
+5. Update test page with dialog trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
+
+[x] Consolidate Button component styling into styled component
+1. Identified that Button had a mix of inline styles and styled component properties
+2. Moved all dynamic styles (layout, typography, colors, borders) from inline `style` object to styled component props
+3. Updated `StyledButton` to accept props for: gap, height, minWidth, padding, width, fontSize, fontWeight, fontFamily, textColor, borderWidth, borderStyle, borderColor, borderRadius, bgColor, transition
+4. Removed inline `style` attribute entirely - all styling now handled in styled component
+5. Benefits: Eliminates specificity issues, enables proper pseudo-class styling (`:hover`, `:focus`), maintains dynamic theme switching through props
+
+[x] Apply styled component consolidation pattern to all refactored components
+Apply the same pattern used in Button to eliminate inline styles across all refactored components:
+1. **Input component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+2. **Select component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+3. **Textarea component** - Move border, backgroundColor, color, fontSize, fontFamily, transition from inline to styled component props
+4. **Checkbox component** - Move border, borderRadius, backgroundColor, transition from inline to CheckboxVisual styled component props
+5. **ButtonGroup component** - Audit and move any inline styles to styled component props
+6. **Pagination component** - Audit and move any inline styles to styled component props
+7. **ItemNavigator component** - Audit and move any inline styles to styled component props
+8. **ListSelect component** - Move backgroundColor, color from inline to styled component props; add hover states
+9. **ImageSelect component** - Audit and move any inline styles to styled component props; add hover states
+10. **AudioSelect component** - Audit and move any inline styles to styled component props; add hover states
+11. **AudioPlayer component** - Audit and move any inline styles to styled component props; ensure hover states work
+12. **ProgressBanner component** - Audit and move any inline styles to styled component props; ensure hover states work
+13. **Gallery component** - Audit and move any inline styles to styled component props; add hover states where appropriate
+14. **Toast component** - Verify styled component handles all states properly
+15. **Dialog component** - Audit and move any inline styles to styled component props
+Pattern: For each component, (a) identify all inline style objects, (b) convert style properties to styled component props, (c) update styled component template to use props, (d) add hover/focus pseudo-classes where needed, (e) remove inline style attribute
+
+[x] Refactor Modal component to Goober (global)
+1. Update `public/js/custom-ui/modal.mjs` to use goober styling
+2. Style overlay, modal box, header, footer, and size variants
+3. Handle image modal styling
+4. Document all props with JSDoc
+5. Update test page with modal trigger buttons
+6. Add transition notes to "Component Transition Guide" section above
+7. Create baseline styled container components in `modal-base.mjs` for reuse across Modal and Dialog
+8. Fix click-outside-to-close functionality using CSS class checking
+9. Standardize BaseContainer padding to 16px (no padding prop needed)
+10. Remove all border properties from BaseContainer (no borders on modal/dialog containers)
+11. Apply base container pattern to list-select component for consistency
+
+[x] Refactor use-pagination hook to Goober
+1. Update `public/js/custom-ui/use-pagination.mjs` for theme integration
+2. Document all exported functions/hooks with JSDoc

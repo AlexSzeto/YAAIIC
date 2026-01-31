@@ -108,18 +108,6 @@
           "type": "string",
           "description": "The filename of the underlying ComfyUI workflow JSON file in server/resource/"
         },
-        "imageFormat": {
-          "type": "string",
-          "description": "The output file format",
-          "enum": ["png", "jpg", "jpeg", "webp", "gif"],
-          "default": "png"
-        },
-        "audioFormat": {
-          "type": "string",
-          "description": "The output audio file format",
-          "enum": ["mp3", "wav", "flac", "ogg"],
-          "default": "mp3"
-        },
         "finalNode": {
           "type": "string",
           "description": "The node ID of the final output node in the workflow"

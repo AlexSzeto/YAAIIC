@@ -13,6 +13,7 @@
     "csv-parser": "^3.2.0",
     "express": "^5.1.0",
     "form-data": "^4.0.4",
+    "goober": "^2.1.18",
     "libwebp-static": "^1.0.5",
     "multer": "^2.0.2",
     "node-webpmux": "^3.2.1",

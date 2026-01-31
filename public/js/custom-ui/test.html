@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom UI Component Test Page</title>
+  
+  <!-- Import Map for bare module specifiers -->
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "https://esm.sh/preact@10.19.2",
+        "preact/": "https://esm.sh/preact@10.19.2/",
+        "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
+        "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact",
+        "goober": "https://esm.sh/goober@2.1.14?external=preact"
+      }
+    }
+  </script>
+  
+  <!-- Box Icons for icon support -->
+  <script src="https://unpkg.com/boxicons@latest/dist/boxicons.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    import { html, render, Component } from 'htm/preact';
+    import { styled, css } from './goober-setup.mjs';
+    import { Page } from './layout/page.mjs';
+    import { currentTheme, toggleTheme } from './theme.mjs';
+    import { Button } from './io/button.mjs';
+    import { Panel } from './layout/panel.mjs';
+    import { Input } from './io/input.mjs';
+    import { Select } from './io/select.mjs';
+    import { Textarea } from './io/textarea.mjs';
+    import { Checkbox } from './io/checkbox.mjs';
+    import { ButtonGroup } from './nav/button-group.mjs';
+    import { NavigatorControl } from './nav/navigator.mjs';
+    import { usePagination } from './nav/use-pagination.mjs';
+    import { useItemNavigation } from './nav/use-item-navigation.mjs';
+    import { showListSelect } from './overlays/list-select.mjs';
+    import { ImageSelect } from './media/image-select.mjs';
+    import { AudioSelect } from './media/audio-select.mjs';
+    import { AudioPlayer } from './media/audio-player.mjs';
+    import { ProgressProvider, useProgress } from './msg/progress-context.mjs';
+    import { ToastProvider, useToast } from './msg/toast.mjs';
+    import { showDialog, showTextPrompt } from './overlays/dialog.mjs';
+    import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
+
+    
+    // =========================================================================
+    // Styled Components
+    // =========================================================================
+    
+    /**
+     * Main container for the test page content
+     */
+    const Container = styled('div')`
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    `;
+    
+    /**
+     * Header with flex layout for title and theme toggle
+     */
+    const Header = styled('header')`
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    `;
+    
+    /**
+     * Page title with no margin (handled by Header)
+     */
+    const Title = styled('h1')`
+      margin: 0;
+    `;
+    
+    /**
+     * Muted text paragraph
+     */
+    const MutedText = styled('p')`
+      margin-bottom: 24px;
+      opacity: 0.7;
+    `;
+    
+    /**
+     * Section container with bottom margin
+     */
+    const Section = styled('section')`
+      margin-bottom: 48px;
+    `;
+    
+    /**
+     * Section title with bottom border
+     */
+    const SectionTitle = styled('h2')`
+      border-bottom: 1px solid currentColor;
+      padding-bottom: 8px;
+      opacity: 0.5;
+    `;
+    
+    /**
+     * Flex container for component demos
+     */
+    const ComponentGrid = styled('div')`
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+    `;
+    
+    /**
+     * Placeholder text for coming soon sections
+     */
+    const ComingSoon = styled('p')`
+      opacity: 0.6;
+    `;
+    
+    // =========================================================================
+    // Toast Test Component
+    // =========================================================================
+    
+    /**
+     * ToastTriggers - Component with buttons to trigger different toast variants
+     */
+    function ToastTriggers() {
+      const toast = useToast();
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="success"
+            onClick=${() => toast.success('Operation completed successfully!')}
+          >
+            Show Success Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${() => toast.error('An error occurred!')}
+          >
+            Show Error Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${() => toast.show('This is an informational message.')}
+          >
+            Show Info Toast
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${() => toast.show('Custom duration message', { type: 'info', duration: 8000 })}
+          >
+            Show Long Duration Toast (8s)
+          <//>
+        </div>
+      `;
+    }
+    
+    // =========================================================================
+    // Navigation Demo Components
+    // =========================================================================
+    
+    /**
+     * PageBasedNavigationDemo - Demonstrates usePagination hook with PaginationControls
+     */
+    function PageBasedNavigationDemo() {
+      const mockData = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
+      const pagination = usePagination(mockData, 10);
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p style="opacity: 0.7; font-size: 14px;">
+            Showing items ${pagination.currentPage * pagination.itemsPerPage + 1}-${Math.min((pagination.currentPage + 1) * pagination.itemsPerPage, pagination.totalItems)} of ${pagination.totalItems}
+          </p>
+          <${NavigatorControl}
+            currentPage=${pagination.currentPage}
+            totalPages=${pagination.totalPages}
+            onPrev=${pagination.goToPrev}
+            onNext=${pagination.goToNext}
+            onFirst=${pagination.goToFirst}
+            onLast=${pagination.goToLast}
+            showFirstLast=${true}
+          />
+        </div>
+      `;
+    }
+    
+    /**
+     * ItemBasedNavigationDemo - Demonstrates useItemNavigation hook with PaginationControls
+     */
+    function ItemBasedNavigationDemo({ items, selected, onSelect }) {
+      const nav = useItemNavigation(items, selected || items[0]);
+      
+      // Sync nav.currentItem with parent's selected state
+      if (nav.currentItem && nav.currentItem !== selected) {
+        onSelect(nav.currentItem);
+      }
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p style="opacity: 0.7; font-size: 14px;">
+            Current: ${nav.currentItem?.name || 'None'} (${nav.currentIndex + 1} of ${nav.totalItems})
+          </p>
+          <${NavigatorControl}
+            currentPage=${nav.currentIndex}
+            totalPages=${nav.totalItems}
+            onPrev=${nav.selectPrev}
+            onNext=${nav.selectNext}
+            onFirst=${nav.selectFirst}
+            onLast=${nav.selectLast}
+            showFirstLast=${false}
+          />
+        </div>
+      `;
+    }
+    
+    // =========================================================================
+    // Dialog Test Component
+    // =========================================================================
+    
+    /**
+     * DialogTriggers - Component with buttons to trigger different dialog variants
+     */
+    function DialogTriggers() {
+      const toast = useToast();
+      
+      const handleBasicDialog = () => {
+        showDialog('This is a basic dialog with default close button.', 'Basic Dialog');
+      };
+      
+      const handleConfirmDialog = async () => {
+        const result = await showDialog(
+          'Are you sure you want to delete this item? This action cannot be undone.',
+          'Confirm Delete',
+          ['Delete', 'Cancel']
+        );
+        if (result === 'Delete') {
+          toast.success('Item deleted successfully!');
+        } else {
+          toast.show('Delete cancelled');
+        }
+      };
+      
+      const handleMultiOptionDialog = async () => {
+        const result = await showDialog(
+          'Choose how you want to proceed with this operation:',
+          'Select Action',
+          ['Save and Exit', 'Save', 'Discard Changes']
+        );
+        toast.show(`You selected: ${result}`);
+      };
+      
+      const handleTextPrompt = async () => {
+        const folderName = await showTextPrompt(
+          'Enter folder name',
+          'My New Folder',
+          'Folder name...'
+        );
+        if (folderName) {
+          toast.success(`Folder "${folderName}" created!`);
+        } else {
+          toast.show('Folder creation cancelled');
+        }
+      };
+      
+      const handleEmptyPrompt = async () => {
+        const value = await showTextPrompt('Enter a value');
+        if (value !== null) {
+          toast.show(`You entered: "${value}"`);
+        }
+      };
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${handleBasicDialog}
+          >
+            Show Basic Dialog
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${handleConfirmDialog}
+          >
+            Show Confirm Dialog (Destructive)
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${handleMultiOptionDialog}
+          >
+            Show Multi-Option Dialog
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="secondary"
+            onClick=${handleTextPrompt}
+          >
+            Show Text Prompt (with initial value)
+          <//>
+          <${Button} 
+            variant="medium-text"
+            color="secondary"
+            onClick=${handleEmptyPrompt}
+          >
+            Show Text Prompt (empty)
+          <//>
+        </div>
+      `;
+    }
+    
+    // =========================================================================
+    // Progress Banner Test Component
+    // =========================================================================
+    
+    /**
+     * ProgressTriggers - Component with buttons to trigger progress simulations
+     */
+    function ProgressTriggers({ mockSSEManager }) {
+      const progress = useProgress();
+      
+      const handleSimulateProgress = () => {
+        const taskId = 'test-task-' + Date.now();
+        progress.show(taskId, {
+          onComplete: (data) => console.log('Progress complete!', data),
+          onError: (data) => console.error('Progress error!', data),
+          defaultTitle: 'Component Test Page'
+        });
+        
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          mockSSEManager.simulateProgress(taskId);
+        }, 100);
+      };
+      
+      const handleSimulateError = () => {
+        const taskId = 'test-task-error-' + Date.now();
+        progress.show(taskId, {
+          onComplete: (data) => console.log('Progress complete!', data),
+          onError: (data) => console.error('Progress error!', data),
+          defaultTitle: 'Component Test Page'
+        });
+        
+        // Delay simulation to allow component to subscribe first
+        setTimeout(() => {
+          mockSSEManager.simulateError(taskId);
+        }, 100);
+      };
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onClick=${handleSimulateProgress}
+          >
+            Simulate Progress
+          </>
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${handleSimulateError}
+          >
+            Simulate Error
+          </>
+        </div>
+      `;
+    }
+    
+    // =========================================================================
+    // Test Application
+    // =========================================================================
+    
+    /**
+     * TestApp - Main test page application component
+     * Displays all custom UI components with various states for testing
+     */
+    class TestApp extends Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          themeName: currentTheme.value.name,
+          // Checkbox states
+          checkbox1: false,
+          checkbox2: true,
+          checkbox3: true,
+          // ButtonGroup states
+          selectedTags: ['tag2'],
+          // Pagination state
+          paginationPage: 0,
+          // Item navigation state (for useItemNavigation demo)
+          itemNavItems: [
+            { id: '1', name: 'Image 1', url: '/img1.jpg' },
+            { id: '2', name: 'Image 2', url: '/img2.jpg' },
+            { id: '3', name: 'Image 3', url: '/img3.jpg' },
+            { id: '4', name: 'Image 4', url: '/img4.jpg' },
+            { id: '5', name: 'Image 5', url: '/img5.jpg' }
+          ],
+          itemNavSelected: null,
+          // ImageSelect states
+          imageSelectValue1: null,
+          imageSelectValue2: 'https://picsum.photos/200',
+          // AudioSelect states
+          audioSelectValue1: null,
+          audioSelectValue2: { audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', name: 'SoundHelix Song 1', imageUrl: 'https://picsum.photos/150' },
+          // ProgressBanner states
+          progressBannerVisible: false,
+          progressBannerKey: 0,
+          // Modal states
+          modalOpen: false,
+          modalSize: 'medium',
+        };
+        
+        // Mock SSE manager for testing ProgressBanner
+        this.mockSSEManager = {
+          subscribers: {},
+          subscribe(taskId, handlers) {
+            this.subscribers[taskId] = handlers;
+          },
+          unsubscribe(taskId) {
+            delete this.subscribers[taskId];
+          },
+          // Simulate progress updates with realistic step changes
+          simulateProgress(taskId) {
+            const handlers = this.subscribers[taskId];
+            if (!handlers) return;
+            
+            // Define realistic steps with progress ranges
+            const steps = [
+              { range: [0, 15], name: 'Loading model...', node: 'CheckpointLoaderSimple' },
+              { range: [15, 25], name: 'Loading LoRA...', node: 'LoraLoaderModelOnly' },
+              { range: [25, 35], name: 'Encoding prompt...', node: 'CLIPTextEncode' },
+              { range: [35, 40], name: 'Preparing canvas...', node: 'EmptyLatentImage' },
+              { range: [40, 85], name: 'Sampling image...', node: 'KSampler' },
+              { range: [85, 95], name: 'Decoding image...', node: 'VAEDecode' },
+              { range: [95, 100], name: 'Saving image...', node: 'SaveImage' }
+            ];
+            
+            let progress = 0;
+            let stepIndex = 0;
+            
+            const interval = setInterval(() => {
+              progress += 2; // Increment by 2% for smoother animation
+              
+              // Find current step
+              while (stepIndex < steps.length - 1 && progress > steps[stepIndex].range[1]) {
+                stepIndex++;
+              }
+              
+              const currentStep = steps[stepIndex];
+              
+              if (progress <= 100) {
+                handlers.onProgress?.({
+                  progress: {
+                    percentage: progress,
+                    currentValue: progress,
+                    maxValue: 100,
+                    currentStep: currentStep.name,
+                    node: currentStep.node
+                  }
+                });
+              }
+              
+              if (progress >= 100) {
+                clearInterval(interval);
+                handlers.onComplete?.({
+                  progress: { maxValue: 100 }
+                });
+              }
+            }, 200); // Faster updates for smoother animation
+          },
+          // Simulate error
+          simulateError(taskId) {
+            const handlers = this.subscribers[taskId];
+            if (!handlers) return;
+            
+            setTimeout(() => {
+              handlers.onError?.({
+                error: { message: 'Simulated generation error' }
+              });
+            }, 1000);
+          }
+        };
+      }
+      
+      componentDidMount() {
+        // Subscribe to theme changes
+        this.unsubscribe = currentTheme.subscribe((theme) => {
+          this.setState({ themeName: theme.name });
+        });
+      }
+      
+      componentWillUnmount() {
+        if (this.unsubscribe) {
+          this.unsubscribe();
+        }
+      }
+      
+      handleToggleTheme = () => {
+        toggleTheme();
+      };
+      
+      handleCheckbox = (key) => () => {
+        this.setState(prev => ({ [key]: !prev[key] }));
+      };
+      
+      handleTagSelect = (id) => {
+        this.setState(prev => ({
+          selectedTags: prev.selectedTags.includes(id)
+            ? prev.selectedTags.filter(t => t !== id)
+            : [...prev.selectedTags, id]
+        }));
+      };
+      
+      handlePaginationPrev = () => {
+        this.setState(prev => ({ paginationPage: Math.max(0, prev.paginationPage - 1) }));
+      };
+      
+      handlePaginationNext = () => {
+        this.setState(prev => ({ paginationPage: Math.min(4, prev.paginationPage + 1) }));
+      };
+      
+      handleItemNavSelect = (item) => {
+        this.setState({ itemNavSelected: item });
+      };
+      
+      handleImageChange1 = (value) => {
+        this.setState({ imageSelectValue1: value });
+      };
+      
+      handleImageChange2 = (value) => {
+        this.setState({ imageSelectValue2: value });
+      };
+      
+      handleAudioChange1 = (value) => {
+        this.setState({ audioSelectValue1: value });
+      };
+      
+      handleAudioChange2 = (value) => {
+        this.setState({ audioSelectValue2: value });
+      };
+      
+      
+      handleSimulateProgress = () => {
+        // Moved to ProgressTriggers component
+      };
+      
+      handleSimulateError = () => {
+        // Moved to ProgressTriggers component
+      };
+
+      
+      render() {
+        const { themeName } = this.state;
+        
+        return html`
+          <${ToastProvider}>
+            <${ProgressProvider} sseManager=${this.mockSSEManager}>
+              <${Page}>
+                <${Container}>
+                  <${Header}>
+                    <${Title}>Custom UI Component Test Page<//>
+                    <${Button} 
+                      variant="medium-icon-text"
+                      color="primary" 
+                      icon=${themeName === 'dark' ? 'sun' : 'moon'}
+                      onClick=${this.handleToggleTheme}
+                    >
+                      ${themeName === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    <//>
+                  <//>
+                  
+                  <${MutedText}>
+                    Current theme: <strong>${themeName}</strong>
+                  <//>
+                  
+                  <!-- Component Sections -->
+                <${Section}>
+                <${SectionTitle}>Page Component<//>
+                <p>The Page component provides global styles including:</p>
+                <ul>
+                  <li>Font family (Arial, sans-serif)</li>
+                  <li>Background color from theme</li>
+                  <li>Text color from theme</li>
+                  <li>CSS reset / base styles</li>
+                  <li>Custom scrollbar styling</li>
+                </ul>
+              <//>
+              
+              <${Section}>
+                <${SectionTitle}>Button Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">All button variants with color themes</p>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Text Buttons (default)</h4>
+                <${ComponentGrid}>
+                  <${Button} color="primary">Primary<//>
+                  <${Button} color="secondary">Secondary<//>
+                  <${Button} color="success">Success<//>
+                  <${Button} color="danger">Danger<//>
+                  <${Button} color="primary" disabled=${true}>Disabled<//>
+                  <${Button} color="primary" loading=${true}>Loading<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Icon-Text Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="medium-icon-text" icon="play" color="primary">Play<//>
+                  <${Button} variant="medium-icon-text" icon="save" color="success">Save<//>
+                  <${Button} variant="medium-icon-text" icon="trash" color="danger">Delete<//>
+                  <${Button} variant="medium-icon-text" icon="cog" color="secondary">Settings<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Medium Icon-Only Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="medium-icon" icon="play" color="primary" title="Play" />
+                  <${Button} variant="medium-icon" icon="pause" color="secondary" title="Pause" />
+                  <${Button} variant="medium-icon" icon="check" color="success" title="Confirm" />
+                  <${Button} variant="medium-icon" icon="x" color="danger" title="Close" />
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Small Text Buttons (tag-style)</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="small-text" color="primary">Tag Primary<//>
+                  <${Button} variant="small-text" color="secondary">Tag Secondary<//>
+                  <${Button} variant="small-text" color="success">Tag Success<//>
+                  <${Button} variant="small-text" color="danger">Tag Danger<//>
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Small Icon-Only Buttons</h4>
+                <${ComponentGrid}>
+                  <${Button} variant="small-icon" icon="copy" color="secondary" title="Copy" />
+                  <${Button} variant="small-icon" icon="edit" color="primary" title="Edit" />
+                  <${Button} variant="small-icon" icon="refresh" color="success" title="Refresh" />
+                  <${Button} variant="small-icon" icon="trash" color="danger" title="Delete" />
+                <//>
+              <//>
+              
+              <${Section}>
+                <${SectionTitle}>Panel Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Versatile container with variants and optional color theming</p>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Variants (Default Colors)</h3>
+                <${ComponentGrid}>
+                  <${Panel}>
+                    <strong>Default Panel</strong>
+                    <p>Solid background with subtle border.</p>
+                  <//>
+                  <${Panel} variant="elevated">
+                    <strong>Elevated Panel</strong>
+                    <p>Raised appearance with shadow.</p>
+                  <//>
+                  <${Panel} variant="outlined">
+                    <strong>Outlined Panel</strong>
+                    <p>Transparent background with border.</p>
+                  <//>
+                  <div style="position: relative; background: linear-gradient(45deg, #007bff, #28a745); padding: 20px; border-radius: 8px;">
+                    <${Panel} variant="glass">
+                      <strong>Glass Panel</strong>
+                      <p>Semi-transparent with blur effect.</p>
+                    <//>
+                  </div>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Elevated Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} variant="elevated" color="success">
+                    <strong>Success</strong>
+                    <p>Positive feedback or completed states.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="danger">
+                    <strong>Danger</strong>
+                    <p>Errors or destructive actions.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="primary">
+                    <strong>Primary</strong>
+                    <p>Primary brand color.</p>
+                  <//>
+                  <${Panel} variant="elevated" color="secondary">
+                    <strong>Secondary</strong>
+                    <p>Secondary brand color.</p>
+                  <//>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Default Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} color="success">
+                    <strong>Success Default</strong>
+                  <//>
+                  <${Panel} color="danger">
+                    <strong>Danger Default</strong>
+                  <//>
+                  <${Panel} color="primary">
+                    <strong>Primary Default</strong>
+                  <//>
+                  <${Panel} color="secondary">
+                    <strong>Secondary Default</strong>
+                  <//>
+                </>
+                
+                <h3 style="margin: 24px 0 12px; opacity: 0.8;">Outlined Panels with Colors</h3>
+                <${ComponentGrid}>
+                  <${Panel} variant="outlined" color="success">
+                    <strong>Success Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="danger">
+                    <strong>Danger Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="primary">
+                    <strong>Primary Outlined</strong>
+                  <//>
+                  <${Panel} variant="outlined" color="secondary">
+                    <strong>Secondary Outlined</strong>
+                  <//>
+                </>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Input Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Input} label="Basic Input" name="basic" placeholder="Enter text..." />
+                  <${Input} label="With Value" name="withValue" value="Hello World" />
+                  <${Input} label="Disabled" name="disabled" disabled=${true} value="Cannot edit" />
+                  <${Input} label="With Error" name="error" error="This field is required" />
+                <//>
+                <div style="margin-top: 16px;">
+                  <${Input} label="Full Width Input" name="fullWidth" fullWidth=${true} placeholder="This spans the full width..." />
+                </div>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Select Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Select} 
+                    label="Basic Select" 
+                    name="basic"
+                    options=${[
+                      { label: 'Option 1', value: '1' },
+                      { label: 'Option 2', value: '2' },
+                      { label: 'Option 3', value: '3' }
+                    ]} 
+                  />
+                  <${Select} 
+                    label="With Selection" 
+                    name="selected"
+                    value="2"
+                    options=${[
+                      { label: 'First', value: '1' },
+                      { label: 'Second', value: '2' },
+                      { label: 'Third', value: '3' }
+                    ]} 
+                  />
+                  <${Select} 
+                    label="Disabled" 
+                    name="disabled"
+                    disabled=${true}
+                    options=${[{ label: 'Cannot change', value: '1' }]} 
+                  />
+                  <${Select} 
+                    label="With Error" 
+                    name="error"
+                    error="Please select an option"
+                    options=${[{ label: 'Choose...', value: '' }]} 
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Textarea Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Textarea} label="Basic Textarea" name="basic" placeholder="Enter text here..." />
+                  <${Textarea} label="With Value" name="withValue" value="Some existing content that spans multiple lines for demonstration purposes." />
+                  <${Textarea} label="Disabled" name="disabled" disabled=${true} value="Cannot edit this content" />
+                  <${Textarea} label="With Error" name="error" error="This field is required" />
+                </${ComponentGrid}>
+                <div style="margin-top: 16px;">
+                  <${Textarea} label="Full Width Textarea (default)" name="fullWidth" placeholder="This spans the full width by default..." rows=${6} />
+                </div>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Checkbox Component</${SectionTitle}>
+                <${ComponentGrid}>
+                  <${Checkbox} label="Click to toggle" checked=${this.state.checkbox1} onChange=${this.handleCheckbox('checkbox1')} />
+                  <${Checkbox} label="Initially checked" checked=${this.state.checkbox2} onChange=${this.handleCheckbox('checkbox2')} />
+                  <${Checkbox} label="Disabled Unchecked" disabled=${true} />
+                  <${Checkbox} label="Disabled Checked" checked=${true} disabled=${true} />
+                  <${Checkbox} label="Label on Left" labelPosition="left" checked=${this.state.checkbox3} onChange=${this.handleCheckbox('checkbox3')} />
+                  <${Checkbox} checked=${this.state.checkbox1} onChange=${this.handleCheckbox('checkbox1')} />
+                </${ComponentGrid}>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ButtonGroup Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Click buttons to toggle selection</p>
+                <${ButtonGroup}
+                  items=${[
+                    { id: 'tag1', name: 'Option A' },
+                    { id: 'tag2', name: 'Option B' },
+                    { id: 'tag3', name: 'Option C' },
+                    { id: 'tag4', name: 'Long Option Name' }
+                  ]}
+                  selected=${this.state.selectedTags}
+                  onSelect=${this.handleTagSelect}
+                />
+                <h4 style="margin: 16px 0 8px;">Medium Variant</h4>
+                <${ButtonGroup}
+                  items=${[
+                    { id: 'a', name: 'First' },
+                    { id: 'b', name: 'Second' },
+                    { id: 'c', name: 'Third' }
+                  ]}
+                  selected=${['a']}
+                  variant="medium-text"
+                />
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Navigation Hooks Demo</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Demonstrating usePagination (page-based) and useItemNavigation (item-based) hooks with PaginationControls</p>
+                
+                <h4 style="margin: 16px 0 8px;">usePagination + PaginationControls (Page-based)</h4>
+                <${PageBasedNavigationDemo} />
+                
+                <h4 style="margin: 16px 0 8px;">useItemNavigation + PaginationControls (Item-based)</h4>
+                <${ItemBasedNavigationDemo} 
+                  items=${this.state.itemNavItems}
+                  selected=${this.state.itemNavSelected}
+                  onSelect=${this.handleItemNavSelect}
+                />
+              </${Section}>
+              
+
+              
+              <${Section}>
+                <${SectionTitle}>ListSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Modal list selection with optional actions</p>
+                
+                <${ComponentGrid}>
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="list-ul" 
+                    color="primary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Select Item',
+                        items: [
+                          { id: '1', label: 'Option 1' },
+                          { id: '2', label: 'Option 2' },
+                          { id: '3', label: 'Option 3' },
+                          { id: '4', label: 'Disabled Option', disabled: true }
+                        ],
+                        itemIcon: 'check-circle',
+                        onSelectItem: (item) => {
+                          console.log('Selected:', item);
+                        }
+                      });
+                    }}
+                  >
+                    Basic List Select
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="folder" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Select Folder',
+                        items: [
+                          { id: 'f1', label: 'Documents', icon: 'folder' },
+                          { id: 'f2', label: 'Images', icon: 'folder' },
+                          { id: 'f3', label: 'Videos', icon: 'folder' }
+                        ],
+                        selectedId: 'f2',
+                        onSelectItem: (item) => {
+                          console.log('Selected folder:', item);
+                        }
+                      });
+                    }}
+                  >
+                    Folder Select
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="cog" 
+                    color="success"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Manage Items',
+                        items: [
+                          { id: 'i1', label: 'Editable Item 1', icon: 'file' },
+                          { id: 'i2', label: 'Editable Item 2', icon: 'file' },
+                          { id: 'i3', label: 'Protected Item', icon: 'lock-alt', disabled: true }
+                        ],
+                        showActions: true,
+                        actionLabel: 'New Item',
+                        onSelectItem: (item) => {
+                          console.log('Selected:', item);
+                        },
+                        onEdit: (item) => {
+                          console.log('Edit:', item);
+                        },
+                        onDelete: (item) => {
+                          console.log('Delete:', item);
+                        },
+                        onAction: () => {
+                          console.log('Create new item');
+                        }
+                      });
+                    }}
+                  >
+                    With Actions
+                  <//>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="loader" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Loading State',
+                        items: [],
+                        emptyMessage: 'Loading...'
+                      });
+                    }}
+                  >
+                    Loading State
+                  </>
+                  
+                  <${Button} 
+                    variant="medium-icon-text" 
+                    icon="x-circle" 
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Empty List',
+                        items: []
+                      });
+                    }}
+                  >
+                    Empty State
+                  <//>
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ImageSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Image selection with preview, upload, and overlay controls</p>
+                
+                <${ComponentGrid}>
+                  <${ImageSelect}
+                    label="Empty State"
+                    value=${this.state.imageSelectValue1}
+                    onChange=${this.handleImageChange1}
+                  />
+                  <${ImageSelect}
+                    label="With Image"
+                    value=${this.state.imageSelectValue2}
+                    onChange=${this.handleImageChange2}
+                  />
+                  <${ImageSelect}
+                    label="Disabled"
+                    value=${this.state.imageSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio selection with album art preview, play controls, and overlay buttons</p>
+                
+                <${ComponentGrid}>
+                  <${AudioSelect}
+                    label="Empty State"
+                    value=${this.state.audioSelectValue1}
+                    onChange=${this.handleAudioChange1}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="With Audio (Album Art)"
+                    value=${this.state.audioSelectValue2}
+                    onChange=${this.handleAudioChange2}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="Disabled"
+                    value=${this.state.audioSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioPlayer Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio player overlay with play/pause, progress bar, and time display</p>
+                
+                <${ComponentGrid}>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                  </div>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                  </div>
+                <//${ComponentGrid}>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ProgressBanner Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error. Now uses provider pattern with useProgress hook.</p>
+                
+                <${ComponentGrid}>
+                  <${ProgressTriggers} mockSSEManager=${this.mockSSEManager} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Toast Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Global notification system with success, error, info, and warning variants</p>
+                
+                <${ComponentGrid}>
+                  <${ToastTriggers} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Dialog Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Modal dialog with overlay - supports basic alerts, confirmations, and text prompts</p>
+                
+                <${ComponentGrid}>
+                  <${DialogTriggers} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Modal Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Declarative modal component with customizable size, header, content, and footer</p>
+                
+                <${ComponentGrid}>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'small' })}
+                    >
+                      Show Small Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'medium' })}
+                    >
+                      Show Medium Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'large' })}
+                    >
+                      Show Large Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => createImageModal('https://picsum.photos/800/600', false, 'Sample Image')}
+                    >
+                      Show Image Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="success"
+                      onClick=${() => createImageModal(
+                        'https://picsum.photos/800/600',
+                        true,
+                        'Selectable Image',
+                        () => alert('Image selected!'),
+                        'Select This Image'
+                      )}
+                    >
+                      Show Image Modal with Select
+                    <//>
+                  </div>
+                <//>
+                
+                <${Modal}
+                  isOpen=${this.state.modalOpen}
+                  onClose=${() => this.setState({ modalOpen: false })}
+                  title=${`Modal Example (${this.state.modalSize})`}
+                  size=${this.state.modalSize}
+                  footer=${html`
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => this.setState({ modalOpen: false })}
+                    >
+                      Cancel
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => {
+                        alert('Action confirmed!');
+                        this.setState({ modalOpen: false });
+                      }}
+                    >
+                      Confirm
+                    <//>
+                  `}
+                >
+                  <p>This is a ${this.state.modalSize} size modal with custom footer buttons.</p>
+                  <p style="margin-top: 16px;">The Modal component supports:</p>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Multiple size variants (small, medium, large, full)</li>
+                    <li>Custom header, content, and footer</li>
+                    <li>Escape key to close</li>
+                    <li>Click outside to close</li>
+                    <li>Body scroll locking when open</li>
+                  </ul>
+                <//>
+              </${Section}>
+              
+              <!-- More component sections will be added as they are refactored -->
+              
+            <//>
+          <//>
+        <//>
+      <//>
+        `;
+      }
+    }
+    
+    // Render the test app
+    render(html`<${TestApp} />`, document.getElementById('app'));
+  </script>
+</body>
+</html>

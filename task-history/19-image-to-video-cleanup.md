@@ -26,7 +26,7 @@ Tweak the UI to prevent user errors, clarify UI intent, and improve usability
    .image-upload-area.disabled {
      opacity: 0.5;
      pointer-events: none;
-     cursor: not-allowed;
+     cursor: default;
    }
    ```
 4. In `main.mjs`, add a `setImageUploadsDisabled(disabled)` function that iterates through `uploadComponentRefs` and updates their disabled state
@@ -272,6 +272,6 @@ Tweak the UI to prevent user errors, clarify UI intent, and improve usability
     
     .image-select-btn:disabled {
       opacity: 0.5;
-      cursor: not-allowed;
+      cursor: default;
     }
     ```

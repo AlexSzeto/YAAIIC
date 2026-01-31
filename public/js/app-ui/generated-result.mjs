@@ -1,12 +1,152 @@
 import { useState } from 'preact/hooks';
 import { html, Component } from 'htm/preact';
-import { Button } from '../custom-ui/button.mjs';
-import { Tags } from '../custom-ui/tags.mjs';
-import { AudioPlayer } from '../custom-ui/audio-player.mjs';
-import { sendToClipboard } from '../util.mjs';
-import { createImageModal } from '../custom-ui/modal.mjs';
-import { showListSelect } from '../custom-ui/list-select.mjs';
-import { useToast } from '../custom-ui/toast.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
+import { ButtonGroup } from '../custom-ui/nav/button-group.mjs';
+import { AudioPlayer } from '../custom-ui/media/audio-player.mjs';
+import { sendToClipboard } from '../custom-ui/util.mjs';
+import { createImageModal } from '../custom-ui/overlays/modal.mjs';
+import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
+import { useToast } from '../custom-ui/msg/toast.mjs';
+import { H2, HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
+import { currentTheme } from '../custom-ui/theme.mjs';
+import { Panel } from '../custom-ui/layout/panel.mjs';
+
+// Styled components
+const Container = styled('div')`
+  padding: 20px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  border: 1px solid ${() => currentTheme.value.colors.border.secondary};
+  border-radius: 8px;
+`;
+Container.className = 'container';
+
+const Content = styled('div')`
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+`;
+Content.className = 'content';
+
+const LeftColumn = styled('div')`
+  flex: 0 0 auto;
+  max-width: 50%;
+  position: relative;
+`;
+LeftColumn.className = 'left-column';
+
+const GeneratedImage = styled('img')`
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+  border-radius: 4px;
+  display: block;
+  cursor: pointer;
+`;
+GeneratedImage.className = 'generated-image';
+
+const RightColumn = styled('div')`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+RightColumn.className = 'right-column';
+
+// InfoSection styled components
+const InfoSection = styled('div')`
+  display: flex;
+  flex-direction: column;
+`;
+InfoSection.className = 'info-section';
+
+const InfoHeader = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 10px;
+`;
+InfoHeader.className = 'info-header';
+
+const InfoLabel = styled('label')`
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+`;
+InfoLabel.className = 'info-label';
+
+const InfoButtons = styled('div')`
+  display: flex;
+  gap: 5px;
+`;
+InfoButtons.className = 'info-buttons';
+
+const InfoInput = styled('input')`
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid ${() => currentTheme.value.colors.border.primary};
+  border-radius: 4px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-family: ${() => currentTheme.value.typography.fontFamily};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  
+  ${props => props.isEditing ? `
+    border-color: ${currentTheme.value.colors.primary.background};
+    background-color: ${currentTheme.value.colors.background.primary};
+    box-shadow: 0 0 0 2px ${currentTheme.value.colors.primary.focus};
+  ` : ''}
+
+  &:focus {
+    outline: none;
+    border-color: ${() => currentTheme.value.colors.primary.background};
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
+  }
+`;
+InfoInput.className = 'info-input';
+
+const InfoTextarea = styled('textarea')`
+  width: 100%;
+  min-height: 80px;
+  padding: 8px 10px;
+  border: 2px solid ${() => currentTheme.value.colors.border.primary};
+  border-radius: 4px;
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-family: ${() => currentTheme.value.typography.fontFamily};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  resize: vertical;
+  
+  ${props => props.isEditing ? `
+    border-color: ${currentTheme.value.colors.primary.background};
+    background-color: ${currentTheme.value.colors.background.primary};
+    box-shadow: 0 0 0 2px ${currentTheme.value.colors.primary.focus};
+  ` : ''}
+
+  &:focus {
+    outline: none;
+    border-color: ${() => currentTheme.value.colors.primary.background};
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
+  }
+`;
+InfoTextarea.className = 'info-textarea';
+
+// TabbedInfoSection styled components
+const TabbedInfoSection = styled('div')`
+  display: flex;
+  flex-direction: column;
+`;
+TabbedInfoSection.className = 'tabbed-info-section';
+
+const TabbedInfoHeader = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 10px;
+`;
+TabbedInfoHeader.className = 'tabbed-info-header';
 
 export function GeneratedResult({ 
   image, 
@@ -108,143 +248,143 @@ export function GeneratedResult({
   };
 
   return html`
-    <div className="generated-image-display content-container" style="display: block;">
-      <h3 className="generated-result-title">Generated Result</h3>
-      
-      <div className="generated-image-content">
-        <div className="generated-image-left" style="position: relative;">
-          <img 
-            src=${image.imageUrl} 
-            alt=${image.name || 'Generated Image'} 
-            className="generated-image"
-            style="cursor: pointer;"
-            onClick=${() => createImageModal(image.imageUrl, true)}
-          />
-          ${image.audioUrl ? html`
-            <${AudioPlayer} audioUrl=${image.audioUrl} />
-          ` : null}
-        </div>
+    <${Panel} variant="outlined">
+      <${VerticalLayout}>
+        <${H2}>Generated Result</${H2}>
+        
+        <${Content}>
+          <${LeftColumn}>
+            <${GeneratedImage}
+              src=${image.imageUrl} 
+              alt=${image.name || 'Generated Image'} 
+              onClick=${() => createImageModal(image.imageUrl, true)}
+            />
+            ${image.audioUrl ? html`
+              <${AudioPlayer} audioUrl=${image.audioUrl} />
+            ` : null}
+          <//>
 
-        <div className="generated-image-right">
-          <${InfoField} 
-            label="Workflow" 
-            field="workflow"
-            value=${image.workflow} 
-            onCopy=${() => handleCopy(image.workflow, 'Workflow')}
-            onUse=${() => onUseWorkflow && onUseWorkflow(image.workflow)}
-            useTitle="Use this workflow"
-            canEdit=${false} 
-          />
-          
-          <${InfoField} 
-            label="Name" 
-            field="name"
-            value=${image.name} 
-            isEditing=${editingField === 'name'}
-            onEditStart=${() => startEditing('name')}
-            onCancel=${stopEditing}
-            onSave=${(val) => handleSave('name', val)}
-            onCopy=${() => handleCopy(image.name, 'Name')}
-            onUse=${() => onUseName && onUseName(image.name)}
-            useTitle="Use this name"
-            canEdit=${true}
-          />
-          
-          <${TabbedInfoField}
-            tabs=${[
-              {
-                id: 'tags',
-                name: 'Tags',
-                value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
-                canEdit: true,
-                onUse: null, // No use button for tags
-                useTitle: ''
-              },
-              {
-                id: 'prompt',
-                name: 'Prompt',
-                value: image.prompt,
-                canEdit: true,
-                onUse: () => onUsePrompt && onUsePrompt(image.prompt),
-                useTitle: 'Use this prompt'
-              },
-              {
-                id: 'description',
-                name: 'Description',
-                value: image.description,
-                canEdit: true,
-                onUse: () => onUseDescription && onUseDescription(image.description),
-                useTitle: 'Use this description'
-              },
-              {
-                id: 'summary',
-                name: 'Summary',
-                value: image.summary,
-                canEdit: true,
-                onUse: () => onUseDescription && onUseDescription(image.summary),
-                useTitle: 'Use this summary'
-              }
-            ]}
-            onCopy=${handleCopy}
-            onEditStart=${startEditing}
-            onSave=${handleSave}
-            onCancel=${stopEditing}
-            onRegenerate=${onRegenerate}
-            editingField=${editingField}
-            image=${image}
-          />
-          
-          <${InfoField} 
-            label="Seed" 
-            field="seed"
-            value=${image.seed} 
-            onCopy=${() => handleCopy(image.seed, 'Seed')}
-            onUse=${() => onUseSeed && onUseSeed(image.seed)}
-            useTitle="Use this seed"
-            canEdit=${false}
-          />
-        </div>
-      </div>
+          <${RightColumn}>
+            <${InfoField} 
+              label="Workflow" 
+              field="workflow"
+              value=${image.workflow} 
+              onCopy=${() => handleCopy(image.workflow, 'Workflow')}
+              onUse=${() => onUseWorkflow && onUseWorkflow(image.workflow)}
+              useTitle="Use this workflow"
+              canEdit=${false} 
+            />
+            
+            <${InfoField} 
+              label="Name" 
+              field="name"
+              value=${image.name} 
+              isEditing=${editingField === 'name'}
+              onEditStart=${() => startEditing('name')}
+              onCancel=${stopEditing}
+              onSave=${(val) => handleSave('name', val)}
+              onCopy=${() => handleCopy(image.name, 'Name')}
+              onUse=${() => onUseName && onUseName(image.name)}
+              useTitle="Use this name"
+              canEdit=${true}
+            />
+            
+            <${TabbedInfoField}
+              tabs=${[
+                {
+                  id: 'tags',
+                  name: 'Tags',
+                  value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
+                  canEdit: true,
+                  onUse: null,
+                  useTitle: ''
+                },
+                {
+                  id: 'prompt',
+                  name: 'Prompt',
+                  value: image.prompt,
+                  canEdit: true,
+                  onUse: () => onUsePrompt && onUsePrompt(image.prompt),
+                  useTitle: 'Use this prompt'
+                },
+                {
+                  id: 'description',
+                  name: 'Description',
+                  value: image.description,
+                  canEdit: true,
+                  onUse: () => onUseDescription && onUseDescription(image.description),
+                  useTitle: 'Use this description'
+                },
+                {
+                  id: 'summary',
+                  name: 'Summary',
+                  value: image.summary,
+                  canEdit: true,
+                  onUse: () => onUseDescription && onUseDescription(image.summary),
+                  useTitle: 'Use this summary'
+                }
+              ]}
+              onCopy=${handleCopy}
+              onEditStart=${startEditing}
+              onSave=${handleSave}
+              onCancel=${stopEditing}
+              onRegenerate=${onRegenerate}
+              editingField=${editingField}
+              image=${image}
+            />
+            
+            <${InfoField} 
+              label="Seed" 
+              field="seed"
+              value=${image.seed} 
+              onCopy=${() => handleCopy(image.seed, 'Seed')}
+              onUse=${() => onUseSeed && onUseSeed(image.seed)}
+              useTitle="Use this seed"
+              canEdit=${false}
+            />
+          <//>
+        <//>
 
-      <div className="image-action-container">
-        <${Button} 
-          variant="success"
-          icon="check-circle"
-          onClick=${() => onSelectAsInput && onSelectAsInput(image)}
-          disabled=${!onSelectAsInput || isSelectDisabled}
-          title="Use this image as input"
-        >
-          Select
-        <//>
-        <${Button} 
-          variant="primary" 
-          icon="image"
-          onClick=${() => onInpaint && onInpaint(image)}
-          disabled=${isInpaintDisabled}
-          title="Inpaint this image"
-        >
-          Inpaint
-        <//Button>
-        <${Button}
-          variant="primary"
-          icon="export"
-          onClick=${handleExport}
-          disabled=${!image.uid}
-          title="Export this media"
-        >
-          Export
-        <//>
-        <${Button} 
-          variant="danger"
-          icon="trash"
-          onClick=${() => onDelete && onDelete(image)}
-          disabled=${!image.uid || !onDelete}
-          title="Delete this image"
-        >
-          Delete
-        <//>
-      </div>
-    </div>
+        <${HorizontalLayout}>
+          <${Button} 
+            variant="success"
+            icon="check-circle"
+            onClick=${() => onSelectAsInput && onSelectAsInput(image)}
+            disabled=${!onSelectAsInput || isSelectDisabled}
+            title="Use this image as input"
+          >
+            Select
+          </${Button}>
+          <${Button} 
+            variant="primary" 
+            icon="image"
+            onClick=${() => onInpaint && onInpaint(image)}
+            disabled=${isInpaintDisabled}
+            title="Inpaint this image"
+          >
+            Inpaint
+          </${Button}>
+          <${Button}
+            variant="primary"
+            icon="export"
+            onClick=${handleExport}
+            disabled=${!image.uid}
+            title="Export this media"
+          >
+            Export
+          </${Button}>
+          <${Button} 
+            variant="danger"
+            icon="trash"
+            onClick=${() => onDelete && onDelete(image)}
+            disabled=${!image.uid || !onDelete}
+            title="Delete this image"
+          >
+            Delete
+          </${Button}>
+        </${HorizontalLayout}>
+      </${VerticalLayout}>
+    </${Panel}>
   `;
 }
 
@@ -322,38 +462,38 @@ class TabbedInfoField extends Component {
     const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'description' || activeTab.id === 'summary');
 
     return html`
-      <div className="tabbed-info-section">
-        <div className="tabbed-info-header">
-          <${Tags}
+      <${TabbedInfoSection}>
+        <${TabbedInfoHeader}>
+          <${ButtonGroup}
             items=${tabItems}
             selected=${[selectedTab]}
             onSelect=${this.handleTabSelect}
           />
-          <div className="info-buttons">
+          <${InfoButtons}>
             ${!isEditing ? html`
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="revision"
                 onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
                 title="Regenerate ${activeTab.name}"
                 disabled=${!canRegenerate}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="copy"
                 onClick=${() => onCopy(activeTab.value, activeTab.name)}
                 title="Copy ${activeTab.name}"
                 disabled=${!onCopy || !activeTab.value}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="up-arrow-circle"
                 onClick=${activeTab.onUse}
                 title=${activeTab.useTitle || `Use ${activeTab.name}`}
                 disabled=${!activeTab.onUse}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
                 icon="pencil"
                 onClick=${activeTab.canEdit ? this.handleEditClick : null}
                 title="Edit"
@@ -361,29 +501,29 @@ class TabbedInfoField extends Component {
               />
             ` : html`
               <${Button}
-                variant="icon"
+                variant="small-icon"
+                color="success"
                 icon="check"
                 onClick=${this.handleSaveClick}
                 title="Save"
-                style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
               />
               <${Button}
-                variant="icon"
+                variant="small-icon"
+                color="danger"
                 icon="x"
                 onClick=${onCancel}
                 title="Cancel"
-                style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
               />
             `}
-          </div>
-        </div>
-        <textarea 
-            className="info-field info-tabbed ${isEditing ? 'editing' : ''}" 
+          <//>
+        <//>
+        <${InfoTextarea}
+            isEditing=${isEditing}
             readOnly=${!isEditing} 
             value=${isEditing ? editValue : (activeTab.value || '')}
             onInput=${(e) => this.setState({ editValue: e.target.value })}
-        ></textarea>
-      </div>
+        />
+      <//>
     `;
   }
 }
@@ -416,31 +556,28 @@ function InfoField({
       onSave(editValue);
   };
 
-  const labelLower = label.toLowerCase();
-  const fieldClass = labelLower === 'tags' ? 'info-tags-field' : `info-${labelLower}`;
-
   return html`
-    <div className="info-section">
-      <div className="info-header">
-        <label className="info-label">${label}:</label>
-        <div className="info-buttons">
+    <${InfoSection}>
+      <${InfoHeader}>
+        <${InfoLabel}>${label}:<//>
+        <${InfoButtons}>
           ${!isEditing ? html`
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="copy"
               onClick=${onCopy}
               title="Copy ${label}"
               disabled=${!onCopy}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="up-arrow-circle"
               onClick=${onUse}
               title=${useTitle || `Use ${label}`}
               disabled=${!onUse}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
               icon="pencil"
               onClick=${canEdit ? handleEditClick : null}
               title="Edit"
@@ -448,39 +585,39 @@ function InfoField({
             />
           ` : html`
             <${Button}
-              variant="icon"
+              variant="small-icon"
+              color="success"
               icon="check"
               onClick=${handleSaveClick}
               title="Save"
-              style=${{ backgroundColor: '#28a745', borderColor: '#28a745' }}
             />
             <${Button}
-              variant="icon"
+              variant="small-icon"
+              color="danger"
               icon="x"
               onClick=${onCancel}
               title="Cancel"
-              style=${{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
             />
           `}
-        </div>
-      </div>
+        <//>
+      <//>
       ${isTextarea 
         ? html`
-            <textarea 
-                className="info-field ${fieldClass} ${isEditing ? 'editing' : ''}" 
+            <${InfoTextarea}
+                isEditing=${isEditing}
                 readOnly=${!isEditing} 
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
-            ></textarea>`
+            />`
         : html`
-            <input 
+            <${InfoInput}
                 type="text" 
-                className="info-field ${fieldClass} ${isEditing ? 'editing' : ''}" 
+                isEditing=${isEditing}
                 readOnly=${!isEditing} 
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
             />`
       }
-    </div>
+    <//>
   `;
 }

@@ -1,6 +1,39 @@
-// InpaintCanvas - Functional Preact component for inpainting canvas
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { H2 } from '../custom-ui/themed-base.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+import { Panel } from '../custom-ui/layout/panel.mjs';
+
+// Styled components
+const CanvasContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  width: 100%;
+`;
+CanvasContainer.className = 'canvas-container';
+
+const Canvas = styled('canvas')`
+  max-width: 100%;
+  height: auto;
+  cursor: crosshair;
+  border-radius: ${getThemeValue('spacing.small.borderRadius')};
+`;
+Canvas.className = 'canvas';
+
+const InfoContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.small.gap')};
+  color: ${() => getThemeValue('colors.text.secondary')};
+  font-size: ${getThemeValue('typography.fontSize.small')};
+
+  p {
+    margin: 0;
+  }
+`;
+InfoContainer.className = 'info-container';
 
 /**
  * InpaintCanvas Component
@@ -66,7 +99,8 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   useEffect(() => {
     if (!imageLoaded || !canvasRef.current || !imageRef.current) return;
     
-    const canvas = canvasRef.current;
+    // Goober styled components: access DOM element via .base property
+    const canvas = canvasRef.current.base || canvasRef.current;
     const ctx = canvas.getContext('2d');
     
     // Set canvas size
@@ -123,7 +157,8 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   const getCanvasCoordinates = useCallback((e) => {
     if (!canvasRef.current) return { x: 0, y: 0, isValid: false };
     
-    const canvas = canvasRef.current;
+    // Goober styled components: access DOM element via .base property
+    const canvas = canvasRef.current.base || canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -235,38 +270,36 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   };
   
   return html`
-    <div class="inpaint-canvas-container">
-      <h3>Inpaint Canvas</h3>
+    <${CanvasContainer}>
+      <${H2}>Inpaint Canvas</>
       ${!imageUrl && html`
-        <div class="inpaint-placeholder">
+        <${Panel} variant="outlined">
           <p>No image loaded for inpainting</p>
-        </div>
+        <//>
       `}
       ${imageUrl && !imageLoaded && html`
-        <div class="inpaint-loading">
+        <${Panel} variant="outlined">
           <p>Loading image...</p>
-        </div>
+        <//>
       `}
       ${imageLoaded && html`
-        <canvas 
+        <${Canvas}
           id="inpaint"
           ref=${canvasRef}
-          class="inpaint-canvas loaded"
-          style="max-width: 100%; height: auto; cursor: crosshair;"
           onMouseDown=${handleMouseDown}
           onContextMenu=${handleRightClick}
         />
       `}
       ${imageLoaded && html`
-        <div class="inpaint-info">
+        <${InfoContainer}>
           <p>Canvas size: ${canvasSize.width} x ${canvasSize.height}</p>
           ${inpaintArea ? html`
             <p>Inpaint area: ${getInpaintAreaDisplay()}</p>
           ` : html`
             <p>Left click and drag to select inpaint area, right click to clear selection</p>
           `}
-        </div>
+        <//>
       `}
-    </div>
+    <//>
   `;
 }

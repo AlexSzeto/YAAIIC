@@ -1,7 +1,16 @@
 # Bugs / Fixes
 
+## V3 Visual bugs (Main Page)
+- on select folder UI, the unsorted folder don't show the selected highlight when it is the currently selected folder
+- in gallery, use button group to organize delete and move buttons so they have spacing between them
+- in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
+- in gallery, nav to first/last doesn't work
+
 # Features
-- Rename all generation variables ("savePath", etc.) to use snake_case. refactor prefix/postfix into using {{template}}. add math ops.
+- Cancel generation
+- Reprompt (copy and reuse all params from previous generation)
+- Cropping
+- Rename all generation variables ("savePath", etc.) to use snake_case. add math ops.
 - Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
