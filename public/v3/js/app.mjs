@@ -9,7 +9,8 @@ import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
-import { H1, H2, H3 } from './custom-ui/typography.mjs';
+import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
+import { AppHeader } from './app-ui/themed-base.mjs';
 import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
@@ -30,26 +31,6 @@ import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
 // =========================================================================
 // Styled Components
 // =========================================================================
-
-const AppContainer = styled('div')`
-  display: flex;
-  flex-direction: column;
-  gap: ${getThemeValue('spacing.large.gap')};
-`;
-AppContainer.className = 'app-container';
-
-const AppHeader = styled('div')`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-AppHeader.className = 'app-header';
-
-const HeaderActions = styled('div')`
-  display: flex;
-  gap: ${getThemeValue('spacing.small.gap')};
-`;
-HeaderActions.className = 'header-actions';
 
 const HiddenFileInput = styled('input')`
   display: none;
@@ -829,10 +810,10 @@ function App() {
   };
 
   return html`
-    <${AppContainer}>
+    <${VerticalLayout} gap="large">
       <${AppHeader}>
-        <${H1}>YAAIIG <small>V3</small><//>
-        <${HeaderActions}>
+        <${H1}>YAAIIG <small>V3</small></${H1}>
+        <${HorizontalLayout} gap="small">
           <${Button} 
             id="theme-toggle-btn"
             onClick=${handleToggleTheme}
@@ -847,7 +828,7 @@ function App() {
             icon="folder"
           >
             ${currentFolder.label}
-          </>
+          </${Button}>
           <${Button} 
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
@@ -855,38 +836,40 @@ function App() {
             icon="images"
           >
             Gallery
-          </>
-        </>
-      </>
+          </${Button}>
+        </${HorizontalLayout}>
+      </${AppHeader}>
       
       <${Panel} variant="outlined">
-        <${WorkflowSelector}
-          value=${workflow}
-          onChange=${handleWorkflowChange}
-          disabled=${isGenerating}
-          typeOptions=${[
-            { label: 'Image', value: 'image' },
-            { label: 'Video', value: 'video' },
-            { label: 'Audio', value: 'audio' }
-          ]}
-        />
-        
-        <${GenerationForm}
-          workflow=${workflow}
-          formState=${formState}
-          onFieldChange=${handleFieldChange}
-          isGenerating=${isGenerating}
-          onGenerate=${handleGenerate}
-          onOpenGallery=${() => setIsGalleryOpen(true)}
-          onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
-          inputImages=${inputImages}
-          onImageChange=${handleImageChange}
-          onSelectFromGallery=${handleSelectFromGallery}
-          inputAudios=${inputAudios}
-          onAudioChange=${handleAudioChange}
-          onSelectAudioFromGallery=${handleSelectAudioFromGallery}
-        />
-      <//>
+        <${VerticalLayout}>
+          <${WorkflowSelector}
+            value=${workflow}
+            onChange=${handleWorkflowChange}
+            disabled=${isGenerating}
+            typeOptions=${[
+              { label: 'Image', value: 'image' },
+              { label: 'Video', value: 'video' },
+              { label: 'Audio', value: 'audio' }
+            ]}
+          />
+          
+          <${GenerationForm}
+            workflow=${workflow}
+            formState=${formState}
+            onFieldChange=${handleFieldChange}
+            isGenerating=${isGenerating}
+            onGenerate=${handleGenerate}
+            onOpenGallery=${() => setIsGalleryOpen(true)}
+            onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
+            inputImages=${inputImages}
+            onImageChange=${handleImageChange}
+            onSelectFromGallery=${handleSelectFromGallery}
+            inputAudios=${inputAudios}
+            onAudioChange=${handleAudioChange}
+            onSelectAudioFromGallery=${handleSelectAudioFromGallery}
+          />
+        </${VerticalLayout}>
+      </${Panel}>
       
       <${GeneratedResult} 
         image=${generatedImage}
@@ -922,19 +905,21 @@ function App() {
 
       ${history.length > 0 && html`
         <${Panel} variant="outlined">
-          <${H2}>Session History</>
-          <${NavigatorControl} 
-            currentPage=${historyNav.currentIndex}
-            totalPages=${historyNav.totalItems}
-            onNext=${historyNav.selectNext}
-            onPrev=${historyNav.selectPrev}
-            onFirst=${historyNav.selectFirst}
-            onLast=${historyNav.selectLast}
-            showFirstLast=${true}
-          />
-        <//>
+          <${VerticalLayout}>
+            <${H2}>Session History</${H2}>
+            <${NavigatorControl} 
+              currentPage=${historyNav.currentIndex}
+              totalPages=${historyNav.totalItems}
+              onNext=${historyNav.selectNext}
+              onPrev=${historyNav.selectPrev}
+              onFirst=${historyNav.selectFirst}
+              onLast=${historyNav.selectLast}
+              showFirstLast=${true}
+            />
+          </${VerticalLayout}>
+        </${Panel}>
       `}
-    <//>
+    </${VerticalLayout}>
 
     ${taskId ? html`
       <${ProgressBanner} 
@@ -995,8 +980,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <${Page}>
         <${ToastProvider}>
           <${App} />
-        <//>
-      <//>
+        </${ToastProvider}>
+      </${Page}>
     `, root);
     console.log('App V3 mounted successfully');
 

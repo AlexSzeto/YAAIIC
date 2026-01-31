@@ -72,16 +72,6 @@ export function InpaintForm({
       
       <!-- Row 1: Name, Seed, Lock -->
       <${FormRow} key="name-seed-row">
-        <div>
-          <${Input}
-            label="Name"
-            type="text"
-            placeholder="Enter name"
-            value=${formState.name || ''}
-            onChange=${handleChange('name')}
-            disabled=${isGenerating}
-          />
-        </div>
 
         <${SeedControl}
           seed=${formState.seed || -1}
@@ -90,6 +80,20 @@ export function InpaintForm({
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
           disabled=${isGenerating}
         />
+
+        <div>
+          <${Input}
+            label="Name"
+            type="text"
+            fullWidth=${true}
+            placeholder="Enter name"
+            value=${formState.name || ''}
+            onChange=${handleChange('name')}
+            disabled=${isGenerating}
+          />
+        </div>
+
+
         
         <!-- Extra Inputs (standard types: text, number, select, checkbox) -->
         ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'standard') : null}

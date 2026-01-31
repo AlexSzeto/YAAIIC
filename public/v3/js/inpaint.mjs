@@ -3,9 +3,12 @@ import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from 'goober';
+
 import { Page } from './custom-ui/layout/page.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
-import { H1, H2, H3 } from './custom-ui/typography.mjs';
+import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
+import { AppHeader } from './app-ui/themed-base.mjs';
+
 import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
@@ -20,44 +23,6 @@ import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
-
-// Styled components
-const AppContainer = styled('div')`
-  margin: 0 auto;
-
-  display: flex;
-  flex-direction: column;
-  gap: ${getThemeValue('spacing.large.gap')};  
-`;
-AppContainer.className = 'app-container';
-
-const AppHeader = styled('div')`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-AppHeader.className = 'app-header';
-
-const HeaderActions = styled('div')`
-  display: flex;
-  gap: ${getThemeValue('spacing.small.gap')};
-`;
-HeaderActions.className = 'header-actions';
-
-const ProgressBannerContainer = styled('div')`
-  margin-bottom: ${getThemeValue('spacing.medium.margin')};
-`;
-ProgressBannerContainer.className = 'progress-banner-container';
-
-const MainLayout = styled('div')`
-  display: grid;
-  gap: ${getThemeValue('spacing.large.gap')};
-  
-  @media (min-width: 1024px) {
-    grid-template-columns: 1fr 500px;
-  }
-`;
-MainLayout.className = 'main-layout';
 
 /**
  * Helper function to generate random seed
@@ -504,10 +469,10 @@ function InpaintApp() {
     inpaintArea.y1 !== inpaintArea.y2;
 
   return html`
-    <${AppContainer}>
+    <${VerticalLayout} gap="large">
       <${AppHeader}>
-        <${H1}>YAAIIG <small>Inpaint V3</small></>
-        <${HeaderActions}>
+        <${H1}>YAAIIG <small>Inpaint V3</small></${H1}>
+        <${HorizontalLayout} gap="small">
           <${Button}
             variant="large-icon"
             icon=${themeName === 'dark' ? 'sun' : 'moon'}
@@ -520,24 +485,12 @@ function InpaintApp() {
             title="Return to main page"
           >
             Home
-          <//>
-        </>
-      </>
+          </${Button}>
+        </${HorizontalLayout}>
+      </${AppHeader}>
       
-      ${taskId ? html`
-        <${ProgressBannerContainer}>
-          <${ProgressBanner} 
-            key=${taskId}
-            taskId=${taskId}
-            sseManager=${sseManager}
-            onComplete=${handleGenerationComplete}
-            onError=${handleGenerationError}
-          />
-        </>
-      ` : null}
-      
-      <${MainLayout}>
-        <${Panel} variant="outlined" style=${{ minHeight: '400px' }}>
+      <${HorizontalLayout} gap="large">
+        <${Panel} variant="outlined">
           ${loading && html`
             <p>Loading image for inpainting...</p>
           `}
@@ -557,7 +510,7 @@ function InpaintApp() {
           ${!loading && !error && !mediaData?.imageUrl && html`
             <p>No image loaded for inpainting</p>
           `}
-        </>
+        </${Panel}>
         
         <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap') }}>
           <${WorkflowSelector}
@@ -577,24 +530,37 @@ function InpaintApp() {
             onGenerate=${handleGenerate}
             hasValidInpaintArea=${hasValidInpaintArea}
           />
-        </>
-      </>
+        </${Panel}>
+      </${HorizontalLayout}>
       
       ${history.length > 0 && html`
         <${Panel} variant="outlined">
-          <${H2}>Session History</>
-          <${NavigatorControl} 
-            currentPage=${historyNav.currentIndex}
-            totalPages=${historyNav.totalItems}
-            onNext=${historyNav.selectNext}
-            onPrev=${historyNav.selectPrev}
-            onFirst=${historyNav.selectFirst}
-            onLast=${historyNav.selectLast}
-            showFirstLast=${true}
-          />
-        </>
+          <${VerticalLayout}>
+            <${H2}>Session History</${H2}>
+            <${NavigatorControl} 
+              currentPage=${historyNav.currentIndex}
+              totalPages=${historyNav.totalItems}
+              onNext=${historyNav.selectNext}
+              onPrev=${historyNav.selectPrev}
+              onFirst=${historyNav.selectFirst}
+              onLast=${historyNav.selectLast}
+              showFirstLast=${true}
+            />
+          </${VerticalLayout}>
+        </${Panel}>
       `}
-    </>
+      
+      ${taskId ? html`
+        <${ProgressBanner} 
+          key=${taskId}
+          taskId=${taskId}
+          sseManager=${sseManager}
+          onComplete=${handleGenerationComplete}
+          onError=${handleGenerationError}
+        />
+      ` : null}
+
+    </${VerticalLayout}>
   `;
 }
 

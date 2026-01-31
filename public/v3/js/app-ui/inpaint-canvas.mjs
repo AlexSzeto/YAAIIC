@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
-import { H2 } from '../custom-ui/typography.mjs';
+import { H2 } from '../custom-ui/themed-base.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
 import { Panel } from '../custom-ui/layout/panel.mjs';
 

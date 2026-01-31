@@ -8,24 +8,7 @@ import { ImageSelect } from '../custom-ui/media/image-select.mjs';
 import { AudioSelect } from '../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
-
-// Styled components
-const FormContainer = styled('div')`
-  display: flex;
-  flex-direction: column;
-  gap: ${getThemeValue('spacing.medium.gap')};
-  width: 100%;
-`;
-FormContainer.className = 'form-container';
-
-const FormRow = styled('div')`
-  display: flex;
-  gap: ${getThemeValue('spacing.medium.gap')};
-  align-items: ${props => props.alignItems || 'flex-end'};
-  flex-wrap: wrap;
-  ${props => props.justifyContent ? `justify-content: ${props.justifyContent};` : ''}
-`;
-FormRow.className = 'form-row';
+import { HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
 
 /**
  * Generation Form Component
@@ -93,21 +76,9 @@ export function GenerationForm({
   })();
 
   return html`
-    <${FormContainer}>
+    <${VerticalLayout}>
       
-      <!-- Row 1: Name, Seed, Lock -->
-      <${FormRow} key="name-seed-row">
-        <div>
-          <${Input}
-            label="Name"
-            type="text"
-            placeholder="Enter name"
-            value=${formState.name || ''}
-            onChange=${handleChange('name')}
-            disabled=${isGenerating}
-          />
-        </div>
-
+      <${HorizontalLayout}>
         <${SeedControl}
           seed=${formState.seed || -1}
           setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
@@ -115,11 +86,23 @@ export function GenerationForm({
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
           disabled=${isGenerating}
         />
+      </${HorizontalLayout}>
+
+      <!-- Row 1: Name, Seed, Lock -->
+      <${HorizontalLayout}>
+        <${Input}
+          label="Name"
+          type="text"
+          placeholder="Enter name"
+          value=${formState.name || ''}
+          onChange=${handleChange('name')}
+          disabled=${isGenerating}
+        />
 
         ${workflow?.extraInputs ? html`
           ${renderExtraInputs(workflow.extraInputs, 'standard')}
       ` : null}
-      <//>
+      </${HorizontalLayout}>
 
       <!-- Prompt -->
       <${Textarea}
@@ -138,7 +121,7 @@ export function GenerationForm({
 
       <!-- Row 3: Image Upload -->
       ${workflow?.inputImages > 0 && html`
-        <${FormRow} key="image-uploads">
+        <${HorizontalLayout}>
           ${Array.from({ length: workflow.inputImages }, (_, i) => html`
             <${ImageSelect}
               key=${i}
@@ -149,12 +132,12 @@ export function GenerationForm({
               disabled=${isGenerating}
             />
           `)}
-        <//>
+        </${HorizontalLayout}>
       `}
 
       <!-- Row 3.5: Audio Upload -->
       ${workflow?.inputAudios > 0 && html`
-        <${FormRow} key="audio-uploads">
+        <${HorizontalLayout}>
           ${Array.from({ length: workflow.inputAudios }, (_, i) => html`
             <${AudioSelect}
               key=${i}
@@ -165,11 +148,11 @@ export function GenerationForm({
               disabled=${isGenerating}
             />
           `)}
-        <//>
+        </${HorizontalLayout}>
       `}
 
       <!-- Row 4: Action Buttons -->
-      <${FormRow} key="actions" justifyContent="flex-start">
+      <${HorizontalLayout} key="actions" justifyContent="flex-start">
         <${Button} 
           variant="primary"
           icon="play"
@@ -178,7 +161,7 @@ export function GenerationForm({
           disabled=${isGenerateDisabled}
         >
           ${isGenerating ? 'Generating...' : 'Generate'}
-        <//>
+        </${Button}>
 
 
 
@@ -190,9 +173,9 @@ export function GenerationForm({
           disabled=${isGenerating}
         >
           Upload
-        <//>
-      <//>
+        </${Button}>
+      </${HorizontalLayout}>
 
-    <//>
+    </${VerticalLayout}>
   `;
 }

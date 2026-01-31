@@ -8,8 +8,9 @@ import { sendToClipboard } from '../custom-ui/util.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
 import { useToast } from '../custom-ui/msg/toast.mjs';
-import { H2 } from '../custom-ui/typography.mjs';
+import { H2, HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
+import { Panel } from '../custom-ui/layout/panel.mjs';
 
 // Styled components
 const Container = styled('div')`
@@ -51,15 +52,6 @@ const RightColumn = styled('div')`
   gap: 15px;
 `;
 RightColumn.className = 'right-column';
-
-const ActionContainer = styled('div')`
-  margin-top: 15px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 15px;
-`;
-ActionContainer.className = 'action-container';
 
 // InfoSection styled components
 const InfoSection = styled('div')`
@@ -256,141 +248,143 @@ export function GeneratedResult({
   };
 
   return html`
-    <${Container}>
-      <${H2}>Generated Result</>
-      
-      <${Content}>
-        <${LeftColumn}>
-          <${GeneratedImage}
-            src=${image.imageUrl} 
-            alt=${image.name || 'Generated Image'} 
-            onClick=${() => createImageModal(image.imageUrl, true)}
-          />
-          ${image.audioUrl ? html`
-            <${AudioPlayer} audioUrl=${image.audioUrl} />
-          ` : null}
+    <${Panel} variant="outlined">
+      <${VerticalLayout}>
+        <${H2}>Generated Result</${H2}>
+        
+        <${Content}>
+          <${LeftColumn}>
+            <${GeneratedImage}
+              src=${image.imageUrl} 
+              alt=${image.name || 'Generated Image'} 
+              onClick=${() => createImageModal(image.imageUrl, true)}
+            />
+            ${image.audioUrl ? html`
+              <${AudioPlayer} audioUrl=${image.audioUrl} />
+            ` : null}
+          <//>
+
+          <${RightColumn}>
+            <${InfoField} 
+              label="Workflow" 
+              field="workflow"
+              value=${image.workflow} 
+              onCopy=${() => handleCopy(image.workflow, 'Workflow')}
+              onUse=${() => onUseWorkflow && onUseWorkflow(image.workflow)}
+              useTitle="Use this workflow"
+              canEdit=${false} 
+            />
+            
+            <${InfoField} 
+              label="Name" 
+              field="name"
+              value=${image.name} 
+              isEditing=${editingField === 'name'}
+              onEditStart=${() => startEditing('name')}
+              onCancel=${stopEditing}
+              onSave=${(val) => handleSave('name', val)}
+              onCopy=${() => handleCopy(image.name, 'Name')}
+              onUse=${() => onUseName && onUseName(image.name)}
+              useTitle="Use this name"
+              canEdit=${true}
+            />
+            
+            <${TabbedInfoField}
+              tabs=${[
+                {
+                  id: 'tags',
+                  name: 'Tags',
+                  value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
+                  canEdit: true,
+                  onUse: null,
+                  useTitle: ''
+                },
+                {
+                  id: 'prompt',
+                  name: 'Prompt',
+                  value: image.prompt,
+                  canEdit: true,
+                  onUse: () => onUsePrompt && onUsePrompt(image.prompt),
+                  useTitle: 'Use this prompt'
+                },
+                {
+                  id: 'description',
+                  name: 'Description',
+                  value: image.description,
+                  canEdit: true,
+                  onUse: () => onUseDescription && onUseDescription(image.description),
+                  useTitle: 'Use this description'
+                },
+                {
+                  id: 'summary',
+                  name: 'Summary',
+                  value: image.summary,
+                  canEdit: true,
+                  onUse: () => onUseDescription && onUseDescription(image.summary),
+                  useTitle: 'Use this summary'
+                }
+              ]}
+              onCopy=${handleCopy}
+              onEditStart=${startEditing}
+              onSave=${handleSave}
+              onCancel=${stopEditing}
+              onRegenerate=${onRegenerate}
+              editingField=${editingField}
+              image=${image}
+            />
+            
+            <${InfoField} 
+              label="Seed" 
+              field="seed"
+              value=${image.seed} 
+              onCopy=${() => handleCopy(image.seed, 'Seed')}
+              onUse=${() => onUseSeed && onUseSeed(image.seed)}
+              useTitle="Use this seed"
+              canEdit=${false}
+            />
+          <//>
         <//>
 
-        <${RightColumn}>
-          <${InfoField} 
-            label="Workflow" 
-            field="workflow"
-            value=${image.workflow} 
-            onCopy=${() => handleCopy(image.workflow, 'Workflow')}
-            onUse=${() => onUseWorkflow && onUseWorkflow(image.workflow)}
-            useTitle="Use this workflow"
-            canEdit=${false} 
-          />
-          
-          <${InfoField} 
-            label="Name" 
-            field="name"
-            value=${image.name} 
-            isEditing=${editingField === 'name'}
-            onEditStart=${() => startEditing('name')}
-            onCancel=${stopEditing}
-            onSave=${(val) => handleSave('name', val)}
-            onCopy=${() => handleCopy(image.name, 'Name')}
-            onUse=${() => onUseName && onUseName(image.name)}
-            useTitle="Use this name"
-            canEdit=${true}
-          />
-          
-          <${TabbedInfoField}
-            tabs=${[
-              {
-                id: 'tags',
-                name: 'Tags',
-                value: Array.isArray(image.tags) ? image.tags.join(', ') : image.tags,
-                canEdit: true,
-                onUse: null,
-                useTitle: ''
-              },
-              {
-                id: 'prompt',
-                name: 'Prompt',
-                value: image.prompt,
-                canEdit: true,
-                onUse: () => onUsePrompt && onUsePrompt(image.prompt),
-                useTitle: 'Use this prompt'
-              },
-              {
-                id: 'description',
-                name: 'Description',
-                value: image.description,
-                canEdit: true,
-                onUse: () => onUseDescription && onUseDescription(image.description),
-                useTitle: 'Use this description'
-              },
-              {
-                id: 'summary',
-                name: 'Summary',
-                value: image.summary,
-                canEdit: true,
-                onUse: () => onUseDescription && onUseDescription(image.summary),
-                useTitle: 'Use this summary'
-              }
-            ]}
-            onCopy=${handleCopy}
-            onEditStart=${startEditing}
-            onSave=${handleSave}
-            onCancel=${stopEditing}
-            onRegenerate=${onRegenerate}
-            editingField=${editingField}
-            image=${image}
-          />
-          
-          <${InfoField} 
-            label="Seed" 
-            field="seed"
-            value=${image.seed} 
-            onCopy=${() => handleCopy(image.seed, 'Seed')}
-            onUse=${() => onUseSeed && onUseSeed(image.seed)}
-            useTitle="Use this seed"
-            canEdit=${false}
-          />
-        <//>
-      <//>
-
-      <${ActionContainer}>
-        <${Button} 
-          variant="success"
-          icon="check-circle"
-          onClick=${() => onSelectAsInput && onSelectAsInput(image)}
-          disabled=${!onSelectAsInput || isSelectDisabled}
-          title="Use this image as input"
-        >
-          Select
-        <//>
-        <${Button} 
-          variant="primary" 
-          icon="image"
-          onClick=${() => onInpaint && onInpaint(image)}
-          disabled=${isInpaintDisabled}
-          title="Inpaint this image"
-        >
-          Inpaint
-        <//>
-        <${Button}
-          variant="primary"
-          icon="export"
-          onClick=${handleExport}
-          disabled=${!image.uid}
-          title="Export this media"
-        >
-          Export
-        <//>
-        <${Button} 
-          variant="danger"
-          icon="trash"
-          onClick=${() => onDelete && onDelete(image)}
-          disabled=${!image.uid || !onDelete}
-          title="Delete this image"
-        >
-          Delete
-        <//>
-      <//>
-    <//>
+        <${HorizontalLayout}>
+          <${Button} 
+            variant="success"
+            icon="check-circle"
+            onClick=${() => onSelectAsInput && onSelectAsInput(image)}
+            disabled=${!onSelectAsInput || isSelectDisabled}
+            title="Use this image as input"
+          >
+            Select
+          </${Button}>
+          <${Button} 
+            variant="primary" 
+            icon="image"
+            onClick=${() => onInpaint && onInpaint(image)}
+            disabled=${isInpaintDisabled}
+            title="Inpaint this image"
+          >
+            Inpaint
+          </${Button}>
+          <${Button}
+            variant="primary"
+            icon="export"
+            onClick=${handleExport}
+            disabled=${!image.uid}
+            title="Export this media"
+          >
+            Export
+          </${Button}>
+          <${Button} 
+            variant="danger"
+            icon="trash"
+            onClick=${() => onDelete && onDelete(image)}
+            disabled=${!image.uid || !onDelete}
+            title="Delete this image"
+          >
+            Delete
+          </${Button}>
+        </${HorizontalLayout}>
+      </${VerticalLayout}>
+    </${Panel}>
   `;
 }
 

@@ -304,7 +304,7 @@ export class GalleryPreview extends Component {
               ${hasAudio && html`
                 <${GalleryAudioButton} onClick=${this.handleAudioToggle}>
                   <${Button}
-                    variant="icon"
+                    variant="small-icon"
                     icon=${isAudioPlaying ? 'stop' : 'play'}
                     title=${isAudioPlaying ? 'Stop' : 'Play'}
                   />

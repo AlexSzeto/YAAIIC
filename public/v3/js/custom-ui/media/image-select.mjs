@@ -13,7 +13,6 @@ import { Panel } from '../layout/panel.mjs';
 const Container = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
 `;
 Container.className = 'container';
 

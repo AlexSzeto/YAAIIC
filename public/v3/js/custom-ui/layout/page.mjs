@@ -78,11 +78,6 @@ function applyGlobalStyles(theme) {
       color: ${theme.colors.text.primary};
     }
 
-    h1 { font-size: 2rem; }
-    h2 { font-size: 1.5rem; }
-    h3 { font-size: 1.25rem; }
-    h4 { font-size: 1rem; }
-
     /* Code/pre styling using monotype */
     code, pre {
       font-family: ${theme.monotype.fontFamily};
@@ -105,6 +100,22 @@ function applyGlobalStyles(theme) {
     pre code {
       background: none;
       padding: 0;
+    }
+
+    /* Custom select picker positioning */
+    select {
+      /* For progressive enhancement in supporting browsers */
+      @supports (appearance: base-select) {
+        appearance: base-select;
+      }
+    }    
+    select::picker-icon {
+      content: '╲╱';
+      font-size: 0.5em;
+      // font-weight: bold;
+      position: relative;
+      top: 1em;
+      color: ${theme.colors.text.primary};
     }
   `;
 }
