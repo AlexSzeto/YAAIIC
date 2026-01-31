@@ -10,6 +10,7 @@ import { showDialog } from '../custom-ui/overlays/dialog.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
+import { HorizontalLayout } from '../custom-ui/themed-base.mjs';
 
 // Styled Components
 const ModalOverlay = styled('div')`
@@ -656,8 +657,8 @@ export function Gallery({
           ${renderGalleryItems()}
         <//>
         <${PaginationWrapper}>
+          <${HorizontalLayout}>
           ${!selectionMode && html`
-            <${BulkActions}>
               <${Button}
                 variant="medium-icon-text"
                 color=${hasSelectedItems ? 'danger' : 'secondary'}
@@ -678,9 +679,7 @@ export function Gallery({
               >
                 Move
               <//>
-            <//>
           `}
-          <${PaginationContainer}>
             <${PaginationControls}
               currentPage=${pagination.currentPage}
               totalPages=${pagination.totalPages}
@@ -689,9 +688,11 @@ export function Gallery({
               isLastPage=${pagination.isLastPage}
               onNext=${pagination.goToNext}
               onPrev=${pagination.goToPrev}
+              onFirst=${pagination.goToFirst}
+              onLast=${pagination.goToLast}
               showFirstLast=${true}
             />
-          <//>
+          </${HorizontalLayout}>
         <//>
         <${Controls}>
           <${SearchContainer}>
