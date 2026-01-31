@@ -43,9 +43,9 @@ const AppHeader = styled('div')`
   align-items: center;
 `;
 
-const HeaderButtons = styled('div')`
+const HeaderActions = styled('div')`
   display: flex;
-  gap: ${getThemeValue('spacing.medium.gap')};
+  gap: ${getThemeValue('spacing.small.gap')};
 `;
 
 const HiddenFileInput = styled('input')`
@@ -828,7 +828,7 @@ function App() {
     <${AppContainer}>
       <${AppHeader}>
         <${H1}>YAAIIG <small>V3</small><//>
-        <${HeaderButtons}>
+        <${HeaderActions}>
           <${Button} 
             id="theme-toggle-btn"
             onClick=${handleToggleTheme}

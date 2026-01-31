@@ -120,7 +120,7 @@ class Dialog extends Component {
             borderRadius=${theme.spacing.medium.borderRadius}
             maxWidth="500px"
             maxHeight="400px"
-            shadowColor=${theme.colors.shadow.colorStrong}
+            shadowColor=${theme.shadow.colorStrong}
           >
             <${BaseHeader} marginBottom="16px">
               <${BaseTitle} 
@@ -226,7 +226,7 @@ class TextPromptDialog extends Component {
             maxWidth="500px"
             maxHeight="400px"
             minWidth="400px"
-            shadowColor=${theme.colors.shadow.colorStrong}
+            shadowColor=${theme.shadow.colorStrong}
           >
             <${BaseTitle}
               color=${theme.colors.text.primary}

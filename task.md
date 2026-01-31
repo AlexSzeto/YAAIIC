@@ -20,6 +20,14 @@ Complete the Goober migration by refactoring all remaining app-ui components, re
 - **Theme colors**: Always add new colors to `theme.mjs` instead of hardcoding color values. If a needed color doesn't exist, add it to both light and dark themes before using it in components.
 
 ## Tasks
+[x] Refactor v3 gallery preview component to use Goober
+1. Update `public/v3/js/app-ui/gallery-preview.mjs` to use Goober styling
+2. Create styled components for gallery-item, gallery-item-image, gallery-item-info, gallery-item-text-content, gallery-item-name, gallery-item-date, gallery-item-checkbox-container, and gallery-audio-button
+3. Replace CSS class dependencies with styled components
+4. Remove all inline styles
+5. Use theme values for colors, spacing, and transitions
+6. Maintain hover effects, disabled states, and audio button functionality
+
 [x] Isolate and debug WorkflowSelector
 1. Comment out everything except WorkflowSelector in App.mjs
 2. Verify page loads

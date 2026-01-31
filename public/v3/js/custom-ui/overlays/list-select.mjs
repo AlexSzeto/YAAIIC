@@ -298,7 +298,7 @@ class ListSelectModal extends Component {
           maxWidth="90vw"
           maxHeight="80vh"
           minWidth="auto"
-          shadowColor=${theme.colors.shadow.colorStrong}
+          shadowColor=${theme.shadow.colorStrong}
         >
           <${ModalWrapper}>
             <${BaseHeader} marginBottom="16px">

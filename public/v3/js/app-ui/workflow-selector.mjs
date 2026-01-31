@@ -8,7 +8,6 @@ import { getThemeValue } from '../custom-ui/theme.mjs';
 const Container = styled('div')`
   display: flex;
   gap: ${getThemeValue('spacing.medium.gap')};
-  flex: 1 1 auto;
   align-items: end;
   width: 100%;
 

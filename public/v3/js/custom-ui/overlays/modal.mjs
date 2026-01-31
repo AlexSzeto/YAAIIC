@@ -110,7 +110,7 @@ export function Modal({
         borderRadius=${theme.spacing.medium.borderRadius}
         maxWidth=${getSizeMaxWidth()}
         maxHeight=${getSizeMaxHeight()}
-        shadowColor=${theme.colors.shadow.colorStrong}
+        shadowColor=${theme.shadow.colorStrong}
         class=${className}
         role="dialog" 
         aria-modal="true" 
@@ -259,7 +259,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
           borderRadius=${theme.spacing.medium.borderRadius}
           maxWidth="calc(100vw - 40px)"
           maxHeight="calc(100vh - 40px)"
-          shadowColor=${theme.colors.shadow.colorStrong}
+          shadowColor=${theme.shadow.colorStrong}
         >
           <${ImageModalWrapper} hasActionButton=${allowSelect && onSelect}>
             <${ImageModalContent}>
@@ -268,7 +268,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
               alt=${title || 'Preview'}
               maxHeight=${allowSelect && onSelect ? 'calc(100vh - 120px)' : 'calc(100vh - 60px)'}
               borderRadius=${theme.spacing.medium.borderRadius}
-              shadowColor=${theme.colors.shadow.colorStrong}
+              shadowColor=${theme.shadow.colorStrong}
             />
             
             ${title && html`

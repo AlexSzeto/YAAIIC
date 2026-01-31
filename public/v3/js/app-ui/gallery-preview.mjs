@@ -1,9 +1,125 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
+import { styled } from '../custom-ui/goober-setup.mjs'
 import { createImageModal } from '../custom-ui/overlays/modal.mjs'
 import { Checkbox } from '../custom-ui/io/checkbox.mjs'
 import { Button } from '../custom-ui/io/button.mjs'
+import { Panel } from '../custom-ui/layout/panel.mjs'
 import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs'
+import { currentTheme } from '../custom-ui/theme.mjs'
+
+// Styled components
+const GalleryItemContainer = styled('div')`
+  aspect-ratio: 1;
+  border: 1px solid ${() => currentTheme.value.colors.border.focus};
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  background-color: ${() => currentTheme.value.colors.background.card};
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: ${() => currentTheme.value.colors.border.highlight};
+  }
+
+  ${props => props.disabled ? `
+    opacity: 0.4;
+    pointer-events: none;
+  ` : ''}
+`;
+
+const GalleryItemImage = styled('img')`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: ${() => currentTheme.value.colors.border.primary};
+
+  ${props => props.imageError ? `
+    background-color: #333333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999999;
+    font-size: 10px;
+    cursor: default;
+  ` : props.disabled ? `
+    cursor: default;
+  ` : props.hasAudio ? `
+    cursor: default;
+  ` : `
+    cursor: pointer;
+  `}
+`;
+
+const GalleryItemInfo = styled('div')`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  pointer-events: none;
+`;
+
+const GalleryItemInfoContent = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: ${() => currentTheme.value.colors.text.primary};
+
+  ${props => props.hasAudio ? `
+    flex-direction: row;
+    gap: 8px;
+  ` : ''}
+`;
+
+const GalleryAudioButton = styled('div')`
+  pointer-events: auto;
+  flex-shrink: 0;
+`;
+
+const GalleryItemTextContent = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const GalleryItemName = styled('div')`
+  font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
+  font-size: 13px;
+  color: ${() => currentTheme.value.colors.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+`;
+
+const GalleryItemDate = styled('div')`
+  font-size: 11px;
+  color: ${() => currentTheme.value.colors.text.secondary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+`;
+
+const GalleryItemCheckboxContainer = styled('div')`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+`;
 
 // Gallery Preview Component
 export class GalleryPreview extends Component {
@@ -88,13 +204,13 @@ export class GalleryPreview extends Component {
     }
     
     // Don't open modal if clicking on checkbox or checkbox container
-    if (e.target.type === 'checkbox' || 
-        e.target.closest('.gallery-item-checkbox-container')) {
+    if (e.target.type === 'checkbox') {
       return;
     }
     
-    // Don't open modal if clicking on audio button
-    if (e.target.closest('.gallery-audio-button')) {
+    // Don't open modal if clicking on audio button - check for button element or parent
+    const target = e.target;
+    if (target.tagName === 'BUTTON' || target.closest('button')) {
       return;
     }
     
@@ -147,61 +263,56 @@ export class GalleryPreview extends Component {
     const hasAudio = item && item.audioUrl;
 
     return html`
-      <div 
-        class="gallery-item ${disabled ? 'disabled' : ''}" 
-        style=${{ position: 'relative' }}
+      <${GalleryItemContainer}
+        disabled=${disabled}
         onMouseEnter=${this.handleMouseEnter}
         onMouseLeave=${this.handleMouseLeave}
       >
         ${onSelect && html`
-          <div class="gallery-item-checkbox-container" onClick=${(e) => e.stopPropagation()}>
+          <${GalleryItemCheckboxContainer} onClick=${(e) => e.stopPropagation()}>
             <${Checkbox}
               checked=${isSelected || false}
               disabled=${disableCheckbox}
               onChange=${this.handleCheckboxChange}
               label=${null}
-              className="gallery-item-checkbox"
             />
-          </div>
+          </${GalleryItemCheckboxContainer}>
         `}
-        <img
-          class="gallery-item-image"
+        <${GalleryItemImage}
           src=${item.imageUrl || ''}
           alt=${item.name || 'Generated image'}
-          style=${imageError ? {
-            backgroundColor: '#333333',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#999999',
-            fontSize: '10px',
-            cursor: 'default'
-          } : disabled ? { cursor: 'default' } : (hasAudio ? { cursor: 'default' } : { cursor: 'pointer' })}
+          imageError=${imageError}
+          disabled=${disabled}
+          hasAudio=${hasAudio}
           onError=${this.handleImageError}
           onClick=${this.handleImageClick}
         >
           ${imageError && 'No image'}
-        </img>
-        <div class="gallery-item-info overlay-panel ${hasAudio ? 'has-audio' : ''}">
-          ${hasAudio && html`
-            <div class="gallery-audio-button" onClick=${this.handleAudioToggle}>
-              <${Button}
-                variant="icon"
-                icon=${isAudioPlaying ? 'stop' : 'play'}
-                title=${isAudioPlaying ? 'Stop' : 'Play'}
-              />
-            </div>
-          `}
-          <div class="gallery-item-text-content">
-            <div class="gallery-item-name">
-              ${item.name || 'Unnamed'}
-            </div>
-            <div class="gallery-item-date">
-              ${this.formatDate(item.timestamp)}
-            </div>
-          </div>
-        </div>
-      </div>
+        </${GalleryItemImage}>
+        <${GalleryItemInfo}>
+          <${Panel} variant="glass" style=${{ padding: '8px 8px' }}>
+            <${GalleryItemInfoContent} hasAudio=${hasAudio}>
+              ${hasAudio && html`
+                <${GalleryAudioButton} onClick=${this.handleAudioToggle}>
+                  <${Button}
+                    variant="icon"
+                    icon=${isAudioPlaying ? 'stop' : 'play'}
+                    title=${isAudioPlaying ? 'Stop' : 'Play'}
+                  />
+                </${GalleryAudioButton}>
+              `}
+              <${GalleryItemTextContent}>
+                <${GalleryItemName}>
+                  ${item.name || 'Unnamed'}
+                </${GalleryItemName}>
+                <${GalleryItemDate}>
+                  ${this.formatDate(item.timestamp)}
+                </${GalleryItemDate}>
+              </${GalleryItemTextContent}>
+            </${GalleryItemInfoContent}>
+          </${Panel}>
+        </${GalleryItemInfo}>
+      </${GalleryItemContainer}>
     `;
   }
 }
