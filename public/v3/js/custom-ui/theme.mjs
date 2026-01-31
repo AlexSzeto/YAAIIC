@@ -126,6 +126,27 @@ const monotypeSubTheme = {
 };
 
 // ============================================================================
+// Shadow Sub-Theme
+// ============================================================================
+
+const shadowSubTheme = {
+  light: {
+    shadow: {
+      color: 'rgba(0, 0, 0, 0.15)',
+      colorStrong: 'rgba(0, 0, 0, 0.25)',
+      elevated: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.15)'
+    }
+  },
+  dark: {
+    shadow: {
+      color: 'rgba(0, 0, 0, 0.3)',
+      colorStrong: 'rgba(0, 0, 0, 0.3)',
+      elevated: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3)'
+    }
+  }
+};
+
+// ============================================================================
 // Color Themes
 // ============================================================================
 
@@ -202,11 +223,6 @@ const lightColors = {
     background: 'rgba(0, 0, 0, 0.5)',
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
     glass: 'rgba(255, 255, 255, 0.85)'
-  },
-  shadow: {
-    color: 'rgba(0, 0, 0, 0.15)',
-    colorStrong: 'rgba(0, 0, 0, 0.25)',
-    elevated: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.15)'
   },
   focus: {
     shadowPrimary: 'rgba(0, 123, 255, 0.25)',
@@ -297,11 +313,6 @@ const darkColors = {
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
     glass: 'rgba(40, 40, 40, 0.6)'
   },
-  shadow: {
-    color: 'rgba(0, 0, 0, 0.3)',
-    colorStrong: 'rgba(0, 0, 0, 0.3)',
-    elevated: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3)'
-  },
   focus: {
     shadowPrimary: 'rgba(255, 255, 255, 0.6)',
     shadowWhite: 'rgba(255, 255, 255, 0.3)'
@@ -322,8 +333,8 @@ const darkColors = {
 // ============================================================================
 
 export const themes = {
-  light: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, colors: lightColors, name: 'light' },
-  dark: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, colors: darkColors, name: 'dark' }
+  light: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.light, colors: lightColors, name: 'light' },
+  dark: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.dark, colors: darkColors, name: 'dark' }
 };
 
 // ============================================================================

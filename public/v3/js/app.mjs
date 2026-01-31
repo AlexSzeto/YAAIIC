@@ -8,7 +8,8 @@ import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 
 import { Button } from './custom-ui/io/button.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
-import { getThemeValue } from './custom-ui/theme.mjs';
+import { Panel } from './custom-ui/layout/panel.mjs';
+import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
@@ -56,30 +57,6 @@ const HeaderButtons = styled('div')`
   gap: ${getThemeValue('spacing.medium.gap')};
 `;
 
-const WorkflowControlsContainer = styled('div')`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${getThemeValue('spacing.medium.gap')};
-  padding: ${getThemeValue('spacing.medium.padding')};
-  background-color: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-  align-items: start;
-`;
-
-const HistoryContainer = styled('div')`
-  padding: ${getThemeValue('spacing.medium.padding')};
-  background-color: ${getThemeValue('colors.background.secondary')};
-  border: 1px solid ${getThemeValue('colors.border.secondary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-`;
-
-const HistoryTitle = styled('h3')`
-  margin-bottom: ${getThemeValue('spacing.small.gap')};
-  font-size: 1rem;
-  color: ${getThemeValue('colors.text.secondary')};
-`;
-
 const HiddenFileInput = styled('input')`
   display: none;
 `;
@@ -109,6 +86,9 @@ function normalizeFrameCount(inputValue) {
  */
 function App() {
   const toast = useToast();
+  
+  // Theme state
+  const [themeName, setThemeName] = useState(currentTheme.value.name);
   
   // State management
   const [workflow, setWorkflow] = useState(null);
@@ -145,6 +125,20 @@ function App() {
   
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
+
+  // Theme toggle handler
+  const handleToggleTheme = () => {
+    toggleTheme();
+    setThemeName(currentTheme.value.name);
+  };
+
+  // Subscribe to theme changes
+  useEffect(() => {
+    const unsubscribe = currentTheme.subscribe((theme) => {
+      setThemeName(theme.name);
+    });
+    return unsubscribe;
+  }, []);
 
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
@@ -845,6 +839,13 @@ function App() {
         <${HeaderTitle}>YAAIIG <small>V3</small><//>
         <${HeaderButtons}>
           <${Button} 
+            id="theme-toggle-btn"
+            onClick=${handleToggleTheme}
+            variant="large-icon"
+            icon=${themeName === 'dark' ? 'sun' : 'moon'}
+            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
+          />
+          <${Button} 
             id="folder-btn"
             onClick=${handleOpenFolderSelect}
             variant="medium-icon-text"
@@ -863,7 +864,7 @@ function App() {
         </>
       </>
       
-      <${WorkflowControlsContainer}>
+      <${Panel} variant="default">
         <${WorkflowSelector}
           value=${workflow}
           onChange=${handleWorkflowChange}
@@ -925,8 +926,10 @@ function App() {
       />
 
       ${history.length > 0 && html`
-        <${HistoryContainer}>
-          <${HistoryTitle}>Session History<//>
+        <${Panel} variant="default">
+          <h3 style=${{ marginBottom: '8px', fontSize: '1rem', color: currentTheme.value.colors.text.secondary }}>
+            Session History
+          </h3>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}
             totalPages=${historyNav.totalItems}

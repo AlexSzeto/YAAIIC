@@ -4,7 +4,8 @@ import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from 'goober';
 import { Page } from './custom-ui/layout/page.mjs';
-import { getThemeValue } from './custom-ui/theme.mjs';
+import { Panel } from './custom-ui/layout/panel.mjs';
+import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint-canvas.mjs';
@@ -59,43 +60,6 @@ const MainLayout = styled('div')`
   
   @media (min-width: 1024px) {
     grid-template-columns: 1fr 500px;
-  }
-`;
-
-const CanvasPanel = styled('div')`
-  background: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-  padding: ${getThemeValue('spacing.medium.padding')};
-  
-  p {
-    margin: 0;
-    color: ${getThemeValue('colors.text.secondary')};
-  }
-`;
-
-const FormPanel = styled('div')`
-  display: flex;
-  flex-direction: column;
-  gap: ${getThemeValue('spacing.medium.gap')};
-  padding: ${getThemeValue('spacing.medium.padding')};
-  background-color: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-`;
-
-const HistoryContainer = styled('div')`
-  margin-top: ${getThemeValue('spacing.medium.margin')};
-  padding: ${getThemeValue('spacing.medium.padding')};
-  background-color: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.secondary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-  
-  h3 {
-    margin: 0 0 ${getThemeValue('spacing.small.margin')} 0;
-    font-size: ${getThemeValue('typography.fontSize.medium')};
-    color: ${getThemeValue('colors.text.secondary')};
-    font-weight: ${getThemeValue('typography.fontWeight.medium')};
   }
 `;
 
@@ -180,6 +144,9 @@ async function createOriginalImageCanvas(imageUrl) {
 function InpaintApp() {
   const toast = useToast();
   
+  // Theme state
+  const [themeName, setThemeName] = useState(currentTheme.value.name);
+  
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -199,6 +166,20 @@ function InpaintApp() {
     seed: generateRandomSeed(),
     seedLocked: false
   });
+
+  // Theme toggle handler
+  const handleToggleTheme = () => {
+    toggleTheme();
+    setThemeName(currentTheme.value.name);
+  };
+
+  // Subscribe to theme changes
+  useEffect(() => {
+    const unsubscribe = currentTheme.subscribe((theme) => {
+      setThemeName(theme.name);
+    });
+    return unsubscribe;
+  }, []);
 
   // Initialize and load data on mount
   useEffect(() => {
@@ -532,19 +513,18 @@ function InpaintApp() {
         <h1>YAAIIG <small>Inpaint V3</small></h1>
         <${HeaderActions}>
           <${Button}
-            icon="folder"
-            onClick=${handleOpenFolderSelect}
-            title="Select folder"
-          >
-            ${currentFolder.label}
-          </>
+            variant="large-icon"
+            icon=${themeName === 'dark' ? 'sun' : 'moon'}
+            onClick=${handleToggleTheme}
+            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
+          />
           <${Button}
             icon="home"
             onClick=${handleDone}
             title="Return to main page"
           >
             Home
-          </>
+          <//>
         </>
       </>
       
@@ -561,7 +541,7 @@ function InpaintApp() {
       ` : null}
       
       <${MainLayout}>
-        <${CanvasPanel}>
+        <${Panel} variant="default" style=${{ minHeight: '400px' }}>
           ${loading && html`
             <p>Loading image for inpainting...</p>
           `}
@@ -583,7 +563,7 @@ function InpaintApp() {
           `}
         </>
         
-        <${FormPanel}>
+        <${Panel} variant="default" style=${{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
@@ -605,7 +585,7 @@ function InpaintApp() {
       </>
       
       ${history.length > 0 && html`
-        <${HistoryContainer}>
+        <${Panel} variant="default" style=${{ marginTop: '16px' }}>
           <h3>Session History</h3>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}

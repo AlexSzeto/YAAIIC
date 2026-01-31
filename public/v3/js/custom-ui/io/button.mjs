@@ -74,10 +74,11 @@ const TextSpan = styled('span')`
  * icons, and loading states. All styling is handled via Goober.
  * 
  * @param {Object} props
- * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
+ * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'large-icon'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
  *   - 'medium-text': Standard button with text only
- *   - 'medium-icon': Square button with icon only (44x44)
+ *   - 'medium-icon': Square button with icon only (32x32)
  *   - 'medium-icon-text': Button with icon and text
+ *   - 'large-icon': Large square button with icon only (44x44)
  *   - 'small-text': Compact tag-style button with text
  *   - 'small-icon': Small square button with icon only (28x28)
  * @param {'primary'|'secondary'|'success'|'danger'} [props.color='secondary'] - Color theme
@@ -140,7 +141,8 @@ export class Button extends Component {
 
     // Determine sizing based on variant
     const isSmall = variant.startsWith('small');
-    const isIconOnly = variant === 'medium-icon' || variant === 'small-icon';
+    const isLarge = variant === 'large-icon';
+    const isIconOnly = variant === 'medium-icon' || variant === 'small-icon' || variant === 'large-icon';
     const hasIcon = icon || loading;
     const hasText = children && !isIconOnly;
 
@@ -163,10 +165,19 @@ export class Button extends Component {
         iconSize: '24px',
         borderRadius: isIconOnly ? theme.spacing.small.borderRadius : theme.spacing.medium.borderRadius,
         gap: '8px'
+      },
+      large: {
+        height: '44px',
+        minWidth: '44px',
+        padding: '0',
+        fontSize: theme.typography.fontSize.large,
+        iconSize: '28px',
+        borderRadius: theme.spacing.medium.borderRadius,
+        gap: '8px'
       }
     };
 
-    const size = isSmall ? sizes.small : sizes.medium;
+    const size = isSmall ? sizes.small : (isLarge ? sizes.large : sizes.medium);
 
     // Color configurations
     const getColorStyles = (colorName) => {
