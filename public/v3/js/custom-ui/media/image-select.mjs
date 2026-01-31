@@ -39,9 +39,11 @@ const SelectArea = styled('div')`
   transition: ${props => props.transition};
   opacity: ${props => props.opacity};
   
-  &:hover {
-    border-color: ${props => props.hoverBorderColor};
-  }
+  ${props => !props.disabled && `
+    &:hover {
+      border-color: ${props.hoverBorderColor};
+    }
+  `}
 `;
 SelectArea.className = 'select-area';
 
@@ -269,6 +271,7 @@ export class ImageSelect extends Component {
           cursor=${disabled ? 'default' : 'pointer'}
           transition=${`border-color ${theme.transitions.fast}, background-color ${theme.transitions.fast}`}
           opacity=${disabled ? '0.4' : '1'}
+          disabled=${disabled}
           hoverBorderColor=${theme.colors.primary.background}
           onClick=${this.handleBoxClick}
           onMouseEnter=${() => this.setState({ isHovered: true })}

@@ -43,9 +43,11 @@ const SelectArea = styled('div')`
   background-size: ${props => props.backgroundSize};
   background-position: ${props => props.backgroundPosition};
   
-  &:hover {
-    border-color: ${props => props.hoverBorderColor};
-  }
+  ${props => !props.disabled && `
+    &:hover {
+      border-color: ${props.hoverBorderColor};
+    }
+  `}
 `;
 SelectArea.className = 'select-area';
 
@@ -264,6 +266,7 @@ export class AudioSelect extends Component {
           backgroundImage=${audioUrl && albumImageUrl ? `url('${albumImageUrl}')` : 'none'}
           backgroundSize="cover"
           backgroundPosition="center"
+          disabled=${disabled}
           hoverBorderColor=${theme.colors.primary.background}
           onClick=${audioUrl ? null : this.handleBrowseClick}
           onMouseEnter=${() => this.setState({ isHovered: true })}
