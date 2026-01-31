@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YAAIIG - Inpaint v2</title>
+    <title>YAAIIG - Inpaint v3</title>
     <!-- Preact and HTM via CDN -->
     <script type="importmap">
       {
@@ -12,7 +12,9 @@
           "preact/": "https://esm.sh/preact@10.19.2/",
           "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
           "@preact/signals": "https://esm.sh/@preact/signals@1.2.2?external=preact",
-          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact",
+          "goober": "https://esm.sh/goober@2.1.13",
+          "goober/prefixer": "https://esm.sh/goober@2.1.13/prefixer"
         }
       }
     </script>
@@ -21,16 +23,13 @@
     <!-- Boxicons for icons -->
     <script src="https://unpkg.com/boxicons@latest/dist/boxicons.js"></script>
     <!-- Textarea Caret Position library wrapper -->
-    <script src="/js/textarea-caret-position-wrapper.mjs"></script>
-    <!-- Dark Mode CSS -->
-    <link rel="stylesheet" href="/css/custom-ui.css" />
-    <link rel="stylesheet" href="/css/style.css" />
+    <script src="/js/app-ui/textarea-caret-position-wrapper.mjs"></script>
   </head>
   <body>
     <!-- Root App Container -->
     <div id="app"></div>
 
     <!-- Main Entry Point -->
-    <script type="module" src="/js/inpaint-page.mjs"></script>
+    <script type="module" src="/js/inpaint.mjs"></script>
   </body>
 </html>

@@ -1,8 +1,15 @@
 import { html } from 'htm/preact';
-import { Textarea } from '../custom-ui/textarea.mjs';
-import { Input } from '../custom-ui/input.mjs';
-import { Select } from '../custom-ui/select.mjs';
-import { Checkbox } from '../custom-ui/checkbox.mjs';
+import { styled } from 'goober';
+import { Textarea } from '../custom-ui/io/textarea.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Select } from '../custom-ui/io/select.mjs';
+import { Checkbox } from '../custom-ui/io/checkbox.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+const CheckboxWrapper = styled('div')`
+  margin-bottom: ${getThemeValue('spacing.small.margin')};
+`;
+CheckboxWrapper.className = 'checkbox-wrapper';
 
 /**
  * Creates an extra inputs renderer function
@@ -38,13 +45,13 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
         return false;
       })
       .map(input => {
-        const value = formState[input.id];
-        
+          const value = formState[input.id];
+          
         switch (input.type) {
           case 'text':
             return html`
               <${Input}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 type="text"
                 value=${value || ''}
@@ -56,7 +63,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
           case 'number':
             return html`
               <${Input}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 type="number"
                 value=${value !== undefined ? value : (input.default || '')}
@@ -68,7 +75,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
           case 'select':
             return html`
               <${Select}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 value=${value || input.default || ''}
                 options=${input.options || []}
@@ -79,21 +86,21 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
             
           case 'checkbox':
             return html`
-              <div style="margin-bottom: 6px;">
+              <${CheckboxWrapper}>
               <${Checkbox}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 checked=${value !== undefined ? value : (input.default || false)}
                 onChange=${handleCheckboxChange(input.id)}
                 disabled=${isGenerating}
               />
-              </div>
+              <//>
             `;
             
           case 'textarea':
             return html`
               <${Textarea}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 value=${value || ''}
                 onChange=${handleChange(input.id)}

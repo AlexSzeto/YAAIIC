@@ -1,24 +1,41 @@
-// Main application entry point for V2
+// Main application entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
-import { ToastProvider, useToast } from './custom-ui/toast.mjs';
-import { Modal } from './custom-ui/modal.mjs';
+import { styled } from 'goober';
+import { Page } from './custom-ui/layout/page.mjs';
+import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
+
+import { Button } from './custom-ui/io/button.mjs';
+import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
+import { Panel } from './custom-ui/layout/panel.mjs';
+import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
+import { AppHeader } from './app-ui/themed-base.mjs';
+import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
+
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
 import { GeneratedResult } from './app-ui/generated-result.mjs';
-
-import { ProgressBanner } from './custom-ui/progress-banner.mjs';
-import { sseManager } from './sse-manager.mjs';
-import { fetchJson, extractNameFromFilename } from './util.mjs';
-import { initAutoComplete } from './autocomplete-setup.mjs';
-import { loadTags } from './tags.mjs';
-
 import { Gallery } from './app-ui/gallery.mjs';
-import { ImageCarousel } from './custom-ui/image-carousel.mjs';
-import { createGalleryPreview } from './gallery-preview.mjs';
-import { Button } from './custom-ui/button.mjs';
+import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
+import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
+import { showDialog } from './custom-ui/overlays/dialog.mjs';
+
+import { sseManager } from './app-ui/sse-manager.mjs';
+import { fetchJson, extractNameFromFilename } from './util.mjs';
+import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
+import { loadTags } from './app-ui/tags.mjs';
+import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
+
+// =========================================================================
+// Styled Components
+// =========================================================================
+
+const HiddenFileInput = styled('input')`
+  display: none;
+`;
+HiddenFileInput.className = 'hidden-file-input';
 
 /**
  * Helper function to generate random seed
@@ -45,6 +62,9 @@ function normalizeFrameCount(inputValue) {
  */
 function App() {
   const toast = useToast();
+  
+  // Theme state
+  const [themeName, setThemeName] = useState(currentTheme.value.name);
   
   // State management
   const [workflow, setWorkflow] = useState(null);
@@ -82,16 +102,24 @@ function App() {
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
 
+  // Theme toggle handler
+  const handleToggleTheme = () => {
+    toggleTheme();
+    setThemeName(currentTheme.value.name);
+  };
+
+  // Subscribe to theme changes
+  useEffect(() => {
+    const unsubscribe = currentTheme.subscribe((theme) => {
+      setThemeName(theme.name);
+    });
+    return unsubscribe;
+  }, []);
+
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
     async function init() {
       try {
-        await loadTags();
-        setTimeout(() => {
-             initAutoComplete();
-             console.log('Autocomplete initialized in App V2');
-        }, 100);
-
         // Load workflows for lookup
         const workflowData = await fetchJson('/workflows');
         if (Array.isArray(workflowData)) {
@@ -146,16 +174,11 @@ function App() {
         }
       });
       
-      // Update formState with new defaults, preserving existing values not from extraInputs
-      setFormState(prev => {
-        // Remove old extraInput values that are no longer in the new workflow
-        const newState = { ...prev };
-        
-        // Add new extraInput defaults
-        Object.assign(newState, extraInputDefaults);
-        
-        return newState;
-      });
+      // Update formState with new defaults
+      setFormState(prev => ({
+        ...prev,
+        ...extraInputDefaults
+      }));
     }
   };
   
@@ -458,7 +481,7 @@ function App() {
   const handleGenerationError = (data) => {
     setIsGenerating(false);
     setTaskId(null);
-    console.error('Generation error:', data);
+    toast.error(data.error?.message || 'Generation failed');
   };
   
   // Handlers for Generated Result
@@ -493,16 +516,16 @@ function App() {
     toast.show('Description copied');
   };
   
-  // Delete confirmation state
-  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, image: null });
-
-  const handleDeleteImage = (image) => {
-    setDeleteModalState({ isOpen: true, image });
-  };
-
-  const handleConfirmDelete = async () => {
-    const image = deleteModalState.image;
+  const handleDeleteImage = async (image) => {
     if (!image) return;
+
+    const result = await showDialog(
+      `Are you sure you want to delete "${image.name || 'this image'}"? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
+
+    if (result !== 'Delete') return;
 
     try {
       await fetchJson('/media-data/delete', {
@@ -531,8 +554,6 @@ function App() {
       toast.success('Image deleted');
     } catch (err) {
       toast.error(err.message || 'Failed to delete image');
-    } finally {
-      setDeleteModalState({ isOpen: false, image: null });
     }
   };
   
@@ -724,10 +745,15 @@ function App() {
      }
   };
 
-  // Carousel handlers
-  const handleCarouselSelect = (item) => {
-    setGeneratedImage(item);
-  };
+  // History navigation using useItemNavigation hook
+  const historyNav = useItemNavigation(history, generatedImage);
+  
+  // Sync navigation state with generatedImage
+  useEffect(() => {
+    if (historyNav.currentItem && historyNav.currentItem !== generatedImage) {
+      setGeneratedImage(historyNav.currentItem);
+    }
+  }, [historyNav.currentItem]);
 
   // Upload handler
   const handleUploadFile = async (e) => {
@@ -778,76 +804,66 @@ function App() {
   };
 
   return html`
-    <div className="app-container">
-      <div className="app-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>YAAIIG <small style="font-size: 0.5em; opacity: 0.6;">V2</small></h1>
-        <div style="display: flex; gap: 10px;">
+    <${VerticalLayout} gap="large">
+      <${AppHeader}>
+        <${H1}>YAAIIG <small>V3</small></${H1}>
+        <${HorizontalLayout} gap="small">
+          <${Button} 
+            id="theme-toggle-btn"
+            onClick=${handleToggleTheme}
+            variant="large-icon"
+            icon=${themeName === 'dark' ? 'sun' : 'moon'}
+            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
+          />
           <${Button} 
             id="folder-btn"
             onClick=${handleOpenFolderSelect}
+            variant="medium-icon-text"
             icon="folder"
           >
             ${currentFolder.label}
-          </>
+          </${Button}>
           <${Button} 
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
+            variant="medium-icon-text"
             icon="images"
           >
             Gallery
-          </>
-        </div>
-      </div>
+          </${Button}>
+        </${HorizontalLayout}>
+      </${AppHeader}>
       
-      ${taskId ? html`
-        <${ProgressBanner} 
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
-      ` : null}
-      
-      ${regenerateTaskId ? html`
-        <${ProgressBanner} 
-          key=${regenerateTaskId}
-          taskId=${regenerateTaskId}
-          sseManager=${sseManager}
-          onComplete=${handleRegenerateComplete}
-          onError=${handleRegenerateError}
-        />
-      ` : null}
-      
-      <div className="workflow-controls">
-        <${WorkflowSelector}
-          value=${workflow}
-          onChange=${handleWorkflowChange}
-          disabled=${isGenerating}
-          typeOptions=${[
-            { label: 'Image', value: 'image' },
-            { label: 'Video', value: 'video' },
-            { label: 'Audio', value: 'audio' }
-          ]}
-        />
-        
-        <${GenerationForm}
-          workflow=${workflow}
-          formState=${formState}
-          onFieldChange=${handleFieldChange}
-          isGenerating=${isGenerating}
-          onGenerate=${handleGenerate}
-          onOpenGallery=${() => setIsGalleryOpen(true)}
-          onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
-          inputImages=${inputImages}
-          onImageChange=${handleImageChange}
-          onSelectFromGallery=${handleSelectFromGallery}
-          inputAudios=${inputAudios}
-          onAudioChange=${handleAudioChange}
-          onSelectAudioFromGallery=${handleSelectAudioFromGallery}
-        />
-        <!-- Note: Passed onUploadClick logic to decouple, though implementation of upload button in Form relies on ID or prop -->
-      </div>
+      <${Panel} variant="outlined">
+        <${VerticalLayout}>
+          <${WorkflowSelector}
+            value=${workflow}
+            onChange=${handleWorkflowChange}
+            disabled=${isGenerating}
+            typeOptions=${[
+              { label: 'Image', value: 'image' },
+              { label: 'Video', value: 'video' },
+              { label: 'Audio', value: 'audio' }
+            ]}
+          />
+          
+          <${GenerationForm}
+            workflow=${workflow}
+            formState=${formState}
+            onFieldChange=${handleFieldChange}
+            isGenerating=${isGenerating}
+            onGenerate=${handleGenerate}
+            onOpenGallery=${() => setIsGalleryOpen(true)}
+            onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
+            inputImages=${inputImages}
+            onImageChange=${handleImageChange}
+            onSelectFromGallery=${handleSelectFromGallery}
+            inputAudios=${inputAudios}
+            onAudioChange=${handleAudioChange}
+            onSelectAudioFromGallery=${handleSelectAudioFromGallery}
+          />
+        </${VerticalLayout}>
+      </${Panel}>
       
       <${GeneratedResult} 
         image=${generatedImage}
@@ -871,12 +887,9 @@ function App() {
           // Disable if all slots are filled
           const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
           if (filledCount >= workflow.inputImages) return true;
-          // TODO: account for inputAudio slots when implementing input audios
           return false;
         })()}
         isInpaintDisabled=${(() => {
-          // Disable inpaint if no UID or handler
-          // if (!generatedImage?.uid || !handleInpaint) return true;
           // Disable if the media type is not an image
           const mediaType = generatedImage?.type || 'image';
           if (mediaType !== 'image') return true;
@@ -884,75 +897,72 @@ function App() {
         })()}
       />
 
-      <!-- Carousel for History -->
       ${history.length > 0 && html`
-        <div className="history-carousel-container" style="margin-top: 20px;">
-          <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Session History</h3>
-          <${ImageCarousel} 
-            items=${history} 
-            selectedItem=${generatedImage}
-            onSelect=${handleCarouselSelect}
-          />
-        </div>
+        <${Panel} variant="outlined">
+          <${VerticalLayout}>
+            <${H2}>Session History</${H2}>
+            <${NavigatorControl} 
+              currentPage=${historyNav.currentIndex}
+              totalPages=${historyNav.totalItems}
+              onNext=${historyNav.selectNext}
+              onPrev=${historyNav.selectPrev}
+              onFirst=${historyNav.selectFirst}
+              onLast=${historyNav.selectLast}
+              showFirstLast=${true}
+            />
+          </${VerticalLayout}>
+        </${Panel}>
       `}
+    </${VerticalLayout}>
 
-      <!-- Gallery Modal -->
-      <${Gallery} 
-        isOpen=${isGalleryOpen}
-        onClose=${() => {
-            setIsGalleryOpen(false);
-            setGallerySelectionMode({ active: false, index: -1, type: null });
-        }}
-        queryPath="/media-data"
-        folder=${currentFolder.uid}
-        previewFactory=${createGalleryPreview}
-        onSelect=${handleGallerySelect}
-        onLoad=${(items) => {
-          if (items && items.length > 0) {
-             // Replace session history with loaded items
-             setHistory(items);
-             setGeneratedImage(items[0]);
-          }
-        }}
-        selectionMode=${gallerySelectionMode.active}
-        fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
-        onSelectAsInput=${handleSelectAsInput}
+    ${taskId ? html`
+      <${ProgressBanner} 
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        onComplete=${handleGenerationComplete}
+        onError=${handleGenerationError}
       />
-      
-      <input 
-        type="file" 
-        id="upload-file-input" 
-        style="display: none" 
-        accept="image/*,audio/*"
-        onChange=${handleUploadFile}
+    ` : null}
+    
+    ${regenerateTaskId ? html`
+      <${ProgressBanner} 
+        key=${regenerateTaskId}
+        taskId=${regenerateTaskId}
+        sseManager=${sseManager}
+        onComplete=${handleRegenerateComplete}
+        onError=${handleRegenerateError}
       />
-      
-      <!-- Delete Confirmation Modal -->
-      <${Modal}
-        isOpen=${deleteModalState.isOpen}
-        onClose=${() => setDeleteModalState({ isOpen: false, image: null })}
-        title="Confirm Deletion"
-        size="small"
-        footer=${html`
-          <${Button} 
-            variant="secondary" 
-            onClick=${() => setDeleteModalState({ isOpen: false, image: null })}
-          >
-            Cancel
-          <//>
-          <${Button} 
-            variant="danger" 
-            onClick=${handleConfirmDelete}
-            icon="trash"
-          >
-            Delete
-          <//>
-        `}
-      >
-        <p>Are you sure you want to delete <strong>"${deleteModalState.image?.name || 'this image'}"</strong>?</p>
-        <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 10px;">This action cannot be undone.</p>
-      <//>
-    </div>
+    ` : null}
+
+    <${Gallery} 
+      isOpen=${isGalleryOpen}
+      onClose=${() => {
+          setIsGalleryOpen(false);
+          setGallerySelectionMode({ active: false, index: -1, type: null });
+      }}
+      queryPath="/media-data"
+      folder=${currentFolder.uid}
+      previewFactory=${createGalleryPreview}
+      onSelect=${handleGallerySelect}
+      onLoad=${(items) => {
+        if (items && items.length > 0) {
+            // Replace session history with loaded items
+            setHistory(items);
+            setGeneratedImage(items[0]);
+        }
+      }}
+      selectionMode=${gallerySelectionMode.active}
+      fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
+      onSelectAsInput=${handleSelectAsInput}
+    />
+    
+    <${HiddenFileInput} 
+      type="file" 
+      id="upload-file-input" 
+      accept="image/*,audio/*"
+      onChange=${handleUploadFile}
+    />
   `;
 }
 
@@ -961,11 +971,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
-      <${ToastProvider}>
-        <${App} />
-      <//>
+      <${Page}>
+        <${ToastProvider}>
+          <${App} />
+        </${ToastProvider}>
+      </${Page}>
     `, root);
-    console.log('App V2 mounted successfully');
+    console.log('App V3 mounted successfully');
+
+    setTimeout(() => {
+      loadTags().then(() => {
+        initAutoComplete();
+        console.log('Autocomplete initialized in App V3');
+      });
+    }, 100);    
   } else {
     console.error('Root element #app not found');
   }

@@ -1,294 +1,244 @@
-// Folder Select Modal Component
-import { render, Component } from 'preact';
-import { html } from 'htm/preact';
-import { showTextPrompt, showDialog } from '../custom-ui/dialog.mjs';
-import { Button } from '../custom-ui/button.mjs';
+/**
+ * folder-select.mjs - Folder selection modal using ListSelect as base
+ * 
+ * Provides a modal dialog for selecting, creating, renaming, and deleting folders.
+ * Uses the generic ListSelectModal component for consistent styling and behavior.
+ */
+import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
+import { showTextPrompt, showDialog } from '../custom-ui/overlays/dialog.mjs';
 
-// FolderItem component - renders a single folder row
-function FolderItem({ folder, isSelected, onSelect, onRename, onDelete }) {
-  const handleRenameClick = (e) => {
-    e.stopPropagation();
-    onRename(folder);
-  };
-
-  const handleDeleteClick = (e) => {
-    e.stopPropagation();
-    onDelete(folder);
-  };
-
-  const isUnsorted = folder.uid === '';
-
-  return html`
-    <div class="folder-item ${isSelected ? 'selected' : ''}" onClick=${() => onSelect(folder.uid)}>
-      <div class="folder-label">
-        <box-icon name='folder' type='solid' color='var(--dark-text-secondary)' size='20px'></box-icon>
-        <span class="folder-name">${folder.label}</span>
-      </div>
-      <div class="folder-actions">
-        <${Button}
-          variant="icon"
-          icon="edit"
-          onClick=${handleRenameClick}
-          disabled=${isUnsorted}
-          title=${isUnsorted ? 'Cannot rename Unsorted folder' : 'Rename folder'}
-        />
-        <${Button}
-          variant="icon"
-          icon="trash"
-          onClick=${handleDeleteClick}
-          disabled=${isUnsorted}
-          title=${isUnsorted ? 'Cannot delete Unsorted folder' : 'Delete folder'}
-        />
-      </div>
-    </div>
-  `;
+/**
+ * Internal helper to fetch folders from the server
+ * @returns {Promise<Array<{id: string, label: string, icon: string, disabled: boolean}>>}
+ */
+async function fetchFolderItems() {
+  try {
+    const response = await fetch('/folder');
+    if (!response.ok) {
+      throw new Error('Failed to fetch folders');
+    }
+    const data = await response.json();
+    // Transform folder data to list-select item format
+    return data.list.map(folder => ({
+      id: folder.uid,
+      label: folder.label,
+      icon: 'folder',
+      // Unsorted folder (empty uid) cannot be edited/deleted, but can be selected
+      disabled: folder.uid === '',
+      isUnsorted: folder.uid === ''
+    }));
+  } catch (error) {
+    console.error('Error fetching folders:', error);
+    return [];
+  }
 }
 
-// FolderSelectModal component
-class FolderSelectModal extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      folders: [],
-      currentFolder: props.currentFolder || '',
-      isLoading: true
-    };
-  }
-
-  componentDidMount() {
-    this.fetchFolders();
-    document.addEventListener('keydown', this.handleKeyDown);
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.handleKeyDown);
-  }
-
-  handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      this.handleClose();
-    }
-  }
-
-  fetchFolders = async () => {
-    try {
-      const response = await fetch('/folder');
-      if (!response.ok) {
-        throw new Error('Failed to fetch folders');
-      }
-      const data = await response.json();
-      this.setState({
-        folders: data.list,
-        // Don't update currentFolder from API - keep the prop value or existing state
-        isLoading: false
-      });
-    } catch (error) {
-      console.error('Error fetching folders:', error);
-      this.setState({ isLoading: false });
-    }
-  }
-
-  handleOverlayClick = (e) => {
-    if (e.target.classList.contains('folder-select-overlay')) {
-      this.handleClose();
-    }
-  }
-
-  handleClose = () => {
-    if (this.props.onClose) {
-      this.props.onClose();
-    }
-  }
-
-  handleFolderSelect = async (uid) => {
-    // Update local state to show selection
-    this.setState({ currentFolder: uid });
+/**
+ * Creates a new folder on the server
+ * @param {string} label - New folder name
+ * @returns {Promise<{uid: string, label: string}|null>} Created folder or null on failure
+ */
+async function createFolder(label) {
+  try {
+    const response = await fetch('/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: label.trim() })
+    });
     
-    if (this.props.onSelectFolder) {
-      await this.props.onSelectFolder(uid);
+    if (!response.ok) {
+      throw new Error('Failed to create folder');
     }
-    this.handleClose();
-  }
-
-  handleRenameFolder = async (folder) => {
-    const newLabel = await showTextPrompt('Rename Folder', folder.label, 'Folder name');
-    if (newLabel && newLabel.trim() && newLabel !== folder.label) {
-      try {
-        const response = await fetch('/folder', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: folder.uid, label: newLabel.trim() })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to rename folder');
-        }
-        
-        // Refresh folder list
-        await this.fetchFolders();
-        
-        if (this.props.onRenameFolder) {
-          this.props.onRenameFolder(folder.uid, newLabel.trim());
-        }
-      } catch (error) {
-        console.error('Error renaming folder:', error);
-        await showDialog('Failed to rename folder', 'Error');
-      }
-    }
-  }
-
-  handleDeleteFolder = async (folder) => {
-    const result = await showDialog(
-      `Delete folder "${folder.label}"? All images in this folder will be moved to Unsorted.`,
-      'Confirm Delete',
-      ['Delete', 'Cancel']
-    );
     
-    if (result === 'Delete') {
-      try {
-        const response = await fetch(`/folder/${folder.uid}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to delete folder');
-        }
-        
-        // Refresh folder list
-        await this.fetchFolders();
-        
-        if (this.props.onDeleteFolder) {
-          this.props.onDeleteFolder(folder.uid);
-        }
-      } catch (error) {
-        console.error('Error deleting folder:', error);
-        await showDialog('Failed to delete folder', 'Error');
-      }
-    }
+    const data = await response.json();
+    return { uid: data.current, label: label.trim() };
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    await showDialog('Failed to create folder', 'Error');
+    return null;
   }
+}
 
-  handleInsertFolder = async () => {
-    const folderName = await showTextPrompt('New Folder', '', 'Folder name');
-    if (folderName && folderName.trim()) {
-      try {
-        const response = await fetch('/folder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ label: folderName.trim() })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to create folder');
-        }
-        
-        const data = await response.json();
-        
-        // Refresh folder list
-        await this.fetchFolders();
-        
-        if (this.props.onInsertFolder) {
-          this.props.onInsertFolder(data.current);
-        }
-        
-        // Select the newly created folder
-        this.handleFolderSelect(data.current);
-      } catch (error) {
-        console.error('Error creating folder:', error);
-        await showDialog('Failed to create folder', 'Error');
-      }
+/**
+ * Renames a folder on the server
+ * @param {string} uid - Folder uid to rename
+ * @param {string} newLabel - New folder name
+ * @returns {Promise<boolean>} True on success
+ */
+async function renameFolder(uid, newLabel) {
+  try {
+    const response = await fetch('/folder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid, label: newLabel.trim() })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to rename folder');
     }
+    
+    return true;
+  } catch (error) {
+    console.error('Error renaming folder:', error);
+    await showDialog('Failed to rename folder', 'Error');
+    return false;
   }
+}
 
-  render() {
-    const { isLoading, folders, currentFolder } = this.state;
-
-    if (!this.props.isOpen) {
-      return null;
+/**
+ * Deletes a folder on the server
+ * @param {string} uid - Folder uid to delete
+ * @returns {Promise<boolean>} True on success
+ */
+async function deleteFolder(uid) {
+  try {
+    const response = await fetch(`/folder/${uid}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete folder');
     }
-
-    return html`
-      <div class="folder-select-overlay" onClick=${this.handleOverlayClick}>
-        <div class="folder-select-modal">
-          <div class="folder-select-header">
-            <h3 class="folder-select-title">Select Folder</h3>
-          </div>
-          
-          <div class="folder-select-content">
-            ${isLoading ? html`
-              <div class="folder-loading">Loading folders...</div>
-            ` : html`
-              <div class="folder-list">
-                ${folders.map(folder => html`
-                  <${FolderItem}
-                    key=${folder.uid}
-                    folder=${folder}
-                    isSelected=${folder.uid === currentFolder}
-                    onSelect=${this.handleFolderSelect}
-                    onRename=${this.handleRenameFolder}
-                    onDelete=${this.handleDeleteFolder}
-                  />
-                `)}
-              </div>
-            `}
-          </div>
-          
-          <div class="folder-select-footer">
-            <button class="folder-btn cancel-btn" onClick=${this.handleClose}>
-              Cancel
-            </button>
-            <button class="folder-btn insert-btn" onClick=${this.handleInsertFolder}>
-              New Folder
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting folder:', error);
+    await showDialog('Failed to delete folder', 'Error');
+    return false;
   }
 }
 
 /**
  * Shows the folder select modal
  * 
+ * A modal for selecting folders with options to create, rename, and delete folders.
+ * Uses ListSelect internally for consistent styling.
+ * 
  * @param {Function} onSelectFolder - Callback when a folder is selected, receives folder uid
- * @param {Function} [onRenameFolder] - Optional callback when a folder is renamed
- * @param {Function} [onDeleteFolder] - Optional callback when a folder is deleted
- * @param {Function} [onInsertFolder] - Optional callback when a new folder is created
+ * @param {Function} [onRenameFolder] - Optional callback when a folder is renamed: (uid, newLabel) => void
+ * @param {Function} [onDeleteFolder] - Optional callback when a folder is deleted: (uid) => void
+ * @param {Function} [onInsertFolder] - Optional callback when a new folder is created: (newFolder) => void
  * @param {string} [currentFolder] - Current folder uid to show as selected
  * 
  * @returns {Function} Cleanup function to close the modal
  * 
  * @example
- * const cleanup = showFolderSelect(async (uid) => {
- *   console.log('Selected folder:', uid);
- * }, null, null, null, currentFolderUid);
+ * const cleanup = showFolderSelect(
+ *   async (uid) => {
+ *     console.log('Selected folder:', uid);
+ *   },
+ *   (uid, newLabel) => console.log('Renamed:', uid, newLabel),
+ *   (uid) => console.log('Deleted:', uid),
+ *   (newFolder) => console.log('Created:', newFolder),
+ *   currentFolderUid
+ * );
  */
 export function showFolderSelect(onSelectFolder, onRenameFolder, onDeleteFolder, onInsertFolder, currentFolder) {
-  // Create container element
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  // Function to clean up modal
-  const cleanup = () => {
-    if (container && container.parentNode) {
-      document.body.removeChild(container);
+  // Store cleanup function reference for re-rendering
+  let cleanupRef = null;
+  
+  // Function to show the modal with current folder items
+  async function showModal() {
+    // Fetch folders from server
+    const items = await fetchFolderItems();
+    
+    // Show list select modal
+    cleanupRef = showListSelect({
+      title: 'Select Folder',
+      items,
+      itemIcon: 'folder',
+      actionLabel: 'New Folder',
+      showActions: true,
+      showActionButton: true,
+      selectedId: currentFolder,
+      emptyMessage: items.length === 0 ? 'Loading...' : 'No folders available',
+      
+      onSelectItem: async (item) => {
+        if (onSelectFolder) {
+          await onSelectFolder(item.id);
+        }
+      },
+      
+      onEdit: async (item) => {
+        // Prevent editing Unsorted folder
+        if (item.isUnsorted) {
+          await showDialog('The Unsorted folder cannot be renamed.', 'Cannot Rename');
+          return;
+        }
+        const newLabel = await showTextPrompt('Rename Folder', item.label, 'Folder name');
+        if (newLabel && newLabel.trim() && newLabel !== item.label) {
+          const success = await renameFolder(item.id, newLabel);
+          if (success) {
+            if (onRenameFolder) {
+              onRenameFolder(item.id, newLabel.trim());
+            }
+            // Re-show modal with updated items
+            if (cleanupRef) {
+              cleanupRef();
+            }
+            showModal();
+          }
+        }
+      },
+      
+      onDelete: async (item) => {
+        // Prevent deleting Unsorted folder
+        if (item.isUnsorted) {
+          await showDialog('The Unsorted folder cannot be deleted.', 'Cannot Delete');
+          return;
+        }
+        const result = await showDialog(
+          `Delete folder "${item.label}"? All images in this folder will be moved to Unsorted.`,
+          'Confirm Delete',
+          ['Delete', 'Cancel']
+        );
+        
+        if (result === 'Delete') {
+          const success = await deleteFolder(item.id);
+          if (success) {
+            if (onDeleteFolder) {
+              onDeleteFolder(item.id);
+            }
+            // Re-show modal with updated items
+            if (cleanupRef) {
+              cleanupRef();
+            }
+            showModal();
+          }
+        }
+      },
+      
+      onAction: async () => {
+        const folderName = await showTextPrompt('New Folder', '', 'Folder name');
+        if (folderName && folderName.trim()) {
+          const newFolder = await createFolder(folderName);
+          if (newFolder) {
+            if (onInsertFolder) {
+              onInsertFolder(newFolder.uid);
+            }
+            // Select the newly created folder
+            if (onSelectFolder) {
+              await onSelectFolder(newFolder.uid);
+            }
+            // Close the modal (selecting already closes it)
+            if (cleanupRef) {
+              cleanupRef();
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  // Initial render
+  showModal();
+  
+  // Return cleanup function
+  return () => {
+    if (cleanupRef) {
+      cleanupRef();
     }
   };
-
-  const handleClose = () => {
-    cleanup();
-  };
-
-  render(html`<${FolderSelectModal}
-    isOpen=${true}
-    currentFolder=${currentFolder}
-    onSelectFolder=${onSelectFolder}
-    onRenameFolder=${onRenameFolder}
-    onDeleteFolder=${onDeleteFolder}
-    onInsertFolder=${onInsertFolder}
-    onClose=${handleClose}
-  />`, container);
-
-  return cleanup;
 }
 
-export default FolderSelectModal;
+export default showFolderSelect;

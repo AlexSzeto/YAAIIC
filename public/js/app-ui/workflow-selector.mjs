@@ -1,7 +1,22 @@
 import { html } from 'htm/preact';
 import { useEffect, useState } from 'preact/hooks';
-import { Select } from '../custom-ui/select.mjs';
+import { styled } from 'goober';
+import { Select } from '../custom-ui/io/select.mjs';
 import { fetchJson } from '../util.mjs';
+import { getThemeValue } from '../custom-ui/theme.mjs';
+
+const Container = styled('div')`
+  display: flex;
+  gap: ${getThemeValue('spacing.medium.gap')};
+  align-items: end;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+Container.className = 'container';
 
 /**
  * Workflow Selector Component
@@ -109,7 +124,7 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
   const showTypeSelector = typeOptions && typeOptions.length > 1;
 
   return html`
-    <div className="workflow-selector-container">
+    <${Container}>
       ${showTypeSelector && html`
         <${Select}
           label="Workflow Type"
@@ -129,6 +144,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         error=${error}
         fullWidth=${true}
       />
-    </div>
+    <//>
   `;
 }

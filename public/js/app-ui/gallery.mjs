@@ -1,16 +1,301 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { PaginationControls } from '../custom-ui/pagination.mjs';
-import { usePagination } from '../custom-ui/use-pagination.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../custom-ui/theme.mjs';
+import { NavigatorControl as PaginationControls } from '../custom-ui/nav/navigator.mjs';
+import { usePagination } from '../custom-ui/nav/use-pagination.mjs';
 import { fetchJson, FetchError } from '../util.mjs';
-import { showDialog } from '../custom-ui/dialog.mjs';
-import { createImageModal } from '../custom-ui/modal.mjs';
+import { showDialog } from '../custom-ui/overlays/dialog.mjs';
+import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
+
+// Styled Components
+const ModalOverlay = styled('div')`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: ${() => currentTheme.value.colors.overlay.backgroundStrong};
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+`;
+ModalOverlay.className = 'modal-overlay';
+
+const Content = styled('div')`
+  background-color: ${() => currentTheme.value.colors.background.secondary};
+  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.secondary};
+  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
+  padding: 20px;
+  width: 90vw;
+  max-width: 2000px;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+`;
+Content.className = 'content';
+Content.className = 'content';
+
+const Grid = styled('div')`
+  display: grid;
+  grid-template-columns: repeat(8, minmax(100px, 1fr));
+  grid-template-rows: repeat(3, minmax(100px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+  min-height: 400px;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(6, minmax(100px, 1fr));
+    max-width: 900px;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(4, minmax(100px, 1fr));
+    max-width: 600px;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(3, minmax(100px, 1fr));
+    max-width: 450px;
+  }
+`;
+Grid.className = 'grid';
+
+const ItemWrapper = styled('div')`
+  aspect-ratio: 1;
+  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.focus};
+  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform ${() => currentTheme.value.transitions.fast}, 
+              border-color ${() => currentTheme.value.transitions.fast};
+  background-color: ${() => currentTheme.value.colors.background.card};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  opacity: ${props => props.opacity || '1'};
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: ${() => currentTheme.value.colors.border.highlight};
+  }
+
+  ${props => props.disabled ? `
+    opacity: 0.4;
+    pointer-events: none;
+  ` : ''}
+
+  img, canvas {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    border-radius: 3px;
+  }
+`;
+ItemWrapper.className = 'item-wrapper';
+
+const ItemInfo = styled('div')`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 8px 10px;
+  margin-right: 0;
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  color: ${() => currentTheme.value.colors.text.primary};
+  display: flex;
+  flex-direction: ${props => props.hasAudio ? 'row' : 'column'};
+  gap: ${props => props.hasAudio ? '8px' : '2px'};
+  pointer-events: none;
+  max-width: calc(100% - 12px);
+  box-sizing: border-box;
+`;
+ItemInfo.className = 'item-info';
+ItemInfo.className = 'item-info';
+
+const AudioButtonContainer = styled('div')`
+  pointer-events: auto;
+  flex-shrink: 0;
+`;
+AudioButtonContainer.className = 'audio-button-container';
+
+const ItemTextContent = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`;
+ItemTextContent.className = 'item-text-content';
+
+const ItemName = styled('div')`
+  font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
+  font-size: 13px;
+  color: ${() => currentTheme.value.colors.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+`;
+ItemName.className = 'item-name';
+
+const ItemDate = styled('div')`
+  font-size: 11px;
+  color: ${() => currentTheme.value.colors.text.secondary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+`;
+ItemDate.className = 'item-date';
+
+const CheckboxContainer = styled('div')`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+`;
+CheckboxContainer.className = 'checkbox-container';
+CheckboxContainer.className = 'checkbox-container';
+CheckboxContainer.className = 'checkbox-container';
+
+const PaginationWrapper = styled('div')`
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+`;
+PaginationWrapper.className = 'pagination-wrapper';
+
+const PaginationContainer = styled('div')`
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+`;
+PaginationContainer.className = 'pagination-container';
+
+const BulkActions = styled('div')`
+  display: flex;
+  align-items: center;
+  position: absolute;
+`;
+BulkActions.className = 'bulk-actions';
+
+const Controls = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+Controls.className = 'controls';
+
+const SearchContainer = styled('div')`
+  position: relative;
+  flex: 1;
+`;
+SearchContainer.className = 'search-container';
+
+const SearchInput = styled('input')`
+  width: 100%;
+  padding: ${() => currentTheme.value.spacing.medium.padding} 35px ${() => currentTheme.value.spacing.medium.padding} 12px;
+  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.focus};
+  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+  background-color: ${() => currentTheme.value.colors.background.card};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+
+  &:focus {
+    outline: none;
+    border-color: ${() => currentTheme.value.colors.border.focus};
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.focus.shadowPrimary};
+  }
+`;
+SearchInput.className = 'search-input';
+
+const SearchIcon = styled('box-icon')`
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+`;
+SearchIcon.className = 'search-icon';
+
+const ButtonGroup = styled('div')`
+  display: flex;
+  gap: 10px;
+`;
+ButtonGroup.className = 'button-group';
 
 /**
  * Gallery Component
- * Displays a grid of images/videos with search, pagination, and selection capabilities.
+ * 
+ * Displays a full-screen modal with a grid of media items (images/videos/audio) with search,
+ * pagination, and selection capabilities. Supports both selection mode (for picking items)
+ * and viewing mode (for browsing and managing media).
+ * 
+ * Features:
+ * - Search by text or comma-separated tags
+ * - Pagination (24 items per page)
+ * - Bulk selection with delete and move operations
+ * - Click to view full-screen media
+ * - Optional folder filtering
+ * - Responsive grid layout (8/6/4/3 columns based on screen width)
+ * - Keyboard support (Escape to close)
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Controls modal visibility (required)
+ * @param {Function} props.onClose - Callback when modal is closed (required)
+ * @param {string} props.queryPath - API endpoint for fetching gallery data (required)
+ * @param {Function} props.previewFactory - Function that creates preview DOM nodes for items (required)
+ * @param {Function} [props.onLoad] - Callback for "View" button or single-item load in viewing mode
+ * @param {Function} [props.onSelect] - Callback for selection mode when item is selected
+ * @param {boolean} [props.selectionMode=false] - If true, enables selection mode (single-select)
+ * @param {string|Array<string>|null} [props.fileTypeFilter=null] - Filter allowed types in selection mode
+ * @param {Function} [props.onSelectAsInput=null] - Callback for "Use as Input" action from gallery preview
+ * @param {string} [props.folder] - Optional folder UID to filter results
+ * @returns {preact.VNode|null}
+ * 
+ * @example
+ * // Viewing mode with search and bulk operations
+ * <Gallery
+ *   isOpen={isOpen}
+ *   onClose={() => setIsOpen(false)}
+ *   queryPath="/media-data"
+ *   previewFactory={createPreview}
+ *   onLoad={(items) => console.log('Loading', items)}
+ * />
+ * 
+ * @example
+ * // Selection mode for picking a single image
+ * <Gallery
+ *   isOpen={isOpen}
+ *   onClose={() => setIsOpen(false)}
+ *   queryPath="/media-data"
+ *   previewFactory={createPreview}
+ *   selectionMode={true}
+ *   fileTypeFilter="image"
+ *   onSelect={(item) => console.log('Selected', item)}
+ * />
  */
 export function Gallery({
   isOpen,
@@ -35,6 +320,7 @@ export function Gallery({
   const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // -- Data Fetching --
   const fetchGalleryData = useCallback(async () => {
@@ -107,6 +393,18 @@ export function Gallery({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Handle search input focus
+  useEffect(() => {
+    if (shouldFocusSearch && searchInputRef.current) {
+      // Goober styled components: access DOM element via .base property
+      const element = searchInputRef.current.base || searchInputRef.current;
+      if (element && element.focus) {
+        element.focus();
+      }
+      setShouldFocusSearch(false);
+    }
+  }, [shouldFocusSearch]);
 
   // Debounce search
   useEffect(() => {
@@ -317,16 +615,20 @@ export function Gallery({
       
       if (preview) {
         items.push(html`
-          <div 
-            key=${`${item.uid || index}`} 
-            class="gallery-item-wrapper"
+          <${ItemWrapper}
+            key=${`${item.uid || index}`}
+            disabled=${shouldDisable}
             ref=${(ref) => {
               if (ref) {
-                ref.innerHTML = '';
-                ref.appendChild(preview);
+                // Goober styled components: access DOM element via .base property
+                const element = ref.base || ref;
+                if (element) {
+                  element.innerHTML = '';
+                  element.appendChild(preview);
+                }
               }
             }}
-          ></div>
+          />
         `);
       }
     });
@@ -334,7 +636,7 @@ export function Gallery({
     // Fill empty slots
     const emptySlots = maxItems - itemsToShow.length;
     for (let i = 0; i < emptySlots; i++) {
-      items.push(html`<div key=${`empty-${i}`} class="gallery-item" style=${{ opacity: '0.3' }}></div>`);
+      items.push(html`<${ItemWrapper} key=${`empty-${i}`} opacity="0.3" />`);
     }
 
     return items;
@@ -346,39 +648,39 @@ export function Gallery({
   const selectedText = selectedItems.length === 1 ? 'item' : 'items';
 
   return html`
-    <div 
-      class="gallery-modal"
-      onClick=${(e) => { if (e.target.classList.contains('gallery-modal')) onClose(); }}
+    <${ModalOverlay}
+      onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div class="gallery-content">
-        <div class="gallery-grid">
+      <${Content}>
+        <${Grid}>
           ${renderGalleryItems()}
-        </div>
-        <div class="gallery-pagination-wrapper">
+        <//>
+        <${PaginationWrapper}>
           ${!selectionMode && html`
-            <div class="gallery-bulk-delete">
-              <button 
-                class="btn-with-icon btn-danger"
+            <${BulkActions}>
+              <${Button}
+                variant="medium-icon-text"
+                color=${hasSelectedItems ? 'danger' : 'secondary'}
                 onClick=${deleteSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Delete ${selectedItems.length} selected ${selectedText}` : 'No items selected'}
+                icon="trash"
               >
-                <box-icon name="trash" color="#ffffff"></box-icon>
                 Delete
-              </button>
-              <button 
-                class="btn-with-icon btn-primary"
+              <//>
+              <${Button}
+                variant="medium-icon-text"
+                color=${hasSelectedItems ? 'primary' : 'secondary'}
                 onClick=${moveSelectedItems}
                 disabled=${!hasSelectedItems}
                 title=${hasSelectedItems ? `Move ${selectedItems.length} selected ${selectedText} to folder` : 'No items selected'}
-                style="margin-left: 10px;"
+                icon="folder"
               >
-                <box-icon name="folder" color="#ffffff"></box-icon>
                 Move
-              </button>
-            </div>
+              <//>
+            <//>
           `}
-          <div class="gallery-pagination-container">
+          <${PaginationContainer}>
             <${PaginationControls}
               currentPage=${pagination.currentPage}
               totalPages=${pagination.totalPages}
@@ -387,50 +689,47 @@ export function Gallery({
               isLastPage=${pagination.isLastPage}
               onNext=${pagination.goToNext}
               onPrev=${pagination.goToPrev}
+              showFirstLast=${true}
             />
-          </div>
-        </div>
-        <div class="gallery-controls">
-          <div class="gallery-search">
-            <input
+          <//>
+        <//>
+        <${Controls}>
+          <${SearchContainer}>
+            <${SearchInput}
               type="text"
               placeholder=${searchQuery.includes(',') ? 'Tag search (comma-separated)' : 'Search images...'}
               value=${searchQuery}
               onInput=${handleSearchInput}
-              ref=${(input) => { 
-                if (input && shouldFocusSearch) {
-                  input.focus();
-                  setShouldFocusSearch(false);
-                }
-              }}
+              ref=${searchInputRef}
             />
-            <box-icon
+            <${SearchIcon}
               name=${searchQuery.includes(',') ? 'purchase-tag' : 'search'}
               color="#999999"
-              class="gallery-search-icon"
-            ></box-icon>
-          </div>
-          <div class="gallery-btn-group">
+            />
+          <//>
+          <${ButtonGroup}>
             ${!selectionMode && html`
-              <button 
-                class="gallery-load-btn btn-with-icon"
+              <${Button}
+                variant="medium-icon-text"
+                color="secondary"
                 onClick=${handleLoadClick}
+                icon="show"
               >
-                <box-icon name="show" color="#ffffff"></box-icon>
                 View
-              </button>
+              <//>
             `}
-            <button 
-              class="gallery-cancel-btn btn-with-icon"
+            <${Button}
+              variant="medium-icon-text"
+              color="secondary"
               onClick=${onClose}
+              icon="x"
             >
-              <box-icon name="x" color="#ffffff"></box-icon>
               Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            <//>
+          <//>
+        <//>
+      <//>
+    <//>
   `;
 }
 
@@ -471,36 +770,6 @@ export function createGallery(queryPath, previewFactory, onLoad) {
       props.onLoad = callback;
       updateRender();
     },
-    // The previous factory didn't really expose other state setters easily, 
-    // but V1 uses 'refreshData' sometimes? No, I saw refreshData in my grep but not in file content.
-    // Ah, grep showed 'galleryDisplay.refreshData()', but the file content for gallery.mjs didn't have refreshData.
-    // The grep output showed lines from main.mjs calling refreshData.
-    // I need to add refreshData to the return object if main.mjs calls it.
-    // But wait, the previous gallery.mjs file I read DID NOT have refreshData method on the class or the factory return.
-    // Verify?
-    // Line 98: this.debounceSearch();
-    // Line 360: async fetchGalleryData()
-    // Helper methods... 
-    // I don't see refreshData exported in the factory return object in the file I read.
-    // Checking grep again...
-    // {"File":"/mnt/dev-240/YAAIIC/public/js/main.mjs","LineNumber":739,"LineContent":"        galleryDisplay.refreshData();"}
-    // Maybe it was added dynamically or I missed it?
-    // Or maybe the GalleryDisplay class had it? 
-    // I read the whole file. GalleryDisplay was exported. 
-    // Line 9: export class GalleryDisplay extends Component
-    // It has `fetchGalleryData`. 
-    // If main.mjs calls `refreshData()`, and it worked, then it must exist. 
-    // Let me check if I missed it in the file view.
-    // The file view showed lines 1-630.
-    // I don't see refreshData in GalleryDisplay.
-    // Maybe `main.mjs` was checking if it exists? 
-    // `if (galleryDisplay && galleryDisplay.isVisible && galleryDisplay.isVisible())` - wait, `isVisible` is a state property, not a method.
-    // But main.mjs calls `galleryDisplay.isVisible()`?
-    // And `galleryDisplay.refreshData()`?
-    // If the legacy code expects these, I might need to add them or main.mjs is broken/outdated.
-    // I'll add a dummy logic or map it to fetchGalleryData.
-    // Actually, I can allow access to the gallery ref if needed, but for now I'll just skip it or add if needed.
-    // I will add `refreshData` to the returned object just in case.
     refreshData() {
       // Trigger a re-fetch if open?
       // Since we control props, we can't easily trigger an internal fetch without a ref.
@@ -514,4 +783,3 @@ export function createGallery(queryPath, previewFactory, onLoad) {
     }
   };
 }
-
