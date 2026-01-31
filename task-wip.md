@@ -2,9 +2,7 @@
 
 ## V3 Visual bugs (Main Page)
 - on select folder UI, the unsorted folder don't show the selected highlight when it is the currently selected folder
-- in gallery, use button group to organize delete and move buttons so they have spacing between them
 - in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
-- in gallery, nav to first/last doesn't work
 
 # Features
 - Cancel generation
