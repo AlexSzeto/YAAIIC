@@ -1,16 +1,11 @@
 # Bugs / Fixes
 
 ## V3 Visual bugs (Main Page)
-- gen result select/inpaint/export/delete has wrong colors
-- session history nav not centered
-- input image/audio should not have a 200px container
 - on select folder UI, the unsorted folder don't show the selected highlight when it is the currently selected folder
-- on select folder UI, remove left solid color border for selected item
-- on gallery item component, fix display aspect ratio to cover entire component area
-- fix gallery item checkbox to be placed on top of preview image
 - in gallery, use button group to organize delete and move buttons so they have spacing between them
 - in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
-- 
+- in gallery, nav to first/last doesn't work
+
 # Features
 - Cancel generation
 - Reprompt (copy and reuse all params from previous generation)
