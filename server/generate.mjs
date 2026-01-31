@@ -987,13 +987,15 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         console.log(`Extracted output path: ${actualOutputPath}`);
         
         // Replace extension based on format parameter if provided
-        if (workflowConfig.imageFormat) {
+        if (generationData.imageFormat) {
           // Extract extension from format (e.g., "image/webp" -> "webp")
-          const formatExtension = workflowConfig.imageFormat;
+          const formatExtension = generationData.imageFormat;
           const extractedDir = path.dirname(actualOutputPath);
           const extractedBasename = path.basename(actualOutputPath, path.extname(actualOutputPath));
           actualOutputPath = path.join(extractedDir, `${extractedBasename}.${formatExtension}`);
           console.log(`Modified output path based on format: ${actualOutputPath}`);
+        } else {
+          throw new Error('imageFormat is required to determine output file extension');
         }
         
         // Copy the file from the extracted path to savePath
