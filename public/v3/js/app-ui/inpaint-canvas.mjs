@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { H2 } from '../custom-ui/typography.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
+import { Panel } from '../custom-ui/layout/panel.mjs';
 
 // Styled components
 const CanvasContainer = styled('div')`
@@ -10,28 +11,6 @@ const CanvasContainer = styled('div')`
   flex-direction: column;
   gap: ${getThemeValue('spacing.medium.gap')};
   width: 100%;
-`;
-
-const PlaceholderContainer = styled('div')`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${getThemeValue('spacing.large.padding')};
-  background: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-  color: ${getThemeValue('colors.text.secondary')};
-`;
-
-const LoadingContainer = styled('div')`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${getThemeValue('spacing.large.padding')};
-  background: ${getThemeValue('colors.background.secondary')};
-  border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')};
-  border-radius: ${getThemeValue('spacing.medium.borderRadius')};
-  color: ${getThemeValue('colors.text.secondary')};
 `;
 
 const Canvas = styled('canvas')`
@@ -45,7 +24,7 @@ const InfoContainer = styled('div')`
   display: flex;
   flex-direction: column;
   gap: ${getThemeValue('spacing.small.gap')};
-  color: ${getThemeValue('colors.text.secondary')};
+  color: ${() => getThemeValue('colors.text.secondary')};
   font-size: ${getThemeValue('typography.fontSize.small')};
 
   p {
@@ -291,12 +270,12 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
     <${CanvasContainer}>
       <${H2}>Inpaint Canvas</>
       ${!imageUrl && html`
-        <${PlaceholderContainer}>
+        <${Panel} variant="outlined">
           <p>No image loaded for inpainting</p>
         <//>
       `}
       ${imageUrl && !imageLoaded && html`
-        <${LoadingContainer}>
+        <${Panel} variant="outlined">
           <p>Loading image...</p>
         <//>
       `}

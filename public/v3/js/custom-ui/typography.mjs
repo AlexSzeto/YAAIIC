@@ -19,6 +19,11 @@ export const H1 = styled('h1')`
   font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
   color: ${() => currentTheme.value.colors.text.primary};
   line-height: 1.2;
+
+  small {
+    font-size: 0.5em;
+    opacity: 0.6;
+  }
 `;
 
 /**
@@ -29,7 +34,7 @@ export const H1 = styled('h1')`
  */
 export const H2 = styled('h2')`
   margin: 0 0 ${() => currentTheme.value.spacing.medium.margin} 0;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
   color: ${() => currentTheme.value.colors.text.primary};
   line-height: 1.3;

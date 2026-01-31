@@ -47,7 +47,7 @@ const ProgressBannerContainer = styled('div')`
 
 const MainLayout = styled('div')`
   display: grid;
-  gap: ${getThemeValue('spacing.medium.gap')};
+  gap: ${getThemeValue('spacing.large.gap')};
   
   @media (min-width: 1024px) {
     grid-template-columns: 1fr 500px;
@@ -554,7 +554,7 @@ function InpaintApp() {
           `}
         </>
         
-        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap') }}>
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
@@ -576,7 +576,7 @@ function InpaintApp() {
       </>
       
       ${history.length > 0 && html`
-        <${Panel} variant="outlined" style=${{ marginTop: '16px' }}>
+        <${Panel} variant="outlined">
           <${H2}>Session History</>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}
