@@ -878,16 +878,30 @@ function App() {
         onRegenerate=${handleRegenerate}
         onSelectAsInput=${handleSelectAsInput}
         isSelectDisabled=${(() => {
-          // Disable if no workflow or workflow doesn't need images
-          if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-          // Disable if the media type doesn't match the workflow type
-          const workflowType = workflow.type || 'image';
           const mediaType = generatedImage?.type || 'image';
-          if (mediaType !== workflowType) return true;
-          // Disable if all slots are filled
-          const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
-          if (filledCount >= workflow.inputImages) return true;
-          return false;
+          
+          // Check if workflow needs images as input
+          if (mediaType === 'image') {
+            // Disable if no workflow or workflow doesn't need images
+            if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
+            // Disable if all image slots are filled
+            const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
+            if (filledCount >= workflow.inputImages) return true;
+            return false;
+          }
+          
+          // Check if workflow needs audio as input
+          if (mediaType === 'audio') {
+            // Disable if no workflow or workflow doesn't need audio
+            if (!workflow || !workflow.inputAudios || workflow.inputAudios <= 0) return true;
+            // Disable if all audio slots are filled
+            const filledCount = inputAudios.filter(aud => aud && (aud.url)).length;
+            if (filledCount >= workflow.inputAudios) return true;
+            return false;
+          }
+          
+          // For video or other media types, disable selection (not supported as input yet)
+          return true;
         })()}
         isInpaintDisabled=${(() => {
           // Disable if the media type is not an image
