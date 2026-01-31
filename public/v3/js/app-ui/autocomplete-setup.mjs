@@ -83,6 +83,10 @@ export function initAutoComplete() {
     resultsList: {
       tabSelect: true,
       maxResults: 30,
+      // CRITICAL FIX: Append to document.body to avoid conflicts with goober's DOM manipulation
+      // This prevents "insertBefore" errors when goober re-renders styled components
+      destination: () => document.body,
+      position: "afterbegin",
     },
     resultItem: {
       highlight: true
