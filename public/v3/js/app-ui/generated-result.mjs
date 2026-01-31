@@ -8,6 +8,7 @@ import { sendToClipboard } from '../custom-ui/util.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
 import { useToast } from '../custom-ui/msg/toast.mjs';
+import { H2 } from '../custom-ui/typography.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 
 // Styled components
@@ -16,13 +17,6 @@ const Container = styled('div')`
   background-color: ${() => currentTheme.value.colors.background.secondary};
   border: 1px solid ${() => currentTheme.value.colors.border.secondary};
   border-radius: 8px;
-`;
-
-const Title = styled('h3')`
-  color: ${() => currentTheme.value.colors.text.primary};
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.2em;
 `;
 
 const Content = styled('div')`
@@ -249,7 +243,7 @@ export function GeneratedResult({
 
   return html`
     <${Container}>
-      <${Title}>Generated Result<//>
+      <${H2}>Generated Result</>
       
       <${Content}>
         <${LeftColumn}>

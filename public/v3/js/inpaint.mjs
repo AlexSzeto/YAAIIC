@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from 'goober';
 import { Page } from './custom-ui/layout/page.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
+import { H1, H2, H3 } from './custom-ui/typography.mjs';
 import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
@@ -22,27 +23,17 @@ import { showFolderSelect } from './app-ui/folder-select.mjs';
 
 // Styled components
 const AppContainer = styled('div')`
-  padding: ${getThemeValue('spacing.medium.padding')};
-  max-width: 1800px;
   margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: ${getThemeValue('spacing.large.gap')};  
 `;
 
 const AppHeader = styled('div')`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${getThemeValue('spacing.medium.margin')};
-  
-  h1 {
-    margin: 0;
-    color: ${getThemeValue('colors.text.primary')};
-    font-size: ${getThemeValue('typography.fontSize.large')};
-    
-    small {
-      font-size: 0.5em;
-      opacity: 0.6;
-    }
-  }
 `;
 
 const HeaderActions = styled('div')`
@@ -510,7 +501,7 @@ function InpaintApp() {
   return html`
     <${AppContainer}>
       <${AppHeader}>
-        <h1>YAAIIG <small>Inpaint V3</small></h1>
+        <${H1}>YAAIIG <small>Inpaint V3</small></>
         <${HeaderActions}>
           <${Button}
             variant="large-icon"
@@ -586,7 +577,7 @@ function InpaintApp() {
       
       ${history.length > 0 && html`
         <${Panel} variant="default" style=${{ marginTop: '16px' }}>
-          <h3>Session History</h3>
+          <${H2}>Session History</>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}
             totalPages=${historyNav.totalItems}

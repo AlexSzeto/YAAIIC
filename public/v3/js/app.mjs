@@ -9,6 +9,7 @@ import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
+import { H1, H2, H3 } from './custom-ui/typography.mjs';
 import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
@@ -40,16 +41,6 @@ const AppHeader = styled('div')`
   display: flex;
   justify-content: space-between;
   align-items: center;
-`;
-
-const HeaderTitle = styled('h1')`
-  color: ${getThemeValue('colors.text.primary')};
-  margin: 0;
-  
-  small {
-    font-size: 0.5em;
-    opacity: 0.6;
-  }
 `;
 
 const HeaderButtons = styled('div')`
@@ -836,7 +827,7 @@ function App() {
   return html`
     <${AppContainer}>
       <${AppHeader}>
-        <${HeaderTitle}>YAAIIG <small>V3</small><//>
+        <${H1}>YAAIIG <small>V3</small><//>
         <${HeaderButtons}>
           <${Button} 
             id="theme-toggle-btn"
@@ -927,9 +918,7 @@ function App() {
 
       ${history.length > 0 && html`
         <${Panel} variant="default">
-          <h3 style=${{ marginBottom: '8px', fontSize: '1rem', color: currentTheme.value.colors.text.secondary }}>
-            Session History
-          </h3>
+          <${H2}>Session History</>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}
             totalPages=${historyNav.totalItems}

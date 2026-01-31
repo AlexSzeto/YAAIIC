@@ -1,6 +1,7 @@
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
+import { H2 } from '../custom-ui/typography.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
 
 // Styled components
@@ -9,13 +10,6 @@ const CanvasContainer = styled('div')`
   flex-direction: column;
   gap: ${getThemeValue('spacing.medium.gap')};
   width: 100%;
-`;
-
-const CanvasTitle = styled('h3')`
-  margin: 0;
-  color: ${getThemeValue('colors.text.primary')};
-  font-size: ${getThemeValue('typography.fontSize.large')};
-  font-weight: ${getThemeValue('typography.fontWeight.bold')};
 `;
 
 const PlaceholderContainer = styled('div')`
@@ -295,7 +289,7 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   
   return html`
     <${CanvasContainer}>
-      <${CanvasTitle}>Inpaint Canvas<//>
+      <${H2}>Inpaint Canvas</>
       ${!imageUrl && html`
         <${PlaceholderContainer}>
           <p>No image loaded for inpainting</p>
