@@ -1,7 +1,9 @@
 // Autocomplete Setup Module
 import { loadTags, getTags, isTagsLoaded } from './tags.mjs';
+import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
 
 let autoCompleteJS = null;
+let stylesInjected = false;
 
 // Function to get current description text
 export function getCurrentDescription() {
@@ -44,6 +46,12 @@ export function initAutoComplete() {
   if (tags.length === 0) {
     console.warn('No tags available for autocomplete');
     return;
+  }
+
+  // Inject global styles once
+  if (!stylesInjected) {
+    injectAutocompleteStyles();
+    stylesInjected = true;
   }
 
   // Add keydown event listener to handle tab key behavior (ESC is handled via events config)

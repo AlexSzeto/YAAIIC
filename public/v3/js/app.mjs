@@ -842,7 +842,7 @@ function App() {
   return html`
     <${AppContainer}>
       <${AppHeader}>
-        <${HeaderTitle}>YAAIIG <small>V3</small><//>>
+        <${HeaderTitle}>YAAIIG <small>V3</small><//>
         <${HeaderButtons}>
           <${Button} 
             id="folder-btn"
