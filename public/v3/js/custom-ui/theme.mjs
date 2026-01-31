@@ -198,7 +198,7 @@ const lightColors = {
     primary: '#ffffff',
     secondary: '#f8f9fa',
     tertiary: '#e9ecef',
-    card: '#ffffff',
+    card: '#f8f9fa',
     hover: '#f1f1f1',
     disabled: '#e9ecef'
   },

@@ -84,7 +84,7 @@ export class Panel extends Component {
     switch (variant) {
       case 'default':
         variantStyle = {
-          backgroundColor: bgColor,
+          backgroundColor: color ? bgColor : theme.colors.background.card,
         };
         break;
       case 'elevated':

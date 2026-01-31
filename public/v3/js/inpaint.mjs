@@ -532,7 +532,7 @@ function InpaintApp() {
       ` : null}
       
       <${MainLayout}>
-        <${Panel} variant="default" style=${{ minHeight: '400px' }}>
+        <${Panel} variant="outlined" style=${{ minHeight: '400px' }}>
           ${loading && html`
             <p>Loading image for inpainting...</p>
           `}
@@ -554,7 +554,7 @@ function InpaintApp() {
           `}
         </>
         
-        <${Panel} variant="default" style=${{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
@@ -576,7 +576,7 @@ function InpaintApp() {
       </>
       
       ${history.length > 0 && html`
-        <${Panel} variant="default" style=${{ marginTop: '16px' }}>
+        <${Panel} variant="outlined" style=${{ marginTop: '16px' }}>
           <${H2}>Session History</>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}

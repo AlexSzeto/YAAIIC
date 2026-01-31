@@ -855,7 +855,7 @@ function App() {
         </>
       </>
       
-      <${Panel} variant="default">
+      <${Panel} variant="outlined">
         <${WorkflowSelector}
           value=${workflow}
           onChange=${handleWorkflowChange}
@@ -917,7 +917,7 @@ function App() {
       />
 
       ${history.length > 0 && html`
-        <${Panel} variant="default">
+        <${Panel} variant="outlined">
           <${H2}>Session History</>
           <${NavigatorControl} 
             currentPage=${historyNav.currentIndex}
