@@ -73,6 +73,20 @@ const spacingSubTheme = {
     fast: '0.15s ease',
     normal: '0.25s ease',
     slow: '0.4s ease'
+  },
+  sizing: {
+    small: {
+      width: '200px',
+      height: '200px'
+    },
+    medium: {
+      width: '400px',
+      height: '400px'
+    },
+    large: {
+      width: '800px',
+      height: '800px'
+    }
   }
 };
 
@@ -191,7 +205,8 @@ const lightColors = {
   },
   shadow: {
     color: 'rgba(0, 0, 0, 0.15)',
-    colorStrong: 'rgba(0, 0, 0, 0.25)'
+    colorStrong: 'rgba(0, 0, 0, 0.25)',
+    elevated: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.15)'
   },
   focus: {
     shadowPrimary: 'rgba(0, 123, 255, 0.25)',
@@ -284,7 +299,8 @@ const darkColors = {
   },
   shadow: {
     color: 'rgba(0, 0, 0, 0.3)',
-    colorStrong: 'rgba(0, 0, 0, 0.3)'
+    colorStrong: 'rgba(0, 0, 0, 0.3)',
+    elevated: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3)'
   },
   focus: {
     shadowPrimary: 'rgba(255, 255, 255, 0.6)',

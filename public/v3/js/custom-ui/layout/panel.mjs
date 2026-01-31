@@ -91,7 +91,7 @@ export class Panel extends Component {
         variantStyle = {
           backgroundColor: bgColor,
           border: 'none',
-          boxShadow: `0 4px 12px ${theme.colors.shadow.color}, 0 2px 4px ${theme.colors.shadow.color}`,
+          boxShadow: theme.shadow.elevated,
         };
         break;
       case 'outlined':
