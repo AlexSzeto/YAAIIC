@@ -21,6 +21,7 @@ const ModalWrapper = styled('div')`
   display: flex;
   flex-direction: column;
 `;
+ModalWrapper.className = 'modal-wrapper';
 
 const Content = styled('div')`
   flex: 1;
@@ -30,6 +31,7 @@ const Content = styled('div')`
   min-height: 200px;
   max-height: 400px;
 `;
+Content.className = 'content';
 
 const LoadingMessage = styled('div')`
   display: flex;
@@ -38,11 +40,13 @@ const LoadingMessage = styled('div')`
   padding: 40px;
   color: ${props => props.theme.colors.text.secondary};
 `;
+LoadingMessage.className = 'loading-message';
 
 const List = styled('div')`
   display: flex;
   flex-direction: column;
 `;
+List.className = 'list';
 
 const ItemContainer = styled('div')`
   display: flex;
@@ -65,6 +69,7 @@ const ItemContainer = styled('div')`
     border-left: 3px solid ${props.theme.colors.primary.background};
   ` : ''}
 `;
+ItemContainer.className = 'item-container';
 
 const ItemLabel = styled('div')`
   display: flex;
@@ -72,18 +77,21 @@ const ItemLabel = styled('div')`
   gap: 10px;
   flex: 1;
 `;
+ItemLabel.className = 'item-label';
 
 const ItemName = styled('span')`
   color: ${props => props.theme.colors.text.primary};
   font-size: ${props => props.theme.typography.fontSize.medium};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
 `;
+ItemName.className = 'item-name';
 
 const ItemActions = styled('div')`
   display: flex;
   gap: ${props => props.theme.spacing.medium.gap};
   align-items: center;
 `;
+ItemActions.className = 'item-actions';
 
 const Footer = styled('div')`
   display: flex;
@@ -92,6 +100,7 @@ const Footer = styled('div')`
   padding-top: 15px;
   margin-top: 10px;
 `;
+Footer.className = 'footer';
 
 // ============================================================================
 // ListItem Component

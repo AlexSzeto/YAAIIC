@@ -2,6 +2,13 @@
 ## Goals
 Complete the Goober migration by refactoring all remaining app-ui components, removing deprecated component files, eliminating all inline styles, and cleaning up legacy CSS files to ensure the entire application uses Goober styling exclusively.
 
+[x] Add Class Names to All Styled Components in v3
+[] Add className property to all styled components in v3 folder
+1. Search through all `.mjs` files in `public/v3/` directory
+2. Find all `styled()` component definitions
+3. Add `.className = '<descriptive-kebab-case-name>'` after each styled component definition
+4. Ensure class names follow the pattern used in existing code (e.g., `GalleryItemContainer.className = 'gallery-item-container'`)
+
 ## Implementation Details
 - Refactor takes place exclusively inside the v2 folder before implemetation is complete.
 - Refactor remaining app-ui components (GenerationForm, GeneratedResult, InpaintForm, InpaintCanvas, SeedControl, ExtraInputsRenderer, WorkflowSelector)

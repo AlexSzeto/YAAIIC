@@ -180,6 +180,7 @@ const ImageModalWrapper = styled('div')`
   max-height: calc(100vh - 80px);
   padding-bottom: ${props => props.hasActionButton ? '60px' : '0'};
 `;
+ImageModalWrapper.className = 'image-modal-wrapper';
 
 const ImageModalContent = styled('div')`
   position: relative;
@@ -187,6 +188,7 @@ const ImageModalContent = styled('div')`
   align-items: center;
   justify-content: center;
 `;
+ImageModalContent.className = 'image-modal-content';
 
 const ImageModalPreview = styled('img')`
   max-width: 100%;
@@ -195,6 +197,7 @@ const ImageModalPreview = styled('img')`
   object-fit: contain;
   border-radius: ${props => props.borderRadius};
 `;
+ImageModalPreview.className = 'image-modal-preview';
 
 const ImageModalTitleWrapper = styled('div')`
   position: absolute;
@@ -202,6 +205,7 @@ const ImageModalTitleWrapper = styled('div')`
   left: 8px;
   max-width: ${props => props.hasActionButton ? 'calc(100% - 140px)' : 'calc(100% - 20px)'};
 `;
+ImageModalTitleWrapper.className = 'image-modal-title-wrapper';
 
 const ImageModalActionArea = styled('div')`
   position: absolute;
@@ -211,6 +215,7 @@ const ImageModalActionArea = styled('div')`
   justify-content: flex-end;
   align-items: center;
 `;
+ImageModalActionArea.className = 'image-modal-action-area';
 
 export function createImageModal(imageUrl, allowSelect = false, title = null, onSelect = null, selectButtonText = 'View') {
   const container = document.createElement('div');

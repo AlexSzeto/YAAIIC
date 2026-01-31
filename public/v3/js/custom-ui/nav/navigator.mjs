@@ -26,12 +26,14 @@ const Container = styled('div')`
   align-items: center;
   display: ${props => props.display};
 `;
+Container.className = 'container';
 
 const Nav = styled('div')`
   display: flex;
   align-items: center;
   gap: ${props => props.gap};
 `;
+Nav.className = 'nav';
 
 const PageIndex = styled('div')`
   min-width: 60px;
@@ -40,6 +42,7 @@ const PageIndex = styled('div')`
   font-weight: ${props => props.fontWeight};
   color: ${props => props.color};
 `;
+PageIndex.className = 'page-index';
 
 const EmptyMessage = styled('div')`
   text-align: center;
@@ -48,6 +51,7 @@ const EmptyMessage = styled('div')`
   font-size: ${props => props.fontSize};
   font-style: italic;
 `;
+EmptyMessage.className = 'empty-message';
 
 /**
  * Stateless Pagination Controls Component (for use with usePagination hook)

@@ -58,6 +58,7 @@ const StyledButton = styled('button')`
     cursor: default;
   }
 `;
+StyledButton.className = 'styled-button';
 
 const TextSpan = styled('span')`
   white-space: nowrap;
@@ -66,6 +67,7 @@ const TextSpan = styled('span')`
   flex: 1;
   min-width: 0;
 `;
+TextSpan.className = 'text-span';
 
 /**
  * Button - Themed button with multiple variants and states

@@ -8,6 +8,7 @@ const CheckboxWrapper = styled('div')`
   margin-bottom: ${getThemeValue('spacing.small.margin')};
   width: 200px;
 `;
+CheckboxWrapper.className = 'checkbox-wrapper';
 
 /**
  * Seed Control Component

@@ -16,6 +16,7 @@ const Wrapper = styled('div')`
   right: 0;
   padding: ${props => props.padding};
 `;
+Wrapper.className = 'wrapper';
 
 const Controls = styled('div')`
   display: flex;
@@ -23,6 +24,7 @@ const Controls = styled('div')`
   width: 100%;
   gap: ${props => props.gap};
 `;
+Controls.className = 'controls';
 
 const TimelineWrapper = styled('div')`
   display: flex;
@@ -30,6 +32,7 @@ const TimelineWrapper = styled('div')`
   flex: 1;
   gap: ${props => props.gap};
 `;
+TimelineWrapper.className = 'timeline-wrapper';
 
 const Time = styled('span')`
   font-family: monospace;
@@ -38,6 +41,7 @@ const Time = styled('span')`
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
 `;
+Time.className = 'time';
 
 const ProgressBar = styled('div')`
   flex: 1;
@@ -52,6 +56,7 @@ const ProgressBar = styled('div')`
     height: 8px;
   }
 `;
+ProgressBar.className = 'progress-bar';
 
 const ProgressFill = styled('div')`
   height: 100%;
@@ -60,6 +65,7 @@ const ProgressFill = styled('div')`
   width: ${props => props.width};
   background-color: ${props => props.backgroundColor};
 `;
+ProgressFill.className = 'progress-fill';
 
 // =========================================================================
 // AudioTimeline Component (isolated to prevent parent re-renders)

@@ -16,6 +16,7 @@ const FormContainer = styled('div')`
   gap: ${getThemeValue('spacing.medium.gap')};
   width: 100%;
 `;
+FormContainer.className = 'form-container';
 
 const FormRow = styled('div')`
   display: flex;
@@ -24,6 +25,7 @@ const FormRow = styled('div')`
   flex-wrap: wrap;
   ${props => props.justifyContent ? `justify-content: ${props.justifyContent};` : ''}
 `;
+FormRow.className = 'form-row';
 
 /**
  * Generation Form Component

@@ -12,6 +12,7 @@ const CanvasContainer = styled('div')`
   gap: ${getThemeValue('spacing.medium.gap')};
   width: 100%;
 `;
+CanvasContainer.className = 'canvas-container';
 
 const Canvas = styled('canvas')`
   max-width: 100%;
@@ -19,6 +20,7 @@ const Canvas = styled('canvas')`
   cursor: crosshair;
   border-radius: ${getThemeValue('spacing.small.borderRadius')};
 `;
+Canvas.className = 'canvas';
 
 const InfoContainer = styled('div')`
   display: flex;
@@ -31,6 +33,7 @@ const InfoContainer = styled('div')`
     margin: 0;
   }
 `;
+InfoContainer.className = 'info-container';
 
 /**
  * InpaintCanvas Component

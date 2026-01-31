@@ -25,6 +25,7 @@ const ModalOverlay = styled('div')`
   justify-content: center;
   padding: 20px;
 `;
+ModalOverlay.className = 'modal-overlay';
 
 const Content = styled('div')`
   background-color: ${() => currentTheme.value.colors.background.secondary};
@@ -37,6 +38,8 @@ const Content = styled('div')`
   overflow: auto;
   position: relative;
 `;
+Content.className = 'content';
+Content.className = 'content';
 
 const Grid = styled('div')`
   display: grid;
@@ -64,6 +67,7 @@ const Grid = styled('div')`
     max-width: 450px;
   }
 `;
+Grid.className = 'grid';
 
 const ItemWrapper = styled('div')`
   aspect-ratio: 1;
@@ -98,6 +102,7 @@ const ItemWrapper = styled('div')`
     border-radius: 3px;
   }
 `;
+ItemWrapper.className = 'item-wrapper';
 
 const ItemInfo = styled('div')`
   position: absolute;
@@ -114,11 +119,14 @@ const ItemInfo = styled('div')`
   max-width: calc(100% - 12px);
   box-sizing: border-box;
 `;
+ItemInfo.className = 'item-info';
+ItemInfo.className = 'item-info';
 
 const AudioButtonContainer = styled('div')`
   pointer-events: auto;
   flex-shrink: 0;
 `;
+AudioButtonContainer.className = 'audio-button-container';
 
 const ItemTextContent = styled('div')`
   display: flex;
@@ -127,6 +135,7 @@ const ItemTextContent = styled('div')`
   flex: 1;
   min-width: 0;
 `;
+ItemTextContent.className = 'item-text-content';
 
 const ItemName = styled('div')`
   font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
@@ -137,6 +146,7 @@ const ItemName = styled('div')`
   white-space: nowrap;
   line-height: 1.2;
 `;
+ItemName.className = 'item-name';
 
 const ItemDate = styled('div')`
   font-size: 11px;
@@ -146,6 +156,7 @@ const ItemDate = styled('div')`
   white-space: nowrap;
   line-height: 1.2;
 `;
+ItemDate.className = 'item-date';
 
 const CheckboxContainer = styled('div')`
   position: absolute;
@@ -159,6 +170,9 @@ const CheckboxContainer = styled('div')`
   cursor: pointer;
   pointer-events: auto;
 `;
+CheckboxContainer.className = 'checkbox-container';
+CheckboxContainer.className = 'checkbox-container';
+CheckboxContainer.className = 'checkbox-container';
 
 const PaginationWrapper = styled('div')`
   margin-bottom: 15px;
@@ -166,18 +180,21 @@ const PaginationWrapper = styled('div')`
   align-items: center;
   gap: 15px;
 `;
+PaginationWrapper.className = 'pagination-wrapper';
 
 const PaginationContainer = styled('div')`
   flex-grow: 1;
   display: flex;
   justify-content: center;
 `;
+PaginationContainer.className = 'pagination-container';
 
 const BulkActions = styled('div')`
   display: flex;
   align-items: center;
   position: absolute;
 `;
+BulkActions.className = 'bulk-actions';
 
 const Controls = styled('div')`
   display: flex;
@@ -189,11 +206,13 @@ const Controls = styled('div')`
     align-items: stretch;
   }
 `;
+Controls.className = 'controls';
 
 const SearchContainer = styled('div')`
   position: relative;
   flex: 1;
 `;
+SearchContainer.className = 'search-container';
 
 const SearchInput = styled('input')`
   width: 100%;
@@ -210,6 +229,7 @@ const SearchInput = styled('input')`
     box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.focus.shadowPrimary};
   }
 `;
+SearchInput.className = 'search-input';
 
 const SearchIcon = styled('box-icon')`
   position: absolute;
@@ -218,11 +238,13 @@ const SearchIcon = styled('box-icon')`
   transform: translateY(-50%);
   pointer-events: none;
 `;
+SearchIcon.className = 'search-icon';
 
 const ButtonGroup = styled('div')`
   display: flex;
   gap: 10px;
 `;
+ButtonGroup.className = 'button-group';
 
 /**
  * Gallery Component

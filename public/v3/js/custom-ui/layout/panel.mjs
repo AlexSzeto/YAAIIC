@@ -12,6 +12,7 @@ const StyledPanel = styled('div')`
               border-color 0.2s ease,
               box-shadow 0.2s ease;
 `;
+StyledPanel.className = 'styled-panel';
 
 /**
  * Panel - Container component with rounded corners and themed background

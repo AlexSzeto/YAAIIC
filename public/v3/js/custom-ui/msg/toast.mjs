@@ -43,6 +43,7 @@ const ToastContainer = styled('div')`
   flex-direction: column;
   gap: ${props => props.theme.spacing.medium.gap};
 `;
+ToastContainer.className = 'toast-container';
 
 const ToastWrapper = styled('div')`
   max-width: 400px;
@@ -55,11 +56,13 @@ const ToastWrapper = styled('div')`
     opacity: 0.9;
   }
 `;
+ToastWrapper.className = 'toast-wrapper';
 
 const ToastContent = styled('div')`
   padding: 12px 20px;
   text-align: center;
 `;
+ToastContent.className = 'toast-content';
 
 const ToastText = styled('p')`
   margin: 0;
@@ -67,6 +70,7 @@ const ToastText = styled('p')`
   font-size: ${props => props.theme.typography.fontSize.medium};
   font-family: ${props => props.theme.typography.fontFamily};
 `;
+ToastText.className = 'toast-text';
 
 // ============================================================================
 // Context

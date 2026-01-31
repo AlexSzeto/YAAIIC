@@ -14,6 +14,7 @@ const FormGroup = styled('div')`
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;
+FormGroup.className = 'form-group';
 
 const Label = styled('label')`
   margin-bottom: 5px;
@@ -21,6 +22,7 @@ const Label = styled('label')`
   font-size: ${props => props.fontSize};
   font-weight: ${props => props.fontWeight};
 `;
+Label.className = 'label';
 
 const StyledTextarea = styled('textarea')`
   width: 100%;
@@ -45,12 +47,14 @@ const StyledTextarea = styled('textarea')`
     cursor: default;
   }
 `;
+StyledTextarea.className = 'styled-textarea';
 
 const ErrorMessage = styled('span')`
   margin-top: 4px;
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
 `;
+ErrorMessage.className = 'error-message';
 
 /**
  * Textarea - Themed multi-line text input with label and error state support

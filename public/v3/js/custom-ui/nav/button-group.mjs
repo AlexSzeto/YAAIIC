@@ -14,6 +14,7 @@ const Container = styled('div')`
   align-items: center;
   gap: ${props => props.gap};
 `;
+Container.className = 'container';
 
 /**
  * ButtonGroup - Container for a row of selectable button items

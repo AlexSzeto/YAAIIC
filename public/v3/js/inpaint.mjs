@@ -29,21 +29,25 @@ const AppContainer = styled('div')`
   flex-direction: column;
   gap: ${getThemeValue('spacing.large.gap')};  
 `;
+AppContainer.className = 'app-container';
 
 const AppHeader = styled('div')`
   display: flex;
   justify-content: space-between;
   align-items: center;
 `;
+AppHeader.className = 'app-header';
 
 const HeaderActions = styled('div')`
   display: flex;
   gap: ${getThemeValue('spacing.small.gap')};
 `;
+HeaderActions.className = 'header-actions';
 
 const ProgressBannerContainer = styled('div')`
   margin-bottom: ${getThemeValue('spacing.medium.margin')};
 `;
+ProgressBannerContainer.className = 'progress-banner-container';
 
 const MainLayout = styled('div')`
   display: grid;
@@ -53,6 +57,7 @@ const MainLayout = styled('div')`
     grid-template-columns: 1fr 500px;
   }
 `;
+MainLayout.className = 'main-layout';
 
 /**
  * Helper function to generate random seed

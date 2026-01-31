@@ -36,21 +36,25 @@ const AppContainer = styled('div')`
   flex-direction: column;
   gap: ${getThemeValue('spacing.large.gap')};
 `;
+AppContainer.className = 'app-container';
 
 const AppHeader = styled('div')`
   display: flex;
   justify-content: space-between;
   align-items: center;
 `;
+AppHeader.className = 'app-header';
 
 const HeaderActions = styled('div')`
   display: flex;
   gap: ${getThemeValue('spacing.small.gap')};
 `;
+HeaderActions.className = 'header-actions';
 
 const HiddenFileInput = styled('input')`
   display: none;
 `;
+HiddenFileInput.className = 'hidden-file-input';
 
 /**
  * Helper function to generate random seed

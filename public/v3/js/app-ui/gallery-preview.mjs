@@ -31,6 +31,7 @@ const GalleryItemContainer = styled('div')`
     pointer-events: none;
   ` : ''}
 `;
+GalleryItemContainer.className = 'gallery-item-container';
 
 const GalleryItemImage = styled('img')`
   width: 100%;
@@ -54,6 +55,7 @@ const GalleryItemImage = styled('img')`
     cursor: pointer;
   `}
 `;
+GalleryItemImage.className = 'gallery-item-image';
 
 const GalleryItemInfo = styled('div')`
   position: absolute;
@@ -62,6 +64,7 @@ const GalleryItemInfo = styled('div')`
   max-width: calc(100% - 16px);
   pointer-events: none;
 `;
+GalleryItemInfo.className = 'gallery-item-info';
 
 const GalleryItemInfoContent = styled('div')`
   display: flex;
@@ -75,11 +78,13 @@ const GalleryItemInfoContent = styled('div')`
     gap: 8px;
   ` : ''}
 `;
+GalleryItemInfoContent.className = 'gallery-item-info-content';
 
 const GalleryAudioButton = styled('div')`
   pointer-events: auto;
   flex-shrink: 0;
 `;
+GalleryAudioButton.className = 'gallery-audio-button';
 
 const GalleryItemTextContent = styled('div')`
   display: flex;
@@ -88,6 +93,7 @@ const GalleryItemTextContent = styled('div')`
   flex: 1;
   min-width: 0;
 `;
+GalleryItemTextContent.className = 'gallery-item-text-content';
 
 const GalleryItemName = styled('div')`
   font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
@@ -98,6 +104,7 @@ const GalleryItemName = styled('div')`
   white-space: nowrap;
   line-height: 1.2;
 `;
+GalleryItemName.className = 'gallery-item-name';
 
 const GalleryItemDate = styled('div')`
   font-size: 11px;
@@ -107,6 +114,7 @@ const GalleryItemDate = styled('div')`
   white-space: nowrap;
   line-height: 1.2;
 `;
+GalleryItemDate.className = 'gallery-item-date';
 
 const GalleryItemCheckboxContainer = styled('div')`
   position: absolute;
@@ -120,6 +128,7 @@ const GalleryItemCheckboxContainer = styled('div')`
   cursor: pointer;
   pointer-events: auto;
 `;
+GalleryItemCheckboxContainer.className = 'gallery-item-checkbox-container';
 
 // Gallery Preview Component
 export class GalleryPreview extends Component {

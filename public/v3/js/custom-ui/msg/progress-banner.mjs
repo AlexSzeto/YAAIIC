@@ -28,6 +28,7 @@ const BannerWrapper = styled('div')`
   min-width: 320px;
   animation: ${slideUp} 0.3s ease-out;
 `;
+BannerWrapper.className = 'banner-wrapper';
 
 const BannerContent = styled('div')`
   padding: 8px;
@@ -36,11 +37,13 @@ const BannerContent = styled('div')`
   justify-content: space-between;
   gap: 16px;
 `;
+BannerContent.className = 'banner-content';
 
 const Content = styled('div')`
   flex: 1;
   min-width: 0;
 `;
+Content.className = 'content';
 
 const Info = styled('div')`
   display: flex;
@@ -49,6 +52,7 @@ const Info = styled('div')`
   margin-bottom: ${() => currentTheme.value.spacing.medium.margin};
   gap: 12px;
 `;
+Info.className = 'info';
 
 const Message = styled('span')`
   color: ${() => currentTheme.value.colors.text.primary};
@@ -60,6 +64,7 @@ const Message = styled('span')`
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
+Message.className = 'message';
 
 const Percentage = styled('span')`
   color: ${() => currentTheme.value.colors.text.secondary};
@@ -67,6 +72,7 @@ const Percentage = styled('span')`
   font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
   flex-shrink: 0;
 `;
+Percentage.className = 'percentage';
 
 const BarContainer = styled('div')`
   width: 100%;
@@ -75,6 +81,7 @@ const BarContainer = styled('div')`
   border-radius: 3px;
   overflow: hidden;
 `;
+BarContainer.className = 'bar-container';
 
 const Bar = styled('div')`
   height: 100%;
@@ -92,6 +99,7 @@ const Bar = styled('div')`
     }
   }}
 `;
+Bar.className = 'bar';
 
 const DismissButton = styled('button')`
   background: none;
@@ -117,6 +125,7 @@ const DismissButton = styled('button')`
     box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
   }
 `;
+DismissButton.className = 'dismiss-button';
 
 /**
  * Map ComfyUI node types to human-readable step names

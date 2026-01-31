@@ -16,6 +16,7 @@ const Container = styled('div')`
     align-items: stretch;
   }
 `;
+Container.className = 'container';
 
 /**
  * Workflow Selector Component

@@ -20,6 +20,7 @@ const Container = styled('label')`
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;
+Container.className = 'container';
 
 const HiddenInput = styled('input')`
   position: absolute;
@@ -32,6 +33,7 @@ const HiddenInput = styled('input')`
   white-space: nowrap;
   border: 0;
 `;
+HiddenInput.className = 'hidden-input';
 
 const CheckboxVisual = styled('div')`
   width: 22px;
@@ -55,12 +57,14 @@ const CheckboxVisual = styled('div')`
     }
   ` : ''}
 `;
+CheckboxVisual.className = 'checkbox-visual';
 
 const LabelText = styled('span')`
   font-size: ${props => props.fontSize};
   font-weight: ${props => props.fontWeight};
   color: ${props => props.color};
 `;
+LabelText.className = 'label-text';
 
 /**
  * Checkbox - Themed checkbox with label and custom visual styling

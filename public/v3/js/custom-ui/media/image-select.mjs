@@ -15,6 +15,7 @@ const Container = styled('div')`
   flex-direction: column;
   min-width: 200px;
 `;
+Container.className = 'container';
 
 const Label = styled('label')`
   margin-bottom: 5px;
@@ -22,6 +23,7 @@ const Label = styled('label')`
   font-size: ${props => props.fontSize};
   font-weight: ${props => props.fontWeight};
 `;
+Label.className = 'label';
 
 const SelectArea = styled('div')`
   position: relative;
@@ -42,12 +44,14 @@ const SelectArea = styled('div')`
     border-color: ${props => props.hoverBorderColor};
   }
 `;
+SelectArea.className = 'select-area';
 
 const Preview = styled('img')`
   width: 100%;
   height: 100%;
   object-fit: cover;
 `;
+Preview.className = 'preview';
 
 const OverlayWrapper = styled('div')`
   position: absolute;
@@ -58,12 +62,14 @@ const OverlayWrapper = styled('div')`
   padding: ${props => props.padding};
   transition: ${props => props.transition};
 `;
+OverlayWrapper.className = 'overlay-wrapper';
 
 const OverlayContent = styled('div')`
   display: flex;
   justify-content: flex-end;
   gap: ${props => props.gap};
 `;
+OverlayContent.className = 'overlay-content';
 
 const EmptyState = styled('div')`
   display: flex;
@@ -72,15 +78,18 @@ const EmptyState = styled('div')`
   justify-content: center;
   gap: ${props => props.gap};
 `;
+EmptyState.className = 'empty-state';
 
 const EmptyText = styled('div')`
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
 `;
+EmptyText.className = 'empty-text';
 
 const HiddenFileInput = styled('input')`
   display: none;
 `;
+HiddenFileInput.className = 'hidden-file-input';
 
 /**
  * ImageSelect Component

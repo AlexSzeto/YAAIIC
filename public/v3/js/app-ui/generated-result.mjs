@@ -18,18 +18,21 @@ const Container = styled('div')`
   border: 1px solid ${() => currentTheme.value.colors.border.secondary};
   border-radius: 8px;
 `;
+Container.className = 'container';
 
 const Content = styled('div')`
   display: flex;
   gap: 20px;
   align-items: flex-start;
 `;
+Content.className = 'content';
 
 const LeftColumn = styled('div')`
   flex: 0 0 auto;
   max-width: 50%;
   position: relative;
 `;
+LeftColumn.className = 'left-column';
 
 const GeneratedImage = styled('img')`
   max-width: 100%;
@@ -39,6 +42,7 @@ const GeneratedImage = styled('img')`
   display: block;
   cursor: pointer;
 `;
+GeneratedImage.className = 'generated-image';
 
 const RightColumn = styled('div')`
   flex: 1;
@@ -46,6 +50,7 @@ const RightColumn = styled('div')`
   flex-direction: column;
   gap: 15px;
 `;
+RightColumn.className = 'right-column';
 
 const ActionContainer = styled('div')`
   margin-top: 15px;
@@ -54,12 +59,14 @@ const ActionContainer = styled('div')`
   align-items: center;
   gap: 15px;
 `;
+ActionContainer.className = 'action-container';
 
 // InfoSection styled components
 const InfoSection = styled('div')`
   display: flex;
   flex-direction: column;
 `;
+InfoSection.className = 'info-section';
 
 const InfoHeader = styled('div')`
   display: flex;
@@ -68,17 +75,20 @@ const InfoHeader = styled('div')`
   margin-bottom: 5px;
   gap: 10px;
 `;
+InfoHeader.className = 'info-header';
 
 const InfoLabel = styled('label')`
   font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
   color: ${() => currentTheme.value.colors.text.primary};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
 `;
+InfoLabel.className = 'info-label';
 
 const InfoButtons = styled('div')`
   display: flex;
   gap: 5px;
 `;
+InfoButtons.className = 'info-buttons';
 
 const InfoInput = styled('input')`
   width: 100%;
@@ -102,6 +112,7 @@ const InfoInput = styled('input')`
     box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
   }
 `;
+InfoInput.className = 'info-input';
 
 const InfoTextarea = styled('textarea')`
   width: 100%;
@@ -127,12 +138,14 @@ const InfoTextarea = styled('textarea')`
     box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
   }
 `;
+InfoTextarea.className = 'info-textarea';
 
 // TabbedInfoSection styled components
 const TabbedInfoSection = styled('div')`
   display: flex;
   flex-direction: column;
 `;
+TabbedInfoSection.className = 'tabbed-info-section';
 
 const TabbedInfoHeader = styled('div')`
   display: flex;
@@ -141,6 +154,7 @@ const TabbedInfoHeader = styled('div')`
   margin-bottom: 5px;
   gap: 10px;
 `;
+TabbedInfoHeader.className = 'tabbed-info-header';
 
 export function GeneratedResult({ 
   image, 
