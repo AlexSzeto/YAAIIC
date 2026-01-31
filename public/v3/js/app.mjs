@@ -174,17 +174,11 @@ function App() {
         }
       });
       
-      // Update formState with new defaults, preserving existing values not from extraInputs
-      setFormState(prev => {
-        // // Remove old extraInput values that are no longer in the new workflow
-        // const newState = { ...prev };
-        
-        // // Add new extraInput defaults
-        // Object.assign(newState, extraInputDefaults);
-        
-        // return newState;
-        return prev;
-      });
+      // Update formState with new defaults
+      setFormState(prev => ({
+        ...prev,
+        ...extraInputDefaults
+      }));
     }
   };
   
@@ -487,7 +481,7 @@ function App() {
   const handleGenerationError = (data) => {
     setIsGenerating(false);
     setTaskId(null);
-    console.error('Generation error:', data);
+    toast.error(data.error?.message || 'Generation failed');
   };
   
   // Handlers for Generated Result

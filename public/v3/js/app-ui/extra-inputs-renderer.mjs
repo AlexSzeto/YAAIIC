@@ -45,13 +45,13 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
         return false;
       })
       .map(input => {
-        const value = formState[input.id];
-        
+          const value = formState[input.id];
+          
         switch (input.type) {
           case 'text':
             return html`
               <${Input}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 type="text"
                 value=${value || ''}
@@ -63,7 +63,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
           case 'number':
             return html`
               <${Input}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 type="number"
                 value=${value !== undefined ? value : (input.default || '')}
@@ -75,7 +75,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
           case 'select':
             return html`
               <${Select}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 value=${value || input.default || ''}
                 options=${input.options || []}
@@ -88,7 +88,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
             return html`
               <${CheckboxWrapper}>
               <${Checkbox}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 checked=${value !== undefined ? value : (input.default || false)}
                 onChange=${handleCheckboxChange(input.id)}
@@ -100,7 +100,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
           case 'textarea':
             return html`
               <${Textarea}
-                key=${input.id}
+                id=${input.id}
                 label=${input.label}
                 value=${value || ''}
                 onChange=${handleChange(input.id)}

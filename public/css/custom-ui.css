@@ -635,7 +635,6 @@
 .toast {
   background-color: var(--dark-background-card);
   color: white;
-  padding: 12px 20px;
   margin-bottom: 10px;
   border-radius: 8px;
   border: 1px solid var(--dark-border-secondary);

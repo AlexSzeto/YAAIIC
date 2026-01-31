@@ -106,7 +106,6 @@ export function GenerationForm({
 
       <!-- Prompt -->
       <${Textarea}
-        key="description"
         label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}

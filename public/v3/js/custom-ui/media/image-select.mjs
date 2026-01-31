@@ -286,7 +286,7 @@ export class ImageSelect extends Component {
                 padding=${theme.spacing.small.padding}
                 transition=${`opacity ${theme.transitions.fast}`}
               >
-                <${Panel} variant="glass">
+                <${Panel} variant="glass" padding="small">
                   <${OverlayContent} gap=${theme.spacing.small.gap}>
                     <${Button}
                       variant="small-icon"

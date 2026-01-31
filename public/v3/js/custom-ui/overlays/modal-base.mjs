@@ -6,6 +6,7 @@
  */
 
 import { styled } from '../goober-setup.mjs';
+import { H2 } from '../themed-base.mjs';
 
 /**
  * BaseOverlay - Fixed overlay that covers the entire viewport
@@ -54,13 +55,7 @@ export const BaseHeader = styled('div')`
 /**
  * BaseTitle - Styled title text
  */
-export const BaseTitle = styled('h3')`
-  margin: 0;
-  color: ${props => props.color};
-  font-size: 1.2em
-  font-family: ${props => props.fontFamily};
-  font-weight: ${props => props.fontWeight};
-`;
+export const BaseTitle = H2
 
 /**
  * BaseContent - Styled content area

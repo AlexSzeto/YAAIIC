@@ -13,7 +13,6 @@ import { globalAudioPlayer } from '../global-audio-player.mjs';
 const Container = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
 `;
 Container.className = 'container';
 
@@ -291,7 +290,7 @@ export class AudioSelect extends Component {
                 transition=${`opacity ${theme.transitions.fast}`}
                 opacity=${isHovered ? '1' : '0'}
               >
-                <${Panel} variant="glass">
+                <${Panel} variant="glass" padding="small">
                   <${OverlayContent} gap=${theme.spacing.small.gap}>
                     <${Button}
                       variant="small-icon"

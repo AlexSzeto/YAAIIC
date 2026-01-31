@@ -44,7 +44,7 @@
 const spacingSubTheme = {
   spacing: {
     small: {
-      padding: '4px',
+      padding: '8px',
       buttonPadding: '0 8px',
       margin: '4px',
       borderRadius: '4px',

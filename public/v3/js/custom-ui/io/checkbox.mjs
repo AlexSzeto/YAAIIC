@@ -169,6 +169,7 @@ export class Checkbox extends Component {
           disabled=${disabled} 
           onChange=${onChange}
           id=${id}
+          name=${id}
           ...${rest}
         />
         ${labelPosition === 'left' ? html`${labelElement}${checkboxVisual}` : html`${checkboxVisual}${labelElement}`}

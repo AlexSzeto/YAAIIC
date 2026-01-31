@@ -66,19 +66,18 @@ ErrorMessage.className = 'error-message';
  * @param {Object} props
  * @param {string} [props.label] - Label text displayed above the textarea
  * @param {string} [props.error] - Error message displayed below the textarea
- * @param {string} [props.id] - ID for label association (falls back to name prop)
+ * @param {string} [props.id] - ID for the textarea element (also sets name attribute)
  * @param {boolean} [props.fullWidth=true] - Whether to span full container width (default true for textareas)
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {string} [props.placeholder] - Placeholder text
  * @param {number} [props.rows=4] - Number of visible text lines
- * @param {string} [props.name] - Textarea name attribute
  * @param {*} [props.value] - Textarea value
  * @param {Function} [props.onChange] - Change handler
  * @returns {preact.VNode}
  * 
  * @example
  * // Basic textarea with label
- * <Textarea label="Description" name="description" />
+ * <Textarea label="Description" id="description" />
  * 
  * @example
  * // Textarea with error state
@@ -120,8 +119,6 @@ export class Textarea extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const inputId = id || rest.name;
-
     return html`
       <${FormGroup} 
         width=${fullWidth ? '100%' : '200px'}
@@ -129,14 +126,15 @@ export class Textarea extends Component {
       >
         ${label ? html`
           <${Label} 
-            for=${inputId}
+            for=${id}
             color=${theme.colors.text.secondary}
             fontSize=${theme.typography.fontSize.medium}
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
         <${StyledTextarea} 
-          id=${inputId} 
+          id=${id} 
+          name=${id}
           disabled=${disabled} 
           rows=${rows}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}

@@ -64,7 +64,7 @@ ErrorMessage.className = 'error-message';
  * @param {string} [props.label] - Label text displayed above the select
  * @param {Array<{label: string, value: any}>} [props.options=[]] - Array of option objects
  * @param {string} [props.error] - Error message displayed below the select
- * @param {string} [props.id] - ID for label association (falls back to name prop)
+ * @param {string} [props.id] - ID for the select element (also sets name attribute)
  * @param {boolean} [props.fullWidth=false] - Whether to span full container width
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {*} [props.value] - Currently selected value
@@ -122,8 +122,6 @@ export class Select extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    const inputId = id || rest.name;
-
     return html`
       <${FormGroup} 
         width=${fullWidth ? '100%' : '200px'}
@@ -131,14 +129,15 @@ export class Select extends Component {
       >
         ${label ? html`
           <${Label} 
-            for=${inputId}
+            for=${id}
             color=${theme.colors.text.secondary}
             fontSize=${theme.typography.fontSize.medium}
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
         <${StyledSelect} 
-          id=${inputId} 
+          id=${id} 
+          name=${id}
           disabled=${disabled}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
           backgroundColor=${theme.colors.background.tertiary}

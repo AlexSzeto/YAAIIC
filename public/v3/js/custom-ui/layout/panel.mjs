@@ -29,6 +29,10 @@ StyledPanel.className = 'styled-panel';
  * @param {'primary'|'secondary'|'success'|'danger'} [props.color] - Optional color theme
  *   - When specified, applies the color theme's background and border colors
  *   - Works with all variants
+ * @param {'small'|'medium'|'large'} [props.padding='medium'] - Padding size
+ *   - 'small': Compact padding for tight layouts
+ *   - 'medium': Default balanced padding
+ *   - 'large': Generous padding for emphasis
  * @param {preact.ComponentChildren} [props.children] - Panel content
  * @returns {preact.VNode}
  * 
@@ -65,12 +69,12 @@ export class Panel extends Component {
   }
 
   render() {
-    const { variant = 'default', color, children, style: propStyle, ...rest } = this.props;
+    const { variant = 'default', color, padding = 'medium', children, style: propStyle, ...rest } = this.props;
     const { theme } = this.state;
 
     // Build dynamic styles based on variant and theme
     const baseStyle = {
-      padding: theme.spacing.medium.padding,
+      padding: theme.spacing[padding].padding,
       borderRadius: theme.spacing.medium.borderRadius,
     };
 

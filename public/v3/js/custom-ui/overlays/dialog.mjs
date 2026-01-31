@@ -228,12 +228,14 @@ class TextPromptDialog extends Component {
             minWidth="400px"
             shadowColor=${theme.shadow.colorStrong}
           >
+            <${BaseHeader} marginBottom="16px">
             <${BaseTitle}
               color=${theme.colors.text.primary}
               fontFamily=${theme.typography.fontFamily}
               fontWeight=${theme.typography.fontWeight.bold}
             >
               ${title}
+            <//>
             <//>
             <${BaseContent}
               as="div"

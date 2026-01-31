@@ -101,7 +101,6 @@ export function InpaintForm({
 
       <!-- Prompt -->
       <${Textarea}
-        key="description"
         label="Prompt"
         id="description"
         autocomplete=${workflow?.autocomplete ? undefined : 'off'}

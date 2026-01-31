@@ -59,7 +59,6 @@ const ToastWrapper = styled('div')`
 ToastWrapper.className = 'toast-wrapper';
 
 const ToastContent = styled('div')`
-  padding: 12px 20px;
   text-align: center;
 `;
 ToastContent.className = 'toast-content';

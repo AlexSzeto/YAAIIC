@@ -293,7 +293,7 @@ export class AudioPlayer extends Component {
           preload="metadata"
         />
         
-        <${Panel} variant="glass">
+        <${Panel} variant="glass" padding="small">
           <${Controls} gap=${theme.spacing.medium.gap}>
             <${Button}
               variant="medium-icon"
