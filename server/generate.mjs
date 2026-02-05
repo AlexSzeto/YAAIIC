@@ -805,15 +805,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           // Emit SSE progress update for completion
           emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
-          console.warn(`Failed to process pre-generation task for ${promptConfig.to}:`, error.message);
-          // Set a fallback value if the task fails and field is empty
-          if (!generationData[promptConfig.to]) {
-            generationData[promptConfig.to] = promptConfig.to === 'prompt' 
-              ? 'Dynamic motion and camera movement' 
-              : 'Generated Content';
-          }
-          // Increment step counter even if task failed
-          currentStep++;
+          console.error(`Pre-generation task failed for ${promptConfig.to}:`, error.message);
+          // For pre-generation tasks, fail gracefully and stop generation
+          throw new Error(`Pre-generation failed: ${error.message}`);
         }
       }
       
@@ -1032,6 +1026,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
     }
 
+    // Track post-generation errors
+    const postGenErrors = [];
+    
     // Process post-generation tasks from config if workflow type is not video
     if (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') {
       console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
@@ -1082,6 +1079,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
         } catch (error) {
           console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
+          
+          // Track the error for reporting
+          postGenErrors.push({ field: promptConfig.to, error: error.message });
+          
           // Set a fallback value if the prompt fails
           if (!generationData[promptConfig.to]) {
             generationData[promptConfig.to] = promptConfig.to === 'description' 
@@ -1123,11 +1124,20 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       console.log('Image data entry saved to database with UID:', generationData.uid);
     }
 
-    // Emit completion event using entire generationData object
-    emitTaskCompletion(taskId, {
+    // Prepare completion data
+    const completionData = {
       ...generationData,
       maxValue: totalSteps
-    });
+    };
+    
+    // Add error information if post-generation tasks failed
+    if (postGenErrors.length > 0) {
+      completionData.warnings = postGenErrors.map(e => `Failed to generate ${e.field}: ${e.error}`);
+      console.log(`Task ${taskId} completed with ${postGenErrors.length} post-generation error(s)`);
+    }
+
+    // Emit completion event using entire generationData object
+    emitTaskCompletion(taskId, completionData);
 
     // Clean up timer
     taskTimers.delete(taskId);

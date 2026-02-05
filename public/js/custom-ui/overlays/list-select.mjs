@@ -213,7 +213,7 @@ class ListSelectModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedId: props.selectedId || null,
+      selectedId: props.selectedId ?? null,
       theme: currentTheme.value
     };
   }

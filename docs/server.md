@@ -331,7 +331,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "taskId": "...",
     "status": "completed",
     "progress": { "percentage": 100, ... },
-    "imageData": { ... full updated image object ... },
+    "mediaData": { ... full updated image object ... },
     "message": "Regeneration complete"
   }
   ```

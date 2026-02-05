@@ -742,7 +742,7 @@ app.post('/regenerate', async (req, res) => {
             currentValue: 1,
             maxValue: 1
           },
-          imageData: imageDataForClient,
+          mediaData: imageDataForClient,
           message: 'Regeneration complete',
           timestamp: new Date().toISOString()
         };

@@ -5,6 +5,8 @@
 - in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
 
 # Features
+- Qwen 3 TTS, AceStep 1.5
+- Higher Quality Flux Klein (use different model)
 - Cancel generation
 - Reprompt (copy and reuse all params from previous generation)
 - Cropping
