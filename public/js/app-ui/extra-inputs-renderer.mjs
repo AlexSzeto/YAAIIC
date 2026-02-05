@@ -7,7 +7,9 @@ import { Checkbox } from '../custom-ui/io/checkbox.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
 
 const CheckboxWrapper = styled('div')`
-  margin-bottom: ${getThemeValue('spacing.small.margin')};
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 8px;
 `;
 CheckboxWrapper.className = 'checkbox-wrapper';
 

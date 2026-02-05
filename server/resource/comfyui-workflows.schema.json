@@ -50,13 +50,8 @@
           "type": "string",
           "description": "Target field name to store the result (e.g., 'description', 'summary', 'name', 'tags')"
         },
-        "replaceBlankFieldOnly": {
-          "type": "boolean",
-          "description": "If true, only runs the task if the target field is empty",
-          "default": false
-        },
         "condition": {
-          "type": "object",
+          "$ref": "#/definitions/condition",
           "description": "Optional condition that must be met for the task to execute"
         }
       },
@@ -294,24 +289,27 @@
       },
       "additionalProperties": false
     },
-    "conditionalReplacement": {
+    "condition": {
       "type": "object",
-      "description": "Conditional replacement that sets workflow values based on generation context",
-      "properties": {
-        "condition": {
+      "description": "A condition that can be a simple comparison, OR condition, or AND condition",
+      "oneOf": [
+        {
           "type": "object",
-          "description": "Condition to evaluate",
+          "description": "Simple condition with where/equals",
           "properties": {
             "where": {
               "type": "object",
               "description": "Source of value to check",
               "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Field name in data object (e.g., 'orientation', 'name')"
+                },
                 "generationData": {
                   "type": "string",
                   "description": "Field name in generation data (e.g., 'orientation')"
                 }
               },
-              "required": ["generationData"],
               "additionalProperties": false
             },
             "equals": {
@@ -319,7 +317,7 @@
               "description": "Expected value",
               "properties": {
                 "value": {
-                  "description": "The value to compare against"
+                  "description": "The value to compare against (undefined, null, and whitespace-only strings are treated as blank when comparing with empty string)"
                 }
               },
               "required": ["value"],
@@ -328,6 +326,48 @@
           },
           "required": ["where", "equals"],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "OR condition - true if any subcondition is true",
+          "properties": {
+            "or": {
+              "type": "array",
+              "description": "Array of conditions, at least one must be true",
+              "items": {
+                "$ref": "#/definitions/condition"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["or"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "AND condition - true only if all subconditions are true",
+          "properties": {
+            "and": {
+              "type": "array",
+              "description": "Array of conditions, all must be true",
+              "items": {
+                "$ref": "#/definitions/condition"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["and"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "conditionalReplacement": {
+      "type": "object",
+      "description": "Conditional replacement that sets workflow values based on generation context",
+      "properties": {
+        "condition": {
+          "$ref": "#/definitions/condition",
+          "description": "Condition to evaluate"
         },
         "value": {
           "description": "Value to set if condition is true"
