@@ -91,12 +91,28 @@ const spacingSubTheme = {
 };
 
 // ============================================================================
-// Typography Sub-Theme
+// Typography Sub-Themes
 // ============================================================================
+
+const arialTypographySubTheme = {
+  typography: {
+    fontFamily: 'Arial, sans-serif',
+    fontSize: {
+      small: '12px',
+      medium: '14px',
+      large: '16px'
+    },
+    fontWeight: {
+      normal: '400',
+      medium: '500',
+      bold: '600'
+    }
+  }
+};
 
 const typographySubTheme = {
   typography: {
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: '"Figtree", sans-serif',
     fontSize: {
       small: '12px',
       medium: '14px',

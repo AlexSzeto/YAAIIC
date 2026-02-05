@@ -23,3 +23,9 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 1. Update ListSelectModal constructor in `list-select.mjs` to properly handle empty string as selectedId value (use nullish coalescing instead of logical OR) ✓
 2. Test that unsorted folder (uid='') shows as selected when it is the current folder ✓
 
+[x] Add Figtree font and update default typography
+1. Add Figtree font links to `index.html` and `inpaint.html` ✓
+2. Create new `figtreeTypographySubTheme` with Figtree font family ✓
+3. Rename existing `typographySubTheme` to `arialTypographySubTheme` ✓
+4. Update the themes to use Figtree as the default typography ✓
+
