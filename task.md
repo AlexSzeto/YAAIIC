@@ -29,3 +29,19 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 3. Rename existing `typographySubTheme` to `arialTypographySubTheme` ✓
 4. Update the themes to use Figtree as the default typography ✓
 
+[] Create theme-aware Icon component and replace Box-icons with Material Symbols support
+1. Create Icon component at `/public/js/custom-ui/layout/icon.mjs` with theme-based conditional rendering, with the possibility of using either box-icons or material symbols depending on the theme.
+> Note: developer's guide to material symbols are available at https://developers.google.com/fonts/docs/material_symbols
+2. Add icon name mapping object to translate box-icon names to Material Symbol names
+3. Update theme configuration in `/public/js/custom-ui/theme.mjs` to add `iconSystem` property
+4. Add Material Symbols stylesheet to `/public/index.html` and `/public/inpaint.html`
+5. Replace box-icon usage in Button component (`/public/js/custom-ui/io/button.mjs`)
+6. Replace box-icon usage in Checkbox component (`/public/js/custom-ui/io/checkbox.mjs`)
+7. Replace box-icon usage in Modal component (`/public/js/custom-ui/overlays/modal.mjs`)
+8. Replace box-icon usage in ListSelect component (`/public/js/custom-ui/overlays/list-select.mjs`)
+9. Replace box-icon usage in ProgressBanner component (`/public/js/custom-ui/msg/progress-banner.mjs`)
+10. Replace box-icon usage in AudioSelect component (`/public/js/custom-ui/media/audio-select.mjs`)
+11. Replace box-icon usage in ImageSelect component (`/public/js/custom-ui/media/image-select.mjs`)
+12. Replace styled box-icon usage in Gallery component (`/public/js/app-ui/gallery.mjs`)
+13. Verify all box-icon usages have been replaced and test icon rendering
+
