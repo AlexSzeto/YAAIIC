@@ -1,0 +1,4 @@
+---
+mode: agent
+---
+Create a plan to implement the features in `task.md`, following the rules from `.github/copilot-instructions.md`. The list of tasks under the tasks section should be initially empty. if it is not, STOP, and notify the user. Otherwise, use the information from the Goals and Implementation Details section to produce a list of tasks. If the task calls for the creation of data formats, list the planned data format as code blocks within the subtask. For new  components or libraries, create a code block and list the name of its planned public and private methods, wih comments describing its functionalities. Do not include tests in the implementation. In the same format, write the implementation plan back into `task.md`. Leave all items as unchecked/incomplete. Do not update the code base.

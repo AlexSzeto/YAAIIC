@@ -24,3 +24,70 @@ During the generation:
 
 ## Tasks
 
+[] Implement Dynamic Step Count Calculation
+
+1. Create `IMPORTANT_NODE_TYPES` constant in server/generate.mjs to define workflow node types that take substantial time
+   ```javascript
+   // In server/generate.mjs
+   const IMPORTANT_NODE_TYPES = [
+     'KSampler',
+     'VAEDecode',
+     'VAEEncode',
+     // ... other time-consuming node types
+   ];
+   ```
+
+2. Create function `calculateTotalSteps(preGenTasks, workflowNodes, postGenTasks)` to calculate total steps dynamically
+   ```javascript
+   /**
+    * Calculate the total number of steps for progress tracking
+    * @param {Array} preGenTasks - Pre-generation tasks
+    * @param {Array} workflowNodes - Workflow nodes from ComfyUI
+    * @param {Array} postGenTasks - Post-generation tasks
+    * @returns {number} Total step count
+    */
+   function calculateTotalSteps(preGenTasks, workflowNodes, postGenTasks) {
+     // Count pre-gen tasks with prompt parameter
+     // Count workflow nodes that match IMPORTANT_NODE_TYPES
+     // Count post-gen tasks with prompt parameter
+     // Return sum
+   }
+   ```
+
+3. Update pre-generation task counting logic to only count tasks with `prompt` parameter set
+
+4. Update workflow node counting logic to only count nodes with `class_type` in `IMPORTANT_NODE_TYPES` (linear counting, no execution order)
+
+5. Update post-generation task counting logic to match pre-generation counting (only tasks with `prompt` parameter)
+
+[] Implement Single Counter Progress Tracking
+
+6. Initialize `currentStep` counter (0-indexed) at the start of generation process
+
+7. Store `totalSteps` value calculated from step calculation function
+
+8. Update pre-generation progress reporting:
+   - Advance `currentStep` counter when a prompt is processed OR skipped
+   - Calculate start percentage as `currentStep / totalSteps`
+   - Calculate end percentage as `(currentStep + 1) / totalSteps`
+
+9. Update ComfyUI node progress reporting:
+   - Advance `currentStep` counter only when node belongs to `IMPORTANT_NODE_TYPES`
+   - For non-important nodes, update node name in report but do not advance counter
+   - Calculate percentage as `(progressPercent / 100 + currentStep) / totalSteps` during node processing
+
+10. Add logic at end of workflow execution to advance counter to `preGenTaskCount + importantNodeCount` to account for any skipped important nodes
+
+11. Update post-generation progress reporting:
+    - Advance `currentStep` counter when a task is processed OR skipped
+    - Calculate start percentage as `currentStep / totalSteps`
+    - Calculate end percentage as `(currentStep + 1) / totalSteps`
+
+[] Update Progress Event Emission
+
+12. Modify all progress event emissions to use the new calculation methodology
+
+13. Ensure progress percentages are properly converted to 0-100 range for client display
+
+14. Verify that progress events maintain backward compatibility with existing SSE structure
+
