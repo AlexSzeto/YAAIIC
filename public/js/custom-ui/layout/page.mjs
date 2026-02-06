@@ -26,7 +26,7 @@ function applyGlobalStyles(theme) {
       font-family: ${theme.typography.fontFamily};
       font-size: ${theme.typography.fontSize.medium};
       line-height: 1.5;
-      background-color: ${theme.colors.background.primary};
+      background-color: ${theme.colors.background.page};
       color: ${theme.colors.text.primary};
       max-width: 1600px;
       margin: 0 auto;

@@ -74,7 +74,7 @@ Grid.className = 'grid';
 
 const ItemWrapper = styled('div')`
   aspect-ratio: 1;
-  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.focus};
+  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.primary};
   border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
   overflow: hidden;
   cursor: pointer;

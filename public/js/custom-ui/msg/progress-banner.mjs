@@ -137,13 +137,15 @@ const NODE_STEP_NAMES = {
   'EmptyLatentImage': 'Preparing canvas...',
   'EmptySD3LatentImage': 'Preparing canvas...',
   'FluxGuidance': 'Configuring guidance...',
-  'KSampler': 'Sampling image...',
-  'VAEDecode': 'Decoding image...',
+  'KSampler': 'Generating latent data...',
+  'VAEEncode': 'Encoding data...',
+  'VAEDecode': 'Decoding data...',
   'VAEEncodeForInpaint': 'Encoding for inpaint...',
   'LoadImage': 'Loading image...',
   'LoadImageMask': 'Loading mask...',
   'JWImageSaveToPath': 'Saving image...',
-  'SaveImage': 'Saving image...'
+  'SaveImage': 'Saving image...',
+  'JWAudioSaveToPath': 'Saving audio...'
 };
 
 /**

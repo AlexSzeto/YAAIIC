@@ -40,13 +40,13 @@ const IMPORTANT_NODE_TYPES = [
   'KSamplerAdvanced',
   'VAEDecode',
   'VAEEncode',
+  'CLIPTextEncode',
   'VAEEncodeForInpaint',
-  'SamplerCustom',
-  'SaveImage',
+  'SamplerCustomAdvanced',
   'SaveAnimatedWEBP',
   'VHS_VideoCombine',
   'stable-audio-open-generate',
-  'SaveAudio'
+  'TextEncodeAceStepAudio1.5',
 ];
 
 // Initialize generate module with ComfyUI API path
@@ -791,7 +791,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     // Load the ComfyUI workflow
     const __dirname = path.dirname(new URL(import.meta.url).pathname);
     // Fix Windows path issue by removing leading slash
-    const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+    const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;    
     const workflowPath = path.join(actualDirname, 'resource', workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 

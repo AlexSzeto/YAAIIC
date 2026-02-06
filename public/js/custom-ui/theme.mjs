@@ -213,6 +213,7 @@ const lightColors = {
   },
   // Background Colors
   background: {
+    page: '#eeeeee',
     primary: '#ffffff',
     secondary: '#f8f9fa',
     tertiary: '#e9ecef',
@@ -303,6 +304,7 @@ const darkColors = {
   // Background Colors
   background: {
     primary: '#121212',
+    page: '#121212',  
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
     card: '#1e1e1e',

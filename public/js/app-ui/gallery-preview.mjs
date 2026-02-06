@@ -11,7 +11,7 @@ import { currentTheme } from '../custom-ui/theme.mjs'
 // Styled components
 const GalleryItemContainer = styled('div')`
   aspect-ratio: 1;
-  border: 1px solid ${() => currentTheme.value.colors.border.focus};
+  border: 1px solid ${() => currentTheme.value.colors.border.primary};
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
