@@ -24,7 +24,7 @@ During the generation:
 
 ## Tasks
 
-[] Implement Dynamic Step Count Calculation
+[x] Implement Dynamic Step Count Calculation
 
 1. Create `IMPORTANT_NODE_TYPES` constant in server/generate.mjs to define workflow node types that take substantial time
    ```javascript
@@ -60,7 +60,7 @@ During the generation:
 
 5. Update post-generation task counting logic to match pre-generation counting (only tasks with `prompt` parameter)
 
-[] Implement Single Counter Progress Tracking
+[x] Implement Single Counter Progress Tracking
 
 6. Initialize `currentStep` counter (0-indexed) at the start of generation process
 
@@ -83,7 +83,7 @@ During the generation:
     - Calculate start percentage as `currentStep / totalSteps`
     - Calculate end percentage as `(currentStep + 1) / totalSteps`
 
-[] Update Progress Event Emission
+[x] Update Progress Event Emission
 
 12. Modify all progress event emissions to use the new calculation methodology
 
