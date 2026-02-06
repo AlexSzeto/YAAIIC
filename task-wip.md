@@ -3,13 +3,12 @@
 ## V3 Visual bugs (Main Page)
 
 # Features
+- Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
 - Qwen 3 TTS, AceStep 1.5
 - Higher Quality Flux Klein (use different model)
 - Cancel generation
-- Reprompt (copy and reuse all params from previous generation)
 - Cropping
 - Rename all generation variables ("savePath", etc.) to use snake_case. add math ops.
-- Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
