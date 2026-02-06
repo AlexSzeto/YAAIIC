@@ -102,6 +102,16 @@ function applyGlobalStyles(theme) {
       padding: 0;
     }
 
+    /* Material Symbols icon spin animation */
+    @keyframes icon-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .icon-spin {
+      animation: icon-spin 1s linear infinite;
+    }
+
     /* Custom select picker positioning */
     select {
       /* For progressive enhancement in supporting browsers */

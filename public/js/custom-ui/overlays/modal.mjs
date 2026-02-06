@@ -4,6 +4,7 @@ import { createPortal } from 'preact/compat';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
+import { Icon } from '../layout/icon.mjs';
 import { 
   BaseOverlay, 
   BaseContainer, 
@@ -131,7 +132,7 @@ export function Modal({
             transition=${theme.transitions.fast}
             aria-label="Close"
           >
-            <box-icon name='x' color='${theme.colors.text.secondary}'></box-icon>
+            <${Icon} name='x' color=${theme.colors.text.secondary} />
           <//>
         <//>
         

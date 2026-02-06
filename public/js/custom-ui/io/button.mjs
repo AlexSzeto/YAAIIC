@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // =========================================================================
 // Styled Components
@@ -86,7 +87,7 @@ TextSpan.className = 'text-span';
  * @param {'primary'|'secondary'|'success'|'danger'} [props.color='secondary'] - Color theme
  * @param {boolean} [props.loading=false] - Shows spinner, disables button
  * @param {boolean} [props.disabled=false] - Disabled state
- * @param {string} [props.icon] - Box-icon name (e.g. 'play', 'trash')
+ * @param {string} [props.icon] - Icon name for the Icon component (e.g. 'play', 'trash')
  * @param {Function} [props.onClick] - Click handler
  * @param {string} [props.title] - Tooltip text
  * @param {string} [props.type='button'] - Button type attribute
@@ -213,9 +214,9 @@ export class Button extends Component {
     // Use theme spinner color for loading state for better visibility across themes
     const spinnerColor = theme.colors.spinner.color;
     const iconElement = loading 
-      ? html`<box-icon name='loader-alt' animation='spin' size=${size.iconSize} color=${spinnerColor}></box-icon>`
+      ? html`<${Icon} name='loader-alt' animation='spin' size=${size.iconSize} color=${spinnerColor} />`
       : (hasIcon && icon) 
-        ? html`<box-icon name=${icon} size=${size.iconSize} color=${iconColor}></box-icon>`
+        ? html`<${Icon} name=${icon} size=${size.iconSize} color=${iconColor} />`
         : null;
 
     return html`

@@ -349,8 +349,8 @@ const darkColors = {
 // ============================================================================
 
 export const themes = {
-  light: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.light, colors: lightColors, name: 'light' },
-  dark: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.dark, colors: darkColors, name: 'dark' }
+  light: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.light, colors: lightColors, name: 'light', iconSystem: 'material-symbols' },
+  dark: { ...spacingSubTheme, ...typographySubTheme, ...monotypeSubTheme, ...shadowSubTheme.dark, colors: darkColors, name: 'dark', iconSystem: 'material-symbols' }
 };
 
 // ============================================================================

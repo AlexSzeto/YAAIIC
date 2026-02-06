@@ -29,7 +29,7 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 3. Rename existing `typographySubTheme` to `arialTypographySubTheme` ✓
 4. Update the themes to use Figtree as the default typography ✓
 
-[] Create theme-aware Icon component and replace Box-icons with Material Symbols support
+[x] Create theme-aware Icon component and replace Box-icons with Material Symbols support
 1. Create Icon component at `/public/js/custom-ui/layout/icon.mjs` with theme-based conditional rendering, with the possibility of using either box-icons or material symbols depending on the theme.
 > Note: developer's guide to material symbols are available at https://developers.google.com/fonts/docs/material_symbols
 2. Add icon name mapping object to translate box-icon names to Material Symbol names

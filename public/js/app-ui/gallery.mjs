@@ -10,6 +10,7 @@ import { showDialog } from '../custom-ui/overlays/dialog.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
+import { Icon } from '../custom-ui/layout/icon.mjs';
 import { HorizontalLayout } from '../custom-ui/themed-base.mjs';
 
 // Styled Components
@@ -232,14 +233,14 @@ const SearchInput = styled('input')`
 `;
 SearchInput.className = 'search-input';
 
-const SearchIcon = styled('box-icon')`
+const SearchIconWrapper = styled('div')`
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
 `;
-SearchIcon.className = 'search-icon';
+SearchIconWrapper.className = 'search-icon-wrapper';
 
 const ButtonGroup = styled('div')`
   display: flex;
@@ -703,10 +704,12 @@ export function Gallery({
               onInput=${handleSearchInput}
               ref=${searchInputRef}
             />
-            <${SearchIcon}
-              name=${searchQuery.includes(',') ? 'purchase-tag' : 'search'}
-              color="#999999"
-            />
+            <${SearchIconWrapper}>
+              <${Icon}
+                name=${searchQuery.includes(',') ? 'tags' : 'search'}
+                color="#999999"
+              />
+            </${SearchIconWrapper}>
           <//>
           <${ButtonGroup}>
             ${!selectionMode && html`
