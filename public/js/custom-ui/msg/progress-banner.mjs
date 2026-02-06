@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
-import { PageTitleManager } from '../util.mjs';
+import { PageTitleManager, getStepName } from '../util.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
 
@@ -126,36 +126,6 @@ const DismissButton = styled('button')`
   }
 `;
 DismissButton.className = 'dismiss-button';
-
-/**
- * Map ComfyUI node types to human-readable step names
- */
-const NODE_STEP_NAMES = {
-  'CheckpointLoaderSimple': 'Loading model...',
-  'LoraLoaderModelOnly': 'Loading LoRA...',
-  'CLIPTextEncode': 'Encoding prompt...',
-  'EmptyLatentImage': 'Preparing canvas...',
-  'EmptySD3LatentImage': 'Preparing canvas...',
-  'FluxGuidance': 'Configuring guidance...',
-  'KSampler': 'Generating latent data...',
-  'VAEEncode': 'Encoding data...',
-  'VAEDecode': 'Decoding data...',
-  'VAEEncodeForInpaint': 'Encoding for inpaint...',
-  'LoadImage': 'Loading image...',
-  'LoadImageMask': 'Loading mask...',
-  'JWImageSaveToPath': 'Saving image...',
-  'SaveImage': 'Saving image...',
-  'JWAudioSaveToPath': 'Saving audio...'
-};
-
-/**
- * Get human-readable step name from node class type
- * @param {string} nodeType - ComfyUI node class type
- * @returns {string} - Human-readable step name
- */
-function getStepName(nodeType) {
-  return NODE_STEP_NAMES[nodeType] || 'Processing...';
-}
 
 /**
  * ProgressBanner - Displays real-time progress updates for image generation tasks

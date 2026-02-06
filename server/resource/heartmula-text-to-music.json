@@ -1,0 +1,243 @@
+{
+  "7": {
+    "inputs": {
+      "lyrics": [
+        "15",
+        0
+      ],
+      "tags": [
+        "16",
+        0
+      ],
+      "version": "RL-oss-3B-20260123",
+      "codec_version": "oss-20260123",
+      "seed": 647848627326126,
+      "max_audio_length_seconds": 60,
+      "topk": 50,
+      "temperature": 1,
+      "cfg_scale": 1.5,
+      "keep_model_loaded": true,
+      "offload_mode": "auto",
+      "quantize_4bit": false
+    },
+    "class_type": "HeartMuLa_Generate",
+    "_meta": {
+      "title": "HeartMuLa Music Generator"
+    }
+  },
+  "15": {
+    "inputs": {
+      "value": "[Intro] [Instrumental] The thought of you reflecting Though dreams they don't come true In a mirror world reflected And my happiness's been through  [Bridge] Trying to find a way, too far, they're all gone now  [Chorus] Memories across the mirrored surface The water do reflect The water do reflect Memories across the mirrored surface The other side is where I'd go"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Lyrics"
+    }
+  },
+  "16": {
+    "inputs": {
+      "value": "slow, comforting, lofi, hiphop"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "18": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "22:17",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "23": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "22:9": {
+    "inputs": {
+      "text": [
+        "22:12",
+        0
+      ],
+      "clip": [
+        "22:19",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "22:10": {
+    "inputs": {
+      "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
+      "clip": [
+        "22:19",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "22:12": {
+    "inputs": {
+      "system": "Write a single paragraph of visual description for an album cover based on a landscape painting or abstract drawing that would be fitting for the music genre and instrumentation described. Only describe nature or abstract shapes free of people or animals.",
+      "prompt": [
+        "16",
+        0
+      ],
+      "think": false,
+      "keep_context": false,
+      "format": "text",
+      "connectivity": [
+        "22:14",
+        0
+      ],
+      "options": [
+        "22:13",
+        0
+      ]
+    },
+    "class_type": "OllamaGenerateV2",
+    "_meta": {
+      "title": "Ollama Generate"
+    }
+  },
+  "22:13": {
+    "inputs": {
+      "enable_mirostat": false,
+      "mirostat": 0,
+      "enable_mirostat_eta": false,
+      "mirostat_eta": 0.1,
+      "enable_mirostat_tau": false,
+      "mirostat_tau": 5,
+      "enable_num_ctx": false,
+      "num_ctx": 2048,
+      "enable_repeat_last_n": false,
+      "repeat_last_n": 64,
+      "enable_repeat_penalty": false,
+      "repeat_penalty": 1.1,
+      "enable_temperature": false,
+      "temperature": 0.8,
+      "enable_seed": false,
+      "seed": 1946359148,
+      "enable_stop": false,
+      "stop": "",
+      "enable_tfs_z": false,
+      "tfs_z": 1,
+      "enable_num_predict": false,
+      "num_predict": -1,
+      "enable_top_k": false,
+      "top_k": 40,
+      "enable_top_p": false,
+      "top_p": 0.9,
+      "enable_min_p": false,
+      "min_p": 0,
+      "debug": false
+    },
+    "class_type": "OllamaOptionsV2",
+    "_meta": {
+      "title": "Ollama Options"
+    }
+  },
+  "22:14": {
+    "inputs": {
+      "url": "http://127.0.0.1:11434",
+      "model": "tinyllama:latest",
+      "keep_alive": 5,
+      "keep_alive_unit": "minutes",
+      "🔄 Reconnect": null
+    },
+    "class_type": "OllamaConnectivityV2",
+    "_meta": {
+      "title": "Ollama Connectivity"
+    }
+  },
+  "22:17": {
+    "inputs": {
+      "samples": [
+        "22:20",
+        0
+      ],
+      "vae": [
+        "22:19",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "22:19": {
+    "inputs": {
+      "ckpt_name": "landscapeAnimePro_v310W768.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "22:20": {
+    "inputs": {
+      "seed": 327498882196473,
+      "steps": 15,
+      "cfg": 4,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "22:19",
+        0
+      ],
+      "positive": [
+        "22:9",
+        0
+      ],
+      "negative": [
+        "22:10",
+        0
+      ],
+      "latent_image": [
+        "22:21",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "22:21": {
+    "inputs": {
+      "width": 256,
+      "height": 256,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  }
+}

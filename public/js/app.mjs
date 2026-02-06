@@ -357,6 +357,13 @@ function App() {
       }
     }
 
+    // Generate new seed if not locked
+    let seedToUse = formState.seed;
+    if (!formState.seedLocked) {
+      seedToUse = generateRandomSeed();
+      handleFieldChange('seed', seedToUse);
+    }
+
     try {
       setIsGenerating(true);
       
@@ -396,7 +403,7 @@ function App() {
         const formData = new FormData();
         formData.append('prompt', formState.description);
         formData.append('workflow', workflow.name);
-        formData.append('seed', formState.seed);
+        formData.append('seed', seedToUse);
         
         if (formState.name.trim()) {
           formData.append('name', formState.name.trim());
@@ -461,7 +468,7 @@ function App() {
           name: formState.name,
           description: formState.description,
           prompt: formState.description,
-          seed: formState.seed,
+          seed: seedToUse,
           orientation: orientation
         };
         
@@ -510,10 +517,6 @@ function App() {
         setHistory(prev => [img, ...prev]);
         
         toast.success(`Generated: ${img.name || 'Image'}`);
-        
-        if (!formState.seedLocked) {
-           handleFieldChange('seed', generateRandomSeed());
-        }
       } catch (err) {
         console.error('Failed to load result image:', err);
         toast.error('Failed to load generated image');

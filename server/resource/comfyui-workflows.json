@@ -1592,7 +1592,8 @@
           {
             "id": "length",
             "type": "number",
-            "label": "Length (seconds)"
+            "label": "Length (seconds)",
+            "default": 120
           },
           {
             "id": "audioFormat",
@@ -1655,6 +1656,12 @@
         {
           "from": "saveAudioPath",
           "to": ["88", "inputs", "path"]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "lyrics",
+          "to": "summary"
         }
       ]
     },
@@ -1813,6 +1820,90 @@
         {
           "from": "saveAudioPath",
           "to": ["108", "inputs", "path"]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "lyrics",
+          "to": "summary"
+        }
+      ]
+    },
+    {
+      "name": "Text to Music (HeartMuLa)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudio": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "lyrics",
+            "type": "textarea",
+            "label": "Lyrics"
+          },
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 120
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "base": "heartmula-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["16", "inputs", "value"]
+        },
+        {
+          "from": "lyrics",
+          "to": ["15", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["22:20", "inputs", "seed"]
+        },
+        {
+          "from": "seed",
+          "to": ["7", "inputs", "seed"]
+        },
+        {
+          "from": "length",
+          "to": ["7", "inputs", "max_audio_length_seconds"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["18", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["23", "inputs", "path"]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "lyrics",
+          "to": "summary"
         }
       ]
     },
