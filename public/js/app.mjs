@@ -123,10 +123,9 @@ function App() {
         // Load workflows for lookup
         const workflowData = await fetchJson('/workflows');
         if (Array.isArray(workflowData)) {
-          const imageVideoWorkflows = workflowData.filter(
-            w => w.type === 'image' || w.type === 'video'
-          );
-          setWorkflows(imageVideoWorkflows);
+          // Filter to exclude only inpaint workflows (include all other types dynamically)
+          const nonInpaintWorkflows = workflowData.filter(w => w.type !== 'inpaint');
+          setWorkflows(nonInpaintWorkflows);
         }
 
         // Load current folder
@@ -560,7 +559,7 @@ function App() {
     toast.show('Description copied');
   };
 
-  const handleReprompt = (image) => {
+  const handleReprompt = async (image) => {
     if (!image) return;
 
     try {
@@ -600,6 +599,64 @@ function App() {
         ...prev,
         ...newFormState
       }));
+
+      // Restore input images if they exist in the generation data
+      const newInputImages = [];
+      if (wf.inputImages && wf.inputImages > 0) {
+        for (let i = 0; i < wf.inputImages; i++) {
+          const uidKey = `image_${i}_uid`;
+          if (image[uidKey]) {
+            try {
+              // Fetch the media data for this input image
+              const inputImageData = await fetchJson(`/media-data/${image[uidKey]}`);
+              if (inputImageData && inputImageData.imageUrl) {
+                // Fetch as blob
+                const response = await fetch(inputImageData.imageUrl);
+                const blob = await response.blob();
+                newInputImages[i] = {
+                  blob,
+                  url: inputImageData.imageUrl,
+                  mediaData: inputImageData
+                };
+              }
+            } catch (err) {
+              console.error(`Failed to load input image ${i}:`, err);
+            }
+          }
+        }
+      }
+      if (newInputImages.length > 0) {
+        setInputImages(newInputImages);
+      }
+
+      // Restore input audio if they exist in the generation data
+      const newInputAudios = [];
+      if (wf.inputAudios && wf.inputAudios > 0) {
+        for (let i = 0; i < wf.inputAudios; i++) {
+          const uidKey = `audio_${i}_uid`;
+          if (image[uidKey]) {
+            try {
+              // Fetch the media data for this input audio
+              const inputAudioData = await fetchJson(`/media-data/${image[uidKey]}`);
+              if (inputAudioData && inputAudioData.audioUrl) {
+                // Fetch as blob
+                const response = await fetch(inputAudioData.audioUrl);
+                const blob = await response.blob();
+                newInputAudios[i] = {
+                  blob,
+                  url: inputAudioData.audioUrl,
+                  mediaData: inputAudioData
+                };
+              }
+            } catch (err) {
+              console.error(`Failed to load input audio ${i}:`, err);
+            }
+          }
+        }
+      }
+      if (newInputAudios.length > 0) {
+        setInputAudios(newInputAudios);
+      }
 
       toast.success('All generation settings loaded from result');
     } catch (error) {

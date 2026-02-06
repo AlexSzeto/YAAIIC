@@ -7,7 +7,7 @@
 - Higher Quality Flux Klein (use different model)
 - Cancel generation
 - Cropping
-- Add math ops for pre/post generation tasks.
+- Add math ops for pre/post generation tasks. Add 5 frames to Wan5b video length, and convert the Wan video length change to a task that can be triggered pre-gen. Convert the frame blending as a post gen task that can be triggered, and add it a task where progress is tracked. Use the current frame being blended to calculate the step completion percentage.
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
