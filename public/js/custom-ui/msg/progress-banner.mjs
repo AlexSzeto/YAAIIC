@@ -5,6 +5,7 @@ import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { PageTitleManager } from '../util.mjs';
 import { Panel } from '../layout/panel.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // Animations
 const slideUp = keyframes`
@@ -136,13 +137,15 @@ const NODE_STEP_NAMES = {
   'EmptyLatentImage': 'Preparing canvas...',
   'EmptySD3LatentImage': 'Preparing canvas...',
   'FluxGuidance': 'Configuring guidance...',
-  'KSampler': 'Sampling image...',
-  'VAEDecode': 'Decoding image...',
+  'KSampler': 'Generating latent data...',
+  'VAEEncode': 'Encoding data...',
+  'VAEDecode': 'Decoding data...',
   'VAEEncodeForInpaint': 'Encoding for inpaint...',
   'LoadImage': 'Loading image...',
   'LoadImageMask': 'Loading mask...',
   'JWImageSaveToPath': 'Saving image...',
-  'SaveImage': 'Saving image...'
+  'SaveImage': 'Saving image...',
+  'JWAudioSaveToPath': 'Saving audio...'
 };
 
 /**
@@ -317,7 +320,7 @@ export function ProgressBanner({
             onClick=${() => onDismiss && onDismiss()}
             aria-label="Dismiss"
           >
-            <box-icon name='x' color='currentColor'></box-icon>
+            <${Icon} name='x' color='currentColor' />
           <//>
         <//>
       <//>

@@ -1,17 +1,14 @@
 # Bugs / Fixes
 
 ## V3 Visual bugs (Main Page)
-- on select folder UI, the unsorted folder don't show the selected highlight when it is the currently selected folder
-- in gallery, use button group to organize delete and move buttons so they have spacing between them
-- in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
-- in gallery, nav to first/last doesn't work
 
 # Features
+- Add a view button to: gallery preview, gen results (bottom left) to open the image modal. In the gallery, clicking on the image selects the image instead of opens the preview.
+- Update select mode for the gallery to select on click, instead of opening the image preview and requiring the select action click.
+- Higher Quality Flux Klein (use different model)
 - Cancel generation
-- Reprompt (copy and reuse all params from previous generation)
 - Cropping
-- Rename all generation variables ("savePath", etc.) to use snake_case. add math ops.
-- Redo how progress is tracked: for pre-post tasks, only count tasks with prompts. for comfyui tasks, only count specific node types that takes time (encode/decode, generate)
+- Add math ops for pre/post generation tasks. Add 5 frames to Wan5b video length, and convert the Wan video length change to a task that can be triggered pre-gen. Convert the frame blending as a post gen task that can be triggered, and add it a task where progress is tracked. Use the current frame being blended to calculate the step completion percentage.
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Wan22 video loop
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress

@@ -64,16 +64,43 @@ export function readOutputPathFromTextFile(filename, storageFolder) {
 }
 
 /**
+ * Check if a value is considered blank (empty string, null, undefined, or whitespace-only)
+ * @param {*} value - The value to check
+ * @returns {boolean} True if the value is blank
+ */
+function isBlankValue(value) {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string' && value.trim() === '') return true;
+  return false;
+}
+
+/**
  * Check if an execution condition is met
  * @param {Object} dataSources - Object containing data sources like { data: {...}, value: ... }
- * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }
+ * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }, { or: [...] }, or { and: [...] }
  * @returns {boolean} True if condition is met, false otherwise
  * 
  * @example
- * // Condition format:
+ * // Simple condition format:
  * // {
  * //   where: { data: "orientation" },  // Check the 'orientation' property from data
  * //   equals: { value: "landscape" }   // Compare against literal value "landscape"
+ * // }
+ * 
+ * // OR condition format:
+ * // {
+ * //   or: [
+ * //     { where: { data: "usePostPrompts" }, equals: { value: true } },
+ * //     { where: { data: "name" }, equals: { value: "" } }
+ * //   ]
+ * // }
+ * 
+ * // AND condition format:
+ * // {
+ * //   and: [
+ * //     { where: { data: "orientation" }, equals: { value: "landscape" } },
+ * //     { where: { data: "aspectRatio" }, equals: { value: "wide" } }
+ * //   ]
  * // }
  * 
  * // Usage:
@@ -85,6 +112,20 @@ export function readOutputPathFromTextFile(filename, storageFolder) {
  */
 export function checkExecutionCondition(dataSources, conditionData) {
   if (!conditionData) return true; // No condition means always execute
+  
+  // Handle OR conditions - returns true if any subcondition is true
+  if (conditionData.or && Array.isArray(conditionData.or)) {
+    return conditionData.or.some(subCondition => 
+      checkExecutionCondition(dataSources, subCondition)
+    );
+  }
+  
+  // Handle AND conditions - returns true only if all subconditions are true
+  if (conditionData.and && Array.isArray(conditionData.and)) {
+    return conditionData.and.every(subCondition => 
+      checkExecutionCondition(dataSources, subCondition)
+    );
+  }
   
   const { where, equals } = conditionData;
   if (!where || !equals) return true;
@@ -118,6 +159,20 @@ export function checkExecutionCondition(dataSources, conditionData) {
   
   // Resolve the expected value from 'equals'
   const expectedValue = resolveValue(equals);
+  
+  // Special handling when comparing with empty string
+  // Treat undefined, null, and whitespace-only strings as equivalent to ""
+  if (expectedValue === '') {
+    return isBlankValue(actualValue);
+  }
+  
+  // Special handling for boolean comparisons
+  // Treat undefined as false when comparing with boolean values
+  if (typeof expectedValue === 'boolean') {
+    // If actualValue is undefined or null, treat it as false for boolean comparison
+    const normalizedActual = (actualValue === undefined || actualValue === null) ? false : actualValue;
+    return normalizedActual === expectedValue;
+  }
   
   // Compare values
   return actualValue === expectedValue;

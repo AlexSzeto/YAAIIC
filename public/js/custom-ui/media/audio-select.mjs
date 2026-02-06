@@ -4,6 +4,7 @@ import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
+import { Icon } from '../layout/icon.mjs';
 import { globalAudioPlayer } from '../global-audio-player.mjs';
 
 // =========================================================================
@@ -174,6 +175,11 @@ export class AudioSelect extends Component {
     if (this.unsubscribePlayer) {
       this.unsubscribePlayer();
     }
+    
+    // Stop audio if this component's audio is currently playing
+    if (this.state.audioUrl && globalAudioPlayer.isPlaying(this.state.audioUrl)) {
+      globalAudioPlayer.stop();
+    }
   }
 
   componentDidUpdate(prevProps) {
@@ -279,7 +285,7 @@ export class AudioSelect extends Component {
               padding=${theme.spacing.small.padding}
               background=${`linear-gradient(${theme.colors.overlay.backgroundStrong}, transparent)`}
             >
-              <box-icon name='music' color='white' size='20px'></box-icon>
+              <${Icon} name='music' color='white' size='20px' />
               <${AudioName} 
                 color=white
                 fontSize=${theme.typography.fontSize.small}
@@ -323,7 +329,7 @@ export class AudioSelect extends Component {
           ` : html`
             <!-- Empty State -->
             <${EmptyState} gap=${theme.spacing.small.gap}>
-              <box-icon name='music' color=${theme.colors.text.muted} size='48px'></box-icon>
+              <${Icon} name='music' color=${theme.colors.text.muted} size='48px' />
               <${EmptyText} 
                 color=${theme.colors.text.muted}
                 fontSize=${theme.typography.fontSize.small}

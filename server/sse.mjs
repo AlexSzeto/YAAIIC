@@ -273,26 +273,38 @@ export function emitProgressUpdate(promptIdOrTaskId, progress, currentStep, node
     }
   }
   
-  // Update global step values if available
+  // Update global step values if available using new method
   let updatedProgress = { ...progress };
-  if (nodeId && task.stepMap && task.stepMap.has(nodeId)) {
-    const stepInfo = task.stepMap.get(nodeId);
-    // Don't prepend step display text anymore - just use the title as-is
+  if (nodeId && task.importantNodes && task.totalSteps && task.currentStep !== undefined) {
+    const isImportantNode = task.importantNodes.has(nodeId);
     
-    // Use global step counter if totalSteps is available
-    if (task.totalSteps) {
-      updatedProgress.value = stepInfo.stepNumber - 1; // -1 because we show (stepNumber/total) but value is 0-indexed
-      updatedProgress.max = task.totalSteps;
+    if (isImportantNode) {
+      // This is an important node - advance the counter if we haven't already for this node
+      if (!task.processedNodes) {
+        task.processedNodes = new Set();
+      }
       
-      // Calculate granular percentage within the current step
-      // Formula: (currentStep/totalSteps) + (1/totalSteps) * nodeCompletionPercentage
-      const basePercentage = (stepInfo.stepNumber - 1) / task.totalSteps; // Percentage at start of current step
-      const stepWeight = 1 / task.totalSteps; // How much this step contributes to total
-      const nodeCompletion = progress.percentage / 100; // Node completion as decimal (0-1)
+      if (!task.processedNodes.has(nodeId)) {
+        task.processedNodes.add(nodeId);
+        task.currentStep++;
+        // Note: This modifies the task object, which is a reference
+      }
+      
+      // Calculate percentage progress: (progressPercent / 100 + currentStep - 1) / totalSteps
+      // currentStep - 1 because we just incremented it
+      const basePercentage = (task.currentStep - 1) / task.totalSteps;
+      const stepWeight = 1 / task.totalSteps;
+      const nodeCompletion = progress.percentage / 100;
       
       updatedProgress.percentage = Math.round((basePercentage + stepWeight * nodeCompletion) * 100);
-      
-      // Don't add percentage display here - let the client handle formatting
+      updatedProgress.value = task.currentStep - 1; // 0-indexed
+      updatedProgress.max = task.totalSteps;
+    } else {
+      // Not an important node - change the name but don't advance progress
+      // Keep the current percentage
+      updatedProgress.percentage = task.progress?.percentage || 0;
+      updatedProgress.value = task.currentStep;
+      updatedProgress.max = task.totalSteps;
     }
   }
   

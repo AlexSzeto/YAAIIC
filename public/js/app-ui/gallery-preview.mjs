@@ -11,7 +11,7 @@ import { currentTheme } from '../custom-ui/theme.mjs'
 // Styled components
 const GalleryItemContainer = styled('div')`
   aspect-ratio: 1;
-  border: 1px solid ${() => currentTheme.value.colors.border.focus};
+  border: 1px solid ${() => currentTheme.value.colors.border.primary};
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
@@ -40,11 +40,11 @@ const GalleryItemImage = styled('img')`
   background-color: ${() => currentTheme.value.colors.border.primary};
 
   ${props => props.imageError ? `
-    background-color: #333333;
+    background-color: ${() => currentTheme.value.colors.background.card};
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999999;
+    color: ${() => currentTheme.value.colors.text.muted};
     font-size: 10px;
     cursor: default;
   ` : props.disabled ? `
@@ -121,7 +121,7 @@ const GalleryItemCheckboxContainer = styled('div')`
   top: 4px;
   right: 4px;
   z-index: 10;
-  padding: 2px;
+  margin: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,11 +166,33 @@ export class GalleryPreview extends Component {
     if (this.unsubscribeAudioPlayer) {
       this.unsubscribeAudioPlayer();
     }
+    
+    // Stop audio if this preview's audio is currently playing
+    const { item } = this.props;
+    if (item && item.audioUrl && globalAudioPlayer.isPlaying(item.audioUrl)) {
+      globalAudioPlayer.stop();
+    }
   }
 
   handleKeyDown = (e) => {
-    // Check if spacebar is pressed, component is hovering, and selection is enabled
-    if (e.code === 'Space' && this.state.isHovering && this.props.onSelect && !this.props.disableCheckbox) {
+    // Check if user is typing in an input field
+    const target = e.target;
+    const isInputField = target.tagName === 'INPUT' || 
+                         target.tagName === 'TEXTAREA' || 
+                         target.isContentEditable;
+    
+    // Only handle keyboard events if:
+    // 1. Not typing in an input field
+    // 2. This component is actually connected to the DOM (gallery is visible)
+    // 3. Component is being hovered over
+    // 4. Selection is enabled
+    if (e.code === 'Space' && 
+        !isInputField && 
+        this.containerRef && 
+        this.containerRef.isConnected && 
+        this.state.isHovering && 
+        this.props.onSelect && 
+        !this.props.disableCheckbox) {
       e.preventDefault(); // Prevent page scroll
       this.toggleSelection();
     }

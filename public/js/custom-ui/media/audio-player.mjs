@@ -244,6 +244,10 @@ export class AudioPlayer extends Component {
       audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
       audio.removeEventListener('ended', this.handleEnded);
       audio.removeEventListener('error', this.handleError);
+      
+      // Pause and cleanup audio element
+      audio.pause();
+      audio.src = '';
     }
   }
 

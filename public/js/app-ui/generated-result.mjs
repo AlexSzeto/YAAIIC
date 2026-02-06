@@ -160,6 +160,7 @@ export function GeneratedResult({
   onSelectAsInput,
   onEdit,
   onRegenerate,
+  onReprompt,
   isSelectDisabled = false,
   isInpaintDisabled = false
 }) {
@@ -347,6 +348,15 @@ export function GeneratedResult({
 
         <${HorizontalLayout}>
           <${Button} 
+            variant="primary"
+            icon="broken-arrow-up"
+            onClick=${() => onReprompt && onReprompt(image)}
+            disabled=${!onReprompt}
+            title="Load all generation settings from this result"
+          >
+            Reprompt
+          </${Button}>
+          <${Button} 
             variant="success"
             icon="check-circle"
             onClick=${() => onSelectAsInput && onSelectAsInput(image)}
@@ -487,7 +497,7 @@ class TabbedInfoField extends Component {
               />
               <${Button}
                 variant="small-icon"
-                icon="up-arrow-circle"
+                icon="broken-arrow-up"
                 onClick=${activeTab.onUse}
                 title=${activeTab.useTitle || `Use ${activeTab.name}`}
                 disabled=${!activeTab.onUse}
@@ -571,7 +581,7 @@ function InfoField({
             />
             <${Button}
               variant="small-icon"
-              icon="up-arrow-circle"
+              icon="broken-arrow-up"
               onClick=${onUse}
               title=${useTitle || `Use ${label}`}
               disabled=${!onUse}

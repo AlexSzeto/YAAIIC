@@ -123,10 +123,9 @@ function App() {
         // Load workflows for lookup
         const workflowData = await fetchJson('/workflows');
         if (Array.isArray(workflowData)) {
-          const imageVideoWorkflows = workflowData.filter(
-            w => w.type === 'image' || w.type === 'video'
-          );
-          setWorkflows(imageVideoWorkflows);
+          // Filter to exclude only inpaint workflows (include all other types dynamically)
+          const nonInpaintWorkflows = workflowData.filter(w => w.type !== 'inpaint');
+          setWorkflows(nonInpaintWorkflows);
         }
 
         // Load current folder
@@ -234,47 +233,91 @@ function App() {
   
   // Handle "Select as Input" from generated result or gallery
   const handleSelectAsInput = async (mediaData) => {
-    // Find first empty slot
-    const requiredSlots = workflow?.inputImages || 0;
-    let targetIndex = -1;
+    // Detect media type
+    const mediaType = mediaData.type || 'image';
     
-    for (let i = 0; i < requiredSlots; i++) {
-      if (!inputImages[i]) {
-        targetIndex = i;
-        break;
+    if (mediaType === 'audio') {
+      // Handle audio selection
+      const requiredSlots = workflow?.inputAudios || 0;
+      let targetIndex = -1;
+      
+      for (let i = 0; i < requiredSlots; i++) {
+        if (!inputAudios[i]) {
+          targetIndex = i;
+          break;
+        }
       }
-    }
-    
-    if (targetIndex === -1) {
-      toast.error('All input image slots are filled');
-      return;
-    }
-    
-    try {
-      // Fetch the image as a blob if we have a URL
-      const imageUrl = mediaData.imageUrl || mediaData.url;
-      if (!imageUrl) {
-        toast.error('No image URL available');
+      
+      if (targetIndex === -1) {
+        toast.error('All input audio slots are filled');
         return;
       }
       
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
+      try {
+        // Get audio URL
+        const audioUrl = mediaData.audioUrl || mediaData.url;
+        if (!audioUrl) {
+          toast.error('No audio URL available');
+          return;
+        }
+        
+        setInputAudios(prev => {
+          const newAudios = [...prev];
+          newAudios[targetIndex] = { 
+            url: audioUrl, 
+            mediaData: mediaData
+          };
+          return newAudios;
+        });
+        
+        toast.success('Audio selected as input');
+      } catch (err) {
+        console.error('Failed to select audio as input:', err);
+        toast.error('Failed to select audio as input');
+      }
+    } else {
+      // Handle image selection
+      const requiredSlots = workflow?.inputImages || 0;
+      let targetIndex = -1;
       
-      setInputImages(prev => {
-        const newImages = [...prev];
-        newImages[targetIndex] = { 
-          blob, 
-          url: imageUrl, 
-          mediaData: mediaData
-        };
-        return newImages;
-      });
+      for (let i = 0; i < requiredSlots; i++) {
+        if (!inputImages[i]) {
+          targetIndex = i;
+          break;
+        }
+      }
       
-      toast.success('Image selected as input');
-    } catch (err) {
-      console.error('Failed to select image as input:', err);
-      toast.error('Failed to select image as input');
+      if (targetIndex === -1) {
+        toast.error('All input image slots are filled');
+        return;
+      }
+      
+      try {
+        // Fetch the image as a blob if we have a URL
+        const imageUrl = mediaData.imageUrl || mediaData.url;
+        if (!imageUrl) {
+          toast.error('No image URL available');
+          return;
+        }
+        
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        setInputImages(prev => {
+          const newImages = [...prev];
+          newImages[targetIndex] = { 
+            blob, 
+            url: imageUrl, 
+            mediaData: mediaData
+          };
+          return newImages;
+        });
+        
+        toast.success('Image selected as input');
+      } catch (err) {
+        console.error('Failed to select image as input:', err);
+        toast.error('Failed to select image as input');
+      }
     }
   };
   
@@ -514,6 +557,112 @@ function App() {
   const handleUseDescription = (desc) => {
     setFormState(prev => ({ ...prev, description: desc }));
     toast.show('Description copied');
+  };
+
+  const handleReprompt = async (image) => {
+    if (!image) return;
+
+    try {
+      // Find the workflow object by name
+      const wf = workflows.find(w => w.name === image.workflow);
+      if (!wf) {
+        toast.error(`Workflow '${image.workflow}' not found`);
+        return;
+      }
+
+      // Set the workflow
+      setWorkflow(wf);
+
+      // Prepare the new form state with base fields
+      const newFormState = {
+        seed: String(image.seed),
+        seedLocked: true,
+        name: image.name || '',
+        description: image.prompt || image.description || ''
+      };
+
+      // Add all extra input values from the image data
+      if (wf.extraInputs && Array.isArray(wf.extraInputs)) {
+        wf.extraInputs.forEach(input => {
+          // Check if the image data has a value for this extra input
+          if (image[input.id] !== undefined) {
+            newFormState[input.id] = image[input.id];
+          } else if (input.default !== undefined) {
+            // Use the default value if not present in image data
+            newFormState[input.id] = input.default;
+          }
+        });
+      }
+
+      // Update the form state with all values at once
+      setFormState(prev => ({
+        ...prev,
+        ...newFormState
+      }));
+
+      // Restore input images if they exist in the generation data
+      const newInputImages = [];
+      if (wf.inputImages && wf.inputImages > 0) {
+        for (let i = 0; i < wf.inputImages; i++) {
+          const uidKey = `image_${i}_uid`;
+          if (image[uidKey]) {
+            try {
+              // Fetch the media data for this input image
+              const inputImageData = await fetchJson(`/media-data/${image[uidKey]}`);
+              if (inputImageData && inputImageData.imageUrl) {
+                // Fetch as blob
+                const response = await fetch(inputImageData.imageUrl);
+                const blob = await response.blob();
+                newInputImages[i] = {
+                  blob,
+                  url: inputImageData.imageUrl,
+                  mediaData: inputImageData
+                };
+              }
+            } catch (err) {
+              console.error(`Failed to load input image ${i}:`, err);
+            }
+          }
+        }
+      }
+      if (newInputImages.length > 0) {
+        setInputImages(newInputImages);
+      }
+
+      // Restore input audio if they exist in the generation data
+      const newInputAudios = [];
+      if (wf.inputAudios && wf.inputAudios > 0) {
+        for (let i = 0; i < wf.inputAudios; i++) {
+          const uidKey = `audio_${i}_uid`;
+          if (image[uidKey]) {
+            try {
+              // Fetch the media data for this input audio
+              const inputAudioData = await fetchJson(`/media-data/${image[uidKey]}`);
+              if (inputAudioData && inputAudioData.audioUrl) {
+                // Fetch as blob
+                const response = await fetch(inputAudioData.audioUrl);
+                const blob = await response.blob();
+                newInputAudios[i] = {
+                  blob,
+                  url: inputAudioData.audioUrl,
+                  mediaData: inputAudioData
+                };
+              }
+            } catch (err) {
+              console.error(`Failed to load input audio ${i}:`, err);
+            }
+          }
+        }
+      }
+      if (newInputAudios.length > 0) {
+        setInputAudios(newInputAudios);
+      }
+
+      toast.success('All generation settings loaded from result');
+    } catch (error) {
+      console.error('Failed to load generation settings:', error);
+      toast.error('Failed to load generation settings');
+    }
   };
   
   const handleDeleteImage = async (image) => {
@@ -876,6 +1025,7 @@ function App() {
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
         onRegenerate=${handleRegenerate}
+        onReprompt=${handleReprompt}
         onSelectAsInput=${handleSelectAsInput}
         isSelectDisabled=${(() => {
           const mediaType = generatedImage?.type || 'image';

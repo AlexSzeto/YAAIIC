@@ -303,14 +303,13 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = n
  * @param {string} promptData.template - Template string with placeholders (alternative to prompt)
  * @param {string} promptData.prompt - Direct prompt text
  * @param {string} promptData.to - Target field to store the result
- * @param {boolean} promptData.replaceBlankFieldOnly - Only process if target field is blank
  * @param {string} promptData.imagePath - Field name containing the image path (for image prompts)
  * @param {Object} dataObject - Object containing data fields
  * @returns {Promise<Object>} Modified data object
  */
 export async function modifyDataWithPrompt(promptData, dataObject) {
   try {
-    const { model, template, prompt, from, to, replaceBlankFieldOnly, imagePath } = promptData;
+    const { model, template, prompt, from, to, imagePath } = promptData;
     
     // Validate that 'to' field is provided
     if (!to) {
@@ -320,12 +319,6 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     // Validate that at least one source is provided
     if (!from && !template && !prompt) {
       throw new Error(`Generation task for "${to}" must have one of: "from", "template", or "prompt"`);
-    }
-    
-    // Check if replaceBlankFieldOnly is true and target field is not blank, skip processing
-    if (replaceBlankFieldOnly && dataObject[to] && dataObject[to].trim() !== '') {
-      console.log(`Skipping prompt for ${to} - field already has a value`);
-      return dataObject;
     }
     
     // Handle "from" parameter - copy value from one field to another

@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // =========================================================================
 // Styled Components
@@ -69,7 +70,7 @@ LabelText.className = 'label-text';
 /**
  * Checkbox - Themed checkbox with label and custom visual styling
  * 
- * A styled checkbox component using box-icons for the check mark,
+ * A styled checkbox component using the Icon component for the check mark,
  * with full theme integration for all visual states.
  * 
  * @param {Object} props
@@ -141,7 +142,7 @@ export class Checkbox extends Component {
         activeBackgroundColor=${checked ? theme.colors.primary.background : theme.colors.background.tertiary}
         disabled=${disabled}
       >
-        ${checked ? html`<box-icon name='check' size='16px' color='#ffffff'></box-icon>` : ''}
+        ${checked ? html`<${Icon} name='check' size='16px' color='#ffffff' />` : ''}
       </${CheckboxVisual}>
     `;
 

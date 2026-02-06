@@ -64,6 +64,7 @@ H3.className = 'themed-h3';
 export const HorizontalLayout = styled('div')`
   display: flex;
   flex-direction: row;
+  align-items: flex-end;
   gap: ${props => currentTheme.value.spacing[props.gap && ['small', 'medium', 'large'].includes(props.gap) ? props.gap : 'medium'].gap};
 `;
 HorizontalLayout.className = 'horizontal-layout';

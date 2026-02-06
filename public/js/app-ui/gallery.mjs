@@ -10,6 +10,8 @@ import { showDialog } from '../custom-ui/overlays/dialog.mjs';
 import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Icon } from '../custom-ui/layout/icon.mjs';
 import { HorizontalLayout } from '../custom-ui/themed-base.mjs';
 
 // Styled Components
@@ -72,7 +74,7 @@ Grid.className = 'grid';
 
 const ItemWrapper = styled('div')`
   aspect-ratio: 1;
-  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.focus};
+  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.primary};
   border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
   overflow: hidden;
   cursor: pointer;
@@ -210,36 +212,9 @@ const Controls = styled('div')`
 Controls.className = 'controls';
 
 const SearchContainer = styled('div')`
-  position: relative;
   flex: 1;
 `;
 SearchContainer.className = 'search-container';
-
-const SearchInput = styled('input')`
-  width: 100%;
-  padding: ${() => currentTheme.value.spacing.medium.padding} 35px ${() => currentTheme.value.spacing.medium.padding} 12px;
-  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.focus};
-  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
-  background-color: ${() => currentTheme.value.colors.background.card};
-  color: ${() => currentTheme.value.colors.text.primary};
-  font-size: ${() => currentTheme.value.typography.fontSize.medium};
-
-  &:focus {
-    outline: none;
-    border-color: ${() => currentTheme.value.colors.border.focus};
-    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.focus.shadowPrimary};
-  }
-`;
-SearchInput.className = 'search-input';
-
-const SearchIcon = styled('box-icon')`
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-`;
-SearchIcon.className = 'search-icon';
 
 const ButtonGroup = styled('div')`
   display: flex;
@@ -312,8 +287,8 @@ export function Gallery({
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState('description'); // 'description' or 'tag'
   const [selectedItems, setSelectedItems] = useState([]);
-  const [shouldFocusSearch, setShouldFocusSearch] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Use pagination hook - single source of truth
@@ -321,7 +296,6 @@ export function Gallery({
   const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
-  const searchInputRef = useRef(null);
 
   // -- Data Fetching --
   const fetchGalleryData = useCallback(async () => {
@@ -330,8 +304,8 @@ export function Gallery({
       const searchText = searchQuery.trim();
       const url = new URL(queryPath, window.location.origin);
       
-      // Tag search vs normal search
-      if (searchText.includes(',')) {
+      // Tag search vs normal search based on mode
+      if (searchMode === 'tag' && searchText) {
         const tags = searchText
           .split(',')
           .map(tag => tag.trim())
@@ -376,7 +350,6 @@ export function Gallery({
   useEffect(() => {
     if (isOpen) {
       setSelectedItems([]);
-      setShouldFocusSearch(true);
       fetchGalleryData();
     } else {
       setSearchQuery('');
@@ -397,18 +370,6 @@ export function Gallery({
 
   // Handle search input focus
   useEffect(() => {
-    if (shouldFocusSearch && searchInputRef.current) {
-      // Goober styled components: access DOM element via .base property
-      const element = searchInputRef.current.base || searchInputRef.current;
-      if (element && element.focus) {
-        element.focus();
-      }
-      setShouldFocusSearch(false);
-    }
-  }, [shouldFocusSearch]);
-
-  // Debounce search
-  useEffect(() => {
     // Skip initial empty search triggered by isOpen effect (handled there) or state init
     if (!isOpen) return;
 
@@ -422,12 +383,16 @@ export function Gallery({
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [searchQuery]); // fetchGalleryData is in dep array via debounce closure, but we want to trigger on searchQuery change
+  }, [searchQuery, searchMode]); // fetchGalleryData is in dep array via debounce closure, but we want to trigger on searchQuery or searchMode change
 
   // -- Handlers --
 
   const handleSearchInput = (e) => {
     setSearchQuery(e.target.value);
+  };
+
+  const toggleSearchMode = () => {
+    setSearchMode(prevMode => prevMode === 'description' ? 'tag' : 'description');
   };
 
   /**
@@ -696,17 +661,21 @@ export function Gallery({
         <//>
         <${Controls}>
           <${SearchContainer}>
-            <${SearchInput}
-              type="text"
-              placeholder=${searchQuery.includes(',') ? 'Tag search (comma-separated)' : 'Search images...'}
-              value=${searchQuery}
-              onInput=${handleSearchInput}
-              ref=${searchInputRef}
-            />
-            <${SearchIcon}
-              name=${searchQuery.includes(',') ? 'purchase-tag' : 'search'}
-              color="#999999"
-            />
+            <${HorizontalLayout} gap="small">
+              <${Button}
+                variant="large-icon"
+                icon=${searchMode === 'tag' ? 'tags' : 'search'}
+                title=${searchMode === 'tag' ? 'Switch to description search' : 'Switch to tag search'}
+                onClick=${toggleSearchMode}
+              />
+              <${Input}
+                type="text"
+                placeholder=${searchMode === 'tag' ? 'Tag search (comma-separated)' : 'Search images...'}
+                value=${searchQuery}
+                onInput=${handleSearchInput}
+                fullWidth=${true}
+              />
+            </${HorizontalLayout}>
           <//>
           <${ButtonGroup}>
             ${!selectionMode && html`

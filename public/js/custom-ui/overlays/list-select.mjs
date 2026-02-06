@@ -8,6 +8,7 @@ import { html } from 'htm/preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
+import { Icon } from '../layout/icon.mjs';
 import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle } from './modal-base.mjs';
 
 // ============================================================================
@@ -112,7 +113,7 @@ Footer.className = 'footer';
  * @param {Object} props.item - Item data object
  * @param {string} props.item.id - Unique item identifier
  * @param {string} props.item.label - Display label
- * @param {string} [props.item.icon] - Optional box-icon name
+ * @param {string} [props.item.icon] - Optional icon name for the Icon component
  * @param {boolean} [props.item.disabled=false] - Whether item is disabled
  * @param {string} [props.itemIcon] - Default icon to use if item doesn't specify one
  * @param {boolean} props.isSelected - Whether this item is currently selected
@@ -144,12 +145,12 @@ function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, show
       onClick=${() => !item.unselectable && onSelect(item)}
     >
       <${ItemLabel} theme=${theme}>
-        <box-icon 
-          name='${icon}' 
+        <${Icon} 
+          name=${icon} 
           type='solid' 
-          color='${theme.colors.text.secondary}' 
+          color=${theme.colors.text.secondary} 
           size='20px'
-        ></box-icon>
+        />
         <${ItemName} theme=${theme}>${item.label}<//>
       <//>
       ${showActions ? html`
@@ -213,7 +214,7 @@ class ListSelectModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedId: props.selectedId || null,
+      selectedId: props.selectedId ?? null,
       theme: currentTheme.value
     };
   }

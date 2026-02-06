@@ -118,7 +118,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   ```json
   {
     "uid": 1234567890,
-    "name": "Generated Image",
+    "name": "Unnamed",
     "description": "AI-generated prose description...",
     "summary": "Objective visual inventory...",
     "tags": ["portrait", "anime", "female"],
@@ -331,7 +331,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "taskId": "...",
     "status": "completed",
     "progress": { "percentage": 100, ... },
-    "imageData": { ... full updated image object ... },
+    "mediaData": { ... full updated image object ... },
     "message": "Regeneration complete"
   }
   ```

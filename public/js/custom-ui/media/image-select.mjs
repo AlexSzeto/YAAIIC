@@ -5,6 +5,7 @@ import { currentTheme } from '../theme.mjs';
 import { createImageModal } from '../overlays/modal.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // =========================================================================
 // Styled Components
@@ -312,7 +313,7 @@ export class ImageSelect extends Component {
           ` : html`
             <!-- Empty State -->
             <${EmptyState} gap=${theme.spacing.small.gap}>
-              <box-icon name='image-add' color=${theme.colors.text.muted} size='48px'></box-icon>
+              <${Icon} name='image-add' color=${theme.colors.text.muted} size='48px' />
               <${EmptyText} 
                 color=${theme.colors.text.muted}
                 fontSize=${theme.typography.fontSize.small}

@@ -42,6 +42,13 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
     }
   }, []);
 
+  // Sync selectedType when value workflow changes (e.g., from reprompt)
+  useEffect(() => {
+    if (value && value.type && typeOptions) {
+      setSelectedType(value.type);
+    }
+  }, [value?.type]);
+
   // Fetch workflows on mount
   useEffect(() => {
     async function loadWorkflows() {
@@ -81,7 +88,7 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
     } else {
       // Default: exclude inpaint workflows (backwards compatible)
       return workflows.filter(
-        w => w.type === 'image' || w.type === 'video'
+        w => w.type === 'image' || w.type === 'video' || w.type === 'audio'
       );
     }
   })();

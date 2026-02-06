@@ -1,0 +1,333 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 31,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "er_sde",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "78",
+        0
+      ],
+      "positive": [
+        "94",
+        0
+      ],
+      "negative": [
+        "47",
+        0
+      ],
+      "latent_image": [
+        "98",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "18": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "97",
+        2
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "47": {
+    "inputs": {
+      "conditioning": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "78": {
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "94": {
+    "inputs": {
+      "tags": [
+        "116",
+        0
+      ],
+      "lyrics": [
+        "115",
+        0
+      ],
+      "seed": 31,
+      "bpm": 80,
+      "duration": 120,
+      "timesignature": "4",
+      "language": "en",
+      "keyscale": "E minor",
+      "clip": [
+        "97",
+        1
+      ]
+    },
+    "class_type": "TextEncodeAceStepAudio1.5",
+    "_meta": {
+      "title": "TextEncodeAceStepAudio1.5"
+    }
+  },
+  "97": {
+    "inputs": {
+      "ckpt_name": "ace_step_1.5_turbo_aio.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "98": {
+    "inputs": {
+      "seconds": 120,
+      "batch_size": 1
+    },
+    "class_type": "EmptyAceStep1.5LatentAudio",
+    "_meta": {
+      "title": "Empty Ace Step 1.5 Latent Audio"
+    }
+  },
+  "108": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "109": {
+    "inputs": {
+      "text": [
+        "112",
+        0
+      ],
+      "clip": [
+        "119",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "110": {
+    "inputs": {
+      "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
+      "clip": [
+        "119",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "112": {
+    "inputs": {
+      "system": "Write a single paragraph of visual description for an album cover based on a landscape painting or abstract drawing that would be fitting for the music genre and instrumentation described. Only describe nature or abstract shapes free of people or animals.",
+      "prompt": [
+        "116",
+        0
+      ],
+      "think": false,
+      "keep_context": false,
+      "format": "text",
+      "connectivity": [
+        "114",
+        0
+      ],
+      "options": [
+        "113",
+        0
+      ]
+    },
+    "class_type": "OllamaGenerateV2",
+    "_meta": {
+      "title": "Ollama Generate"
+    }
+  },
+  "113": {
+    "inputs": {
+      "enable_mirostat": false,
+      "mirostat": 0,
+      "enable_mirostat_eta": false,
+      "mirostat_eta": 0.1,
+      "enable_mirostat_tau": false,
+      "mirostat_tau": 5,
+      "enable_num_ctx": false,
+      "num_ctx": 2048,
+      "enable_repeat_last_n": false,
+      "repeat_last_n": 64,
+      "enable_repeat_penalty": false,
+      "repeat_penalty": 1.1,
+      "enable_temperature": false,
+      "temperature": 0.8,
+      "enable_seed": false,
+      "seed": 1946359148,
+      "enable_stop": false,
+      "stop": "",
+      "enable_tfs_z": false,
+      "tfs_z": 1,
+      "enable_num_predict": false,
+      "num_predict": -1,
+      "enable_top_k": false,
+      "top_k": 40,
+      "enable_top_p": false,
+      "top_p": 0.9,
+      "enable_min_p": false,
+      "min_p": 0,
+      "debug": false
+    },
+    "class_type": "OllamaOptionsV2",
+    "_meta": {
+      "title": "Ollama Options"
+    }
+  },
+  "114": {
+    "inputs": {
+      "url": "http://127.0.0.1:11434",
+      "model": "tinyllama:latest",
+      "keep_alive": 5,
+      "keep_alive_unit": "minutes",
+      "🔄 Reconnect": null
+    },
+    "class_type": "OllamaConnectivityV2",
+    "_meta": {
+      "title": "Ollama Connectivity"
+    }
+  },
+  "115": {
+    "inputs": {
+      "value": "[inst]"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Lyrics"
+    }
+  },
+  "116": {
+    "inputs": {
+      "value": "lofi music"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "117": {
+    "inputs": {
+      "samples": [
+        "120",
+        0
+      ],
+      "vae": [
+        "119",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "118": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "119": {
+    "inputs": {
+      "ckpt_name": "landscapeAnimePro_v310W768.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "120": {
+    "inputs": {
+      "seed": 327498882196473,
+      "steps": 15,
+      "cfg": 4,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "119",
+        0
+      ],
+      "positive": [
+        "109",
+        0
+      ],
+      "negative": [
+        "110",
+        0
+      ],
+      "latent_image": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "121": {
+    "inputs": {
+      "width": 256,
+      "height": 256,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  }
+}
