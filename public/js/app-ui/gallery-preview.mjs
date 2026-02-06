@@ -169,8 +169,24 @@ export class GalleryPreview extends Component {
   }
 
   handleKeyDown = (e) => {
-    // Check if spacebar is pressed, component is hovering, and selection is enabled
-    if (e.code === 'Space' && this.state.isHovering && this.props.onSelect && !this.props.disableCheckbox) {
+    // Check if user is typing in an input field
+    const target = e.target;
+    const isInputField = target.tagName === 'INPUT' || 
+                         target.tagName === 'TEXTAREA' || 
+                         target.isContentEditable;
+    
+    // Only handle keyboard events if:
+    // 1. Not typing in an input field
+    // 2. This component is actually connected to the DOM (gallery is visible)
+    // 3. Component is being hovered over
+    // 4. Selection is enabled
+    if (e.code === 'Space' && 
+        !isInputField && 
+        this.containerRef && 
+        this.containerRef.isConnected && 
+        this.state.isHovering && 
+        this.props.onSelect && 
+        !this.props.disableCheckbox) {
       e.preventDefault(); // Prevent page scroll
       this.toggleSelection();
     }

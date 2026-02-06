@@ -1,3 +1,15 @@
+# Fix Spacebar Key Binding in Gallery
+
+## Goals
+[x] Fix the keyboard binding bug where the spacebar key is blocked in text inputs when gallery preview components exist
+
+## Tasks
+
+1. Update `handleKeyDown` in gallery-preview.mjs to check:
+   - If the event target is an input, textarea, or contenteditable element (skip if true)
+   - If the component's containerRef is actually connected to the DOM (skip if false)
+   - Only handle the spacebar when all conditions are met (not in input, component visible, hovering, selection enabled)
+
 # Recalculate Progress
 
 ## Goals
