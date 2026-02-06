@@ -210,9 +210,10 @@ function handleExecuting(data) {
       logProgressEvent({ type: 'executing', node }, 'comfyui-ws', prompt_id, null);
     }
     
-    // Emit progress update
+    // Emit progress update with reset percentage for the new node
+    // This prevents using stale progress data from the previous node
     if (emitProgressUpdate) {
-      emitProgressUpdate(prompt_id, state.progress, null, node);
+      emitProgressUpdate(prompt_id, { percentage: 0, value: 0, max: 0 }, null, node);
     }
   }
 }
