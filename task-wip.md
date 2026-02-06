@@ -4,6 +4,7 @@
 
 # Features
 - Add a view button to: gallery preview, gen results (bottom left) to open the image modal. In the gallery, clicking on the image selects the image instead of opens the preview.
+- Update select mode for the gallery to select on click, instead of opening the image preview and requiring the select action click.
 - Higher Quality Flux Klein (use different model)
 - Cancel generation
 - Cropping
