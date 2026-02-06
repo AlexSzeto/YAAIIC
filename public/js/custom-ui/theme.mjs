@@ -37,6 +37,8 @@
  * ```
  */
 
+import { getCookie, setCookie } from '../util.mjs';
+
 // ============================================================================
 // Spacing Sub-Theme
 // ============================================================================
@@ -180,12 +182,12 @@ const lightColors = {
   },
   // Secondary Color Theme
   secondary: {
-    background: '#6c757d',
-    hover: '#545b62',
+    background: '#888888',
+    hover: '#666666',
     active: '#3d4449',
     focus: 'rgba(108, 117, 125, 0.5)',
     backgroundLight: '#e9ecef',
-    border: '#ced4da',
+    border: '#cccccc',
     text: '#ffffff'
   },
   // Success Color Theme
@@ -220,16 +222,16 @@ const lightColors = {
   },
   // Border Colors
   border: {
-    primary: '#dee2e6',
-    secondary: '#ced4da',
+    primary: '#cccccc',
+    secondary: '#cccccc',
     focus: '#80bdff',
     highlight: '#007bff'
   },
   // Text Colors
   text: {
-    primary: '#212529',
+    primary: 'black',
     secondary: '#495057',
-    muted: '#6c757d',
+    muted: '#888888',
     placeholder: '#adb5bd',
     disabled: '#868e96',
     inverse: '#ffffff'
@@ -238,7 +240,7 @@ const lightColors = {
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
-    glass: 'rgba(255, 255, 255, 0.85)'
+    glass: 'rgba(255, 255, 255, 0.6)'
   },
   focus: {
     shadowPrimary: 'rgba(0, 123, 255, 0.25)',
@@ -251,7 +253,7 @@ const lightColors = {
   },
   // Loading spinner color (darker for light backgrounds)
   spinner: {
-    color: '#333333'
+    color: '#666666'
   }
 };
 
@@ -269,8 +271,8 @@ const darkColors = {
   },
   // Secondary Color Theme
   secondary: {
-    background: '#6c757d',
-    hover: '#545b62',
+    background: '#888888',
+    hover: '#666666',
     active: '#3d4449',
     focus: 'rgba(108, 117, 125, 0.5)',
     backgroundLight: '#3a3f44',
@@ -309,7 +311,7 @@ const darkColors = {
   },
   // Border Colors
   border: {
-    primary: '#333333',
+    primary: '#666666',
     secondary: '#444444',
     focus: '#555555',
     highlight: '#ffffff'
@@ -384,15 +386,29 @@ function createThemeStore(initialTheme) {
 /**
  * Current theme reactive store
  * Subscribe to get notified when the theme changes
- * Default theme is based on browser's preferred color scheme
+ * Default theme is loaded from cookie, or detected from browser's preferred color scheme
  * 
  * @type {{ value: typeof themes.dark, subscribe: (fn: (theme: typeof themes.dark) => void) => () => void }}
  */
 const getDefaultTheme = () => {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? themes.dark : themes.light;
+  // Try to load theme from cookie first
+  const savedTheme = getCookie('theme');
+  if (savedTheme && themes[savedTheme]) {
+    return themes[savedTheme];
   }
-  return themes.dark; // Fallback to dark if matchMedia not available
+  
+  // If no cookie, detect from browser preference
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const defaultTheme = prefersDark ? themes.dark : themes.light;
+    // Save the detected preference to cookie
+    setCookie('theme', defaultTheme.name);
+    return defaultTheme;
+  }
+  
+  // Fallback to dark if matchMedia not available
+  setCookie('theme', 'dark');
+  return themes.dark;
 };
 
 export const currentTheme = createThemeStore(getDefaultTheme());
@@ -416,10 +432,12 @@ export function setTheme(themeName) {
     throw new Error(`Theme "${themeName}" not found. Available themes: ${Object.keys(themes).join(', ')}`);
   }
   currentTheme.value = themes[themeName];
+  setCookie('theme', themeName);
 }
 
 /**
  * Toggle between light and dark themes
+ * Automatically saves the new theme to cookie
  * 
  * @returns {string} The name of the newly active theme
  * 

@@ -130,7 +130,9 @@ const ICON_MAP = {
   'stop': 'stop',
   'trash': 'delete',
   'folder': 'folder',
-
+  'redo': 'redo',
+  'broken-arrow-up': 'arrow_warm_up',
+ 
 };
 
 /**

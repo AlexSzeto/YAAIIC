@@ -6,7 +6,7 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 
 [x] Add "Reprompt" button to generated results
 1. Add a new "Reprompt" button to the left of the "Select" button in the generated results section
-2. Use the "up-arrow-circle" icon (same as the "Use" info buttons)
+2. Use the "redo" icon (same as the "Use" info buttons)
 3. Create a handler function `handleReprompt` that retrieves all generation input data from the current image
 4. Detect workflow type by finding the workflow object using the workflow name from the image data
 5. Set the workflow using the `setWorkflow` function

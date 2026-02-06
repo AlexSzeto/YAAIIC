@@ -40,11 +40,11 @@ const GalleryItemImage = styled('img')`
   background-color: ${() => currentTheme.value.colors.border.primary};
 
   ${props => props.imageError ? `
-    background-color: #333333;
+    background-color: ${() => currentTheme.value.colors.background.card};
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999999;
+    color: ${() => currentTheme.value.colors.text.muted};
     font-size: 10px;
     cursor: default;
   ` : props.disabled ? `
@@ -121,7 +121,7 @@ const GalleryItemCheckboxContainer = styled('div')`
   top: 4px;
   right: 4px;
   z-index: 10;
-  padding: 2px;
+  margin: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
