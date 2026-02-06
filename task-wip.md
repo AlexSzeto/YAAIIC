@@ -1,8 +1,6 @@
 # Bugs / Fixes
 
 ## V3 Visual bugs (Main Page)
-- on select folder UI, the unsorted folder don't show the selected highlight when it is the currently selected folder
-- in gallery, move the icon indicating current search mode outside of the input and use standard custom-ui input for the search input area
 
 # Features
 - Qwen 3 TTS, AceStep 1.5

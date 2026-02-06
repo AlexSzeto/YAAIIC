@@ -4,6 +4,16 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 ## Implementation Details
 ## Tasks
 
+[x] Refactor gallery search input to use custom-ui components
+1. Replace the styled SearchInput with a standard Input component from custom-ui/io
+2. Replace the SearchIconWrapper with an icon-only Button that toggles between search modes
+3. Add state to track search mode (description vs tag search)
+4. Update the Button to show magnifier icon for description search and tag icon for tag search
+5. Use HorizontalLayout to arrange the Button and Input side-by-side
+6. Remove the comma-based detection logic and use the explicit search mode state instead
+7. Update placeholder text based on search mode
+8. Update fetchGalleryData to use search mode state instead of comma detection
+
 [x] Replace `replaceBlankFieldOnly` with conditional objects
 1. Update all uses of `replaceBlankFieldOnly` in `comfyui-workflows.json` to use conditional objects that check if the field is an empty string
 2. Update the `checkExecutionCondition` function in `server/util.mjs` to treat `undefined`, `null`, and whitespace-only strings as blank strings when comparing with `""`
