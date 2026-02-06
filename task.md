@@ -4,6 +4,20 @@ Implement fixes and small changes after the Goober Refactor, adding more workflo
 ## Implementation Details
 ## Tasks
 
+[x] Add "Reprompt" button to generated results
+1. Add a new "Reprompt" button to the left of the "Select" button in the generated results section
+2. Use the "up-arrow-circle" icon (same as the "Use" info buttons)
+3. Create a handler function `handleReprompt` that retrieves all generation input data from the current image
+4. Detect workflow type by finding the workflow object using the workflow name from the image data
+5. Set the workflow using the `setWorkflow` function
+6. Set the seed and lock it using `handleFieldChange`
+7. Set the name field using `handleFieldChange`
+8. Set the prompt/description field using `handleFieldChange`
+9. Set all extra input values from the image data using `handleFieldChange` for each extra input field
+10. Display a toast notification confirming the settings have been loaded
+11. Pass the handler as `onReprompt` prop to the GeneratedResult component
+12. Update GeneratedResult component to accept and wire up the `onReprompt` callback to the button
+
 [x] Refactor gallery search input to use custom-ui components
 1. Replace the styled SearchInput with a standard Input component from custom-ui/io
 2. Replace the SearchIconWrapper with an icon-only Button that toggles between search modes

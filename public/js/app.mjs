@@ -515,6 +515,54 @@ function App() {
     setFormState(prev => ({ ...prev, description: desc }));
     toast.show('Description copied');
   };
+
+  const handleReprompt = (image) => {
+    if (!image) return;
+
+    try {
+      // Find the workflow object by name
+      const wf = workflows.find(w => w.name === image.workflow);
+      if (!wf) {
+        toast.error(`Workflow '${image.workflow}' not found`);
+        return;
+      }
+
+      // Set the workflow
+      setWorkflow(wf);
+
+      // Prepare the new form state with base fields
+      const newFormState = {
+        seed: String(image.seed),
+        seedLocked: true,
+        name: image.name || '',
+        description: image.prompt || image.description || ''
+      };
+
+      // Add all extra input values from the image data
+      if (wf.extraInputs && Array.isArray(wf.extraInputs)) {
+        wf.extraInputs.forEach(input => {
+          // Check if the image data has a value for this extra input
+          if (image[input.id] !== undefined) {
+            newFormState[input.id] = image[input.id];
+          } else if (input.default !== undefined) {
+            // Use the default value if not present in image data
+            newFormState[input.id] = input.default;
+          }
+        });
+      }
+
+      // Update the form state with all values at once
+      setFormState(prev => ({
+        ...prev,
+        ...newFormState
+      }));
+
+      toast.success('All generation settings loaded from result');
+    } catch (error) {
+      console.error('Failed to load generation settings:', error);
+      toast.error('Failed to load generation settings');
+    }
+  };
   
   const handleDeleteImage = async (image) => {
     if (!image) return;
@@ -876,6 +924,7 @@ function App() {
         onInpaint=${handleInpaint}
         onEdit=${handleEdit}
         onRegenerate=${handleRegenerate}
+        onReprompt=${handleReprompt}
         onSelectAsInput=${handleSelectAsInput}
         isSelectDisabled=${(() => {
           const mediaType = generatedImage?.type || 'image';

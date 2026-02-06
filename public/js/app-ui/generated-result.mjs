@@ -160,6 +160,7 @@ export function GeneratedResult({
   onSelectAsInput,
   onEdit,
   onRegenerate,
+  onReprompt,
   isSelectDisabled = false,
   isInpaintDisabled = false
 }) {
@@ -346,6 +347,15 @@ export function GeneratedResult({
         <//>
 
         <${HorizontalLayout}>
+          <${Button} 
+            variant="primary"
+            icon="up-arrow-circle"
+            onClick=${() => onReprompt && onReprompt(image)}
+            disabled=${!onReprompt}
+            title="Load all generation settings from this result"
+          >
+            Reprompt
+          </${Button}>
           <${Button} 
             variant="success"
             icon="check-circle"
