@@ -175,6 +175,11 @@ export class AudioSelect extends Component {
     if (this.unsubscribePlayer) {
       this.unsubscribePlayer();
     }
+    
+    // Stop audio if this component's audio is currently playing
+    if (this.state.audioUrl && globalAudioPlayer.isPlaying(this.state.audioUrl)) {
+      globalAudioPlayer.stop();
+    }
   }
 
   componentDidUpdate(prevProps) {

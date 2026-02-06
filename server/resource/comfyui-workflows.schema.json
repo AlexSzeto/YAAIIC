@@ -103,10 +103,6 @@
           "type": "string",
           "description": "The filename of the underlying ComfyUI workflow JSON file in server/resource/"
         },
-        "finalNode": {
-          "type": "string",
-          "description": "The node ID of the final output node in the workflow"
-        },
         "upload": {
           "type": "array",
           "description": "Defines how to handle uploaded files and map them to internal variables",
@@ -145,9 +141,16 @@
         "extractOutputPathFromTextFile": {
           "type": "string",
           "description": "For video workflows that output to a file path stored in a text file"
+        },
+        "extractOutputTexts": {
+          "type": "array",
+          "description": "Array of property names to extract text content from storage folder files (e.g., ['summary'] reads summary.txt and assigns to generationData.summary)",
+          "items": {
+            "type": "string"
+          }
         }
       },
-      "required": ["name", "options", "base", "finalNode"],
+      "required": ["name", "options", "base"],
       "additionalProperties": false
     },
     "workflowOptions": {

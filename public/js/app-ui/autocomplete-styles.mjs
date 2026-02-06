@@ -34,11 +34,16 @@ export function injectAutocompleteStyles() {
       color: ${getThemeValue('colors.text.primary')} !important;
       padding: ${getThemeValue('spacing.medium.padding')} !important;
       border-bottom: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.secondary')} !important;
+      border-right: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.secondary')} !important;
       cursor: pointer;
       transition: background-color ${getThemeValue('transitions.fast')};
       list-style: none !important;
       font-family: ${getThemeValue('typography.fontFamily')} !important;
       font-size: ${getThemeValue('typography.fontSize.medium')} !important;
+    }
+
+    #autoComplete_list_1 li mark {
+      padding: 0 2px !important;
     }
 
     #autoComplete_list_1 li:hover,

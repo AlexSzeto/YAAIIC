@@ -1,3 +1,55 @@
+# Fix Gallery Audio Cleanup and AudioPlayer State Sync
+
+## Goals
+[ ] Stop all preview audio when the gallery is closed
+[ ] Fix the AudioPlayer component showing the pause icon when the global audio is stopped (when switching between audio results)
+
+## Tasks
+[ ] Stop all preview audio when the gallery is closed
+[ ] Fix the AudioPlayer component showing the pause icon when the global audio is stopped (when switching between audio results)
+
+# Fix Audio Player DOM Cleanup Bug
+
+## Goals
+[x] Fix the bug where audio continues playing after audio player UI components are removed from the DOM
+
+## Tasks
+
+[x] Update `componentWillUnmount` in AudioSelect component to stop the global audio player if it's currently playing this component's audio
+[x] Update `componentWillUnmount` in AudioPlayer component to pause and clean up its local audio element
+[x] Update `componentWillUnmount` in GalleryPreview component to stop the global audio player if it's currently playing the preview's audio
+
+# Extract Output Texts from Workflow
+
+## Goals
+[x] Implement support for `extractOutputTexts` workflow parameter to extract text content from files in the storage folder and assign them to generation data properties before post-generation tasks
+
+## Tasks
+
+[x] Add `extractOutputTexts` to the destructured workflow config in `processGenerationTask`
+[x] After workflow execution and `extractOutputPathFromTextFile` processing (if applicable), add logic to process `extractOutputTexts`:
+   - Iterate through the `extractOutputTexts` array
+   - For each string in the array (e.g., "summary"), construct the filename by appending ".txt"
+   - Read the text file from the storage folder using the same utility pattern as `readOutputPathFromTextFile`
+   - Assign the content to `generationData[propertyName]` (e.g., `generationData.summary`)
+   - Log each extraction for debugging
+[x] Ensure this processing occurs before post-generation tasks so the extracted values are available for use in post-generation prompts and templates
+[x] Update the workflow documentation in `docs/workflow.md` to document the `extractOutputTexts` parameter
+
+# Fix Audio Select Action from Generated Result
+
+## Goals
+[x] Fix the Select action for audio files to properly check audio slots instead of image slots
+
+## Tasks
+
+[x] Update `handleSelectAsInput` in app.mjs to:
+   - Detect the media type from the passed `mediaData` parameter
+   - For audio files, check `workflow?.inputAudios` and find empty audio slots in `inputAudios` array
+   - For audio files, fetch the audio file and set it in the correct audio slot
+   - Show appropriate error messages for audio ("All input audio slots are filled" instead of "All input image slots are filled")
+   - Keep existing image handling logic unchanged
+
 # Fix Spacebar Key Binding in Gallery
 
 ## Goals

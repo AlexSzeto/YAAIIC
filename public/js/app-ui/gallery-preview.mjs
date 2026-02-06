@@ -166,6 +166,12 @@ export class GalleryPreview extends Component {
     if (this.unsubscribeAudioPlayer) {
       this.unsubscribeAudioPlayer();
     }
+    
+    // Stop audio if this preview's audio is currently playing
+    const { item } = this.props;
+    if (item && item.audioUrl && globalAudioPlayer.isPlaying(item.audioUrl)) {
+      globalAudioPlayer.stop();
+    }
   }
 
   handleKeyDown = (e) => {

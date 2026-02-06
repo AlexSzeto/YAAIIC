@@ -65,7 +65,6 @@
         }
       ],
       "base": "text-to-image-album.json",
-      "finalNode": "18",
       "replace": [
         {
           "from": "ollamaAPIPath",
@@ -182,7 +181,6 @@
         }
       ],
       "base": "illustrious-text-to-image.json",
-      "finalNode": "10",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -296,7 +294,6 @@
         }
       ],
       "base": "illustrious-image-style.json",
-      "finalNode": "11",
       "upload": [
         {
           "from": "image_0",
@@ -422,7 +419,6 @@
         }
       ],
       "base": "flux-fantasy-text-to-landscape.json",
-      "finalNode": "9",
       "replace": [
         {
           "from": "prompt",
@@ -538,7 +534,6 @@
         }
       ],
       "base": "flux-fantasy-text-to-portrait.json",
-      "finalNode": "44",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -653,7 +648,6 @@
         }
       ],
       "base": "zimage-fantasy-landscape.json",
-      "finalNode": "43",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -768,7 +762,6 @@
         }
       ],
       "base": "zimage-fantasy-portrait.json",
-      "finalNode": "43",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -815,7 +808,6 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "finalNode": "9",
       "upload": [
         {
           "from": "image_0",
@@ -880,7 +872,6 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "finalNode": "9",
       "upload": [
         {
           "from": "image_0",
@@ -1007,7 +998,6 @@
         }
       ],
       "base": "qwen-image-to-image.json",
-      "finalNode": "229",
       "upload": [
         {
           "from": "image_0",
@@ -1126,7 +1116,6 @@
         }
       ],
       "base": "flux-klein-image-edit.json",
-      "finalNode": "100",
       "upload": [
         {
           "from": "image_0",
@@ -1245,7 +1234,6 @@
         }
       ],
       "base": "flux-klein-image-edit-multisource.json",
-      "finalNode": "100",
       "upload": [
         {
           "from": "image_0",
@@ -1327,7 +1315,6 @@
         }
       ],
       "base": "wan-image-to-video.json",
-      "finalNode": "76",
       "upload": [
         {
           "from": "image_0",
@@ -1455,7 +1442,6 @@
       ],
       "blendLoopFrames": true,
       "base": "wan5b-image-to-video-loop.json",
-      "finalNode": "119",
       "upload": [
         {
           "from": "image_0",
@@ -1566,7 +1552,6 @@
         }
       ],
       "base": "wan5b-image-to-video.json",
-      "finalNode": "119",
       "upload": [
         {
           "from": "image_0",
@@ -1660,7 +1645,6 @@
         ]
       },
       "base": "acestep-text-to-music.json",
-      "finalNode": "90",
       "preGenerationTasks": [
         {
           "template": "jpg",
@@ -1898,7 +1882,6 @@
         }
       ],
       "base": "chatterbox-text-to-speech.json",
-      "finalNode": "21",
       "upload": [
         {
           "from": "audio_0",
@@ -1925,6 +1908,129 @@
         {
           "from": "referenceAudioPath",
           "to": ["5", "inputs", "audio"]
+        }
+      ]
+    },
+    {
+      "name": "Text to Voice Design (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-voice-design.json",
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["20", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["34:29", "inputs", "seed"]
+        },
+        {
+          "from": "seed",
+          "to": ["4", "inputs", "seed"]
+        },
+        {
+          "from": "storagePath",
+          "to": ["37", "inputs", "output_file_path"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["31", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["36", "inputs", "path"]
+        }
+      ],
+      "extractOutputTexts": [
+        "summary"
+      ]
+    },
+    {
+      "name": "Text to Speech (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-audio.json",
+      "upload": [
+        {
+          "from": "audio_0",
+          "storePathAs": "referenceAudioPath"
+        }
+      ],
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["8", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["13:29", "inputs", "seed"]
+        },
+        {
+          "from": "seed",
+          "to": ["5", "inputs", "seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["15", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["16", "inputs", "path"]
+        },
+        {
+          "from": "referenceAudioPath",
+          "to": ["10", "inputs", "audio"]
         }
       ]
     }

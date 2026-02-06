@@ -47,6 +47,9 @@ const IMPORTANT_NODE_TYPES = [
   'VHS_VideoCombine',
   'stable-audio-open-generate',
   'TextEncodeAceStepAudio1.5',
+  'Qwen3VoiceDesign',
+  'Qwen3VoiceClone',
+  'UnifiedTTSTextNode'
 ];
 
 // Initialize generate module with ComfyUI API path
@@ -275,73 +278,6 @@ function calculateTotalSteps(preGenTasks, workflowNodes, postGenTasks) {
   console.log(`Step calculation: Pre-gen=${preGenCount}, Important nodes=${importantNodeCount}, Post-gen=${postGenCount}, Total=${totalSteps}`);
   
   return { totalSteps, preGenCount, importantNodeCount, postGenCount };
-}
-
-// Function to calculate workflow steps based on node dependencies
-export function calculateWorkflowSteps(workflow, finalNode, preGenTaskCount = 0, postGenTaskCount = 0) {
-  // Map to store nodeId -> distance from final node
-  const distanceMap = new Map();
-  
-  // Recursive function to traverse backwards through node inputs
-  function traverseNode(nodeId, currentDistance) {
-    // If we've already visited this node with a greater or equal distance, skip
-    if (distanceMap.has(nodeId) && distanceMap.get(nodeId) >= currentDistance) {
-      return;
-    }
-    
-    // Set the distance for this node
-    distanceMap.set(nodeId, currentDistance);
-    
-    // Get the node from workflow
-    const node = workflow[nodeId];
-    if (!node || !node.inputs) {
-      return;
-    }
-    
-    // Traverse all input connections
-    for (const inputKey in node.inputs) {
-      const inputValue = node.inputs[inputKey];
-      
-      // Check if input is a node connection (array format [nodeId, outputIndex])
-      if (Array.isArray(inputValue) && typeof inputValue[0] === 'string') {
-        const connectedNodeId = inputValue[0];
-        traverseNode(connectedNodeId, currentDistance + 1);
-      }
-    }
-  }
-  
-  // Start traversal from final node
-  traverseNode(finalNode, 0);
-  
-  // Calculate base workflow total steps (max distance + 1)
-  let maxDistance = 0;
-  for (const distance of distanceMap.values()) {
-    if (distance > maxDistance) {
-      maxDistance = distance;
-    }
-  }
-  const baseWorkflowSteps = maxDistance + 1;
-  
-  // Calculate total steps including all pre-gen and post-gen tasks
-  const totalSteps = preGenTaskCount + baseWorkflowSteps + postGenTaskCount;
-  
-  console.log(`Pre-gen tasks: ${preGenTaskCount}, Workflow steps: ${baseWorkflowSteps}, Post-gen tasks: ${postGenTaskCount}, Total: ${totalSteps}`);
-  
-  // Build step map with display text
-  // Workflow steps start after pre-gen tasks
-  const stepOffset = preGenTaskCount;
-  const stepMap = new Map();
-  for (const [nodeId, distance] of distanceMap.entries()) {
-    const stepNumber = baseWorkflowSteps - distance + stepOffset;
-    const stepDisplayText = `(${stepNumber}/${totalSteps})`;
-    stepMap.set(nodeId, {
-      distance,
-      stepNumber,
-      stepDisplayText
-    });
-  }
-  
-  return { stepMap, totalSteps, baseWorkflowSteps, preGenTaskCount, postGenTaskCount };
 }
 
 // Function to modify generationData with a prompt (wrapper for backwards compatibility)
@@ -727,7 +663,7 @@ export async function handleMediaGeneration(req, res, workflowConfig, serverConf
 // Background processing function
 async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
+    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, extractOutputTexts, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
     const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
@@ -1092,6 +1028,35 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         throw new Error(`Generated audio file not found at: ${generationData.saveAudioPath}`);
       }
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
+    }
+
+    // Handle extractOutputTexts if specified
+    if (extractOutputTexts && Array.isArray(extractOutputTexts)) {
+      console.log(`Extracting text content from ${extractOutputTexts.length} file(s)...`);
+      
+      // Compute absolute storage path
+      const __dirname = path.dirname(new URL(import.meta.url).pathname);
+      const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+      const storagePath = path.join(actualDirname, 'storage');
+      
+      for (const propertyName of extractOutputTexts) {
+        try {
+          // Construct the text filename (e.g., "summary" -> "summary.txt")
+          const textFilename = `${propertyName}.txt`;
+          console.log(`Extracting text from ${textFilename} to property "${propertyName}"`);
+          
+          // Read the text file content
+          const textContent = readOutputPathFromTextFile(textFilename, storagePath);
+          
+          // Assign the content to generationData
+          generationData[propertyName] = textContent;
+          console.log(`Successfully extracted text content: ${textContent.substring(0, 100)}${textContent.length > 100 ? '...' : ''}`);
+        } catch (error) {
+          console.error(`Failed to extract text from ${propertyName}.txt:`, error.message);
+          // Don't throw - allow generation to continue even if text extraction fails
+          generationData[propertyName] = '';
+        }
+      }
     }
 
     // Track post-generation errors

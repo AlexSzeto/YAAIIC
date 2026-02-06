@@ -1,0 +1,288 @@
+{
+  "5": {
+    "inputs": {
+      "text": [
+        "8",
+        0
+      ],
+      "seed": 302498477506640,
+      "language": "Auto",
+      "ref_text": [
+        "11",
+        0
+      ],
+      "max_new_tokens": 2048,
+      "ref_audio_max_seconds": 30,
+      "model": [
+        "6",
+        0
+      ],
+      "ref_audio": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Qwen3VoiceClone",
+    "_meta": {
+      "title": "Qwen3-TTS Voice Clone"
+    }
+  },
+  "6": {
+    "inputs": {
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "source": "HuggingFace",
+      "precision": "bf16",
+      "attention": "auto",
+      "local_model_path": ""
+    },
+    "class_type": "Qwen3Loader",
+    "_meta": {
+      "title": "Qwen3-TTS Loader"
+    }
+  },
+  "8": {
+    "inputs": {
+      "value": "Darling, you really shouldn't stare so intensely unless you're prepared for the consequences of your curiosity. I’ve spent the evening tracing the rim of this glass, wondering if your resolve is quite as fragile as it looks. There’s a certain thrill in the quiet before the storm, don’t you think—a delicious sort of tension that only we share? Do come closer, because I have a whisper meant for your ears alone, and I find I’m terribly tired of waiting."
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "10": {
+    "inputs": {
+      "audio": "voice_preview_daisy.mp3",
+      "audioUI": ""
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Load Audio"
+    }
+  },
+  "11": {
+    "inputs": {
+      "model": "base.en",
+      "language": "auto",
+      "prompt": "",
+      "audio": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Apply Whisper",
+    "_meta": {
+      "title": "Apply Whisper"
+    }
+  },
+  "15": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "13:27",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "16": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "17": {
+    "inputs": {
+      "start_index": 0,
+      "duration": 30,
+      "audio": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "TrimAudioDuration",
+    "_meta": {
+      "title": "Trim Audio Duration"
+    }
+  },
+  "13:22": {
+    "inputs": {
+      "text": [
+        "13:24",
+        0
+      ],
+      "clip": [
+        "13:28",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "13:23": {
+    "inputs": {
+      "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
+      "clip": [
+        "13:28",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "13:25": {
+    "inputs": {
+      "enable_mirostat": false,
+      "mirostat": 0,
+      "enable_mirostat_eta": false,
+      "mirostat_eta": 0.1,
+      "enable_mirostat_tau": false,
+      "mirostat_tau": 5,
+      "enable_num_ctx": false,
+      "num_ctx": 2048,
+      "enable_repeat_last_n": false,
+      "repeat_last_n": 64,
+      "enable_repeat_penalty": false,
+      "repeat_penalty": 1.1,
+      "enable_temperature": false,
+      "temperature": 0.8,
+      "enable_seed": false,
+      "seed": 1611376981,
+      "enable_stop": false,
+      "stop": "",
+      "enable_tfs_z": false,
+      "tfs_z": 1,
+      "enable_num_predict": false,
+      "num_predict": -1,
+      "enable_top_k": false,
+      "top_k": 40,
+      "enable_top_p": false,
+      "top_p": 0.9,
+      "enable_min_p": false,
+      "min_p": 0,
+      "debug": false
+    },
+    "class_type": "OllamaOptionsV2",
+    "_meta": {
+      "title": "Ollama Options"
+    }
+  },
+  "13:28": {
+    "inputs": {
+      "ckpt_name": "landscapeAnimePro_v310W768.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "13:29": {
+    "inputs": {
+      "seed": 784484651778873,
+      "steps": 15,
+      "cfg": 4,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "13:28",
+        0
+      ],
+      "positive": [
+        "13:22",
+        0
+      ],
+      "negative": [
+        "13:23",
+        0
+      ],
+      "latent_image": [
+        "13:30",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "13:30": {
+    "inputs": {
+      "width": 256,
+      "height": 256,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "13:27": {
+    "inputs": {
+      "samples": [
+        "13:29",
+        0
+      ],
+      "vae": [
+        "13:28",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "13:24": {
+    "inputs": {
+      "system": "Write a single paragraph of visual description for an album cover based on a scene that would be fitting for the dialog.",
+      "prompt": [
+        "8",
+        0
+      ],
+      "think": false,
+      "keep_context": false,
+      "format": "text",
+      "connectivity": [
+        "13:26",
+        0
+      ],
+      "options": [
+        "13:25",
+        0
+      ]
+    },
+    "class_type": "OllamaGenerateV2",
+    "_meta": {
+      "title": "Ollama Generate"
+    }
+  },
+  "13:26": {
+    "inputs": {
+      "url": "http://127.0.0.1:11434",
+      "model": "tinyllama:latest",
+      "keep_alive": 5,
+      "keep_alive_unit": "minutes",
+      "🔄 Reconnect": null
+    },
+    "class_type": "OllamaConnectivityV2",
+    "_meta": {
+      "title": "Ollama Connectivity"
+    }
+  }
+}
