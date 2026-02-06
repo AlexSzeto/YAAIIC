@@ -49,7 +49,8 @@ const IMPORTANT_NODE_TYPES = [
   'TextEncodeAceStepAudio1.5',
   'Qwen3VoiceDesign',
   'Qwen3VoiceClone',
-  'UnifiedTTSTextNode'
+  'UnifiedTTSTextNode',
+  'HeartMuLa_Generate',
 ];
 
 // Initialize generate module with ComfyUI API path
