@@ -23,19 +23,16 @@ export const ProgressContext = createContext(null);
  *     - `handlers` {Object} - Event handler callbacks:
  *       - `onProgress(data)` - Called with progress updates. `data.progress` contains:
  *         - `percentage` {number} - Progress percentage (0-100)
- *         - `node` {string} - Current node type (passed to getStepName)
- *         - `currentStep` {string} - Optional explicit step name (overrides node mapping)
+ *         - `currentStep` {string} - Human-readable step name from server
  *         - `currentValue` {number} - Current progress value
  *         - `maxValue` {number} - Maximum progress value
  *       - `onComplete(data)` - Called when task completes successfully
  *       - `onError(data)` - Called on task failure. `data.error.message` contains error text
  *   - `unsubscribe(taskId)` - Unsubscribe from progress events for a task
- * @param {Function} [props.getStepName] - Optional function to map node types to human-readable names.
- *   Signature: `(nodeType: string) => string`. Defaults to returning 'Processing...'.
  * @param {preact.ComponentChildren} props.children - App content wrapped by provider (required)
  * @returns {preact.VNode}
  */
-export function ProgressProvider({ sseManager, getStepName, children }) {
+export function ProgressProvider({ sseManager, children }) {
   const [progresses, setProgresses] = useState({});
 
   const show = useCallback((taskId, options = {}) => {
@@ -91,7 +88,6 @@ export function ProgressProvider({ sseManager, getStepName, children }) {
               onError=${progress.onError}
               defaultTitle=${progress.defaultTitle}
               onDismiss=${() => hide(progress.taskId)}
-              getStepName=${getStepName}
             />
           `)}
         </div>

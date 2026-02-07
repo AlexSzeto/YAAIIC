@@ -8,7 +8,6 @@ import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 
 import { Button } from './custom-ui/io/button.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
-import { getStepName } from './app-ui/comfyui-step-names.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
@@ -1090,7 +1089,6 @@ function App() {
         sseManager=${sseManager}
         onComplete=${handleGenerationComplete}
         onError=${handleGenerationError}
-        getStepName=${getStepName}
       />
     ` : null}
     
@@ -1101,7 +1099,6 @@ function App() {
         sseManager=${sseManager}
         onComplete=${handleRegenerateComplete}
         onError=${handleRegenerateError}
-        getStepName=${getStepName}
       />
     ` : null}
 

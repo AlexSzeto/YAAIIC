@@ -143,7 +143,6 @@ DismissButton.className = 'dismiss-button';
  * @param {Function} [props.onComplete] - Callback when generation completes successfully
  * @param {Function} [props.onError] - Callback when generation fails
  * @param {string} [props.defaultTitle] - Default page title to restore after completion
- * @param {Function} [props.getStepName] - Optional function to map node types to human-readable names. Receives nodeType string, returns display string. Defaults to returning 'Processing...'.
  * @param {Function} [props.onDismiss] - Callback when banner should be dismissed (required for provider pattern)
  * @returns {preact.VNode}
  * 
@@ -162,8 +161,7 @@ export function ProgressBanner({
   onComplete, 
   onError,
   defaultTitle,
-  onDismiss,
-  getStepName = () => 'Processing...'
+  onDismiss
 }) {
   const [state, setState] = useState({
     status: 'starting', // starting, in-progress, completed, error
@@ -185,16 +183,8 @@ export function ProgressBanner({
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
 
-      // Priority: 1) currentStep (if provided), 2) mapped node name, 3) fallback
-      let message = 'Processing...';
-      
-      if (data.progress.currentStep) {
-        // Use the explicit step name if provided
-        message = data.progress.currentStep;
-      } else if (data.progress.node) {
-        // Otherwise map from node type
-        message = getStepName(data.progress.node);
-      }
+      // Use currentStep from server (server always provides this)
+      const message = data.progress.currentStep || 'Processing...';
 
       // Add percentage display to the message for page title
       let titleMessage = message;
