@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
-import { PageTitleManager, getStepName } from '../util.mjs';
+import { PageTitleManager } from '../util.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
 
@@ -143,6 +143,7 @@ DismissButton.className = 'dismiss-button';
  * @param {Function} [props.onComplete] - Callback when generation completes successfully
  * @param {Function} [props.onError] - Callback when generation fails
  * @param {string} [props.defaultTitle] - Default page title to restore after completion
+ * @param {Function} [props.getStepName] - Optional function to map node types to human-readable names. Receives nodeType string, returns display string. Defaults to returning 'Processing...'.
  * @param {Function} [props.onDismiss] - Callback when banner should be dismissed (required for provider pattern)
  * @returns {preact.VNode}
  * 
@@ -161,7 +162,8 @@ export function ProgressBanner({
   onComplete, 
   onError,
   defaultTitle,
-  onDismiss
+  onDismiss,
+  getStepName = () => 'Processing...'
 }) {
   const [state, setState] = useState({
     status: 'starting', // starting, in-progress, completed, error

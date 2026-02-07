@@ -151,7 +151,7 @@ export function GenerationForm({
       `}
 
       <!-- Row 4: Action Buttons -->
-      <${HorizontalLayout} key="actions" justifyContent="flex-start">
+      <${HorizontalLayout} gap="small">
         <${Button} 
           variant="primary"
           icon="play"

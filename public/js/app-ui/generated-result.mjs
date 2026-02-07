@@ -346,7 +346,7 @@ export function GeneratedResult({
           <//>
         <//>
 
-        <${HorizontalLayout}>
+        <${HorizontalLayout} gap="small">
           <${Button} 
             variant="primary"
             icon="broken-arrow-up"

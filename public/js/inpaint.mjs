@@ -15,6 +15,7 @@ import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint-canvas.mjs';
 import { InpaintForm } from './app-ui/inpaint-form.mjs';
 import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
+import { getStepName } from './app-ui/comfyui-step-names.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { sseManager } from './app-ui/sse-manager.mjs';
@@ -557,6 +558,7 @@ function InpaintApp() {
           sseManager=${sseManager}
           onComplete=${handleGenerationComplete}
           onError=${handleGenerationError}
+          getStepName=${getStepName}
         />
       ` : null}
 

@@ -16,7 +16,7 @@ CanvasContainer.className = 'canvas-container';
 
 const Canvas = styled('canvas')`
   max-width: 100%;
-  height: auto;
+  max-height: calc(100vh - 240px);
   cursor: crosshair;
   border-radius: ${getThemeValue('spacing.small.borderRadius')};
 `;

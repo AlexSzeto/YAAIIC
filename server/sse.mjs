@@ -208,16 +208,16 @@ function getNodeStepName(nodeId) {
   
   // Common ComfyUI node patterns
   if (nodeId.includes('Sampler') || nodeId.includes('KSampler')) {
-    return 'Sampling image...';
+    return 'Sampling data...';
   }
   if (nodeId.includes('VAE Decode')) {
-    return 'Decoding image...';
+    return 'Decoding data...';
   }
   if (nodeId.includes('VAE Encode')) {
-    return 'Encoding image...';
+    return 'Encoding data...';
   }
   if (nodeId.includes('Save')) {
-    return 'Saving image...';
+    return 'Saving data...';
   }
   if (nodeId.includes('CLIP') || nodeId.includes('Encode')) {
     return 'Encoding prompt...';
