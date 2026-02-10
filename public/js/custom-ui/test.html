@@ -50,6 +50,8 @@
     import { ToastProvider, useToast } from './msg/toast.mjs';
     import { showDialog, showTextPrompt } from './overlays/dialog.mjs';
     import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
+    import { HoverPanelProvider, useHoverPanel } from './overlays/hover-panel.mjs';
+    import { useRef } from 'preact/hooks';
 
     
     // =========================================================================
@@ -323,6 +325,71 @@
     }
     
     // =========================================================================
+    // Hover Panel Test Component
+    // =========================================================================
+    
+    /**
+     * HoverPanelTriggers - Component with buttons to demonstrate hover panel
+     */
+    function HoverPanelTriggers() {
+      const hoverPanel = useHoverPanel();
+      
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <${Button} 
+            variant="medium-text"
+            color="primary"
+            onMouseEnter=${(e) => hoverPanel.show('This is a simple tooltip text!', e)}
+            onMouseMove=${(e) => hoverPanel.follow(e)}
+            onMouseLeave=${() => hoverPanel.hide()}
+          >
+            Hover for Tooltip
+          <//>
+
+          <${Button} 
+            variant="medium-text"
+            color="secondary"
+            onMouseEnter=${(e) => hoverPanel.show(html`
+              <strong>Rich Content</strong>
+              <p style="margin: 8px 0 0 0;">This panel supports <em>HTML content</em> including styled elements.</p>
+            `, e)}
+            onMouseMove=${(e) => hoverPanel.follow(e)}
+            onMouseLeave=${() => hoverPanel.hide()}
+          >
+            Hover for Rich Content
+          <//>
+
+          <${Button} 
+            variant="medium-text"
+            color="success"
+            onMouseEnter=${(e) => hoverPanel.show(html`
+              <div>
+                <strong>Tag: 1girl</strong>
+                <p style="margin: 8px 0 0 0;">An image depicting one female character. Dolls only count if they act on their own.</p>
+              </div>
+            `, e)}
+            onMouseMove=${(e) => hoverPanel.follow(e)}
+            onMouseLeave=${() => hoverPanel.hide()}
+          >
+            Hover for Tag Definition
+          <//>
+
+          <${Button} 
+            variant="medium-text"
+            color="danger"
+            onClick=${(e) => {
+              // Programmatic show at click position
+              hoverPanel.show('Programmatic panel! Will auto-hide on mouse leave.', e);
+            }}
+            onMouseLeave=${() => hoverPanel.hide()}
+          >
+            Programmatic Show
+          <//>
+        </div>
+      `;
+    }
+    
+    // =========================================================================
     // Progress Banner Test Component
     // =========================================================================
     
@@ -567,9 +634,10 @@
         const { themeName } = this.state;
         
         return html`
-          <${ToastProvider}>
-            <${ProgressProvider} sseManager=${this.mockSSEManager}>
-              <${Page}>
+          <${HoverPanelProvider}>
+            <${ToastProvider}>
+              <${ProgressProvider} sseManager=${this.mockSSEManager}>
+                <${Page}>
                 <${Container}>
                   <${Header}>
                     <${Title}>Custom UI Component Test Page<//>
@@ -1138,12 +1206,22 @@
                 <//>
               </${Section}>
               
+              <${Section}>
+                <${SectionTitle}>Hover Panel Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Context-based hover panel for tooltips and floating content</p>
+                
+                <${ComponentGrid}>
+                  <${HoverPanelTriggers} />
+                </>
+              <//>
+              
               <!-- More component sections will be added as they are refactored -->
               
+                <//${Page}>
+              <//>
             <//>
           <//>
         <//>
-      <//>
         `;
       }
     }
