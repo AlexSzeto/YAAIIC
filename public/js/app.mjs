@@ -26,6 +26,8 @@ import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
+import { loadTagDefinitions } from './app-ui/tag-definitions.mjs';
+import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
 import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
 
 // =========================================================================
@@ -62,6 +64,7 @@ function normalizeFrameCount(inputValue) {
  */
 function App() {
   const toast = useToast();
+  const hoverPanel = useHoverPanel();
   
   // Theme state
   const [themeName, setThemeName] = useState(currentTheme.value.name);
@@ -1138,18 +1141,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
-      <${Page}>
-        <${ToastProvider}>
-          <${App} />
-        </${ToastProvider}>
-      </${Page}>
+      <${HoverPanelProvider}>
+        <${Page}>
+          <${ToastProvider}>
+            <${App} />
+          </${ToastProvider}>
+        </${Page}>
+      </${HoverPanelProvider}>
     `, root);
     console.log('App V3 mounted successfully');
 
     setTimeout(() => {
+      // Load tags first, then initialize autocomplete
       loadTags().then(() => {
         initAutoComplete();
         console.log('Autocomplete initialized in App V3');
+        
+        // Load tag definitions and configure hover panel
+        loadTagDefinitions().then(() => {
+          console.log('Tag definitions loaded');
+        }).catch(err => {
+          console.warn('Failed to load tag definitions:', err);
+        });
       });
     }, 100);    
   } else {

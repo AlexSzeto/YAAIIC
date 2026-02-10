@@ -4,7 +4,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node server/server.mjs"
+    "start": "node server/server.mjs",
+    "sync": "node public/js/custom-ui/lib-sync.mjs sync"
   },
   "author": "",
   "license": "ISC",

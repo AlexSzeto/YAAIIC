@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
-import { PageTitleManager, getStepName } from '../util.mjs';
+import { PageTitleManager } from '../util.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
 
@@ -183,16 +183,8 @@ export function ProgressBanner({
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
 
-      // Priority: 1) currentStep (if provided), 2) mapped node name, 3) fallback
-      let message = 'Processing...';
-      
-      if (data.progress.currentStep) {
-        // Use the explicit step name if provided
-        message = data.progress.currentStep;
-      } else if (data.progress.node) {
-        // Otherwise map from node type
-        message = getStepName(data.progress.node);
-      }
+      // Use currentStep from server (server always provides this)
+      const message = data.progress.currentStep || 'Processing...';
 
       // Add percentage display to the message for page title
       let titleMessage = message;

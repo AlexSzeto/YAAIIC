@@ -16,7 +16,19 @@ export const ProgressContext = createContext(null);
  * Supports multiple concurrent progress instances.
  * 
  * @param {Object} props
- * @param {Object} props.sseManager - SSE manager instance for subscribing to progress events (required)
+ * @param {Object} props.sseManager - SSE manager instance for subscribing to progress events (required).
+ *   Must implement the following interface:
+ *   - `subscribe(taskId, handlers)` - Subscribe to progress events for a task
+ *     - `taskId` {string} - Unique task identifier
+ *     - `handlers` {Object} - Event handler callbacks:
+ *       - `onProgress(data)` - Called with progress updates. `data.progress` contains:
+ *         - `percentage` {number} - Progress percentage (0-100)
+ *         - `currentStep` {string} - Human-readable step name from server
+ *         - `currentValue` {number} - Current progress value
+ *         - `maxValue` {number} - Maximum progress value
+ *       - `onComplete(data)` - Called when task completes successfully
+ *       - `onError(data)` - Called on task failure. `data.error.message` contains error text
+ *   - `unsubscribe(taskId)` - Unsubscribe from progress events for a task
  * @param {preact.ComponentChildren} props.children - App content wrapped by provider (required)
  * @returns {preact.VNode}
  */

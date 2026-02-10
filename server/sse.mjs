@@ -201,32 +201,46 @@ function scheduleTaskCleanup(taskId) {
   }, 5 * 60 * 1000); // 5 minutes
 }
 
+// Map ComfyUI node types to human-readable step names
+// Uses includes() pattern matching for flexible matching
+const NODE_STEP_PATTERNS = [
+  // Exact matches from client-side mapping (checked via includes for flexibility)
+  { pattern: 'CheckpointLoaderSimple', step: 'Loading model...' },
+  { pattern: 'LoraLoaderModelOnly', step: 'Loading LoRA...' },
+  { pattern: 'CLIPTextEncode', step: 'Encoding prompt...' },
+  { pattern: 'EmptyLatentImage', step: 'Preparing canvas...' },
+  { pattern: 'EmptySD3LatentImage', step: 'Preparing canvas...' },
+  { pattern: 'FluxGuidance', step: 'Configuring guidance...' },
+  { pattern: 'KSampler', step: 'Generating latent data...' },
+  { pattern: 'VAEEncode', step: 'Encoding data...' },
+  { pattern: 'VAEDecode', step: 'Decoding data...' },
+  { pattern: 'VAEEncodeForInpaint', step: 'Encoding for inpaint...' },
+  { pattern: 'LoadImage', step: 'Loading image...' },
+  { pattern: 'LoadImageMask', step: 'Loading mask...' },
+  { pattern: 'JWImageSaveToPath', step: 'Saving image...' },
+  { pattern: 'SaveImage', step: 'Saving image...' },
+  { pattern: 'JWAudioSaveToPath', step: 'Saving audio...' },
+  // Pattern-based matches (original server-side logic)
+  { pattern: 'Sampler', step: 'Sampling data...' },
+  { pattern: 'VAE Decode', step: 'Decoding data...' },
+  { pattern: 'VAE Encode', step: 'Encoding data...' },
+  { pattern: 'Save', step: 'Saving data...' },
+  { pattern: 'CLIP', step: 'Encoding prompt...' },
+  { pattern: 'Encode', step: 'Encoding prompt...' },
+  { pattern: 'Checkpoint', step: 'Loading model...' },
+  { pattern: 'Loader', step: 'Loading model...' },
+  { pattern: 'Upscale', step: 'Upscaling image...' }
+];
+
 // Map node IDs to human-readable step names based on node type patterns
 function getNodeStepName(nodeId) {
-  // This is a basic implementation - could be enhanced with node type info
   if (!nodeId) return 'Processing...';
   
-  // Common ComfyUI node patterns
-  if (nodeId.includes('Sampler') || nodeId.includes('KSampler')) {
-    return 'Sampling image...';
-  }
-  if (nodeId.includes('VAE Decode')) {
-    return 'Decoding image...';
-  }
-  if (nodeId.includes('VAE Encode')) {
-    return 'Encoding image...';
-  }
-  if (nodeId.includes('Save')) {
-    return 'Saving image...';
-  }
-  if (nodeId.includes('CLIP') || nodeId.includes('Encode')) {
-    return 'Encoding prompt...';
-  }
-  if (nodeId.includes('Checkpoint') || nodeId.includes('Loader')) {
-    return 'Loading model...';
-  }
-  if (nodeId.includes('Upscale')) {
-    return 'Upscaling image...';
+  // Check patterns in order (more specific patterns listed first)
+  for (const { pattern, step } of NODE_STEP_PATTERNS) {
+    if (nodeId.includes(pattern)) {
+      return step;
+    }
   }
   
   return `Processing ${nodeId}...`;

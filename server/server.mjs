@@ -174,6 +174,8 @@ app.get('/tags', (req, res) => {
 
   let debugOutput = 2;
   const results = [];
+  const definitions = {};
+  
   fs.createReadStream(path.join(actualDirname, 'resource', 'danbooru_tags.csv'))
     .pipe(csv())
     .on('data', (row) => {
@@ -181,6 +183,7 @@ app.get('/tags', (req, res) => {
       const tagName = row.tag;
       const category = row.category; // If there's a category column
       const usageCount = parseInt(row.count) || 0;
+      const definition = row.definition;
       
       if(debugOutput) {
         debugOutput--;
@@ -188,7 +191,13 @@ app.get('/tags', (req, res) => {
       }
       if (!tagName || !category || !filterCategories.some(cat => cat === category)) return; // Skip empty entries
 
-      // Apply filters
+      // Collect all tag definitions (regardless of filters)
+      if (definition && definition.trim()) {
+        const normalizedTagName = tagName.replace(/_/g, ' ');
+        definitions[normalizedTagName] = definition.trim();
+      }
+
+      // Apply filters for tags list
       let shouldInclude = true;
       
       // Filter 1: noCharacters - remove entries with parentheses
@@ -213,8 +222,10 @@ app.get('/tags', (req, res) => {
     })
     .on('end', () => {
       console.log(`Tags filtered: ${results.length} tags returned after applying filters`);
+      console.log(`Tag definitions loaded: ${Object.keys(definitions).length} tags with definitions`);
       res.json({ 
         tags: results,
+        definitions,
         filters: {
           noCharacters,
           minLength,
@@ -227,6 +238,15 @@ app.get('/tags', (req, res) => {
       console.error('Error reading tags.csv:', err);
       res.status(500).json({ error: 'Failed to load tags.csv' });
     });
+});
+
+// GET endpoint for tag definitions (deprecated - use /tags endpoint instead)
+// Kept for backwards compatibility
+app.get('/tag-definitions', (req, res) => {
+  console.log('Tag definitions endpoint called (deprecated - redirecting to /tags)');
+  
+  // Redirect to /tags endpoint which now includes definitions
+  res.redirect(307, '/tags');
 });
 
 // POST endpoint for uploading images

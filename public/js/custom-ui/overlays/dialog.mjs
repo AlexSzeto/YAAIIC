@@ -296,7 +296,7 @@ class TextPromptDialog extends Component {
  * 
  * @param {Object} props
  * @param {string} props.text - The main content text to display (required)
- * @param {string} [props.title='Generate Image'] - The title displayed in header
+ * @param {string} [props.title='Dialog'] - The title displayed in header
  * @param {Array<string>} [props.options] - Array of button labels. First option is styled as danger (destructive).
  * @param {Function} props.onClose - Callback when dialog closes, receives selected option or null (required)
  * @returns {preact.VNode}
@@ -327,8 +327,8 @@ class TextPromptDialog extends Component {
  * 
  * @param {string} text - The main content text to display in the dialog body.
  *                       If empty or whitespace-only, shows "No description text provided."
- * @param {string} [title='Generate Image'] - The title to display in the dialog header.
- *                                           Defaults to 'Generate Image' if not provided.
+ * @param {string} [title='Dialog'] - The title to display in the dialog header.
+ *                                           Defaults to 'Dialog' if not provided.
  * @param {Array<string>} [options] - Array of option labels to display as buttons.
  *                                   If provided, returns a Promise that resolves with the selected option.
  *                                   If not provided, shows default "Close" button and returns undefined.
@@ -351,7 +351,7 @@ class TextPromptDialog extends Component {
  *   // User clicked Delete
  * }
  */
-export function showDialog(text, title = 'Generate Image', options = null) {
+export function showDialog(text, title = 'Dialog', options = null) {
   console.log('showDialog called with:', { text, title, options });
 
   // Create container element
