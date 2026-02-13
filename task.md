@@ -273,3 +273,21 @@ When a tag is selected and confirmed:
    8. Test that right-click on non-autocomplete workflow doesn't show panel
    9. Verify proper error handling when tags fail to load
    10. Test on both main UI and inpaint UI
+[x] Convert tag selector panel to modal
+   1. Import Modal component from `custom-ui/overlays/modal.mjs` in tag-selector-panel.mjs
+   2. Add `isOpen` prop to TagSelectorPanel component API (remove `position` prop)
+   3. Replace PanelContainer styled component usage with Modal component
+   4. Configure Modal with:
+      - size='medium' (or adjust to match current 400px width)
+      - title prop for current node's formatted name
+      - onClose prop calling this.props.onClose
+      - isOpen prop from component props
+   5. Move breadcrumbs, search, definition, and navigation sections into Modal children
+   6. Remove Close button from footer section (keep only Select button)
+   7. Remove position-based styling logic (Modal centers automatically)
+   8. Update generation-form.mjs usage:
+      - Change from conditional render to always-render with isOpen prop
+      - Pass isOpen={showTagPanel} instead of conditionally rendering
+      - Remove tagPanelPosition state and related logic
+   9. Update inpaint-form.mjs with same changes as generation-form
+   10. Test that modal opens on right-click, centers properly, and closes on click-outside

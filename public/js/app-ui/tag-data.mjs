@@ -60,11 +60,8 @@ export async function loadTagDefinitions() {
 export function getTagDefinition(tagName) {
   if (!tagName) return null;
   
-  console.log('Looking up definition for tag:', tagName);
-
   // Try exact match first
   if (definitions[tagName]) {
-    console.log('Found definition for tag:', tagName);
     return definitions[tagName];
   }
   

@@ -44,7 +44,6 @@ export function GenerationForm({
   
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
-  const [tagPanelPosition, setTagPanelPosition] = useState({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   
   // Set up contextmenu listener for tag selector
@@ -54,14 +53,13 @@ export function GenerationForm({
     
     textareaRef.current = textarea;
     
-    const cleanup = suppressContextMenu(textarea, ({ x, y }) => {
+    const cleanup = suppressContextMenu(textarea, () => {
       // Only show panel if workflow has autocomplete enabled and tags are loaded
       if (!workflow?.autocomplete || !isTagDefinitionsLoaded()) {
         return; // Right-click suppressed, but no panel shown
       }
       
-      // Show the tag selector panel at cursor position
-      setTagPanelPosition({ x, y });
+      // Show the tag selector panel
       setShowTagPanel(true);
     });
     
@@ -219,13 +217,11 @@ export function GenerationForm({
       </${HorizontalLayout}>
 
       <!-- Tag Selector Panel -->
-      ${showTagPanel && html`
-        <${TagSelectorPanel}
-          position=${tagPanelPosition}
-          onSelect=${handleTagSelect}
-          onClose=${handleCloseTagPanel}
-        />
-      `}
+      <${TagSelectorPanel}
+        isOpen=${showTagPanel}
+        onSelect=${handleTagSelect}
+        onClose=${handleCloseTagPanel}
+      />
 
     </${VerticalLayout}>
   `;

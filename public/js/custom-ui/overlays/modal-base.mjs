@@ -35,6 +35,8 @@ export const BaseContainer = styled('div')`
   color: ${props => props.textColor};
   padding: 24px;
   border-radius: ${props => props.borderRadius};
+  width: ${props => props.width || 'auto'};
+  height: ${props => props.height || 'auto'};
   max-width: ${props => props.maxWidth};
   max-height: ${props => props.maxHeight};
   min-width: ${props => props.minWidth || 'auto'};

@@ -21,8 +21,11 @@ import {
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether the modal is open (required)
  * @param {Function} props.onClose - Callback when modal is closed (required)
- * @param {string} props.title - Modal title text (required)
+ * @param {string} [props.title] - Modal title text (required if showHeader is true)
+ * @param {boolean} [props.showHeader=true] - Whether to show the header with title and close button
  * @param {string} [props.size='medium'] - Size variant: 'small', 'medium', 'large', 'full'
+ * @param {string} [props.width] - Exact width (overrides size-based width)
+ * @param {string} [props.height] - Exact height (overrides size-based height)
  * @param {preact.ComponentChildren} [props.children] - Modal body content
  * @param {preact.VNode|string} [props.footer] - Optional footer content (typically buttons)
  * @param {string} [props.className=''] - Additional CSS class name
@@ -46,7 +49,10 @@ export function Modal({
   isOpen, 
   onClose, 
   title, 
+  showHeader = true,
   size = 'medium', 
+  width,
+  height,
   children, 
   footer,
   className = ''
@@ -84,6 +90,9 @@ export function Modal({
 
   // Size-based max widths
   const getSizeMaxWidth = () => {
+    // Use exact width if provided
+    if (width) return width;
+    
     switch (size) {
       case 'small': return '400px';
       case 'large': return '800px';
@@ -93,6 +102,9 @@ export function Modal({
   };
 
   const getSizeMaxHeight = () => {
+    // Use exact height if provided
+    if (height) return height;
+    
     switch (size) {
       case 'full': return '95vh';
       default: return '80vh';
@@ -109,32 +121,36 @@ export function Modal({
         bgColor=${theme.colors.background.card}
         textColor=${theme.colors.text.primary}
         borderRadius=${theme.spacing.medium.borderRadius}
-        maxWidth=${getSizeMaxWidth()}
-        maxHeight=${getSizeMaxHeight()}
+        width=${width}
+        height=${height}
+        maxWidth=${!width ? getSizeMaxWidth() : undefined}
+        maxHeight=${!height ? getSizeMaxHeight() : undefined}
         shadowColor=${theme.shadow.colorStrong}
         class=${className}
         role="dialog" 
         aria-modal="true" 
-        aria-labelledby="modal-title"
+        aria-labelledby=${showHeader ? "modal-title" : undefined}
       >
-        <${BaseHeader} marginBottom="16px">
-          <${BaseTitle} 
-            id="modal-title" 
-            color=${theme.colors.text.primary}
-            fontFamily=${theme.typography.fontFamily}
-            fontWeight=${theme.typography.fontWeight.bold}
-          >
-            ${title}
-          </${BaseTitle}>
-          <${CloseButton}
-            onClick=${onClose}
-            color=${theme.colors.text.secondary}
-            transition=${theme.transitions.fast}
-            aria-label="Close"
-          >
-            <${Icon} name='x' color=${theme.colors.text.secondary} />
-          </${CloseButton}>
-        </${BaseHeader}>
+        ${showHeader && html`
+          <${BaseHeader} marginBottom="16px">
+            <${BaseTitle} 
+              id="modal-title" 
+              color=${theme.colors.text.primary}
+              fontFamily=${theme.typography.fontFamily}
+              fontWeight=${theme.typography.fontWeight.bold}
+            >
+              ${title}
+            </${BaseTitle}>
+            <${CloseButton}
+              onClick=${onClose}
+              color=${theme.colors.text.secondary}
+              transition=${theme.transitions.fast}
+              aria-label="Close"
+            >
+              <${Icon} name='x' color=${theme.colors.text.secondary} />
+            </${CloseButton}>
+          </${BaseHeader}>
+        `}
         
         <${BaseContent}
           marginBottom=${footer ? '20px' : '0'}

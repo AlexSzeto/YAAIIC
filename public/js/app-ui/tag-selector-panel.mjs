@@ -6,39 +6,32 @@
  * and includes search functionality with autocomplete.
  */
 
+import { createRef } from 'preact';
 import { html, Component } from 'htm/preact';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
 import { Input } from '../custom-ui/io/input.mjs';
+import { Modal } from '../custom-ui/overlays/modal.mjs';
 import { getCategoryTree, getTagDefinition, formatTagDisplayName, getAllTagNames } from './tag-data.mjs';
 import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
-import { H2, HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout } from '../custom-ui/themed-base.mjs';
 
 // ============================================================================
 // Styled Components
 // ============================================================================
 
 /**
- * Main panel container with glass effect and positioning
+ * Panel container with rigid dimensions for modal content
+ * Provides fixed size and flex layout for proper navigation scrolling
  */
 const PanelContainer = styled('div')`
-  position: fixed;
-  z-index: 10001;
   width: 400px;
   height: 500px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: ${props => props.padding};
-  border-radius: ${props => props.borderRadius};
-  background-color: ${props => props.backgroundColor};
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: ${props => props.boxShadow};
-  color: ${props => props.color};
-  font-family: ${props => props.fontFamily};
-  font-size: ${props => props.fontSize};
+  gap: ${props => props.gap};
+  overflow: hidden;
 `;
 PanelContainer.className = 'tag-selector-panel-container';
 
@@ -49,8 +42,11 @@ const BreadcrumbSection = styled('div')`
   display: flex;
   gap: ${props => props.gap};
   overflow-x: auto;
-  padding-bottom: ${props => props.paddingBottom};
-  margin-bottom: ${props => props.marginBottom};
+  scrollbar-width: none;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 BreadcrumbSection.className = 'tag-selector-panel-breadcrumb-section';
 
@@ -58,7 +54,6 @@ BreadcrumbSection.className = 'tag-selector-panel-breadcrumb-section';
  * Search input section
  */
 const SearchSection = styled('div')`
-  margin-bottom: ${props => props.marginBottom};
 `;
 SearchSection.className = 'tag-selector-panel-search-section';
 
@@ -66,7 +61,6 @@ SearchSection.className = 'tag-selector-panel-search-section';
  * Title section
  */
 const TitleSection = styled('div')`
-  margin-bottom: ${props => props.marginBottom};
 `;
 TitleSection.className = 'tag-selector-panel-title-section';
 
@@ -74,9 +68,8 @@ TitleSection.className = 'tag-selector-panel-title-section';
  * Navigation section with scrollable area
  */
 const NavigationSection = styled('div')`
-  flex: 1;
+  flex: 2 1 0;
   overflow-y: auto;
-  margin-bottom: ${props => props.marginBottom};
   padding-right: ${props => props.paddingRight}; /* For scrollbar space */
 `;
 NavigationSection.className = 'tag-selector-panel-navigation-section';
@@ -86,13 +79,15 @@ NavigationSection.className = 'tag-selector-panel-navigation-section';
  * Displays tag definitions with accent border and subtle background
  */
 const DefinitionDisplay = styled('div')`
-  padding: ${props => props.padding};
+  flex: 1 1 0;
+  padding: 0 ${props => props.padding};
   margin-bottom: ${props => props.marginBottom};
   background-color: ${props => props.backgroundColor};
   border-left: 3px solid ${props => props.borderColor};
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
   line-height: ${props => props.lineHeight};
+  overflow-y: scroll;
 `;
 DefinitionDisplay.className = 'tag-selector-panel-definition';
 
@@ -104,7 +99,6 @@ const FooterSection = styled('div')`
   flex-wrap: nowrap;
   gap: ${props => props.gap};
   padding-top: ${props => props.paddingTop};
-  border-top: 1px solid ${props => props.borderColor};
 `;
 FooterSection.className = 'tag-selector-panel-footer-section';
 
@@ -116,47 +110,62 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  * Tag Selector Panel Component
  * 
  * Displays a hierarchical interface for browsing and selecting tags from
- * the Danbooru category tree.
+ * the Danbooru category tree in a modal dialog.
  * 
  * @param {Object} props
+ * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Function} props.onSelect - Callback when a tag is selected: (tagName) => void
- * @param {Function} props.onClose - Callback when panel should close: () => void
- * @param {Object} props.position - Cursor position for panel placement: {x, y}
+ * @param {Function} props.onClose - Callback when modal should close: () => void
  * @returns {preact.VNode}
  * 
  * @example
  * <TagSelectorPanel
+ *   isOpen={isOpen}
  *   onSelect={(tag) => console.log('Selected:', tag)}
  *   onClose={() => console.log('Closed')}
- *   position={{x: 100, y: 200}}
  * />
  */
 export class TagSelectorPanel extends Component {
   constructor(props) {
     super(props);
     
-    const categoryTree = getCategoryTree();
-    
     this.state = {
       theme: currentTheme.value,
       path: [], // Navigation path as array of node names
       currentNode: 'tag_groups', // Current node key
       searchValue: '',
-      categoryTree: categoryTree
+      categoryTree: {} // Will be populated when modal opens
     };
     
     this.searchInputId = 'tag-selector-search-' + Math.random().toString(36).substr(2, 9);
     this.autoCompleteInstance = null;
     this.autoCompleteId = null;
+    this.breadcrumbRef = createRef();
   }
 
   componentDidMount() {
     this.unsubscribe = currentTheme.subscribe((theme) => {
       this.setState({ theme });
     });
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    // Initialize autocomplete and load category tree when modal opens
+    if (this.props.isOpen && !prevProps.isOpen) {
+      // Load category tree
+      const categoryTree = getCategoryTree();
+      this.setState({ categoryTree });
+      
+      // Wait for next tick to ensure DOM is ready for autocomplete
+      setTimeout(() => {
+        this.initializeAutocomplete();
+      }, 0);
+    }
     
-    // Initialize autocomplete
-    this.initializeAutocomplete();
+    // Clean up autocomplete when modal closes
+    if (!this.props.isOpen && prevProps.isOpen) {
+      this.cleanupAutocomplete();
+    }
   }
 
   componentWillUnmount() {
@@ -164,25 +173,52 @@ export class TagSelectorPanel extends Component {
       this.unsubscribe();
     }
     
-    // Clean up autocomplete
-    if (this.autoCompleteInstance) {
-      // Remove the autocomplete list from DOM if it exists
-      const list = this.autoCompleteInstance.list;
-      if (list && list.parentNode) {
-        list.parentNode.removeChild(list);
+    this.cleanupAutocomplete();
+  }
+
+  /**
+   * Clean up autocomplete instance
+   */
+  cleanupAutocomplete() {
+    if (!this.autoCompleteInstance) {
+      return;
+    }
+    
+    // Remove the autocomplete list from DOM if it exists
+    const list = this.autoCompleteInstance.list;
+    if (list && list.parentNode) {
+      list.parentNode.removeChild(list);
+    }
+    
+    // Remove the style tag for this autocomplete instance
+    if (this.autoCompleteId !== null) {
+      const styleTag = document.getElementById('autocomplete-styles-' + this.autoCompleteId);
+      if (styleTag && styleTag.parentNode) {
+        styleTag.parentNode.removeChild(styleTag);
       }
-      
-      // Remove the style tag for this autocomplete instance
-      if (this.autoCompleteId !== null) {
-        const styleTag = document.getElementById('autocomplete-styles-' + this.autoCompleteId);
-        if (styleTag && styleTag.parentNode) {
-          styleTag.parentNode.removeChild(styleTag);
+    }
+    
+    this.autoCompleteInstance.unInit();
+    this.autoCompleteInstance = null;
+    this.autoCompleteId = null;
+  }
+
+  /**
+   * Scroll breadcrumb to the rightmost position
+   */
+  scrollBreadcrumbToRight() {
+    console.log('Scrolling breadcrumb to right', this.breadcrumbRef);
+    if (this.breadcrumbRef.current.base) {
+      // Use nextTick to ensure DOM is updated
+      requestAnimationFrame(() => {
+        if (this.breadcrumbRef.current.base) {
+          this.breadcrumbRef.current.base.scrollLeft = this.breadcrumbRef.current.base.scrollWidth;
+        } else {
+          console.warn('Breadcrumb ref not set on scroll attempt');
         }
-      }
-      
-      this.autoCompleteInstance.unInit();
-      this.autoCompleteInstance = null;
-      this.autoCompleteId = null;
+      });
+    } else {
+      console.warn('Breadcrumb ref not set, cannot scroll to right');
     }
   }
 
@@ -254,7 +290,9 @@ export class TagSelectorPanel extends Component {
       path: [...path, currentNode],
       currentNode: nodeName,
       searchValue: ''
-    });
+    },
+    // Scroll breadcrumb to right when navigation changes
+    () => this.scrollBreadcrumbToRight());
   }
 
   /**
@@ -314,7 +352,7 @@ export class TagSelectorPanel extends Component {
       selector: `#${this.searchInputId}`,
       placeHolder: "Search tags...",
       data: {
-        src: tagNames,
+        src: tagNames.map(tag => tag.replace(/_/g, ' ')), // Replace underscores with spaces for better search
         cache: true,
       },
       resultsList: {
@@ -336,21 +374,18 @@ export class TagSelectorPanel extends Component {
               list.style.left = inputRect.left + 'px';
               list.style.top = (inputRect.bottom + 4) + 'px';
               list.style.width = inputRect.width + 'px';
-              list.style.zIndex = '10002'; // Higher than panel's 10001
+              list.style.zIndex = '10003'; // Higher than modal's 10000
             }
           },
           selection: (event) => {
             const selectedTag = event.detail.selection.value;
             
             // Navigate to the selected tag
-            this.navigateToTag(selectedTag);
+            this.navigateToTag(selectedTag.replace(/ /g, '_')); // Convert back to internal tag format
             
             // Update search input value
             inputElement.value = selectedTag;
             this.setState({ searchValue: selectedTag });
-            
-            // Dispatch input event for state sync
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
           }
         }
       }
@@ -402,64 +437,48 @@ export class TagSelectorPanel extends Component {
   }
 
   /**
-   * Handle tag selection
+   * Handle tag insertion
    */
-  handleSelect = () => {
+  handleInsert = () => {
     const { currentNode } = this.state;
     const { onSelect } = this.props;
     
     // Get the tag name without any prefix or path
-    const tagName = currentNode.replace(/^tag_groups?:?\/*/i, '').replace(/.*\//, '');
+    const tagName = currentNode.replace(/^tag_groups?:?\/*/i, '').replace(/.*\//, '').replace(/_/g, ' ');
     
     if (onSelect) {
       onSelect(tagName);
     }
-
-  }
-
-  /**
-   * Handle close
-   */
-  handleClose = () => {
-    const { onClose } = this.props;
     
-    if (onClose) {
-      onClose();
-    }
+    // Don't close the modal - user can continue selecting tags
   }
 
   render() {
-    const { position } = this.props;
+    const { isOpen, onClose } = this.props;
     const { theme, currentNode } = this.state;
     
     const children = this.getCurrentChildren();
     const currentDefinition = getTagDefinition(currentNode);
     const displayName = formatTagDisplayName(currentNode);
     
-    // Calculate position to ensure panel stays in viewport
-    const panelStyle = {
-      left: `${position.x}px`,
-      top: `${position.y}px`
-    };
-    
     return html`
-      <${PanelContainer}
-        style=${panelStyle}
-        padding=${theme.spacing.medium.padding}
-        borderRadius=${theme.spacing.medium.borderRadius}
-        backgroundColor=${theme.colors.overlay.glass}
-        boxShadow=${theme.shadow.elevated}
-        color=${theme.colors.text.primary}
-        fontFamily=${theme.typography.fontFamily}
-        fontSize=${theme.typography.fontSize.medium}
+      <${Modal}
+        isOpen=${isOpen}
+        onClose=${onClose}
+        showHeader=${false}
+        width="450px"
+        height="550px"
       >
-        ${this.renderBreadcrumbs()}
-        ${this.renderSearchSection()}
-        ${this.renderTitleSection(displayName)}
-        ${this.renderDefinitionSection(currentDefinition)}
-        ${this.renderNavigationSection(children)}
-        ${this.renderFooter()}
-      </${PanelContainer}>
+        <${PanelContainer} gap=${theme.spacing.medium.gap}>
+          <${H2}>Search</${H2}>
+          ${this.renderSearchSection()}
+          ${this.renderBreadcrumbs()}
+          ${this.renderTitleSection(displayName)}
+          ${this.renderDefinitionSection(currentDefinition)}
+          ${this.renderNavigationSection(children)}
+          ${this.renderFooter()}
+        </${PanelContainer}>
+      </${Modal}>
     `;
   }
 
@@ -471,9 +490,9 @@ export class TagSelectorPanel extends Component {
     
     return html`
       <${BreadcrumbSection}
+        ref=${this.breadcrumbRef}
         gap=${theme.spacing.small.gap}
-        marginBottom=${theme.spacing.medium.gap}
-        paddingBottom=${theme.spacing.medium.padding}
+        paddingBottom=${theme.spacing.small.padding}
       >
         ${breadcrumbs.map((nodeName, index) => {
           const isCurrent = index === breadcrumbs.length - 1;
@@ -529,7 +548,6 @@ export class TagSelectorPanel extends Component {
   renderDefinitionSection(definition) {
     const { theme } = this.state;
     
-    console.log('Rendering definition section with definition:', definition);
     if (!definition) {
       return null;
     }
@@ -552,8 +570,12 @@ export class TagSelectorPanel extends Component {
   renderNavigationSection(children) {
     const { theme } = this.state;
     
+    if(children.length === 0) {
+      return null;
+    }
+
     return html`
-      <${NavigationSection} paddingRight=${theme.spacing.medium.padding} marginBottom=${theme.spacing.medium.gap}>
+      <${NavigationSection} paddingRight=${theme.spacing.medium.padding}>
         <${VerticalLayout} gap="small">
           ${children.map(child => {
             const displayName = formatTagDisplayName(child);
@@ -581,7 +603,7 @@ export class TagSelectorPanel extends Component {
     const currentDefinition = getTagDefinition(currentNode);
     
     return html`
-      <${HorizontalLayout}
+      <${FooterSection}
         gap=${theme.spacing.small.gap}
         paddingTop=${theme.spacing.small.padding}
         borderColor=${theme.colors.border.subtle}
@@ -590,18 +612,11 @@ export class TagSelectorPanel extends Component {
           variant="medium-text"
           color="primary"
           disabled=${!currentDefinition}
-          onClick=${this.handleSelect}
+          onClick=${this.handleInsert}
         >
-          Select
+          Insert
         </${Button}>
-        <${Button}
-          variant="medium-text"
-          color="secondary"
-          onClick=${this.handleClose}
-        >
-          Close
-        </${Button}>
-      </${HorizontalLayout}>
+      </${FooterSection}>
     `;
   }
 }
