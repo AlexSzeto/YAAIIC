@@ -151,8 +151,8 @@ function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, show
           color=${theme.colors.text.secondary} 
           size='20px'
         />
-        <${ItemName} theme=${theme}>${item.label}<//>
-      <//>
+        <${ItemName} theme=${theme}>${item.label}</${ItemName}>
+      </${ItemLabel}>
       ${showActions ? html`
         <${ItemActions} theme=${theme}>
           <${Button}
@@ -170,9 +170,9 @@ function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, show
             disabled=${item.disabled || !onDelete}
             title=${item.disabled ? 'Cannot delete this item' : 'Delete item'}
           />
-        <//>
+        </${ItemActions}>
       ` : null}
-    <//>
+    </${ItemContainer}>
   `;
 }
 
@@ -317,14 +317,14 @@ class ListSelectModal extends Component {
                 fontWeight=${theme.typography.fontWeight.bold}
               >
                 ${title}
-              <//>
-            <//>
+              </${BaseTitle}>
+            </${BaseHeader}>
             
             <${Content} theme=${theme}>
               ${isLoading ? html`
-                <${LoadingMessage} theme=${theme}>Loading...<//>
+                <${LoadingMessage} theme=${theme}>Loading...</${LoadingMessage}>
               ` : items.length === 0 ? html`
-                <${LoadingMessage} theme=${theme}>No items available<//>
+                <${LoadingMessage} theme=${theme}>No items available</${LoadingMessage}>
               ` : html`
                 <${List} theme=${theme}>
                   ${items.map(item => html`
@@ -340,9 +340,9 @@ class ListSelectModal extends Component {
                       theme=${theme}
                     />
                   `)}
-                <//>
+                </${List}>
               `}
-            <//>
+            </${Content}>
             
             <${Footer} theme=${theme}>
               <${Button} 
@@ -361,10 +361,10 @@ class ListSelectModal extends Component {
                   ${actionLabel}
                 </>
               ` : null}
-            <//>
-          <//>
-        <//>
-      <//>
+            </${Footer}>
+          </${ModalWrapper}>
+        </${BaseContainer}>
+      </${BaseOverlay}>
     `;
   }
 }

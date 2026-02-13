@@ -97,7 +97,7 @@ export function InpaintForm({
         
         <!-- Extra Inputs (standard types: text, number, select, checkbox) -->
         ${workflow?.extraInputs ? renderExtraInputs(workflow.extraInputs, 'standard') : null}
-      <//>
+      </${FormRow}>
 
       <!-- Prompt -->
       <${Textarea}
@@ -123,9 +123,9 @@ export function InpaintForm({
           disabled=${isInpaintDisabled}
         >
           ${isGenerating ? 'Inpainting...' : 'Inpaint'}
-        <//>
-      <//>
+        </${Button}>
+      </${FormRow}>
 
-    <//>
+    </${FormContainer}>
   `;
 }

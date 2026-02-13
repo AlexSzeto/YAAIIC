@@ -35,8 +35,8 @@ import {
  *   title="Confirm Action"
  *   size="small"
  *   footer={html`
- *     <${Button} variant="secondary" onClick=${onCancel}>Cancel<//>
- *     <${Button} variant="primary" onClick=${onConfirm}>Confirm<//>
+ *     <${Button} variant="secondary" onClick=${onCancel}>Cancel</${Button}>
+ *     <${Button} variant="primary" onClick=${onConfirm}>Confirm</${Button}>
  *   `}
  * >
  *   <p>Are you sure you want to proceed?</p>
@@ -125,7 +125,7 @@ export function Modal({
             fontWeight=${theme.typography.fontWeight.bold}
           >
             ${title}
-          <//>
+          </${BaseTitle}>
           <${CloseButton}
             onClick=${onClose}
             color=${theme.colors.text.secondary}
@@ -133,8 +133,8 @@ export function Modal({
             aria-label="Close"
           >
             <${Icon} name='x' color=${theme.colors.text.secondary} />
-          <//>
-        <//>
+          </${CloseButton}>
+        </${BaseHeader}>
         
         <${BaseContent}
           marginBottom=${footer ? '20px' : '0'}
@@ -143,7 +143,7 @@ export function Modal({
           fontSize=${theme.typography.fontSize.medium}
         >
           ${children}
-        <//>
+        </${BaseContent}>
 
         ${footer && html`
           <${BaseFooter}
@@ -151,10 +151,10 @@ export function Modal({
             gap=${theme.spacing.medium.gap}
           >
             ${footer}
-          <//>
+          </${BaseFooter}>
         `}
-      <//>
-    <//>
+      </${BaseContainer}>
+    </${BaseOverlay}>
   `;
 
   return createPortal(modalContent, document.body);
@@ -284,7 +284,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
                 </>
               </>
             `}
-          <//>
+          </${ImageModalTitleWrapper}>
 
             ${allowSelect && onSelect && html`
               <${ImageModalActionArea}>
@@ -294,12 +294,12 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
                   onClick=${handleSelect}
                 >
                   ${selectButtonText}
-                </>
-              </>
+                </${Button}>
+              </${ImageModalActionArea}>
             `}
-          </>
-        <//>
-      <//>
+          </${ImageModalWrapper}>
+        </${BaseContainer}>
+      </${BaseOverlay}>
     `;
   };
 
@@ -382,7 +382,7 @@ export function showModal(options) {
           }}
         >
           ${btn.label}
-        <//>
+        </${Button}>
       `)}
     `;
   }
@@ -398,7 +398,7 @@ export function showModal(options) {
         footer=${footerContent}
       >
         ${options.content}
-      <//>
+      </${Modal}>
     `;
   };
 

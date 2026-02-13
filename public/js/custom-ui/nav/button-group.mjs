@@ -92,10 +92,10 @@ export class ButtonGroup extends Component {
               title=${item.name}
             >
               ${item.name}
-            <//>
+            </${Button}>
           `;
         })}
-      <//>
+      </${Container}>
     `;
   }
 }

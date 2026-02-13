@@ -154,11 +154,11 @@ export function ToastProvider({ children }) {
                   <${ToastText} theme=${theme}>${toast.text}</>
                 </>
               </>
-            <//>
+            </${ToastWrapper}>
           `)}
-        <//>
+        </${ToastContainer}>
       `, document.body)}
-    <//>
+    </${ToastContext.Provider}>
   `;
 }
 

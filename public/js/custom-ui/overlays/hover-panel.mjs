@@ -88,7 +88,7 @@ function HoverPanelInternal({
       onMouseLeave=${onMouseLeave}
     >
       ${content}
-    <//>
+    </${HoverPanelContainer}>
   `;
 }
 
@@ -110,7 +110,7 @@ function HoverPanelInternal({
  * html`
  *   <${HoverPanelProvider}>
  *     <${MyApp} />
- *   <//>
+ *   </${HoverPanelProvider}>
  * `
  */
 export function HoverPanelProvider({ children }) {
@@ -260,7 +260,7 @@ export function HoverPanelProvider({ children }) {
           onMouseLeave=${() => hide()}
         />
       `, document.body)}
-    <//>
+    </${HoverPanelContext.Provider}>
   `;
 }
 

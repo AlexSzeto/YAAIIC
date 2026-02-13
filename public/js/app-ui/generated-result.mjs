@@ -263,7 +263,7 @@ export function GeneratedResult({
             ${image.audioUrl ? html`
               <${AudioPlayer} audioUrl=${image.audioUrl} />
             ` : null}
-          <//>
+          </${LeftColumn}>
 
           <${RightColumn}>
             <${InfoField} 
@@ -343,8 +343,8 @@ export function GeneratedResult({
               useTitle="Use this seed"
               canEdit=${false}
             />
-          <//>
-        <//>
+          </${RightColumn}>
+        </${HorizontalLayout}>
 
         <${HorizontalLayout} gap="small">
           <${Button} 
@@ -525,15 +525,15 @@ class TabbedInfoField extends Component {
                 title="Cancel"
               />
             `}
-          <//>
-        <//>
+          </${InfoButtons}>
+        </${TabbedInfoHeader}>
         <${InfoTextarea}
             isEditing=${isEditing}
             readOnly=${!isEditing} 
             value=${isEditing ? editValue : (activeTab.value || '')}
             onInput=${(e) => this.setState({ editValue: e.target.value })}
         />
-      <//>
+      </${TabbedInfoSection}>
     `;
   }
 }
@@ -569,7 +569,7 @@ function InfoField({
   return html`
     <${InfoSection}>
       <${InfoHeader}>
-        <${InfoLabel}>${label}:<//>
+        <${InfoLabel}>${label}:</${InfoLabel}>
         <${InfoButtons}>
           ${!isEditing ? html`
             <${Button}
@@ -609,8 +609,8 @@ function InfoField({
               title="Cancel"
             />
           `}
-        <//>
-      <//>
+        </${InfoButtons}>
+      </${InfoHeader}>
       ${isTextarea 
         ? html`
             <${InfoTextarea}
@@ -628,6 +628,6 @@ function InfoField({
                 onInput=${(e) => setEditValue(e.target.value)}
             />`
       }
-    <//>
+    </${InfoSection}>
   `;
 }

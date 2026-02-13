@@ -266,27 +266,27 @@ export function ProgressBanner({
         <${BannerContent}>
           <${Content}>
             <${Info}>
-              <${Message} status=${statusType}>${state.message}<//>
-              ${state.percentage > 0 ? html`<${Percentage}>${Math.round(state.percentage)}%<//>` : null}
-            <//>
+              <${Message} status=${statusType}>${state.message}</${Message}>
+              ${state.percentage > 0 ? html`<${Percentage}>${Math.round(state.percentage)}%</${Percentage}>` : null}
+            </${Info}>
             ${state.percentage > 0 ? html`
               <${BarContainer}>
                 <${Bar} 
                   percentage=${state.percentage}
                   status=${statusType}
                 />
-              <//>
+              </${BarContainer}>
             ` : null}
-          <//>
+          </${Content}>
           <${DismissButton}
             onClick=${() => onDismiss && onDismiss()}
             aria-label="Dismiss"
           >
             <${Icon} name='x' color='currentColor' />
-          <//>
-        <//>
-      <//>
-    <//>
+          </${DismissButton}>
+        </${BannerContent}>
+      </${Panel}>
+    </${BannerWrapper}>
   `;
 }
 

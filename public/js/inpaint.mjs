@@ -572,8 +572,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       <${Page}>
         <${ToastProvider}>
           <${InpaintApp} />
-        </>
-      <//>
+        </${ToastProvider}>
+      </${Page}>
     `, root);
     await loadTags();
     initAutoComplete();

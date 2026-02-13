@@ -271,16 +271,16 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
   
   return html`
     <${CanvasContainer}>
-      <${H2}>Inpaint Canvas</>
+      <${H2}>Inpaint Canvas</${H2}>
       ${!imageUrl && html`
         <${Panel} variant="outlined">
           <p>No image loaded for inpainting</p>
-        <//>
+        </${Panel}>
       `}
       ${imageUrl && !imageLoaded && html`
         <${Panel} variant="outlined">
           <p>Loading image...</p>
-        <//>
+        </${Panel}>
       `}
       ${imageLoaded && html`
         <${Canvas}
@@ -298,8 +298,8 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
           ` : html`
             <p>Left click and drag to select inpaint area, right click to clear selection</p>
           `}
-        <//>
+        </${InfoContainer}>
       `}
-    <//>
+    </${CanvasContainer}>
   `;
 }

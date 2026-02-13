@@ -177,7 +177,7 @@ export class NavigatorControl extends Component {
             aria-live="polite"
           >
             <span>${currentPage + 1}</span> / <span>${totalPages}</span>
-          <//>
+          </${PageIndex}>
           <${Button}
             variant="medium-icon"
             color="secondary"
@@ -199,8 +199,8 @@ export class NavigatorControl extends Component {
               onClick=${onLast}
             />
           ` : ''}
-        <//>
-      <//>
+        </${Nav}>
+      </${Container}>
     `;
   }
 }
@@ -511,7 +511,7 @@ export class NavigatorComponent extends Component {
     
     // Hide component if no items
     if (!hasItems) {
-      return html`<${Container} display="none"><//>`;
+      return html`<${Container} display="none"></${Container}>`;
     }
 
     return html`
@@ -537,7 +537,7 @@ export class NavigatorComponent extends Component {
             aria-live="polite"
           >
             <span>${currentPage + 1}</span> / <span>${totalPages}</span>
-          <//>
+          </${PageIndex}>
           <${Button}
             variant="medium-icon"
             color="secondary"
@@ -547,8 +547,8 @@ export class NavigatorComponent extends Component {
             disabled=${!hasMultiplePages || isLastPage}
             onClick=${this.goToNextPage}
           />
-        <//>
-      <//>
+        </${Nav}>
+      </${Container}>
     `;
   }
 }
