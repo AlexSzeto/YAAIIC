@@ -3,16 +3,16 @@ import { getThemeValue } from '../custom-ui/theme.mjs';
 
 // Inject global styles for autocomplete.js
 // Uses a direct <style> tag injection to avoid conflicts with goober's glob()
-export function injectAutocompleteStyles() {
+export function injectAutocompleteStyles(index) {
   // Check if styles already injected
-  if (document.getElementById('autocomplete-styles')) {
+  if (document.getElementById('autocomplete-styles-' + index)) {
     return;
   }
 
   const styleTag = document.createElement('style');
-  styleTag.id = 'autocomplete-styles';
+  styleTag.id = 'autocomplete-styles-' + index;
   styleTag.textContent = `
-    #autoComplete_list_1 {
+    #autoComplete_list_${index} {
       background-color: ${getThemeValue('colors.background.secondary')} !important;
       border: ${getThemeValue('border.width')} ${getThemeValue('border.style')} ${getThemeValue('colors.border.primary')} !important;
       border-radius: ${getThemeValue('spacing.medium.borderRadius')} !important;
@@ -20,7 +20,6 @@ export function injectAutocompleteStyles() {
       max-height: ${getThemeValue('sizing.medium.height')};
       overflow-y: auto;
       position: fixed !important;
-      z-index: 1000 !important;
       min-width: ${getThemeValue('sizing.medium.width')};
       list-style: none !important;
       padding: 0 !important;
@@ -29,7 +28,7 @@ export function injectAutocompleteStyles() {
       font-size: ${getThemeValue('typography.fontSize.medium')} !important;
     }
 
-    #autoComplete_list_1 li {
+    #autoComplete_list_${index} li {
       background-color: ${getThemeValue('colors.background.secondary')} !important;
       color: ${getThemeValue('colors.text.primary')} !important;
       padding: ${getThemeValue('spacing.medium.padding')} !important;
@@ -42,16 +41,16 @@ export function injectAutocompleteStyles() {
       font-size: ${getThemeValue('typography.fontSize.medium')} !important;
     }
 
-    #autoComplete_list_1 li mark {
+    #autoComplete_list_${index} li mark {
       padding: 0 2px !important;
     }
 
-    #autoComplete_list_1 li:hover,
-    #autoComplete_list_1 li[aria-selected="true"] {
+    #autoComplete_list_${index} li:hover,
+    #autoComplete_list_${index} li[aria-selected="true"] {
       background-color: ${getThemeValue('colors.background.hover')} !important;
     }
 
-    #autoComplete_list_1 li:last-child {
+    #autoComplete_list_${index} li:last-child {
       border-bottom: none !important;
     }
 
@@ -63,28 +62,28 @@ export function injectAutocompleteStyles() {
       font-size: ${getThemeValue('typography.fontSize.medium')} !important;
     }
 
-    #autoComplete_list_1 li mark {
+    #autoComplete_list_${index} li mark {
       background-color: ${getThemeValue('colors.primary.highlight')} !important;
       color: ${getThemeValue('colors.text.primary')} !important;
       padding: 0 ${getThemeValue('spacing.small.padding')};
       border-radius: ${getThemeValue('spacing.small.borderRadius')};
     }
 
-    #autoComplete_list_1::-webkit-scrollbar {
+    #autoComplete_list_${index}::-webkit-scrollbar {
       width: 8px;
     }
 
-    #autoComplete_list_1::-webkit-scrollbar-track {
+    #autoComplete_list_${index}::-webkit-scrollbar-track {
       background: ${getThemeValue('colors.scrollbar.track')};
       border-radius: ${getThemeValue('spacing.small.borderRadius')};
     }
 
-    #autoComplete_list_1::-webkit-scrollbar-thumb {
+    #autoComplete_list_${index}::-webkit-scrollbar-thumb {
       background: ${getThemeValue('colors.scrollbar.thumb')};
       border-radius: ${getThemeValue('spacing.small.borderRadius')};
     }
 
-    #autoComplete_list_1::-webkit-scrollbar-thumb:hover {
+    #autoComplete_list_${index}::-webkit-scrollbar-thumb:hover {
       background: ${getThemeValue('colors.scrollbar.thumbHover')};
     }
   `;

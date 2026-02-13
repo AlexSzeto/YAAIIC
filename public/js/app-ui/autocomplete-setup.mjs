@@ -50,7 +50,7 @@ export function initAutoComplete() {
 
   // Inject global styles once
   if (!stylesInjected) {
-    injectAutocompleteStyles();
+    injectAutocompleteStyles(1);
     stylesInjected = true;
   }
 

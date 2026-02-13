@@ -181,7 +181,7 @@ When a tag is selected and confirmed:
    5. Component should use HoverPanelContainer or similar positioning logic
    6. Add styled components for different sections (breadcrumbs, navigation grid, footer)
 
-[] Create tag definition display component
+[x] Create tag definition display component
    1. Create styled component in tag selector panel file for showing definitions
    2. Use medium padding, subtle background color from theme
    3. Border-left accent using primary theme color
@@ -189,7 +189,7 @@ When a tag is selected and confirmed:
    5. Component should handle empty/null definitions (not render anything)
    6. Follow goober component naming conventions
 
-[] Implement breadcrumb navigation
+[x] Implement breadcrumb navigation
    1. Create breadcrumb section showing navigation path
    2. Always start with "tag_groups" as first breadcrumb
    3. Use small buttons from custom-ui
@@ -198,7 +198,7 @@ When a tag is selected and confirmed:
    6. Use theme.spacing for gaps between items
    7. Display formatted names (not internal names)
 
-[] Implement search input with autocomplete
+[x] Implement search input with autocomplete
    1. Add custom UI Input component at top of panel
    2. Import and configure autocomplete similar to `autocomplete-setup.mjs`
    3. Configure to search through all tags in definitions
@@ -207,7 +207,7 @@ When a tag is selected and confirmed:
    6. Position autocomplete dropdown relative to panel, not body
    7. Ensure autocomplete works within hover panel's z-index
 
-[] Implement title and definition display
+[x] Implement title and definition display
    1. Show current node's formatted name as title using theme typography
    2. Use tag definition component to show definition if it exists
    3. Definition should display below title with appropriate spacing
@@ -215,7 +215,7 @@ When a tag is selected and confirmed:
    5. Title should use theme.colors.text.primary
    6. Apply medium spacing between title and definition
 
-[] Implement navigation buttons section
+[x] Implement navigation buttons section
    1. Create grid/flex layout for child nodes (wrap as needed)
    2. Use medium-sized buttons for each child
    3. Add appropriate icon prefix for each button:
@@ -227,7 +227,7 @@ When a tag is selected and confirmed:
    7. Make section scrollable if many children
    8. Use theme spacing for gaps between buttons
 
-[] Implement footer with select and cancel buttons
+[x] Implement footer with select and cancel buttons
    1. Create footer section with flexbox layout
    2. Add "Select" button (primary variant) and "Cancel" button (secondary variant)
    3. Select button should be:
@@ -239,7 +239,7 @@ When a tag is selected and confirmed:
    6. Use theme spacing for footer padding and gap between buttons
    7. Ensure buttons don't wrap on narrow panels
 
-[] Wire tag insertion logic
+[x] Wire tag insertion logic
    1. In `public/js/app-ui/generation-form.mjs` and `inpaint-form.mjs`:
    2. Add state for tracking tag selector panel visibility
    3. Create handler for tag selection that:
@@ -250,7 +250,7 @@ When a tag is selected and confirmed:
       - Updates form state with new prompt value
       - Closes panel
 
-[] Integrate tag selector with prompt inputs
+[x] Integrate tag selector with prompt inputs
    1. In generation-form and inpaint-form components:
    2. Import suppressContextMenu utility and TagSelectorPanel component
    3. Add contextmenu listener to textarea with id="description"

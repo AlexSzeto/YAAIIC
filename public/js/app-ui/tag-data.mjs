@@ -60,20 +60,12 @@ export async function loadTagDefinitions() {
 export function getTagDefinition(tagName) {
   if (!tagName) return null;
   
-  // Normalize the tag name (lowercase, trim whitespace)
-  const normalizedName = tagName.toLowerCase().trim();
-  
+  console.log('Looking up definition for tag:', tagName);
+
   // Try exact match first
-  if (definitions[normalizedName]) {
-    return definitions[normalizedName];
-  }
-  
-  // Try case-insensitive search
-  const lowerCaseKeys = Object.keys(definitions).map(k => k.toLowerCase());
-  const index = lowerCaseKeys.indexOf(normalizedName);
-  if (index !== -1) {
-    const originalKey = Object.keys(definitions)[index];
-    return definitions[originalKey];
+  if (definitions[tagName]) {
+    console.log('Found definition for tag:', tagName);
+    return definitions[tagName];
   }
   
   return null;
@@ -137,4 +129,12 @@ export function isTagDefinitionsLoaded() {
  */
 export function getTagDefinitionsCount() {
   return Object.keys(definitions).length;
+}
+
+/**
+ * Get all tag names
+ * @returns {string[]} Array of all tag names
+ */
+export function getAllTagNames() {
+  return Object.keys(definitions);
 }

@@ -1,4 +1,5 @@
 import { html } from 'htm/preact';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { Textarea } from '../custom-ui/io/textarea.mjs';
 import { Input } from '../custom-ui/io/input.mjs';
@@ -6,6 +7,10 @@ import { Button } from '../custom-ui/io/button.mjs';
 import { SeedControl } from './seed-control.mjs';
 import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
+import { createTagSelectionHandler } from './tag-insertion-util.mjs';
+import { TagSelectorPanel } from './tag-selector-panel.mjs';
+import { suppressContextMenu } from '../custom-ui/util.mjs';
+import { isTagDefinitionsLoaded } from './tag-data.mjs';
 
 // Styled components
 const FormContainer = styled('div')`
@@ -45,8 +50,48 @@ export function InpaintForm({
   hasValidInpaintArea
 }) {
   
+  // State for tag selector panel
+  const [showTagPanel, setShowTagPanel] = useState(false);
+  const [tagPanelPosition, setTagPanelPosition] = useState({ x: 0, y: 0 });
+  const textareaRef = useRef(null);
+  
+  // Set up contextmenu listener for tag selector
+  useEffect(() => {
+    const textarea = document.getElementById('description');
+    if (!textarea) return;
+    
+    textareaRef.current = textarea;
+    
+    const cleanup = suppressContextMenu(textarea, ({ x, y }) => {
+      // Only show panel if workflow has autocomplete enabled and tags are loaded
+      if (!workflow?.autocomplete || !isTagDefinitionsLoaded()) {
+        return; // Right-click suppressed, but no panel shown
+      }
+      
+      // Show the tag selector panel at cursor position
+      setTagPanelPosition({ x, y });
+      setShowTagPanel(true);
+    });
+    
+    return cleanup;
+  }, [workflow]);
+  
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
+  };
+  
+  // Handler for tag selection from tag selector panel
+  const handleTagSelect = (tagName) => {
+    const handler = createTagSelectionHandler(
+      () => formState.description || '',
+      (newValue) => onFieldChange('description', newValue)
+    );
+    handler(tagName);
+  };
+  
+  // Handler to close tag panel
+  const handleCloseTagPanel = () => {
+    setShowTagPanel(false);
   };
   
   // Create renderExtraInputs function using the reusable renderer
@@ -125,6 +170,15 @@ export function InpaintForm({
           ${isGenerating ? 'Inpainting...' : 'Inpaint'}
         </${Button}>
       </${FormRow}>
+
+      <!-- Tag Selector Panel -->
+      ${showTagPanel && html`
+        <${TagSelectorPanel}
+          position=${tagPanelPosition}
+          onSelect=${handleTagSelect}
+          onClose=${handleCloseTagPanel}
+        />
+      `}
 
     </${FormContainer}>
   `;
