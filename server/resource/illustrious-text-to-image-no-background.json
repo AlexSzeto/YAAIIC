@@ -1,7 +1,7 @@
 {
   "3": {
     "inputs": {
-      "seed": -1,
+      "seed": 141248005681922,
       "steps": 20,
       "cfg": 3,
       "sampler_name": "euler",
@@ -51,7 +51,7 @@
   },
   "6": {
     "inputs": {
-      "text": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, 1girl, solo",
+      "text": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres\n\n\n\n1girl, solo, side braid, swept bangs, blue hair, office lady, narrowed eyes, mature female, shirt, medium breasts, pencil skirt, crossed arms, annoyed, glasses, close-up, looking at viewer, brown blouse, white shirt, partially unbuttoned, looking down, ",
       "clip": [
         "4",
         1
@@ -91,12 +91,33 @@
       "title": "VAE Decode"
     }
   },
-  "10": {
+  "12": {
     "inputs": {
-      "path": "**replace before send**",
-      "overwrite": "true",
+      "model": "RMBG-2.0",
+      "sensitivity": 1,
+      "process_res": 512,
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222",
       "image": [
         "8",
+        0
+      ]
+    },
+    "class_type": "RMBG",
+    "_meta": {
+      "title": "Remove Background (RMBG)"
+    }
+  },
+  "14": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "12",
         0
       ]
     },

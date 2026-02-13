@@ -21,6 +21,7 @@ import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
+import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 
@@ -575,10 +576,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         </${ToastProvider}>
       </${Page}>
     `, root);
-    await loadTags();
-    initAutoComplete();
-    console.log('Autocomplete initialized in App V3');
     console.log('Inpaint App V3 mounted successfully');
+    
+    // Load tags and tag definitions AFTER rendering so DOM elements exist for autocomplete
+    setTimeout(async () => {
+      await loadTags();
+      await loadTagDefinitions();
+      initAutoComplete();
+      console.log('Tags, tag definitions, and autocomplete initialized');
+    }, 100);
   } else {
     console.error('Root element #app not found');
   }

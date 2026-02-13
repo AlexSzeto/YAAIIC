@@ -135,3 +135,78 @@ export function getTagDefinitionsCount() {
 export function getAllTagNames() {
   return Object.keys(definitions);
 }
+
+/**
+ * Get merged and normalized tag and category names for autocomplete
+ * 
+ * Merges tags from definitions and categories from categoryTree, applying transformations:
+ * - Removes subcategories (entries with '/')
+ * - Replaces underscores with spaces
+ * - Removes 'tag_group:' prefix
+ * - Removes duplicates
+ * 
+ * @returns {Array<{display: string, internal: string, isCategory: boolean}>} Array of items with display and internal names
+ * 
+ * @example
+ * // Returns array like:
+ * // [
+ * //   { display: "long hair", internal: "long_hair", isCategory: false },
+ * //   { display: "body parts", internal: "tag_group:body_parts", isCategory: true }
+ * // ]
+ */
+export function getMergedAutocompleteData() {
+  const seen = new Set();
+  const result = [];
+  const getDisplayName = (tagName) => {
+    let displayName = tagName.replace(/^tag_group:/, '').replace(/_/g, ' ');
+    
+    // Check if it's a subcategory (contains '/')
+    if (displayName.includes('/')) {
+      // Convert slashes to colons: "about us/user contributions" -> "category: user contributions"
+      displayName = 'category: ' + displayName.substring(displayName.indexOf('/') + 1);
+    } else if (tagName.startsWith('tag_group:')) {
+      // Tag group (not a subcategory): prepend "category: "
+      displayName = 'category: ' + displayName;
+    }
+    // Otherwise it's a normal tag, use displayName as-is
+    return displayName;
+  }
+
+  // Process tags from definitions
+  for (const tagName of Object.keys(definitions)) {
+    // Transform: replace underscores with spaces, remove tag_group: prefix
+    let displayName = getDisplayName(tagName);
+    
+    // Skip if we've already seen this display name
+    if (seen.has(displayName)) {
+      continue;
+    }
+    
+    seen.add(displayName);
+    result.push({
+      display: displayName,
+      internal: tagName,
+      isCategory: false
+    });
+  }
+  
+  // Process categories from categoryTree
+  for (const categoryName of Object.keys(categoryTree)) {
+    // Transform: replace underscores with spaces, remove tag_group: prefix
+    let displayName = getDisplayName(categoryName);
+
+    // Skip if we've already seen this display name
+    if (seen.has(displayName)) {
+      continue;
+    }
+    
+    seen.add(displayName);
+    result.push({
+      display: displayName,
+      internal: categoryName,
+      isCategory: true
+    });
+  }
+  
+  return result;
+}

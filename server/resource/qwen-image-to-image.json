@@ -88,6 +88,7 @@
     "inputs": {
       "upscale_method": "area",
       "megapixels": 1,
+      "resolution_steps": 1,
       "image": [
         "377",
         0

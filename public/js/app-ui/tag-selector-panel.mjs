@@ -13,7 +13,7 @@ import { currentTheme } from '../custom-ui/theme.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
 import { Input } from '../custom-ui/io/input.mjs';
 import { Modal } from '../custom-ui/overlays/modal.mjs';
-import { getCategoryTree, getTagDefinition, formatTagDisplayName, getAllTagNames } from './tag-data.mjs';
+import { getCategoryTree, getTagDefinition, formatTagDisplayName, getAllTagNames, getMergedAutocompleteData } from './tag-data.mjs';
 import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
 import { H2, VerticalLayout } from '../custom-ui/themed-base.mjs';
 
@@ -364,12 +364,15 @@ export class TagSelectorPanel extends Component {
       return;
     }
     
-    const tagNames = getAllTagNames();
+    const autocompleteData = getMergedAutocompleteData();
     
-    if (tagNames.length === 0) {
-      console.warn('No tags available for autocomplete in tag selector');
+    if (autocompleteData.length === 0) {
+      console.warn('No tags or categories available for autocomplete in tag selector');
       return;
     }
+    
+    // Store autocomplete data for lookup during selection
+    this.autocompleteData = autocompleteData;
     
     const inputElement = document.getElementById(this.searchInputId);
     if (!inputElement) {
@@ -382,7 +385,7 @@ export class TagSelectorPanel extends Component {
       selector: `#${this.searchInputId}`,
       placeHolder: "Search tags...",
       data: {
-        src: tagNames.map(tag => tag.replace(/_/g, ' ')), // Replace underscores with spaces for better search
+        src: autocompleteData.map(item => item.display),
         cache: true,
       },
       resultsList: {
@@ -408,14 +411,22 @@ export class TagSelectorPanel extends Component {
             }
           },
           selection: (event) => {
-            const selectedTag = event.detail.selection.value;
+            const selectedDisplay = event.detail.selection.value;
             
-            // Navigate to the selected tag
-            this.navigateToTag(selectedTag.replace(/ /g, '_')); // Convert back to internal tag format
+            // Look up the selected item from autocomplete data
+            const selectedItem = this.autocompleteData.find(item => item.display === selectedDisplay);
+            
+            if (!selectedItem) {
+              console.warn('Selected item not found in autocomplete data:', selectedDisplay);
+              return;
+            }
+            
+            // Navigate to the selected tag/category with isCategory flag
+            this.navigateToTag(selectedItem.internal, selectedItem.isCategory);
             
             // Update search input value
-            inputElement.value = selectedTag;
-            this.setState({ searchValue: selectedTag });
+            inputElement.value = selectedDisplay;
+            this.setState({ searchValue: selectedDisplay });
           }
         }
       }
@@ -427,43 +438,73 @@ export class TagSelectorPanel extends Component {
   }
 
   /**
-   * Navigate to a specific tag in the tree
-   * @param {string} tagName - The tag to navigate to
+   * Find the parent node for a given child node in the category tree
+   * @param {string} childNode - The child node to find parent for
+   * @returns {string|null} Parent node name or null if not found
    */
-  navigateToTag(tagName) {
-    // Simple navigation: show tag_groups -> searched tag
-    // This provides a single back link to reset the search
-    this.setState({
-      path: ['tag_groups'],
-      currentNode: tagName,
-      searchValue: tagName
-    });
+  findParentNode(childNode) {
+    const { categoryTree } = this.state;
+    
+    // Search through all nodes in the category tree
+    for (const [nodeName, children] of Object.entries(categoryTree)) {
+      if (Array.isArray(children) && children.includes(childNode)) {
+        return nodeName;
+      }
+    }
+    
+    return null;
   }
 
   /**
-   * Build the full path to a node by working backwards from its key
-   * @param {string} nodeKey - The node key to find the path for
-   * @returns {string[]} Path to the node
+   * Build the full breadcrumb path to a node by traversing upward through the tree
+   * @param {string} nodeKey - The node to build path for
+   * @returns {string[]} Path to the node (excluding the node itself)
    */
   buildPathToNode(nodeKey) {
     const path = [];
+    let currentNode = nodeKey;
     
-    // Start from tag_groups and work forward
-    if (nodeKey === 'tag_groups') {
-      return [];
-    }
-    
-    // For keys like "tag_groups/body" or "tag_group:body_parts", build the path
-    path.push('tag_groups');
-    
-    // If the key starts with "tag_groups/" or "tag_group:", find parent categories
-    if (nodeKey.startsWith('tag_groups/') || nodeKey.startsWith('tag_group:')) {
-      // For now, we'll just return tag_groups as the parent
-      // A more sophisticated approach would traverse the tree to find the full path
-      return path;
+    // Traverse upward until we reach tag_groups or can't find a parent
+    while (true) {
+      const parent = this.findParentNode(currentNode);
+      
+      if (!parent) {
+        // No parent found, add tag_groups if not already at root
+        if (currentNode !== 'tag_groups') {
+          path.unshift('tag_groups');
+        }
+        break;
+      }
+      
+      if (parent === 'tag_groups') {
+        // Reached tag_groups, add it and stop
+        path.unshift('tag_groups');
+        break;
+      }
+      
+      // Add parent to the beginning of path and continue upward
+      path.unshift(parent);
+      currentNode = parent;
     }
     
     return path;
+  }
+
+  /**
+   * Navigate to a specific tag or category in the tree
+   * @param {string} internalName - The internal name of the tag or category to navigate to
+   * @param {boolean} isCategory - Whether the item is a category (has children) or a tag
+   */
+  navigateToTag(internalName, isCategory) {
+    // Build full path to the node
+    const path = this.buildPathToNode(internalName);
+    
+    // Set state with the computed path and the selected node
+    this.setState({
+      path: path,
+      currentNode: internalName,
+      searchValue: ''
+    });
   }
 
   /**

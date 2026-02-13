@@ -1,6 +1,6 @@
 /**
  * A single file application that synchronizes files between multiple on device folders and a central, version controlled repository.
- * The application has two simple commands: init and sync.
+ * The application has three simple commands: init, sync, and push.
  * 
  * init: Initializes the application by creating a configuration file and a central repository. config.json is read and all files in
  * the folder, including the config file and this file, are copied to the central repository.
@@ -8,6 +8,9 @@
  * sync: Synchronizes the on device folders with the central repository. On launch, the application will mirror all files from the central
  * repository to the on device folders, updating and deleting files as necessary. Thereafter, the application will monitor the current folder
  * for changes and update the central repository immediately whenever a change is detected.
+ * 
+ * push: Overwrites the central repository with the current directory content, then mirrors to all sync folders and enters watch mode.
+ * Use this when you want to force the current directory to be the source of truth.
  */
 
 import fs from 'fs/promises';
@@ -280,6 +283,51 @@ async function sync() {
 }
 
 /**
+ * Push command - overwrite central repo with current directory and sync
+ */
+async function push() {
+  console.log('Starting push...');
+  
+  // Load config - REQUIRED
+  const configPath = path.join(__dirname, CONFIG_FILE);
+  let config;
+  
+  try {
+    const configData = await fs.readFile(configPath, 'utf-8');
+    config = JSON.parse(configData);
+  } catch (err) {
+    console.error('Error: config.json not found in lib-sync.mjs directory.');
+    console.error('Please create config.json in the same folder as lib-sync.mjs');
+    process.exit(1);
+  }
+  
+  // Create/overwrite central repository
+  const repoPath = path.resolve(config.centralRepo);
+  console.log(`Overwriting central repository at: ${repoPath}`);
+  
+  // Remove existing central repo if it exists
+  try {
+    await fs.rm(repoPath, { recursive: true, force: true });
+  } catch (err) {
+    // Ignore if doesn't exist
+  }
+  
+  // Create fresh central repo
+  await fs.mkdir(repoPath, { recursive: true });
+  
+  // Copy all files from current directory to central repository
+  console.log('Copying files to central repository...');
+  await copyRecursive(__dirname, repoPath);
+  console.log('Central repository updated!');
+  
+  // Mirror to all sync folders
+  await mirrorToFolders(config);
+  
+  // Watch for changes
+  await watchAndSync(config);
+}
+
+/**
  * Main entry point
  */
 async function main() {
@@ -293,10 +341,14 @@ async function main() {
     case 'sync':
       await sync();
       break;
+    case 'push':
+      await push();
+      break;
     default:
-      console.log('Usage: node lib-sync.mjs [init|sync]');
+      console.log('Usage: node lib-sync.mjs [init|sync|push]');
       console.log('  init - Initialize the sync system');
       console.log('  sync - Sync files between folders and watch for changes');
+      console.log('  push - Overwrite central repo with current directory and sync');
       process.exit(1);
   }
 }

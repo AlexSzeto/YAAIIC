@@ -311,7 +311,7 @@ When a tag is selected and confirmed:
    9. Update inpaint-form.mjs with same changes as generation-form
    10. Test that modal opens on right-click, centers properly, and closes on click-outside
 
-   [] Change the dataset of the tag selection search/autocomplete from the tags list to a merge of the tags and categories list. Convert the data like so:
+   [x] Change the dataset of the tag selection search/autocomplete from the tags list to a merge of the tags and categories list. Convert the data like so:
 
    1. subcategories (anyting with `/`) are removed.
    2. underscores are changed to spaces (`about_us` -> `about us`)
@@ -322,3 +322,17 @@ When a tag is selected and confirmed:
 
    1. Try to see if the tag is a category. If it is, make the breadcrumb `tag groups -> search result` and update the list of children below the tag.
    2. Update the definition of the tag, if it exist.
+
+   [x] Update the dataset of the tag selection to the
+   following:
+
+   1. subcategories (anything with `/`): `tag_group:about_us/user_contributions` -> `about us: user contributions`
+   2. tag groups (tags starting with `tag_group:` but not a subcategory):
+   `tag_group:about_us` -> `category: about us`
+   3. normal tags:
+   `about_us` -> `about us` (same as before)
+
+   Update the autocomplete logic to handle all three cases, and expand on the breadcrumb handling for subcategories and tag groups:
+   1. replace the breadcrumb with just the search result tag. this is the current item.
+   2. try to find a node in the category tree that has the current item as its child. if a node is found, add the node to the start of the breadcrumb, set the node as the current item, and repeat.
+   3. if the node is 'tag_group', stop. If a node can't be found, add 'tag_group' to the start of the breadcrumb, and stop.
