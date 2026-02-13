@@ -35,6 +35,22 @@ const LeftColumn = styled('div')`
 `;
 LeftColumn.className = 'left-column';
 
+const MediaContainer = styled('div')`
+  position: relative;
+`;
+MediaContainer.className = 'media-container';
+
+const TimeOverlay = styled('div')`
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.primary};
+  pointer-events: none;
+`;
+TimeOverlay.className = 'time-overlay';
+
 const GeneratedImage = styled('img')`
   max-width: 100%;
   height: auto;
@@ -255,11 +271,20 @@ export function GeneratedResult({
         
         <${Content}>
           <${LeftColumn}>
-            <${GeneratedImage}
-              src=${image.imageUrl} 
-              alt=${image.name || 'Generated Image'} 
-              onClick=${() => createImageModal(image.imageUrl, true)}
-            />
+            <${MediaContainer}>
+              <${GeneratedImage}
+                src=${image.imageUrl} 
+                alt=${image.name || 'Generated Image'} 
+                onClick=${() => createImageModal(image.imageUrl, true)}
+              />
+              ${image.timeTaken !== undefined && image.timeTaken !== null ? html`
+                <${TimeOverlay}>
+                  <${Panel} variant="glass" padding="small">
+                    ${Math.round(image.timeTaken)}s
+                  </${Panel}>
+                </${TimeOverlay}>
+              ` : null}
+            </${MediaContainer}>
             ${image.audioUrl ? html`
               <${AudioPlayer} audioUrl=${image.audioUrl} />
             ` : null}
