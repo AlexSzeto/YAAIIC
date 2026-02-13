@@ -147,6 +147,7 @@ export class TagSelectorPanel extends Component {
     
     this.searchInputId = 'tag-selector-search-' + Math.random().toString(36).substr(2, 9);
     this.autoCompleteInstance = null;
+    this.autoCompleteId = null;
   }
 
   componentDidMount() {
@@ -166,13 +167,22 @@ export class TagSelectorPanel extends Component {
     // Clean up autocomplete
     if (this.autoCompleteInstance) {
       // Remove the autocomplete list from DOM if it exists
-      const list = document.getElementById('autoComplete_list_2');
-      if (list) {
-        list.remove();
+      const list = this.autoCompleteInstance.list;
+      if (list && list.parentNode) {
+        list.parentNode.removeChild(list);
+      }
+      
+      // Remove the style tag for this autocomplete instance
+      if (this.autoCompleteId !== null) {
+        const styleTag = document.getElementById('autocomplete-styles-' + this.autoCompleteId);
+        if (styleTag && styleTag.parentNode) {
+          styleTag.parentNode.removeChild(styleTag);
+        }
       }
       
       this.autoCompleteInstance.unInit();
       this.autoCompleteInstance = null;
+      this.autoCompleteId = null;
     }
   }
 
@@ -293,9 +303,6 @@ export class TagSelectorPanel extends Component {
       return;
     }
     
-    // Inject autocomplete styles
-    injectAutocompleteStyles(2);
-    
     const inputElement = document.getElementById(this.searchInputId);
     if (!inputElement) {
       console.warn('Search input element not found for autocomplete initialization');
@@ -348,6 +355,10 @@ export class TagSelectorPanel extends Component {
         }
       }
     });
+    
+    // Store the autocomplete ID and inject styles for this instance
+    this.autoCompleteId = this.autoCompleteInstance.id;
+    injectAutocompleteStyles(this.autoCompleteId);
   }
 
   /**
