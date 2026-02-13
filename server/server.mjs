@@ -350,6 +350,15 @@ app.post('/generate', upload.any(), async (req, res) => {
     // Don't create saveImagePath here - it will be created after preGenerationTasks
     // so that the format can be determined from extra inputs
     
+    // Fill in expected but missing image data values with blank strings
+    const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+    requiredImageDataFields.forEach(field => {
+      if (req.body[field] === undefined || req.body[field] === null) {
+        req.body[field] = '';
+        console.log(`Filled missing field '${field}' with blank string`);
+      }
+    });
+    
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
     const requiredImages = workflowData.options?.inputImages || 0;
@@ -1269,6 +1278,15 @@ app.post('/generate/inpaint', upload.fields([
       
       // Don't create saveImagePath here - it will be created after preGenerationTasks
       // so that the format can be determined from extra inputs
+      
+      // Fill in expected but missing image data values with blank strings
+      const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+      requiredImageDataFields.forEach(field => {
+        if (req.body[field] === undefined || req.body[field] === null) {
+          req.body[field] = '';
+          console.log(`Filled missing field '${field}' with blank string`);
+        }
+      });
       
       // Prepare request body with imagePath and maskPath from uploaded filenames
       req.body.imagePath = imageUploadResult.filename;
