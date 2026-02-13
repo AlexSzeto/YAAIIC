@@ -262,7 +262,25 @@ When a tag is selected and confirmed:
    7. Pass onSelect and onClose handlers to panel
    8. Ensure panel is positioned within viewport bounds
 
-[] Test tag selector integration
+[x] Add category and tag count display to title section
+   1. Add helper method `getCategoriesAndTagsCounts()` that:
+      - Gets current children from `getCurrentChildren()`
+      - Counts navigable children (categories) using `isNodeNavigable()`
+      - Counts non-navigable children with definitions (tags)
+      - Returns object: `{ categories: number, tags: number }`
+   2. Modify `renderTitleSection()` to:
+      - Call `getCategoriesAndTagsCounts()` to get counts
+      - Add a `<div>` below the `<H2>` element
+      - Format counts as: "{categories} category/categories, {tags} tag/tags"
+      - Use proper pluralization (append 's' to noun if count !== 1)
+      - Omit category count and comma if categories === 0
+      - Display format examples:
+        - "3 categories, 5 tags"
+        - "1 category, 8 tags"
+        - "10 tags" (when categories === 0)
+        - "1 tag" (when tags === 1 and categories === 0)
+
+[x] Test tag selector integration
    1. Manually test right-click on prompt input for workflow with autocomplete enabled
    2. Verify panel opens at cursor position with tag_groups children
    3. Test navigation through categories (breadcrumbs and drilling down)
@@ -273,6 +291,7 @@ When a tag is selected and confirmed:
    8. Test that right-click on non-autocomplete workflow doesn't show panel
    9. Verify proper error handling when tags fail to load
    10. Test on both main UI and inpaint UI
+
 [x] Convert tag selector panel to modal
    1. Import Modal component from `custom-ui/overlays/modal.mjs` in tag-selector-panel.mjs
    2. Add `isOpen` prop to TagSelectorPanel component API (remove `position` prop)
@@ -291,3 +310,15 @@ When a tag is selected and confirmed:
       - Remove tagPanelPosition state and related logic
    9. Update inpaint-form.mjs with same changes as generation-form
    10. Test that modal opens on right-click, centers properly, and closes on click-outside
+
+   [] Change the dataset of the tag selection search/autocomplete from the tags list to a merge of the tags and categories list. Convert the data like so:
+
+   1. subcategories (anyting with `/`) are removed.
+   2. underscores are changed to spaces (`about_us` -> `about us`)
+   3. `tag_group:` is removed: (`tag_group:about_us` -> `about us`)
+   4. duplicate entries are removed (i.e. if the tags `about_us` and `tag_group:about_us` exist, the second entry would not be added)
+
+   Use the following logic when the user selects an autocomplete item:
+
+   1. Try to see if the tag is a category. If it is, make the breadcrumb `tag groups -> search result` and update the list of children below the tag.
+   2. Update the definition of the tag, if it exist.

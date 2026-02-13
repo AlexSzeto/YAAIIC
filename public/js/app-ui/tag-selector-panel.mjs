@@ -91,6 +91,12 @@ const DefinitionDisplay = styled('div')`
 `;
 DefinitionDisplay.className = 'tag-selector-panel-definition';
 
+/** Spacer section for when both Navigation and Definition sections are absent */
+const SpacerSection = styled('div')`
+  flex: 1 1 0;
+`;
+SpacerSection.className = 'tag-selector-panel-spacer-section';
+
 /**
  * Footer section with action buttons
  */
@@ -280,6 +286,30 @@ export class TagSelectorPanel extends Component {
   }
 
   /**
+   * Get counts of categories and tags from current children
+   * @returns {{ categories: number, tags: number }}
+   */
+  getCategoriesAndTagsCounts() {
+    const children = this.getCurrentChildren();
+    
+    let categories = 0;
+    let tags = 0;
+    
+    for (const child of children) {
+      const isNavigable = this.isNodeNavigable(child);
+      const hasDefinition = getTagDefinition(child);
+      
+      if (isNavigable) {
+        categories++;
+      } else if (hasDefinition) {
+        tags++;
+      }
+    }
+    
+    return { categories, tags };
+  }
+
+  /**
    * Navigate to a child node
    */
   navigateToNode = (nodeName) => {
@@ -461,6 +491,9 @@ export class TagSelectorPanel extends Component {
     const currentDefinition = getTagDefinition(currentNode);
     const displayName = formatTagDisplayName(currentNode);
     
+    const definitionSection = this.renderDefinitionSection(currentDefinition);
+    const navigationSection = this.renderNavigationSection(children);
+
     return html`
       <${Modal}
         isOpen=${isOpen}
@@ -474,8 +507,9 @@ export class TagSelectorPanel extends Component {
           ${this.renderSearchSection()}
           ${this.renderBreadcrumbs()}
           ${this.renderTitleSection(displayName)}
-          ${this.renderDefinitionSection(currentDefinition)}
-          ${this.renderNavigationSection(children)}
+          ${definitionSection}
+          ${navigationSection}
+          ${!definitionSection && !navigationSection ? html`<${SpacerSection} />` : null}
           ${this.renderFooter()}
         </${PanelContainer}>
       </${Modal}>
@@ -533,6 +567,21 @@ export class TagSelectorPanel extends Component {
 
   renderTitleSection(displayName) {
     const { theme } = this.state;
+    const { categories, tags } = this.getCategoriesAndTagsCounts();
+    
+    // Format counts with proper pluralization
+    const categoryText = categories === 1 ? 'category' : 'categories';
+    const tagText = tags === 1 ? 'tag' : 'tags';
+    
+    // Build count string
+    let countString = '';
+    if (categories > 0 && tags > 0) {
+      countString = `${categories} ${categoryText}, ${tags} ${tagText}`;
+    } else if (categories > 0) {
+      countString = `${categories} ${categoryText}`;
+    } else if (tags > 0) {
+      countString = `${tags} ${tagText}`;
+    }
     
     return html`
       <${TitleSection}
@@ -541,6 +590,7 @@ export class TagSelectorPanel extends Component {
         <${H2}>
           ${displayName}
         </${H2}>
+        <div>${countString}</div>
       </${TitleSection}>
     `;
   }

@@ -167,7 +167,7 @@ app.get('/tags', (req, res) => {
   // Parse query parameters with defaults
   const noCharacters = req.query.noCharacters !== 'false'; // Default to true
   const minLength = parseInt(req.query.minLength) || 4; // Default to 4
-  const minUsageCount = parseInt(req.query.minUsageCount) || 1; // Default to 1
+  const minUsageCount = parseInt(req.query.minUsageCount) || 100; // Default to 100
   const filterCategories = req.query.categories ? req.query.categories.split(',') : ['0'];
 
   console.log(`Tags endpoint called with filters: noCharacters=${noCharacters}, minLength=${minLength}, minUsageCount=${minUsageCount}, categories=${filterCategories}`);
