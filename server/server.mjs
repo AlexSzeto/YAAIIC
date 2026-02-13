@@ -172,6 +172,18 @@ app.get('/tags', (req, res) => {
 
   console.log(`Tags endpoint called with filters: noCharacters=${noCharacters}, minLength=${minLength}, minUsageCount=${minUsageCount}, categories=${filterCategories}`);
 
+  // Read category tree file
+  let categoryTree = {};
+  const categoryTreePath = path.join(actualDirname, 'resource', 'danbooru_category_tree.json');
+  try {
+    const categoryTreeData = fs.readFileSync(categoryTreePath, 'utf8');
+    categoryTree = JSON.parse(categoryTreeData);
+    console.log(`Category tree loaded with ${Object.keys(categoryTree).length} entries`);
+  } catch (err) {
+    console.error('Error reading danbooru_category_tree.json:', err.message);
+    // Continue with empty category tree
+  }
+
   let debugOutput = 2;
   const results = [];
   const definitions = {};
@@ -226,6 +238,7 @@ app.get('/tags', (req, res) => {
       res.json({ 
         tags: results,
         definitions,
+        categoryTree,
         filters: {
           noCharacters,
           minLength,

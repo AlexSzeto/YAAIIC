@@ -107,14 +107,14 @@ When a tag is selected and confirmed:
 
 ## Tasks
 
-[] Update `/tags` endpoint to include category tree
+[x] Update `/tags` endpoint to include category tree
    1. Read `server/resource/danbooru_category_tree.json` in the `/tags` endpoint handler
    2. Parse the JSON and add it to the response object as `categoryTree`
    3. Update response format to: `{ tags: [...], definitions: {...}, categoryTree: {...}, filters: {...} }`
    4. Add error handling for missing or invalid category tree file (log error, return empty object)
    5. Test endpoint returns expected data structure
 
-[] Create reusable context menu suppression utility
+[x] Create reusable context menu suppression utility
    1. Create `public/js/custom-ui/util-contextmenu.mjs` with helper function
    2. Export `suppressContextMenu(element, handler)` that:
       - Adds contextmenu event listener to element
@@ -134,7 +134,7 @@ When a tag is selected and confirmed:
    }
    ```
 
-[] Extend tag data module to include category tree
+[x] Extend tag data module to include category tree
    1. Rename `public/js/app-ui/tag-definitions.mjs` to `public/js/app-ui/tag-data.mjs`
    2. Update the existing `loadTagDefinitions()` function to also cache:
       - `categoryTree` from the `/tags` endpoint response
@@ -152,8 +152,8 @@ When a tag is selected and confirmed:
    export function getTagDefinitionsCount()     // Existing - returns count
    ```
 
-[] Create name formatting utility function
-   1. Add function to `public/js/app-ui/tag-definitions.mjs`
+[x] Create name formatting utility function
+   1. Add function to `public/js/app-ui/tag-data.mjs`
    2. Implement `formatTagDisplayName(internalName)` that:
       - Removes "tag_groups:" prefix
       - Removes text before and including "/"
@@ -167,7 +167,7 @@ When a tag is selected and confirmed:
    // "tag_group:colors" → "Colors"
    ```
 
-[] Create tag selector panel component structure
+[x] Create tag selector panel component structure
    1. Create `public/js/app-ui/tag-selector-panel.mjs`
    2. Export `TagSelectorPanel` component that accepts props:
       - `onSelect: (tagName) => void` - callback when tag is selected
