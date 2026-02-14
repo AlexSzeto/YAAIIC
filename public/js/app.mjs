@@ -351,6 +351,15 @@ function App() {
       }
     }
     
+    // Validate required audio files
+    if (workflow.inputAudios && workflow.inputAudios > 0) {
+      const uploadedCount = inputAudios.filter(audio => audio && audio.url).length;
+      if (uploadedCount < workflow.inputAudios) {
+        toast.error(`Please select ${workflow.inputAudios} input audio file(s)`);
+        return;
+      }
+    }
+    
     // Validate that "detect" orientation workflows have input images
     if (workflow.orientation === 'detect') {
       const hasInputImages = inputImages.some(img => img && img.blob);
@@ -444,21 +453,43 @@ function App() {
         
         const audioTextFieldNames = [...mediaTextFieldNames, 'audioFormat'];
         // Append audio files as blobs (from gallery selection)
-        inputAudios.forEach((audio, index) => {
-          if (audio && audio.blob) {
-            // Extract the original filename from the audio URL (e.g., "/media/audio_123.mp3" -> "audio_123.mp3")
-            const originalFilename = audio.url ? audio.url.split('/').pop() : `audio_${index}.mp3`;
-            formData.append(`audio_${index}`, audio.blob, originalFilename);
+        // Fetch audio files as blobs if needed
+        for (let index = 0; index < inputAudios.length; index++) {
+          const audio = inputAudios[index];
+          if (audio) {
+            let audioBlob = audio.blob;
             
-            audioTextFieldNames.forEach(fieldName => {
-              // Check top-level (legacy/upload) or nested in mediaData (selected)
-              const value = audio.mediaData?.[fieldName] || audio[fieldName];
-              if (value) {
-                formData.append(`audio_${index}_${fieldName}`, value);
+            // If audio doesn't have a blob but has a URL, fetch it
+            if (!audioBlob && audio.url) {
+              try {
+                const response = await fetch(audio.url);
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch audio: ${response.statusText}`);
+                }
+                audioBlob = await response.blob();
+              } catch (fetchError) {
+                console.error(`Failed to fetch audio from ${audio.url}:`, fetchError);
+                toast.error(`Failed to load audio file ${index + 1}`);
+                setIsGenerating(false);
+                return;
               }
-            });
+            }
+            
+            if (audioBlob) {
+              // Extract the original filename from the audio URL (e.g., "/media/audio_123.mp3" -> "audio_123.mp3")
+              const originalFilename = audio.url ? audio.url.split('/').pop() : `audio_${index}.mp3`;
+              formData.append(`audio_${index}`, audioBlob, originalFilename);
+              
+              audioTextFieldNames.forEach(fieldName => {
+                // Check top-level (legacy/upload) or nested in mediaData (selected)
+                const value = audio.mediaData?.[fieldName] || audio[fieldName];
+                if (value) {
+                  formData.append(`audio_${index}_${fieldName}`, value);
+                }
+              });
+            }
           }
-        });
+        }
         
         response = await fetchJson('/generate', {
           method: 'POST',

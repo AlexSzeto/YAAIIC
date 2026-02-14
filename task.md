@@ -142,19 +142,19 @@ Four workflows need migration to new format:
 
 ## Tasks
 
-[] Create process handler registry in generate.mjs
-[] Implement extractOutputMediaFromTextFile process handler
-[] Implement crossfadeVideoFrames process handler
-[] Implement extractOutputTexts process handler
-[] Update calculateTotalSteps() to count process tasks
-[] Modify task processing loop to detect and execute process tasks
-[] Remove hard-coded extractOutputPathFromTextFile logic from generate.mjs
-[] Remove hard-coded blendLoopFrames logic from generate.mjs
-[] Remove hard-coded extractOutputTexts logic from generate.mjs
-[] Migrate "Image to Video (WAN22)" workflow to new format
-[] Migrate "Image to Video Loop (WAN5b)" workflow to new format
-[] Migrate "Image to Video (WAN5b)" workflow to new format
-[] Migrate "Text to Voice Design (Qwen3-TTS)" workflow to new format
+[x] Create process handler registry in generate.mjs
+[x] Implement extractOutputMediaFromTextFile process handler
+[x] Implement crossfadeVideoFrames process handler
+[x] Implement extractOutputTexts process handler
+[x] Update calculateTotalSteps() to count process tasks
+[x] Modify task processing loop to detect and execute process tasks
+[x] Remove hard-coded extractOutputPathFromTextFile logic from generate.mjs
+[x] Remove hard-coded blendLoopFrames logic from generate.mjs
+[x] Remove hard-coded extractOutputTexts logic from generate.mjs
+[x] Migrate "Image to Video (WAN22)" workflow to new format
+[x] Migrate "Image to Video Loop (WAN5b)" workflow to new format
+[x] Migrate "Image to Video (WAN5b)" workflow to new format
+[x] Migrate "Text to Voice Design (Qwen3-TTS)" workflow to new format
 [] Test "Image to Video (WAN22)" workflow end-to-end
 [] Test "Image to Video Loop (WAN5b)" workflow end-to-end
 [] Test "Image to Video (WAN5b)" workflow end-to-end

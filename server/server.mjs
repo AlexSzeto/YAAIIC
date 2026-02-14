@@ -360,14 +360,37 @@ app.post('/generate', upload.any(), async (req, res) => {
     });
     
     // Handle file uploads if workflow specifies them
-    // First, validate that required images are provided
+    // First, validate that required images and audio files are provided
     const requiredImages = workflowData.options?.inputImages || 0;
-    const uploadedImages = req.files ? req.files.length : 0;
+    const requiredAudios = workflowData.options?.inputAudios || 0;
     
+    // Count uploaded files by type
+    let uploadedImages = 0;
+    let uploadedAudios = 0;
+    
+    if (req.files) {
+      req.files.forEach(file => {
+        if (file.fieldname.startsWith('image_')) {
+          uploadedImages++;
+        } else if (file.fieldname.startsWith('audio_')) {
+          uploadedAudios++;
+        }
+      });
+    }
+    
+    // Validate image count
     if (requiredImages > 0 && uploadedImages < requiredImages) {
       console.log(`Workflow '${workflow}' requires ${requiredImages} image(s), but only ${uploadedImages} were provided`);
       return res.status(400).json({ 
         error: `Workflow requires ${requiredImages} input image(s), but only ${uploadedImages} were provided` 
+      });
+    }
+    
+    // Validate audio count
+    if (requiredAudios > 0 && uploadedAudios < requiredAudios) {
+      console.log(`Workflow '${workflow}' requires ${requiredAudios} audio file(s), but only ${uploadedAudios} were provided`);
+      return res.status(400).json({ 
+        error: `Workflow requires ${requiredAudios} input audio file(s), but only ${uploadedAudios} were provided` 
       });
     }
     
