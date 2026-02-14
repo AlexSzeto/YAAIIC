@@ -142,6 +142,29 @@ function InpaintApp() {
     });
     return unsubscribe;
   }, []);
+  
+  // Favicon spinning effect for active tasks
+  useEffect(() => {
+    if (!window.favloader) return;
+    
+    // Initialize favloader once
+    if (!window.favloaderInitialized) {
+      window.favloader.init({
+        size: 16,
+        radius: 6,
+        thickness: 2,
+        color: '#FFFFFF',
+        duration: 5000
+      });
+      window.favloaderInitialized = true;
+    }
+    
+    if (taskId) {
+      window.favloader.start();
+    } else {
+      window.favloader.stop();
+    }
+  }, [taskId]);
 
   // Initialize and load data on mount
   useEffect(() => {

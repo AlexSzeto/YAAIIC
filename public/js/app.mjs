@@ -118,6 +118,32 @@ function App() {
     });
     return unsubscribe;
   }, []);
+  
+  // Favicon spinning effect for active tasks
+  useEffect(() => {
+    if (!window.favloader) return;
+    
+    // Initialize favloader once
+    if (!window.favloaderInitialized) {
+      console.log('Initializing');
+      window.favloader.init({
+        size: 16,
+        radius: 6,
+        thickness: 2,
+        color: '#FFFFFF',
+        duration: 5000
+      });
+      window.favloaderInitialized = true;
+    }
+    
+    if (taskId || regenerateTaskId) {
+      console.log('Starting load icon');
+      window.favloader.start();
+    } else {
+      window.favloader.stop();
+      console.log('Stopping load icon');
+    }
+  }, [taskId, regenerateTaskId]);
 
   // Initialize autocomplete & Load Initial History
   useEffect(() => {
