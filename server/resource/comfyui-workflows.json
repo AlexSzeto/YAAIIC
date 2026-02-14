@@ -164,7 +164,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           },
           {
@@ -282,7 +282,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -390,7 +390,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -511,7 +511,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -626,7 +626,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -741,7 +741,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -855,7 +855,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -969,7 +969,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -1191,7 +1191,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -1309,7 +1309,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]
@@ -1427,7 +1427,7 @@
           {
             "id": "usePostPrompts",
             "type": "checkbox",
-            "label": "Use Post-Gen Prompts",
+            "label": "Generate Descriptions",
             "default": false
           }
         ]

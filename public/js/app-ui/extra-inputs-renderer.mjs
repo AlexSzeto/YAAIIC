@@ -7,6 +7,7 @@ import { Checkbox } from '../custom-ui/io/checkbox.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
 
 const CheckboxWrapper = styled('div')`
+  min-width: 200px;
   display: flex;
   align-items: flex-end;
   margin-bottom: 8px;

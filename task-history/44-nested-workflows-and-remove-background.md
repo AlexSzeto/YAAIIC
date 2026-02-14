@@ -158,7 +158,7 @@ Add to "Text to Image (Illustrious Characters)" workflow:
       {
         "id": "usePostPrompts",
         "type": "checkbox",
-        "label": "Use Post-Gen Prompts",
+        "label": "Generate Descriptions",
         "default": false
       },
       {

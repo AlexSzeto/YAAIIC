@@ -536,7 +536,7 @@ function InpaintApp() {
           `}
         </${Panel}>
         
-        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap') }}>
+        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap'), flex: 1 }}>
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
