@@ -96,7 +96,7 @@ export function createExtraInputsRenderer(formState, onFieldChange, isGenerating
                 onChange=${handleCheckboxChange(input.id)}
                 disabled=${isGenerating}
               />
-              <//>
+              </${CheckboxWrapper}>
             `;
             
           case 'textarea':

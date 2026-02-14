@@ -79,5 +79,6 @@ export const VerticalLayout = styled('div')`
   display: flex;
   flex-direction: column;
   gap: ${props => currentTheme.value.spacing[props.gap && ['small', 'medium', 'large'].includes(props.gap) ? props.gap : 'medium'].gap};
+  overflow: ${props => props.overflow || 'visible'};
 `;
 VerticalLayout.className = 'vertical-layout';

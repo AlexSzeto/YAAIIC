@@ -77,14 +77,20 @@ function isBlankValue(value) {
 /**
  * Check if an execution condition is met
  * @param {Object} dataSources - Object containing data sources like { data: {...}, value: ... }
- * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }, { or: [...] }, or { and: [...] }
+ * @param {Object} conditionData - Condition object with structure: { where: {...}, equals: {...} }, { where: {...}, isNot: {...} }, { or: [...] }, or { and: [...] }
  * @returns {boolean} True if condition is met, false otherwise
  * 
  * @example
- * // Simple condition format:
+ * // Simple condition format (equals):
  * // {
  * //   where: { data: "orientation" },  // Check the 'orientation' property from data
  * //   equals: { value: "landscape" }   // Compare against literal value "landscape"
+ * // }
+ * 
+ * // Simple condition format (isNot):
+ * // {
+ * //   where: { data: "name" },         // Check the 'name' property from data
+ * //   isNot: { value: "" }             // Check that it's NOT equal to empty string
  * // }
  * 
  * // OR condition format:
@@ -127,8 +133,8 @@ export function checkExecutionCondition(dataSources, conditionData) {
     );
   }
   
-  const { where, equals } = conditionData;
-  if (!where || !equals) return true;
+  const { where, equals, isNot } = conditionData;
+  if (!where || (!equals && !isNot)) return true;
   
   /**
    * Helper function to resolve a value from data sources
@@ -157,23 +163,30 @@ export function checkExecutionCondition(dataSources, conditionData) {
   // Resolve the actual value from 'where'
   const actualValue = resolveValue(where);
   
-  // Resolve the expected value from 'equals'
-  const expectedValue = resolveValue(equals);
+  // Resolve the expected value from 'equals' or 'isNot'
+  const compareWith = equals || isNot;
+  const expectedValue = resolveValue(compareWith);
+  const shouldNegate = !!isNot; // true if using isNot, false if using equals
+  
+  let result;
   
   // Special handling when comparing with empty string
   // Treat undefined, null, and whitespace-only strings as equivalent to ""
   if (expectedValue === '') {
-    return isBlankValue(actualValue);
+    result = isBlankValue(actualValue);
   }
-  
   // Special handling for boolean comparisons
   // Treat undefined as false when comparing with boolean values
-  if (typeof expectedValue === 'boolean') {
+  else if (typeof expectedValue === 'boolean') {
     // If actualValue is undefined or null, treat it as false for boolean comparison
     const normalizedActual = (actualValue === undefined || actualValue === null) ? false : actualValue;
-    return normalizedActual === expectedValue;
+    result = normalizedActual === expectedValue;
+  }
+  // Compare values
+  else {
+    result = actualValue === expectedValue;
   }
   
-  // Compare values
-  return actualValue === expectedValue;
+  // Negate the result if using isNot
+  return shouldNegate ? !result : result;
 }

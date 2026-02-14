@@ -3,11 +3,11 @@
     "inputs": {
       "model": "RMBG-2.0",
       "sensitivity": 1,
-      "process_res": 1024,
+      "process_res": 512,
       "mask_blur": 0,
       "mask_offset": 0,
       "invert_output": false,
-      "refine_foreground": false,
+      "refine_foreground": true,
       "background": "Alpha",
       "background_color": "#222222",
       "image": [
@@ -22,7 +22,7 @@
   },
   "2": {
     "inputs": {
-      "image": "Andrew-2.png"
+      "image": "Flux2-Klein_00039_.png"
     },
     "class_type": "LoadImage",
     "_meta": {

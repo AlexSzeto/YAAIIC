@@ -92,7 +92,7 @@ export function ProgressProvider({ sseManager, children }) {
           `)}
         </div>
       `, document.body)}
-    <//>
+    </${ProgressContext.Provider}>
   `;
 }
 

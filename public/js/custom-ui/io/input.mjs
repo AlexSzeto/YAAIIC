@@ -33,6 +33,7 @@ const StyledInput = styled('input')`
   font-size: ${props => props.fontSize};
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
+  width: 100%;
   
   &:focus {
     outline: none;
@@ -137,7 +138,7 @@ export class Input extends Component {
           fontSize=${theme.typography.fontSize.medium}
           fontFamily=${theme.typography.fontFamily}
           transition=${`border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
-          focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}
+          focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}          
           ...${rest} 
         />
         ${error ? html`

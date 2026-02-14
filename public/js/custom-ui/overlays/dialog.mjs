@@ -79,7 +79,7 @@ class Dialog extends Component {
             ref=${index === 0 ? (btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); } : null}
           >
             ${optionText}
-          <//>
+          </${Button}>
         `;
       });
     } else {
@@ -92,7 +92,7 @@ class Dialog extends Component {
           ref=${(btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); }}
         >
           Close
-        <//>
+        </${Button}>
       `;
     }
   }
@@ -129,8 +129,8 @@ class Dialog extends Component {
                 fontWeight=${theme.typography.fontWeight.bold}
               >
                 ${title}
-              <//>
-            <//>
+              </${BaseTitle}>
+            </${BaseHeader}>
             <${BaseContent}
               isEmpty=${isEmpty}
               color=${isEmpty ? theme.colors.text.muted : theme.colors.text.secondary}
@@ -139,15 +139,15 @@ class Dialog extends Component {
               marginBottom="20px"
             >
               ${contentText}
-            <//>
+            </${BaseContent}>
             <${BaseFooter} 
               gap="10px"
               marginTop="20px"
             >
               ${this.renderButtons()}
-            <//>
-          <//>
-        <//>
+            </${BaseFooter}>
+          </${BaseContainer}>
+        </${BaseOverlay}>
       `,
       document.body
     );
@@ -235,8 +235,8 @@ class TextPromptDialog extends Component {
               fontWeight=${theme.typography.fontWeight.bold}
             >
               ${title}
-            <//>
-            <//>
+            </${BaseTitle}>
+            </${BaseHeader}>
             <${BaseContent}
               as="div"
               color=${theme.colors.text.secondary}
@@ -251,7 +251,7 @@ class TextPromptDialog extends Component {
                 onInput=${this.handleInputChange}
                 fullWidth=${true}
               />
-            <//>
+            </${BaseContent}>
             <${BaseFooter}
               gap="10px"
               marginTop="20px"
@@ -262,7 +262,7 @@ class TextPromptDialog extends Component {
                 onClick=${this.handleCancel}
               >
                 Cancel
-              <//>
+              </${Button}>
               <${Button}
                 variant="medium-text"
                 color="primary"
@@ -270,10 +270,10 @@ class TextPromptDialog extends Component {
                 ref=${(btn) => { if (btn && btn.buttonRef) setTimeout(() => btn.buttonRef.focus(), 0); }}
               >
                 OK
-              <//>
-            <//>
-          <//>
-        <//>
+              </${Button}>
+            </${BaseFooter}>
+          </${BaseContainer}>
+        </${BaseOverlay}>
       `,
       document.body
     );

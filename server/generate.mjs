@@ -1064,7 +1064,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     const postGenErrors = [];
     
     // Process post-generation tasks from config if workflow type is not video
-    if (postGenerationTasks && Array.isArray(postGenerationTasks) && type !== 'video') {
+    if (postGenerationTasks && Array.isArray(postGenerationTasks)) {
       console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
       
       // Retrieve current step from task
@@ -1140,8 +1140,6 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           }
         }
       }
-    } else if (type === 'video') {
-      console.log('Skipping post-generation prompts for video workflow');
     }
 
     // Return the image URL path (relative to /media/ endpoint)

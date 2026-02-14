@@ -620,7 +620,7 @@ export function Gallery({
       <${Content}>
         <${Grid}>
           ${renderGalleryItems()}
-        <//>
+        </${Grid}>
         <${PaginationWrapper}>
           <${HorizontalLayout}>
           ${!selectionMode && html`
@@ -633,7 +633,7 @@ export function Gallery({
                 icon="trash"
               >
                 Delete
-              <//>
+              </${Button}>
               <${Button}
                 variant="medium-icon-text"
                 color=${hasSelectedItems ? 'primary' : 'secondary'}
@@ -643,7 +643,7 @@ export function Gallery({
                 icon="folder"
               >
                 Move
-              <//>
+              </${Button}>
           `}
             <${PaginationControls}
               currentPage=${pagination.currentPage}
@@ -658,7 +658,7 @@ export function Gallery({
               showFirstLast=${true}
             />
           </${HorizontalLayout}>
-        <//>
+        </${SearchContainer}>
         <${Controls}>
           <${SearchContainer}>
             <${HorizontalLayout} gap="small">
@@ -676,7 +676,7 @@ export function Gallery({
                 fullWidth=${true}
               />
             </${HorizontalLayout}>
-          <//>
+          </${SearchContainer}>
           <${ButtonGroup}>
             ${!selectionMode && html`
               <${Button}
@@ -686,7 +686,7 @@ export function Gallery({
                 icon="show"
               >
                 View
-              <//>
+              </${Button}>
             `}
             <${Button}
               variant="medium-icon-text"
@@ -695,11 +695,11 @@ export function Gallery({
               icon="x"
             >
               Cancel
-            <//>
-          <//>
-        <//>
-      <//>
-    <//>
+            </${Button}>
+          </${ButtonGroup}>
+        </${Controls}>
+      </${Content}>
+    </${ModalOverlay}>
   `;
 }
 

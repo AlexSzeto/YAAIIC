@@ -1,0 +1,129 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 141248005681922,
+      "steps": 20,
+      "cfg": 3,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "4",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "waiNSFWIllustrious_v140.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 896,
+      "height": 1152,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres\n\n\n\n1girl, solo, side braid, swept bangs, blue hair, office lady, narrowed eyes, mature female, shirt, medium breasts, pencil skirt, crossed arms, annoyed, glasses, close-up, looking at viewer, brown blouse, white shirt, partially unbuttoned, looking down, ",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "score_6, score_5, score_4, ugly face, mutated hands, extra hands, extra fingers, extra arms, extra legs, Morphing, blending, (incorrectly proportioned:1.2), long legs, long arms, long forearms, bendy)), (artifacts:1.2), (low detail:1.2), low res, blurry face, black and white. bad eyes, bad art, bad drawing, watermark, trademarked, subtitle, loli, child, censored, motion lines, motion blur",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "12": {
+    "inputs": {
+      "model": "RMBG-2.0",
+      "sensitivity": 1,
+      "process_res": 512,
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222",
+      "image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "RMBG",
+    "_meta": {
+      "title": "Remove Background (RMBG)"
+    }
+  },
+  "14": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  }
+}

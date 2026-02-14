@@ -323,6 +323,36 @@ export function extractNameFromFilename(filename) {
 }
 
 /**
+ * Suppresses the default browser context menu on an element and calls a custom handler.
+ * 
+ * @param {HTMLElement} element - The element to attach the context menu listener to
+ * @param {Function} handler - Callback function called when right-click occurs
+ *                             Receives object with { x, y, event } properties
+ * @returns {Function} Cleanup function to remove the listener
+ * 
+ * @example
+ * const textarea = document.getElementById('my-textarea');
+ * const cleanup = suppressContextMenu(textarea, ({ x, y, event }) => {
+ *   console.log(`Right-clicked at position: ${x}, ${y}`);
+ *   // Show custom menu at cursor position
+ *   showCustomMenu(x, y);
+ * });
+ * 
+ * // Later, to remove the listener:
+ * cleanup();
+ */
+export function suppressContextMenu(element, handler) {
+  const listener = (event) => {
+    event.preventDefault();
+    handler({ x: event.clientX, y: event.clientY, event });
+  };
+  
+  element.addEventListener('contextmenu', listener);
+  
+  return () => element.removeEventListener('contextmenu', listener);
+}
+
+/**
  * PageTitleManager - Manages dynamic page title updates
  */
 export class PageTitleManager {

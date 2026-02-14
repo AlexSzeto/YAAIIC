@@ -172,6 +172,18 @@ app.get('/tags', (req, res) => {
 
   console.log(`Tags endpoint called with filters: noCharacters=${noCharacters}, minLength=${minLength}, minUsageCount=${minUsageCount}, categories=${filterCategories}`);
 
+  // Read category tree file
+  let categoryTree = {};
+  const categoryTreePath = path.join(actualDirname, 'resource', 'danbooru_category_tree.json');
+  try {
+    const categoryTreeData = fs.readFileSync(categoryTreePath, 'utf8');
+    categoryTree = JSON.parse(categoryTreeData);
+    console.log(`Category tree loaded with ${Object.keys(categoryTree).length} entries`);
+  } catch (err) {
+    console.error('Error reading danbooru_category_tree.json:', err.message);
+    // Continue with empty category tree
+  }
+
   let debugOutput = 2;
   const results = [];
   const definitions = {};
@@ -193,8 +205,7 @@ app.get('/tags', (req, res) => {
 
       // Collect all tag definitions (regardless of filters)
       if (definition && definition.trim()) {
-        const normalizedTagName = tagName.replace(/_/g, ' ');
-        definitions[normalizedTagName] = definition.trim();
+        definitions[tagName] = definition.trim();
       }
 
       // Apply filters for tags list
@@ -226,6 +237,7 @@ app.get('/tags', (req, res) => {
       res.json({ 
         tags: results,
         definitions,
+        categoryTree,
         filters: {
           noCharacters,
           minLength,
@@ -337,6 +349,15 @@ app.post('/generate', upload.any(), async (req, res) => {
     
     // Don't create saveImagePath here - it will be created after preGenerationTasks
     // so that the format can be determined from extra inputs
+    
+    // Fill in expected but missing image data values with blank strings
+    const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+    requiredImageDataFields.forEach(field => {
+      if (req.body[field] === undefined || req.body[field] === null) {
+        req.body[field] = '';
+        console.log(`Filled missing field '${field}' with blank string`);
+      }
+    });
     
     // Handle file uploads if workflow specifies them
     // First, validate that required images are provided
@@ -1257,6 +1278,15 @@ app.post('/generate/inpaint', upload.fields([
       
       // Don't create saveImagePath here - it will be created after preGenerationTasks
       // so that the format can be determined from extra inputs
+      
+      // Fill in expected but missing image data values with blank strings
+      const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+      requiredImageDataFields.forEach(field => {
+        if (req.body[field] === undefined || req.body[field] === null) {
+          req.body[field] = '';
+          console.log(`Filled missing field '${field}' with blank string`);
+        }
+      });
       
       // Prepare request body with imagePath and maskPath from uploaded filenames
       req.body.imagePath = imageUploadResult.filename;

@@ -151,6 +151,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         error=${error}
         fullWidth=${true}
       />
-    <//>
+    </${Container}>
   `;
 }
