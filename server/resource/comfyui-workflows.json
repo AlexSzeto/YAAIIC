@@ -126,14 +126,13 @@
       ],
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "imagePath"
+          "from": "image_0"
         }
       ],
       "base": "rmbg-remove-background.json",
       "replace": [
          {
-            "from": "imagePath",
+            "from": "image_0_filename",
             "to": ["2", "inputs", "image"]
          },
          {
@@ -166,6 +165,12 @@
             "id": "usePostPrompts",
             "type": "checkbox",
             "label": "Use Post-Gen Prompts",
+            "default": false
+          },
+          {
+            "id": "removeBackground",
+            "type": "checkbox",
+            "label": "Remove Background",
             "default": false
           }
         ]
@@ -228,6 +233,24 @@
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
         }
       ],
       "base": "illustrious-text-to-image.json",
@@ -611,7 +634,7 @@
       "preGenerationTasks": [
         {
           "template": "The image is a painting from Carl Spitzweg inbetween \nIn the style of chargen_concept_art image of\n\nmagnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background, professional, winning\n\nFantasy illustration of\n\n{{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "postGenerationTasks": [
@@ -681,7 +704,7 @@
       "base": "flux-fantasy-text-to-landscape.json",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {
@@ -1863,7 +1886,7 @@
         },
         {
           "template": "Prevent extreme camera movement, and always use smooth camera motion. {{prompt}}",
-          "to": "prompt"
+          "to": "enhancedPrompt"
         }
       ],
       "base": "wan5b-image-to-video.json",
@@ -1895,7 +1918,7 @@
           "to": ["121", "inputs", "value"]
         },
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": ["6", "inputs", "text"]
         },
         {

@@ -179,7 +179,9 @@ export function checkExecutionCondition(dataSources, conditionData) {
   // Treat undefined as false when comparing with boolean values
   else if (typeof expectedValue === 'boolean') {
     // If actualValue is undefined or null, treat it as false for boolean comparison
-    const normalizedActual = (actualValue === undefined || actualValue === null) ? false : actualValue;
+    const normalizedActual = (typeof actualValue === 'boolean')
+      ? actualValue
+      : !(actualValue === undefined || actualValue === null || actualValue === 'false' || actualValue === '');
     result = normalizedActual === expectedValue;
   }
   // Compare values

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload } from './generate.mjs';
+import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload, validateNoNestedExecuteWorkflow, setWorkflowsData } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
@@ -113,6 +113,9 @@ try {
   
   // Set up the image data entry function for generate.mjs
   setAddMediaDataEntry(addMediaDataEntry);
+  
+  // Set workflows data in generate module
+  setWorkflowsData(comfyuiWorkflows);
   
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -435,8 +438,13 @@ app.post('/generate', upload.any(), async (req, res) => {
             console.log(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully: ${uploadFilename}`);
             
             // Store the filename in request body using the specified variable name
-            req.body[storePathAs] = uploadResult.filename;
-            console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
+            // NOTE: now optional since the _filename variable is always stored for reference
+            // TODO: deprecate storePathAs in favor of using image_x_filename and audio_x_filename for consistency
+            if(storePathAs) {
+              req.body[storePathAs] = uploadResult.filename;
+              console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
+            }
+            req.body[`${from}_filename`] = uploadResult.filename; // Store the filename with a suffix for reference
           }
         }
         
@@ -448,6 +456,14 @@ app.post('/generate', upload.any(), async (req, res) => {
       }
     }
     
+    // Validate that workflow doesn't contain nested executeWorkflow processes
+    const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+    if (!validation.valid) {
+      console.error('Workflow validation failed:', validation.error);
+      return res.status(400).json({ error: 'Workflow validation failed', details: validation.error });
+    }
+    
+    console.log('Starting media generation with request data: ', req.body);
     // Call handleImageGeneration with workflow data and modifications
     handleMediaGeneration(req, res, workflowData, config);
   } catch (error) {
@@ -1323,6 +1339,13 @@ app.post('/generate/inpaint', upload.fields([
       
       // Remove uploads data from request body before calling handleMediaGeneration
       delete req.body.uploads;
+      
+      // Validate that workflow doesn't contain nested executeWorkflow processes
+      const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+      if (!validation.valid) {
+        console.error('Workflow validation failed:', validation.error);
+        return res.status(500).json({ error: 'Workflow validation failed', details: validation.error });
+      }
       
       // Call handleImageGeneration with workflow data and modifications
       handleMediaGeneration(req, res, workflowData, config);

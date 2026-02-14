@@ -300,21 +300,31 @@ curl -X POST http://localhost:3000/api/generate `
 
 ## Tasks
 
-[] Add optional `name` parameter support to pre/post generation task progress events
-[] Add validation function to detect nested `executeWorkflow` processes in workflow configurations
-[] Add validation to check for recursive nesting before workflow execution begins
-[] Implement `executeWorkflow` process handler in `PROCESS_HANDLERS`
-[] Implement input mapping logic for text fields
-[] Implement input mapping logic for image media with metadata field generation
-[] Implement input mapping logic for audio media with metadata field generation
-[] Integrate nested workflow execution within the process handler
-[] Implement output mapping logic for text fields
-[] Implement automatic media URL updates from nested workflow output
-[] Add "Remove Background" checkbox to "Text to Image (Illustrious Characters)" workflow configuration
-[] Configure remove background post-generation task with proper input/output mappings
-[] Test nested workflow execution with remove background process
-[] Verify error handling when nested workflow fails
-[] Verify error handling when workflow name doesn't exist
-[] Verify error handling when nested workflow contains executeWorkflow
-[] Test chained workflow processes (multiple executeWorkflow tasks in sequence)
-[] Verify metadata persistence through nested workflow chain
+[x] Add optional `name` parameter support to pre/post generation task progress events
+[x] Add validation function to detect nested `executeWorkflow` processes in workflow configurations
+[x] Add validation to check for recursive nesting before workflow execution begins
+[x] Implement `executeWorkflow` process handler in `PROCESS_HANDLERS`
+[x] Implement input mapping logic for text fields
+[x] Implement input mapping logic for image media with metadata field generation
+[x] Implement input mapping logic for audio media with metadata field generation
+[x] Integrate nested workflow execution within the process handler
+[x] Implement output mapping logic for text fields
+[x] Implement automatic media URL updates from nested workflow output
+[x] Add "Remove Background" checkbox to "Text to Image (Illustrious Characters)" workflow configuration
+[x] Configure remove background post-generation task with proper input/output mappings
+
+[x] Fix the following bug:
+The post generation workflow is failing from the following error:
+```
+Error in task task_1771049064423_e4u5j6ufy: Error: Nested workflow "Remove Background (RMBG)" failed: Nested workflow did not produce a result
+    at executeWorkflow (file:///F:/YAAIIC/server/generate.mjs:403:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async processGenerationTask (file:///F:/YAAIIC/server/generate.mjs:1442:13)
+```
+Please review how tasks are tracked to ensure that the end of generation result is being captured properly.
+Also, the nested workflow is writing its results directly into media-data, which we do not want.
+Add a parameter to the generate media function to allow it to run in "silent" mode, that is, it would execute everything
+except write the generation data into `media-data.json`.
+
+[x] Test nested workflow execution with remove background process
+[x] Verify error handling when nested workflow fails

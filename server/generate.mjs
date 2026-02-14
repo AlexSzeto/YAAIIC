@@ -25,6 +25,9 @@ import {
 // Store ComfyUI API path locally
 let comfyUIAPIPath = null;
 
+// Store workflows data locally
+let workflowsData = null;
+
 // Track the last used workflow to manage VRAM
 let lastUsedWorkflow = null;
 
@@ -52,6 +55,82 @@ const IMPORTANT_NODE_TYPES = [
   'UnifiedTTSTextNode',
   'HeartMuLa_Generate',
 ];
+
+/**
+ * Validates that a workflow does not contain nested executeWorkflow processes
+ * @param {Object} workflowConfig - The workflow configuration to validate
+ * @param {Array} allWorkflows - Array of all available workflows
+ * @param {Set} visited - Set of visited workflow names (for recursion detection)
+ * @returns {Object} - { valid: boolean, error: string|null }
+ */
+function validateNoNestedExecuteWorkflow(workflowConfig, allWorkflows, visited = new Set()) {
+  // Check if this workflow has postGenerationTasks
+  const postGenTasks = workflowConfig.postGenerationTasks;
+  if (!postGenTasks || !Array.isArray(postGenTasks)) {
+    return { valid: true, error: null };
+  }
+
+  // Find all executeWorkflow processes
+  const executeWorkflowTasks = postGenTasks.filter(task => task.process === 'executeWorkflow');
+  
+  if (executeWorkflowTasks.length === 0) {
+    return { valid: true, error: null };
+  }
+
+  // For each executeWorkflow task, validate the target workflow
+  for (const task of executeWorkflowTasks) {
+    const targetWorkflowName = task.parameters?.workflow;
+    
+    if (!targetWorkflowName) {
+      return { 
+        valid: false, 
+        error: `executeWorkflow process missing 'workflow' parameter in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Find the target workflow
+    const targetWorkflow = allWorkflows.find(w => w.name === targetWorkflowName);
+    
+    if (!targetWorkflow) {
+      return { 
+        valid: false, 
+        error: `Target workflow "${targetWorkflowName}" not found for executeWorkflow in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Check for circular reference
+    if (visited.has(targetWorkflowName)) {
+      return { 
+        valid: false, 
+        error: `Circular workflow reference detected: "${targetWorkflowName}" in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Check if target workflow has any executeWorkflow processes (nesting not allowed)
+    const targetPostGenTasks = targetWorkflow.postGenerationTasks;
+    if (targetPostGenTasks && Array.isArray(targetPostGenTasks)) {
+      const hasNestedExecuteWorkflow = targetPostGenTasks.some(t => t.process === 'executeWorkflow');
+      
+      if (hasNestedExecuteWorkflow) {
+        return { 
+          valid: false, 
+          error: `Nested executeWorkflow detected: workflow "${targetWorkflowName}" contains executeWorkflow process. Only one level of nesting is allowed.` 
+        };
+      }
+    }
+
+    // Recursively validate the target workflow (for other validation, not executeWorkflow)
+    const newVisited = new Set(visited);
+    newVisited.add(workflowConfig.name);
+    const targetValidation = validateNoNestedExecuteWorkflow(targetWorkflow, allWorkflows, newVisited);
+    
+    if (!targetValidation.valid) {
+      return targetValidation;
+    }
+  }
+
+  return { valid: true, error: null };
+}
 
 // Process handler registry - maps process names to handler functions
 const PROCESS_HANDLERS = {
@@ -132,6 +211,197 @@ const PROCESS_HANDLERS = {
         throw error; // Fail immediately on error as per spec
       }
     }
+  },
+  
+  executeWorkflow: async (parameters, generationData, context) => {
+    const { workflow: targetWorkflowName, inputMapping = [], outputMapping = [] } = parameters;
+    
+    if (!targetWorkflowName) {
+      throw new Error('executeWorkflow requires "workflow" parameter');
+    }
+    
+    console.log(`[Process] Executing nested workflow: ${targetWorkflowName}`);
+    
+    const { workflowsData, serverConfig } = context;
+    
+    if (!workflowsData || !workflowsData.workflows) {
+      throw new Error('Workflows data not available in context');
+    }
+    
+    // Find the target workflow
+    const targetWorkflow = workflowsData.workflows.find(w => w.name === targetWorkflowName);
+    if (!targetWorkflow) {
+      throw new Error(`Target workflow "${targetWorkflowName}" not found`);
+    }
+    
+    // Create nested request data starting with basic fields
+    const nestedRequestData = {
+      workflow: targetWorkflowName,
+      seed: Math.floor(Math.random() * 4294967295) // Generate new seed for nested workflow
+    };
+    
+    console.log(`[Process] Applying input mapping with ${inputMapping.length} rules...`);
+    
+    // Apply input mapping
+    for (const mapping of inputMapping) {
+      // Text field mapping
+      if (mapping.from && mapping.to) {
+        const value = generationData[mapping.from];
+        if (value !== undefined) {
+          nestedRequestData[mapping.to] = value;
+          console.log(`[Process] Mapped text field: ${mapping.from} -> ${mapping.to}`);
+        }
+      }
+      // Image mapping
+      else if (mapping.image && mapping.toMediaInput !== undefined) {
+        const mediaIndex = mapping.toMediaInput;
+        const imageKey = mapping.image === 'generated' ? 'saveImagePath' : mapping.image;
+        
+        // Get the image path from generationData
+        const imagePath = generationData[imageKey];
+        if (imagePath) {
+          try {
+            // Read the image file from disk
+            console.log(`[Process] Reading image file: ${imagePath}`);
+            const imageBuffer = fs.readFileSync(imagePath);
+            
+            // Extract filename from path
+            const filename = path.basename(imagePath);
+            
+            // Upload to ComfyUI
+            console.log(`[Process] Uploading image to ComfyUI: ${filename}`);
+            const uploadResult = await uploadFileToComfyUI(imageBuffer, filename, "image", "input", true);
+            
+            // Store the ComfyUI filename in nestedRequestData
+            nestedRequestData[`image_${mediaIndex}_filename`] = uploadResult.filename;
+            console.log(`[Process] Mapped image: ${imageKey} -> image_${mediaIndex} (ComfyUI: ${uploadResult.filename})`);
+            
+            // Map associated metadata fields
+            const metadataFields = ['description', 'summary', 'tags', 'name', 'uid', 'imageFormat'];
+            for (const field of metadataFields) {
+              const sourceField = imageKey === 'saveImagePath' ? field : `${imageKey}_${field}`;
+              const targetField = `image_${mediaIndex}_${field}`;
+              const value = generationData[sourceField];
+              
+              if (value !== undefined) {
+                nestedRequestData[targetField] = value;
+                console.log(`[Process] Mapped metadata: ${sourceField} -> ${targetField}`);
+              }
+            }
+          } catch (uploadError) {
+            console.error(`[Process] Failed to upload image to ComfyUI:`, uploadError);
+            throw new Error(`Failed to upload image for nested workflow: ${uploadError.message}`);
+          }
+        }
+      }
+      // Audio mapping
+      else if (mapping.audio && mapping.toMediaInput !== undefined) {
+        const mediaIndex = mapping.toMediaInput;
+        const audioKey = mapping.audio === 'generated' ? 'saveAudioPath' : mapping.audio;
+        
+        // Get the audio path from generationData
+        const audioPath = generationData[audioKey];
+        if (audioPath) {
+          try {
+            // Read the audio file from disk
+            console.log(`[Process] Reading audio file: ${audioPath}`);
+            const audioBuffer = fs.readFileSync(audioPath);
+            
+            // Extract filename from path
+            const filename = path.basename(audioPath);
+            
+            // Upload to ComfyUI
+            console.log(`[Process] Uploading audio to ComfyUI: ${filename}`);
+            const uploadResult = await uploadFileToComfyUI(audioBuffer, filename, "audio", "input", true);
+            
+            // Store the ComfyUI filename in nestedRequestData
+            nestedRequestData[`audio_${mediaIndex}`] = uploadResult.filename;
+            console.log(`[Process] Mapped audio: ${audioKey} -> audio_${mediaIndex} (ComfyUI: ${uploadResult.filename})`);
+            
+            // Map associated metadata fields
+            const metadataFields = ['description', 'summary', 'tags', 'name', 'uid'];
+            for (const field of metadataFields) {
+              const sourceField = audioKey === 'saveAudioPath' ? field : `${audioKey}_${field}`;
+              const targetField = `audio_${mediaIndex}_${field}`;
+              const value = generationData[sourceField];
+              
+              if (value !== undefined) {
+                nestedRequestData[targetField] = value;
+                console.log(`[Process] Mapped metadata: ${sourceField} -> ${targetField}`);
+              }
+            }
+          } catch (uploadError) {
+            console.error(`[Process] Failed to upload audio to ComfyUI:`, uploadError);
+            throw new Error(`Failed to upload audio for nested workflow: ${uploadError.message}`);
+          }
+        }
+      }
+    }
+    
+    // Fill in required fields with blanks if not provided
+    const requiredFields = ['tags', 'prompt', 'description', 'summary', 'name'];
+    for (const field of requiredFields) {
+      if (nestedRequestData[field] === undefined || nestedRequestData[field] === null) {
+        nestedRequestData[field] = '';
+      }
+    }
+    
+    console.log(`[Process] Executing nested workflow with request data:`, nestedRequestData);
+    
+    // Create a temporary task ID for the nested workflow (not saved to database)
+    const nestedTaskId = generateTaskId();
+    
+    // Create task entry (will not be visible as it won't be saved to database)
+    createTask(nestedTaskId, {
+      workflow: targetWorkflowName,
+      promptId: null,
+      requestData: nestedRequestData,
+      workflowConfig: targetWorkflow
+    });
+    
+    try {
+      // Execute the nested workflow in silent mode (skip database entry)
+      await processGenerationTask(nestedTaskId, nestedRequestData, targetWorkflow, serverConfig, true);
+      
+      // Get the nested task to extract result data
+      const nestedTask = getTask(nestedTaskId);
+      if (!nestedTask || !nestedTask.result) {
+        throw new Error('Nested workflow did not produce a result');
+      }
+      
+      const nestedResult = nestedTask.result;
+      console.log(`[Process] Nested workflow completed successfully`);
+      
+      // Apply output mapping for text fields
+      console.log(`[Process] Applying output mapping with ${outputMapping.length} rules...`);
+      for (const mapping of outputMapping) {
+        if (mapping.from && mapping.to) {
+          const value = nestedResult[mapping.from];
+          if (value !== undefined) {
+            generationData[mapping.to] = value;
+            console.log(`[Process] Mapped output field: ${mapping.from} -> ${mapping.to}`);
+          }
+        }
+      }
+      
+      // Automatically update media URLs from nested workflow
+      if (nestedResult.imageUrl) {
+        generationData.imageUrl = nestedResult.imageUrl;
+        generationData.saveImagePath = nestedResult.saveImagePath;
+        console.log(`[Process] Updated imageUrl from nested workflow: ${nestedResult.imageUrl}`);
+      }
+      
+      if (nestedResult.audioUrl) {
+        generationData.audioUrl = nestedResult.audioUrl;
+        generationData.saveAudioPath = nestedResult.saveAudioPath;
+        console.log(`[Process] Updated audioUrl from nested workflow: ${nestedResult.audioUrl}`);
+      }
+      
+      console.log(`[Process] Nested workflow execution completed successfully`);
+    } catch (error) {
+      console.error(`[Process] Nested workflow failed:`, error.message);
+      throw new Error(`Nested workflow "${targetWorkflowName}" failed: ${error.message}`);
+    }
   }
 };
 
@@ -145,6 +415,11 @@ export function setAddMediaDataEntry(func) {
   addMediaDataEntry = func;
 }
 
+export function setWorkflowsData(workflows) {
+  workflowsData = workflows;
+  console.log('Workflows data set in generate module');
+}
+
 // Re-export SSE functions for backwards compatibility
 export {
   emitProgressUpdate,
@@ -153,6 +428,9 @@ export {
   emitTaskErrorByTaskId,
   handleSSEConnection
 };
+
+// Export validation function for workflow nesting
+export { validateNoNestedExecuteWorkflow };
 
 // Function to upload image to ComfyUI
 export async function uploadFileToComfyUI(fileBuffer, filename, fileType = "image", storageType = "input", overwrite = false) {
@@ -750,7 +1028,7 @@ export async function handleMediaGeneration(req, res, workflowConfig, serverConf
 }
 
 // Background processing function
-async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig) {
+async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig, silent = false) {
   try {
     const { base: workflowBasePath, replace: modifications, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
@@ -895,7 +1173,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           if (hasProcess) {
             // Show progress for process task
             const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = `Processing ${taskConfig.process}`;
+            const stepName = taskConfig.name || `Processing ${taskConfig.process}`;
             
             // Emit SSE progress update for start
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -908,7 +1186,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
             
             // Build context for process handler
             const savePath = generationData.saveImagePath || '';
-            const context = { storagePath, savePath };
+            const context = { storagePath, savePath, workflowsData, serverConfig };
             
             // Execute the process handler
             await handler(taskConfig.parameters || {}, generationData, context);
@@ -924,7 +1202,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           else if (hasPrompt) {
             // Show progress for prompt task
             const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = `Generating ${taskConfig.to}`;
+            const stepName = taskConfig.name || `Generating ${taskConfig.to}`;
             
             // Emit SSE progress update for start
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -934,10 +1212,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
             // Increment step counter
             currentStep++;
             const completionPercentage = Math.round((currentStep / totalSteps) * 100);
-            const completionStepName = `Generating ${taskConfig.to}`;
             
             // Emit SSE progress update for completion
-            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
           }
           // Data copy task (from/to) or template task - no progress tracking
           else {
@@ -1003,6 +1280,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     
     // Update savePath variable for compatibility
     const savePath = generationData.saveImagePath;
+
+    // Set initial imageUrl from savePath (can be overridden by post-generation tasks)
+    const filename = path.basename(savePath);
+    generationData.imageUrl = `/media/${filename}`;
 
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
@@ -1131,7 +1412,8 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           };
           const shouldExecute = checkExecutionCondition(dataSources, taskConfig.condition);
           if (!shouldExecute) {
-            console.log(`Skipping post-generation task due to unmet condition`);
+            const taskName = taskConfig.name || (hasProcess ? `process ${taskConfig.process}` : `prompt to ${taskConfig.to}`);
+            console.log(`Skipping post-generation task ${taskName} due to unmet condition`);
             // Increment step counter only if this task should be counted
             if (shouldCount) {
               currentStep++;
@@ -1145,7 +1427,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           if (hasProcess) {
             // Show progress for process task
             const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = `Processing ${taskConfig.process}`;
+            const stepName = taskConfig.name || `Processing ${taskConfig.process}`;
             
             // Emit SSE progress update for start
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -1157,7 +1439,7 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
             }
             
             // Build context for process handler
-            const context = { storagePath, savePath };
+            const context = { storagePath, savePath, workflowsData, serverConfig };
             
             // Execute the process handler (fail immediately on error)
             await handler(taskConfig.parameters || {}, generationData, context);
@@ -1173,9 +1455,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
           else if (hasPrompt) {
             // Show progress for prompt task
             const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = taskConfig.to === 'description' 
+            const stepName = taskConfig.name || (taskConfig.to === 'description' 
               ? `Analyzing image` 
-              : `Generating ${taskConfig.to}`;
+              : `Generating ${taskConfig.to}`);
             
             // Emit SSE progress update for start
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -1185,12 +1467,9 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
             // Increment step counter
             currentStep++;
             const completionPercentage = Math.round((currentStep / totalSteps) * 100);
-            const completionStepName = taskConfig.to === 'description' 
-              ? `Analyzing image` 
-              : `Generating ${taskConfig.to}`;
             
             // Emit SSE progress update for completion
-            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
           }
           // Data copy task (from/to) or template task - no progress tracking
           else {
@@ -1241,17 +1520,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
     }
 
-    // Return the image URL path (relative to /media/ endpoint)
-    const filename = path.basename(savePath);
-    const imageUrl = `/media/${filename}`;
-
     // Calculate time taken in seconds
     const startTime = taskTimers.get(taskId);
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     console.log(`Generation completed in ${timeTaken} seconds`);
 
-    // Add all fields to generationData before saving
-    generationData.imageUrl = imageUrl;
+    // Add final fields to generationData before saving
     generationData.workflow = workflow;
     generationData.inpaint = inpaint || false;
     generationData.inpaintArea = inpaintArea || null;
@@ -1262,10 +1536,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     if (!generationData.summary) generationData.summary = '';
     if (!generationData.tags) generationData.tags = '';
 
-    // Save image data to database using entire generationData object
-    if (addMediaDataEntry) {
+    // Save image data to database using entire generationData object (skip if silent mode)
+    if (!silent && addMediaDataEntry) {
       addMediaDataEntry(generationData);
       console.log('Image data entry saved to database with UID:', generationData.uid);
+    } else if (silent) {
+      console.log('Silent mode: Skipping database entry for nested workflow');
     }
 
     // Prepare completion data
