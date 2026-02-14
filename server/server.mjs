@@ -409,7 +409,7 @@ app.post('/generate', upload.any(), async (req, res) => {
         
         // Process each upload specification
         for (const uploadSpec of workflowData.upload) {
-          const { from, storePathAs } = uploadSpec;
+          const { from } = uploadSpec;
           
           if (uploadedFilesByName[from]) {
             const uploadedFile = uploadedFilesByName[from];
@@ -437,14 +437,8 @@ app.post('/generate', upload.any(), async (req, res) => {
             const uploadResult = await uploadFileToComfyUI(uploadedFile.buffer, uploadFilename, fileType, "input", true);
             console.log(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully: ${uploadFilename}`);
             
-            // Store the filename in request body using the specified variable name
-            // NOTE: now optional since the _filename variable is always stored for reference
-            // TODO: deprecate storePathAs in favor of using image_x_filename and audio_x_filename for consistency
-            if(storePathAs) {
-              req.body[storePathAs] = uploadResult.filename;
-              console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
-            }
-            req.body[`${from}_filename`] = uploadResult.filename; // Store the filename with a suffix for reference
+            // Store the filename in request body using {from}_filename variable for reference in workflow mappings
+            req.body[`${from}_filename`] = uploadResult.filename;
           }
         }
         

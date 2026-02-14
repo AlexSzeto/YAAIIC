@@ -85,63 +85,6 @@
       ]
     },
     {
-      "name": "Remove Background (RMBG)",
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 1,
-        "optionalPrompt": true,
-        "nameRequired": true,
-        "orientation": "detect"
-      },
-      "preGenerationTasks": [
-        {
-          "template": "png",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_tags" },
-            "isNot": { "value": "" }
-          },
-          "from": "image_0_tags",
-          "to": "tags"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_summary" },
-            "isNot": { "value": "" }
-          },          
-          "from": "image_0_summary",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_description" },
-            "isNot": { "value": "" }
-          },
-          "from": "image_0_description",
-          "to": "description"
-         }
-      ],
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
-      "base": "rmbg-remove-background.json",
-      "replace": [
-         {
-            "from": "image_0_filename",
-            "to": ["2", "inputs", "image"]
-         },
-         {
-           "from": "saveImagePath",
-           "to": ["4", "inputs", "path"]
-         }
-       ]
-    },
-    {
       "name": "Text to Image (Illustrious Characters)",
       "options": {
         "type": "image",
@@ -271,6 +214,7 @@
     },
     {
       "name": "Text to Image (Illustrious Characters, Background Removed)",
+      "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": true,
@@ -579,8 +523,7 @@
       "base": "illustrious-image-style.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "imagePath"
+          "from": "image_0"
         }
       ],
       "replace": [
@@ -597,7 +540,7 @@
           "to": ["11", "inputs", "path"]
         },
         {
-          "from": "imagePath",
+          "from": "image_0_filename",
           "to": ["13", "inputs", "image"]
         }
       ]
@@ -743,6 +686,12 @@
             "type": "checkbox",
             "label": "Generate Descriptions",
             "default": false
+          },
+          {
+            "id": "removeBackground",
+            "type": "checkbox",
+            "label": "Remove Background",
+            "default": false
           }
         ]
       },
@@ -814,6 +763,24 @@
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
         }
       ],
       "base": "flux-fantasy-text-to-portrait.json",
@@ -971,6 +938,12 @@
             "type": "checkbox",
             "label": "Generate Descriptions",
             "default": false
+          },
+          {
+            "id": "removeBackground",
+            "type": "checkbox",
+            "label": "Remove Background",
+            "default": false
           }
         ]
       },
@@ -1042,6 +1015,24 @@
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
         }
       ],
       "base": "zimage-fantasy-portrait.json",
@@ -1083,12 +1074,10 @@
       "base": "realvis-fantasy-inpaint.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "imagePath"
+          "from": "image_0"
         },
         {
-          "from": "mask",
-          "storePathAs": "maskPath"
+          "from": "mask"
         }
       ],
       "replace": [
@@ -1105,11 +1094,11 @@
           "to": ["9", "inputs", "path"]
         },
         {
-          "from": "imagePath",
+          "from": "image_0_filename",
           "to": ["20", "inputs", "image"]
         },
         {
-          "from": "maskPath",
+          "from": "mask_filename",
           "to": ["36", "inputs", "image"]
         }
       ]
@@ -1137,12 +1126,10 @@
       "base": "waifu-anime-inpaint.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "imagePath"
+          "from": "image_0"
         },
         {
-          "from": "mask",
-          "storePathAs": "maskPath"
+          "from": "mask"
         }
       ],
       "replace": [
@@ -1159,11 +1146,11 @@
           "to": ["9", "inputs", "path"]
         },
         {
-          "from": "imagePath",
+          "from": "image_0_filename",
           "to": ["20", "inputs", "image"]
         },
         {
-          "from": "maskPath",
+          "from": "mask_filename",
           "to": ["36", "inputs", "image"]
         }
       ]
@@ -1193,6 +1180,12 @@
             "type": "checkbox",
             "label": "Generate Descriptions",
             "default": false
+          },
+          {
+            "id": "removeBackground",
+            "type": "checkbox",
+            "label": "Remove Background",
+            "default": false
           }
         ]
       },
@@ -1258,13 +1251,30 @@
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
         }
       ],
       "base": "qwen-image-to-image.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "imagePath"
+          "from": "image_0"
         }
       ],
       "replace": [
@@ -1281,7 +1291,7 @@
           "to": ["229", "inputs", "path"]
         },
         {
-          "from": "imagePath",
+          "from": "image_0_filename",
           "to": ["377", "inputs", "image"]
         }
       ]
@@ -1311,123 +1321,11 @@
             "type": "checkbox",
             "label": "Generate Descriptions",
             "default": false
-          }
-        ]
-      },
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
-              },
-              {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
-              }
-            ]
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
-              },
-              {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        }
-      ],
-      "base": "flux-klein-image-edit.json",
-      "upload": [
-        {
-          "from": "image_0",
-          "storePathAs": "imagePath"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": ["75:74", "inputs", "text"]
-        },
-        {
-          "from": "seed",
-          "to": ["75:73", "inputs", "noise_seed"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["100", "inputs", "path"]
-        },
-        {
-          "from": "imagePath",
-          "to": ["76", "inputs", "image"]
-        }
-      ]
-    },
-    {
-      "name": "Multi Source Image Edit (Flux Klein)",
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 2,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
-            ]
           },
           {
-            "id": "usePostPrompts",
+            "id": "removeBackground",
             "type": "checkbox",
-            "label": "Generate Descriptions",
+            "label": "Remove Background",
             "default": false
           }
         ]
@@ -1494,17 +1392,174 @@
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
+        }
+      ],
+      "base": "flux-klein-image-edit.json",
+      "upload": [
+        {
+          "from": "image_0"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["75:74", "inputs", "text"]
+        },
+        {
+          "from": "seed",
+          "to": ["75:73", "inputs", "noise_seed"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["100", "inputs", "path"]
+        },
+        {
+          "from": "image_0_filename",
+          "to": ["76", "inputs", "image"]
+        }
+      ]
+    },
+    {
+      "name": "Multi Source Image Edit (Flux Klein)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 2,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              { "label": "PNG", "value": "png" },
+              { "label": "JPG", "value": "jpg" }
+            ]
+          },
+          {
+            "id": "usePostPrompts",
+            "type": "checkbox",
+            "label": "Generate Descriptions",
+            "default": false
+          },
+          {
+            "id": "removeBackground",
+            "type": "checkbox",
+            "label": "Remove Background",
+            "default": false
+          }
+        ]
+      },
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "where": { "data": "usePostPrompts" },
+            "equals": { "value": true }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "imagePath": "saveImagePath",
+          "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": { "data": "usePostPrompts" },
+            "equals": { "value": true }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "imagePath": "saveImagePath",
+          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
+          "to": "summary"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": { "data": "usePostPrompts" },
+                "equals": { "value": true }
+              },
+              {
+                "where": { "data": "name" },
+                "equals": { "value": "" }
+              }
+            ]
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
+          "to": "name"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": { "data": "usePostPrompts" },
+                "equals": { "value": false }
+              },
+              {
+                "where": { "data": "name" },
+                "equals": { "value": "" }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        },
+        {
+          "condition": {
+            "where": { "data": "usePostPrompts" },
+            "equals": { "value": true }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
+          "to": "tags"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Removing background",
+          "condition": {
+            "where": { "data": "removeBackground" },
+            "equals": { "value": true }
+          },
+          "parameters": {
+            "workflow": "Remove Background (RMBG)",
+            "inputMapping": [
+              {
+                "image": "generated",
+                "toMediaInput": 0
+              }
+            ],
+            "outputMapping": []
+          }
         }
       ],
       "base": "flux-klein-image-edit-multisource.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "editImagePath"
+          "from": "image_0"
         },
         {
-          "from": "image_1",
-          "storePathAs": "referenceImagePath"
+          "from": "image_1"
         }
       ],
       "replace": [
@@ -1521,11 +1576,11 @@
           "to": ["100", "inputs", "path"]
         },
         {
-          "from": "editImagePath",
+          "from": "image_0_filename",
           "to": ["76", "inputs", "image"]
         },
         {
-          "from": "referenceImagePath",
+          "from": "image_1_filename",
           "to": ["81", "inputs", "image"]
         }
       ]
@@ -1604,12 +1659,10 @@
       "base": "wan-image-to-video.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "firstFramePath"
+          "from": "image_0"
         },
         {
-          "from": "image_1",
-          "storePathAs": "lastFramePath"
+          "from": "image_1"
         }
       ],
       "replace": [
@@ -1662,11 +1715,11 @@
           "to": ["76", "inputs", "output_file_path"]
         },
         {
-          "from": "firstFramePath",
+          "from": "image_0_filename",
           "to": ["52", "inputs", "image"]
         },
         {
-          "from": "lastFramePath",
+          "from": "image_1_filename",
           "to": ["71", "inputs", "image"]
         },
         {
@@ -1745,8 +1798,7 @@
       "base": "wan5b-image-to-video-loop.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "firstFramePath"
+          "from": "image_0"
         }
       ],
       "replace": [
@@ -1787,7 +1839,7 @@
           "to": ["119", "inputs", "output_file_path"]
         },
         {
-          "from": "firstFramePath",
+          "from": "image_0_filename",
           "to": ["56", "inputs", "image"]
         },
         {
@@ -1892,12 +1944,10 @@
       "base": "wan5b-image-to-video.json",
       "upload": [
         {
-          "from": "image_0",
-          "storePathAs": "firstFramePath"
+          "from": "image_0"
         },
         {
-          "from": "image_1",
-          "storePathAs": "lastFramePath"
+          "from": "image_1"
         }
       ],
       "replace": [
@@ -1930,11 +1980,11 @@
           "to": ["119", "inputs", "output_file_path"]
         },
         {
-          "from": "firstFramePath",
+          "from": "image_0_filename",
           "to": ["56", "inputs", "image"]
         },
         {
-          "from": "lastFramePath",
+          "from": "image_1_filename",
           "to": ["123", "inputs", "image"]
         },
         {
@@ -2324,8 +2374,7 @@
       "base": "chatterbox-text-to-speech.json",
       "upload": [
         {
-          "from": "audio_0",
-          "storePathAs": "referenceAudioPath"
+          "from": "audio_0"
         }
       ],
       "replace": [
@@ -2346,7 +2395,7 @@
           "to": ["20", "inputs", "path"]
         },
         {
-          "from": "referenceAudioPath",
+          "from": "audio_0_filename",
           "to": ["5", "inputs", "audio"]
         }
       ]
@@ -2452,8 +2501,7 @@
       "base": "qwen3tts-text-to-audio.json",
       "upload": [
         {
-          "from": "audio_0",
-          "storePathAs": "referenceAudioPath"
+          "from": "audio_0"
         }
       ],
       "preGenerationTasks": [
@@ -2488,10 +2536,67 @@
           "to": ["16", "inputs", "path"]
         },
         {
-          "from": "referenceAudioPath",
+          "from": "audio_0_filename",
           "to": ["10", "inputs", "audio"]
         }
       ]
+    },
+    {
+      "name": "Remove Background (RMBG)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
+        {
+          "template": "png",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": { "data": "image_0_tags" },
+            "isNot": { "value": "" }
+          },
+          "from": "image_0_tags",
+          "to": "tags"
+        },
+        {
+          "condition": {
+            "where": { "data": "image_0_summary" },
+            "isNot": { "value": "" }
+          },          
+          "from": "image_0_summary",
+          "to": "summary"
+        },
+        {
+          "condition": {
+            "where": { "data": "image_0_description" },
+            "isNot": { "value": "" }
+          },
+          "from": "image_0_description",
+          "to": "description"
+         }
+      ],
+      "upload": [
+        {
+          "from": "image_0"
+        }
+      ],
+      "base": "rmbg-remove-background.json",
+      "replace": [
+         {
+            "from": "image_0_filename",
+            "to": ["2", "inputs", "image"]
+         },
+         {
+           "from": "saveImagePath",
+           "to": ["4", "inputs", "path"]
+         }
+       ]
     }
   ]
 }

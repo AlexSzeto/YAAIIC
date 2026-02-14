@@ -258,14 +258,10 @@
       "properties": {
         "from": {
           "type": "string",
-          "description": "Field name in the upload (e.g., 'image_0', 'image_1', 'mask')"
-        },
-        "storePathAs": {
-          "type": "string",
-          "description": "Internal variable name to store the file path"
+          "description": "Field name in the upload (e.g., 'image_0', 'image_1', 'mask', 'audio_0'). Uploaded files are automatically available as {from}_filename variables for use in replace mappings."
         }
       },
-      "required": ["from", "storePathAs"],
+      "required": ["from"],
       "additionalProperties": false
     },
     "directReplacement": {

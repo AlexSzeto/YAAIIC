@@ -107,8 +107,14 @@ export function connectToComfyUI(forceReconnect = false) {
 
 // Message handler for ComfyUI WebSocket messages
 function handleComfyUIMessage(data) {
+  let message = data.toString();
   try {
-    const message = JSON.parse(data.toString());
+    message = JSON.parse(message);
+  } catch (error) {
+    // Ignore non-JSON messages (e.g., connection keep-alives or debug logs)
+    return;
+  }
+  try {
     const { type, data: messageData } = message;
     
     // Log all messages for debugging

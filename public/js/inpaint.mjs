@@ -504,6 +504,14 @@ function InpaintApp() {
             title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
           />
           <${Button}
+            variant="medium-icon-text"
+            icon="folder"
+            disabled=${true}
+            title=${`Current folder: ${currentFolder.label} (folder selection disabled on inpaint page)`}
+          >
+            ${currentFolder.label}
+          </${Button}>
+          <${Button}
             icon="home"
             onClick=${handleDone}
             title="Return to main page"

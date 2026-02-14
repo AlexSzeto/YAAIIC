@@ -119,10 +119,10 @@ The `options` object controls UI behavior and input validation:
 ### Upload Handling
 
 - **`upload`** (array, optional)
-  - Defines how to handle uploaded files and map them to internal variables.
+  - Defines how to handle uploaded files.
   - Each item:
     - **`from`** (string): Field name in the upload (e.g., `"image_0"`, `"image_1"`, `"audio_0"`, `"mask"`).
-    - **`storePathAs`** (string): Internal variable name to store the file path.
+  - Uploaded files are automatically available as `{from}_filename` variables for use in replace mappings (e.g., `image_0_filename`, `audio_0_filename`, `mask_filename`).
 
 ### Value Replacement
 
@@ -616,8 +616,8 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
       ],
       "base": "video-workflow.json",
       "upload": [
-        { "from": "image_0", "storePathAs": "firstFramePath" },
-        { "from": "image_1", "storePathAs": "lastFramePath" }
+        { "from": "image_0" },
+        { "from": "image_1" }
       ],
       "replace": [
         {
@@ -627,6 +627,14 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
           },
           "value": 832,
           "to": ["64", "inputs", "width"]
+        },
+        {
+          "from": "image_0_filename",
+          "to": ["52", "inputs", "image"]
+        },
+        {
+          "from": "image_1_filename",
+          "to": ["71", "inputs", "image"]
         },
         {
           "from": "prompt",
