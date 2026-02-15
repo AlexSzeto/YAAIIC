@@ -24,4 +24,4 @@ Clean up after tech debts introduced by the nested workflows feature
 - Qwen Edit (Remove BG)
 - Klein Edits (Remove BG)
 
-[] Update session history to remove entries deleted from gallery after a gallery delete
+[x] Update session history to remove entries deleted from gallery after a gallery delete

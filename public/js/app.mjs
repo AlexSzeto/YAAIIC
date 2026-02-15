@@ -957,6 +957,25 @@ function App() {
      }
   };
 
+  // Handle gallery deletion - update session history
+  const handleGalleryDelete = (deletedUids) => {
+    if (!deletedUids || deletedUids.length === 0) return;
+    
+    // Remove deleted items from history
+    const newHistory = history.filter(item => !deletedUids.includes(item.uid));
+    setHistory(newHistory);
+    
+    // If currently displayed image was deleted, switch to another item
+    if (generatedImage && deletedUids.includes(generatedImage.uid)) {
+      if (newHistory.length > 0) {
+        setGeneratedImage(newHistory[0]);
+      } else {
+        setGeneratedImage(null);
+      }
+    }
+  };
+
+
   // History navigation using useItemNavigation hook
   const historyNav = useItemNavigation(history, generatedImage);
   
@@ -1182,6 +1201,7 @@ function App() {
       selectionMode=${gallerySelectionMode.active}
       fileTypeFilter=${gallerySelectionMode.active ? [gallerySelectionMode.type || 'image'] : null}
       onSelectAsInput=${handleSelectAsInput}
+      onDelete=${handleGalleryDelete}
     />
     
     <${HiddenFileInput} 

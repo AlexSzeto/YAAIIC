@@ -249,6 +249,7 @@ ButtonGroup.className = 'button-group';
  * @param {string|Array<string>|null} [props.fileTypeFilter=null] - Filter allowed types in selection mode
  * @param {Function} [props.onSelectAsInput=null] - Callback for "Use as Input" action from gallery preview
  * @param {string} [props.folder] - Optional folder UID to filter results
+ * @param {Function} [props.onDelete=null] - Callback when items are deleted, receives array of deleted UIDs
  * @returns {preact.VNode|null}
  * 
  * @example
@@ -283,7 +284,8 @@ export function Gallery({
   selectionMode = false,
   fileTypeFilter = null, // Legacy: string like 'image' or array of allowed types like ['image', 'video']
   onSelectAsInput = null,  // Callback for "Use as Input" action from gallery preview
-  folder = undefined  // Optional folder filter (uid)
+  folder = undefined,  // Optional folder filter (uid)
+  onDelete = null  // Callback when items are deleted
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -471,8 +473,14 @@ export function Gallery({
         showSuccessFeedback: false
       });
 
+      const deletedUids = [...selectedItems]; // Store before clearing
       setSelectedItems([]);
       fetchGalleryData(); // Refresh
+
+      // Notify parent component of deletion
+      if (onDelete) {
+        onDelete(deletedUids);
+      }
 
       if (window.showToast) {
         const deletedText = response.deletedCount === 1 ? 'item' : 'items';
