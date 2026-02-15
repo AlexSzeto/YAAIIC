@@ -15,7 +15,7 @@
   "4": {
     "inputs": {
       "text": [
-        "18:13",
+        "16",
         0
       ],
       "instruct": [
@@ -36,11 +36,11 @@
   },
   "16": {
     "inputs": {
-      "value": "Write a single paragraph of prose consist of exactly 3 sentences of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics. Output the dialog ONLY."
+      "value": "You've got some guts coming here unprepared, Sonny, I'll give you that. It doesn't mean I've forgotten or forgiven what you've done, but I'll say... truce... for now."
     },
     "class_type": "PrimitiveString",
     "_meta": {
-      "title": "Dialog System Prompt"
+      "title": "Dialog"
     }
   },
   "20": {
@@ -89,99 +89,6 @@
       "title": "Audio Save to Path"
     }
   },
-  "37": {
-    "inputs": {
-      "output_file_path": "h:\\",
-      "file_name": "summary",
-      "file_extension": "txt",
-      "overwrite": true,
-      "text": [
-        "18:13",
-        0
-      ]
-    },
-    "class_type": "easy saveText",
-    "_meta": {
-      "title": "Save Text"
-    }
-  },
-  "18:14": {
-    "inputs": {
-      "enable_mirostat": false,
-      "mirostat": 0,
-      "enable_mirostat_eta": false,
-      "mirostat_eta": 0.1,
-      "enable_mirostat_tau": false,
-      "mirostat_tau": 5,
-      "enable_num_ctx": false,
-      "num_ctx": 2048,
-      "enable_repeat_last_n": false,
-      "repeat_last_n": 64,
-      "enable_repeat_penalty": false,
-      "repeat_penalty": 1.1,
-      "enable_temperature": false,
-      "temperature": 0.8,
-      "enable_seed": false,
-      "seed": 1780632353,
-      "enable_stop": false,
-      "stop": "",
-      "enable_tfs_z": false,
-      "tfs_z": 1,
-      "enable_num_predict": false,
-      "num_predict": -1,
-      "enable_top_k": false,
-      "top_k": 40,
-      "enable_top_p": false,
-      "top_p": 0.9,
-      "enable_min_p": false,
-      "min_p": 0,
-      "debug": false
-    },
-    "class_type": "OllamaOptionsV2",
-    "_meta": {
-      "title": "Ollama Options"
-    }
-  },
-  "18:13": {
-    "inputs": {
-      "system": [
-        "16",
-        0
-      ],
-      "prompt": [
-        "20",
-        0
-      ],
-      "think": false,
-      "keep_context": false,
-      "format": "text",
-      "connectivity": [
-        "18:15",
-        0
-      ],
-      "options": [
-        "18:14",
-        0
-      ]
-    },
-    "class_type": "OllamaGenerateV2",
-    "_meta": {
-      "title": "Ollama Generate"
-    }
-  },
-  "18:15": {
-    "inputs": {
-      "url": "http://127.0.0.1:11434",
-      "model": "gemma3:4b",
-      "keep_alive": 5,
-      "keep_alive_unit": "minutes",
-      "🔄 Reconnect": null
-    },
-    "class_type": "OllamaConnectivityV2",
-    "_meta": {
-      "title": "Ollama Connectivity"
-    }
-  },
   "34:22": {
     "inputs": {
       "text": [
@@ -228,7 +135,7 @@
       "enable_temperature": false,
       "temperature": 0.8,
       "enable_seed": false,
-      "seed": 2127403309,
+      "seed": 2105352251,
       "enable_stop": false,
       "stop": "",
       "enable_tfs_z": false,
@@ -259,7 +166,7 @@
   },
   "34:29": {
     "inputs": {
-      "seed": 867637800238029,
+      "seed": 619042741628621,
       "steps": 15,
       "cfg": 4,
       "sampler_name": "euler",

@@ -142,6 +142,29 @@ function InpaintApp() {
     });
     return unsubscribe;
   }, []);
+  
+  // Favicon spinning effect for active tasks
+  useEffect(() => {
+    if (!window.favloader) return;
+    
+    // Initialize favloader once
+    if (!window.favloaderInitialized) {
+      window.favloader.init({
+        size: 16,
+        radius: 6,
+        thickness: 2,
+        color: '#FFFFFF',
+        duration: 5000
+      });
+      window.favloaderInitialized = true;
+    }
+    
+    if (taskId) {
+      window.favloader.start();
+    } else {
+      window.favloader.stop();
+    }
+  }, [taskId]);
 
   // Initialize and load data on mount
   useEffect(() => {
@@ -481,6 +504,14 @@ function InpaintApp() {
             title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
           />
           <${Button}
+            variant="medium-icon-text"
+            icon="folder"
+            disabled=${true}
+            title=${`Current folder: ${currentFolder.label} (folder selection disabled on inpaint page)`}
+          >
+            ${currentFolder.label}
+          </${Button}>
+          <${Button}
             icon="home"
             onClick=${handleDone}
             title="Return to main page"
@@ -513,7 +544,7 @@ function InpaintApp() {
           `}
         </${Panel}>
         
-        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap') }}>
+        <${Panel} variant="outlined" style=${{ display: 'flex', flexDirection: 'column', gap: getThemeValue('spacing.large.gap'), flex: 1 }}>
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}

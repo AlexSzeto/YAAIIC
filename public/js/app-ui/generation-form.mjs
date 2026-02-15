@@ -120,6 +120,15 @@ export function GenerationForm({
     <${VerticalLayout}>
       
       <${HorizontalLayout}>
+        <${Input}
+          label="Name"
+          type="text"
+          placeholder="Enter name"
+          value=${formState.name || ''}
+          onChange=${handleChange('name')}
+          disabled=${isGenerating}
+        />
+
         <${SeedControl}
           seed=${formState.seed || -1}
           setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
@@ -130,20 +139,11 @@ export function GenerationForm({
       </${HorizontalLayout}>
 
       <!-- Row 1: Name, Seed, Lock -->
-      <${HorizontalLayout}>
-        <${Input}
-          label="Name"
-          type="text"
-          placeholder="Enter name"
-          value=${formState.name || ''}
-          onChange=${handleChange('name')}
-          disabled=${isGenerating}
-        />
-
         ${workflow?.extraInputs ? html`
-          ${renderExtraInputs(workflow.extraInputs, 'standard')}
+        <${HorizontalLayout}>
+            ${renderExtraInputs(workflow.extraInputs, 'standard')}
+        </${HorizontalLayout}>
       ` : null}
-      </${HorizontalLayout}>
 
       <!-- Prompt -->
       <${Textarea}

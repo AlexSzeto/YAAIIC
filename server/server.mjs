@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload } from './generate.mjs';
+import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload, validateNoNestedExecuteWorkflow, setWorkflowsData } from './generate.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
 import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
@@ -113,6 +113,9 @@ try {
   
   // Set up the image data entry function for generate.mjs
   setAddMediaDataEntry(addMediaDataEntry);
+  
+  // Set workflows data in generate module
+  setWorkflowsData(comfyuiWorkflows);
   
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -360,14 +363,37 @@ app.post('/generate', upload.any(), async (req, res) => {
     });
     
     // Handle file uploads if workflow specifies them
-    // First, validate that required images are provided
+    // First, validate that required images and audio files are provided
     const requiredImages = workflowData.options?.inputImages || 0;
-    const uploadedImages = req.files ? req.files.length : 0;
+    const requiredAudios = workflowData.options?.inputAudios || 0;
     
+    // Count uploaded files by type
+    let uploadedImages = 0;
+    let uploadedAudios = 0;
+    
+    if (req.files) {
+      req.files.forEach(file => {
+        if (file.fieldname.startsWith('image_')) {
+          uploadedImages++;
+        } else if (file.fieldname.startsWith('audio_')) {
+          uploadedAudios++;
+        }
+      });
+    }
+    
+    // Validate image count
     if (requiredImages > 0 && uploadedImages < requiredImages) {
       console.log(`Workflow '${workflow}' requires ${requiredImages} image(s), but only ${uploadedImages} were provided`);
       return res.status(400).json({ 
         error: `Workflow requires ${requiredImages} input image(s), but only ${uploadedImages} were provided` 
+      });
+    }
+    
+    // Validate audio count
+    if (requiredAudios > 0 && uploadedAudios < requiredAudios) {
+      console.log(`Workflow '${workflow}' requires ${requiredAudios} audio file(s), but only ${uploadedAudios} were provided`);
+      return res.status(400).json({ 
+        error: `Workflow requires ${requiredAudios} input audio file(s), but only ${uploadedAudios} were provided` 
       });
     }
     
@@ -383,7 +409,7 @@ app.post('/generate', upload.any(), async (req, res) => {
         
         // Process each upload specification
         for (const uploadSpec of workflowData.upload) {
-          const { from, storePathAs } = uploadSpec;
+          const { from } = uploadSpec;
           
           if (uploadedFilesByName[from]) {
             const uploadedFile = uploadedFilesByName[from];
@@ -411,9 +437,8 @@ app.post('/generate', upload.any(), async (req, res) => {
             const uploadResult = await uploadFileToComfyUI(uploadedFile.buffer, uploadFilename, fileType, "input", true);
             console.log(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully: ${uploadFilename}`);
             
-            // Store the filename in request body using the specified variable name
-            req.body[storePathAs] = uploadResult.filename;
-            console.log(`Stored uploaded ${fileType} path as '${storePathAs}': ${uploadResult.filename}`);
+            // Store the filename in request body using {from}_filename variable for reference in workflow mappings
+            req.body[`${from}_filename`] = uploadResult.filename;
           }
         }
         
@@ -425,6 +450,14 @@ app.post('/generate', upload.any(), async (req, res) => {
       }
     }
     
+    // Validate that workflow doesn't contain nested executeWorkflow processes
+    const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+    if (!validation.valid) {
+      console.error('Workflow validation failed:', validation.error);
+      return res.status(400).json({ error: 'Workflow validation failed', details: validation.error });
+    }
+    
+    console.log('Starting media generation with request data: ', req.body);
     // Call handleImageGeneration with workflow data and modifications
     handleMediaGeneration(req, res, workflowData, config);
   } catch (error) {
@@ -1300,6 +1333,13 @@ app.post('/generate/inpaint', upload.fields([
       
       // Remove uploads data from request body before calling handleMediaGeneration
       delete req.body.uploads;
+      
+      // Validate that workflow doesn't contain nested executeWorkflow processes
+      const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+      if (!validation.valid) {
+        console.error('Workflow validation failed:', validation.error);
+        return res.status(500).json({ error: 'Workflow validation failed', details: validation.error });
+      }
       
       // Call handleImageGeneration with workflow data and modifications
       handleMediaGeneration(req, res, workflowData, config);

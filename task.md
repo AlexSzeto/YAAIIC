@@ -1,161 +1,27 @@
-# Data-Driven Post-Generation Processes
+# Nested Workflows Feature Cleanup
 
 ## Goals
-
-Convert hard-coded pre/post generation process logic (e.g., extracting output paths from text files, crossfading video frames, extracting text outputs) into a data-driven configuration format within the generation task structure. This enables workflows to declare process tasks alongside prompt tasks in `preGenerationTasks` and `postGenerationTasks` arrays, making the system more flexible and maintainable.
+Clean up after tech debts introduced by the nested workflows feature
 
 ## Implementation Details
 
-### Process Task Format
-
-Process tasks are detected by the presence of a `process` keyword and execute server-side operations. They are added to the `postGenerationTasks` array (or `preGenerationTasks` if applicable in future):
-
-```json
-{
-  "process": "processName",
-  "parameters": {
-    "param1": "value1",
-    "param2": 123
-  },
-  "condition": {
-    "where": { "data": "someFlag" },
-    "equals": { "value": true }
-  }
-}
-```
-
-### Process Handlers
-
-Three process handlers will be implemented:
-
-#### 1. extractOutputMediaFromTextFile
-Reads a ComfyUI output path from a text file, modifies the file extension based on `imageFormat`, copies the file to `saveImagePath`.
-
-**Parameters:**
-- `filename` (required): Name of text file containing output path (e.g., "video-filename.txt")
-
-**Example:**
-```json
-{
-  "process": "extractOutputMediaFromTextFile",
-  "parameters": {
-    "filename": "video-filename.txt"
-  }
-}
-```
-
-**Replaces:** `extractOutputPathFromTextFile` workflow property
-
-#### 2. crossfadeVideoFrames
-Blends first and last N frames of a video to create seamless looping animations.
-
-**Parameters:**
-- `blendFrames` (optional, default: 10): Number of frames to blend at start/end
-
-**Example:**
-```json
-{
-  "process": "crossfadeVideoFrames",
-  "parameters": {
-    "blendFrames": 10
-  }
-}
-```
-
-**Replaces:** `blendLoopFrames` workflow property
-
-#### 3. extractOutputTexts
-Reads multiple ComfyUI text file outputs and assigns content to generationData properties.
-
-**Parameters:**
-- `properties` (required): Array of property names to extract from {propertyName}.txt files
-
-**Example:**
-```json
-{
-  "process": "extractOutputTexts",
-  "parameters": {
-    "properties": ["speakerProfile", "voiceDescription"]
-  }
-}
-```
-
-**Replaces:** `extractOutputTexts` workflow property
-
-### Task Detection and Progress Tracking
-
-Tasks are identified by keyword presence:
-- `process` keyword → Process task (counted for progress)
-- `prompt` keyword → LLM prompt task (counted for progress)
-- `from` keyword → Data copy task (not counted)
-- `template` keyword → Template expansion task (not counted)
-
-The `calculateTotalSteps()` function counts tasks with `prompt` or `process` keywords for progress tracking.
-
-### Error Handling
-
-All process handlers fail immediately on error without graceful fallback. Errors are logged and thrown to halt generation.
-
-### Conditional Execution
-
-Process tasks support the existing `condition` field for conditional execution via `checkExecutionCondition()`.
-
-### Affected Workflows
-
-Four workflows need migration to new format:
-1. "Image to Video (WAN22)" - line 1634: `extractOutputPathFromTextFile: "video-filename.txt"`
-2. "Image to Video Loop (WAN5b)" - lines ~1720-1721: `extractOutputPathFromTextFile` + `blendLoopFrames: true`
-3. "Image to Video (WAN5b)" - line ~1910: `extractOutputPathFromTextFile: "video-filename.txt"`
-4. "Text to Voice Design (Qwen3-TTS)" - lines 2302-2303: `extractOutputTexts: ["speakerProfile", "voiceDescription"]`
-
-### Migration Pattern
-
-**Before:**
-```json
-{
-  "name": "Image to Video Loop (WAN5b)",
-  "extractOutputPathFromTextFile": "video-filename.txt",
-  "blendLoopFrames": true
-}
-```
-
-**After:**
-```json
-{
-  "name": "Image to Video Loop (WAN5b)",
-  "postGenerationTasks": [
-    {
-      "process": "extractOutputMediaFromTextFile",
-      "parameters": {
-        "filename": "video-filename.txt"
-      }
-    },
-    {
-      "process": "crossfadeVideoFrames",
-      "parameters": {
-        "blendFrames": 10
-      }
-    }
-  ]
-}
-```
-
 ## Tasks
+[x] Update workflows:
+1. Move the remove background workflow to the bottom of the workflows list
+2. Hide the `illustrious-text-to-image-no-background.json` based workflow.
+3. remove all instances of `storePathAs` and replace it with direct references to the image/audio properties `image_X_filename` / `audio_X_filename`
+4. Enable remove background options for all workflows based on `illustrious-text-to-image.json`, `flux-fantasy-text-to-portrait.json`, and `zimage-fantasy-portrait.json`.
 
-[] Create process handler registry in generate.mjs
-[] Implement extractOutputMediaFromTextFile process handler
-[] Implement crossfadeVideoFrames process handler
-[] Implement extractOutputTexts process handler
-[] Update calculateTotalSteps() to count process tasks
-[] Modify task processing loop to detect and execute process tasks
-[] Remove hard-coded extractOutputPathFromTextFile logic from generate.mjs
-[] Remove hard-coded blendLoopFrames logic from generate.mjs
-[] Remove hard-coded extractOutputTexts logic from generate.mjs
-[] Migrate "Image to Video (WAN22)" workflow to new format
-[] Migrate "Image to Video Loop (WAN5b)" workflow to new format
-[] Migrate "Image to Video (WAN5b)" workflow to new format
-[] Migrate "Text to Voice Design (Qwen3-TTS)" workflow to new format
-[] Test "Image to Video (WAN22)" workflow end-to-end
-[] Test "Image to Video Loop (WAN5b)" workflow end-to-end
-[] Test "Image to Video (WAN5b)" workflow end-to-end
-[] Test "Text to Voice Design (Qwen3-TTS)" workflow end-to-end
+[x] Delete `storePathAs` handling in source code, schema, and documentation
+
+[x] Add the folder select button back to the Inpaint page in the same position as the main page, but set it as always disabled - it is only used to indicate the current folder name, and there's no need to build action logic for it.
+
+[x] Failed workflows:
+- AceStep 1.5
+- HeartMula
+
+[x] Untested workflows:
+- Qwen Edit (Remove BG)
+- Klein Edits (Remove BG)
+
+[x] Update session history to remove entries deleted from gallery after a gallery delete

@@ -25,6 +25,9 @@ import {
 // Store ComfyUI API path locally
 let comfyUIAPIPath = null;
 
+// Store workflows data locally
+let workflowsData = null;
+
 // Track the last used workflow to manage VRAM
 let lastUsedWorkflow = null;
 
@@ -53,6 +56,355 @@ const IMPORTANT_NODE_TYPES = [
   'HeartMuLa_Generate',
 ];
 
+/**
+ * Validates that a workflow does not contain nested executeWorkflow processes
+ * @param {Object} workflowConfig - The workflow configuration to validate
+ * @param {Array} allWorkflows - Array of all available workflows
+ * @param {Set} visited - Set of visited workflow names (for recursion detection)
+ * @returns {Object} - { valid: boolean, error: string|null }
+ */
+function validateNoNestedExecuteWorkflow(workflowConfig, allWorkflows, visited = new Set()) {
+  // Check if this workflow has postGenerationTasks
+  const postGenTasks = workflowConfig.postGenerationTasks;
+  if (!postGenTasks || !Array.isArray(postGenTasks)) {
+    return { valid: true, error: null };
+  }
+
+  // Find all executeWorkflow processes
+  const executeWorkflowTasks = postGenTasks.filter(task => task.process === 'executeWorkflow');
+  
+  if (executeWorkflowTasks.length === 0) {
+    return { valid: true, error: null };
+  }
+
+  // For each executeWorkflow task, validate the target workflow
+  for (const task of executeWorkflowTasks) {
+    const targetWorkflowName = task.parameters?.workflow;
+    
+    if (!targetWorkflowName) {
+      return { 
+        valid: false, 
+        error: `executeWorkflow process missing 'workflow' parameter in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Find the target workflow
+    const targetWorkflow = allWorkflows.find(w => w.name === targetWorkflowName);
+    
+    if (!targetWorkflow) {
+      return { 
+        valid: false, 
+        error: `Target workflow "${targetWorkflowName}" not found for executeWorkflow in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Check for circular reference
+    if (visited.has(targetWorkflowName)) {
+      return { 
+        valid: false, 
+        error: `Circular workflow reference detected: "${targetWorkflowName}" in workflow "${workflowConfig.name}"` 
+      };
+    }
+
+    // Check if target workflow has any executeWorkflow processes (nesting not allowed)
+    const targetPostGenTasks = targetWorkflow.postGenerationTasks;
+    if (targetPostGenTasks && Array.isArray(targetPostGenTasks)) {
+      const hasNestedExecuteWorkflow = targetPostGenTasks.some(t => t.process === 'executeWorkflow');
+      
+      if (hasNestedExecuteWorkflow) {
+        return { 
+          valid: false, 
+          error: `Nested executeWorkflow detected: workflow "${targetWorkflowName}" contains executeWorkflow process. Only one level of nesting is allowed.` 
+        };
+      }
+    }
+
+    // Recursively validate the target workflow (for other validation, not executeWorkflow)
+    const newVisited = new Set(visited);
+    newVisited.add(workflowConfig.name);
+    const targetValidation = validateNoNestedExecuteWorkflow(targetWorkflow, allWorkflows, newVisited);
+    
+    if (!targetValidation.valid) {
+      return targetValidation;
+    }
+  }
+
+  return { valid: true, error: null };
+}
+
+// Process handler registry - maps process names to handler functions
+const PROCESS_HANDLERS = {
+  extractOutputMediaFromTextFile: async (parameters, generationData, context) => {
+    const { filename } = parameters;
+    if (!filename) {
+      throw new Error('extractOutputMediaFromTextFile requires "filename" parameter');
+    }
+    
+    console.log(`[Process] Extracting output path from text file: ${filename}`);
+    
+    const { storagePath, savePath } = context;
+    
+    // Read the output path from the text file
+    let actualOutputPath = readOutputPathFromTextFile(filename, storagePath);
+    console.log(`[Process] Extracted output path: ${actualOutputPath}`);
+    
+    // Replace extension based on format parameter if provided
+    if (generationData.imageFormat) {
+      // Extract extension from format (e.g., "webp" or "image/webp" -> "webp")
+      const formatExtension = generationData.imageFormat;
+      const extractedDir = path.dirname(actualOutputPath);
+      const extractedBasename = path.basename(actualOutputPath, path.extname(actualOutputPath));
+      actualOutputPath = path.join(extractedDir, `${extractedBasename}.${formatExtension}`);
+      console.log(`[Process] Modified output path based on format: ${actualOutputPath}`);
+    } else {
+      throw new Error('imageFormat is required to determine output file extension');
+    }
+    
+    // Copy the file from the extracted path to savePath
+    if (fs.existsSync(actualOutputPath)) {
+      fs.copyFileSync(actualOutputPath, savePath);
+      console.log(`[Process] Successfully copied file from ${actualOutputPath} to ${savePath}`);
+    } else {
+      throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
+    }
+  },
+  
+  crossfadeVideoFrames: async (parameters, generationData, context) => {
+    const { blendFrames = 10 } = parameters;
+    
+    console.log(`[Process] Applying loop fade blending with ${blendFrames} frames...`);
+    
+    const { savePath } = context;
+    
+    if (!fs.existsSync(savePath)) {
+      throw new Error(`Cannot apply crossfade: file not found at ${savePath}`);
+    }
+    
+    await createCrossFade(savePath, blendFrames);
+    console.log(`[Process] Successfully applied crossfade blending`);
+  },
+  
+  extractOutputTexts: async (parameters, generationData, context) => {
+    const { properties } = parameters;
+    if (!properties || !Array.isArray(properties)) {
+      throw new Error('extractOutputTexts requires "properties" parameter as array');
+    }
+    
+    console.log(`[Process] Extracting text content from ${properties.length} file(s)...`);
+    
+    const { storagePath } = context;
+    
+    for (const propertyName of properties) {
+      try {
+        // Construct the text filename (e.g., "summary" -> "summary.txt")
+        const textFilename = `${propertyName}.txt`;
+        console.log(`[Process] Extracting text from ${textFilename} to property "${propertyName}"`);
+        
+        // Read the text file content
+        const textContent = readOutputPathFromTextFile(textFilename, storagePath);
+        
+        // Assign the content to generationData
+        generationData[propertyName] = textContent;
+        console.log(`[Process] Successfully extracted text content: ${textContent.substring(0, 100)}${textContent.length > 100 ? '...' : ''}`);
+      } catch (error) {
+        console.error(`[Process] Failed to extract text from ${propertyName}.txt:`, error.message);
+        throw error; // Fail immediately on error as per spec
+      }
+    }
+  },
+  
+  executeWorkflow: async (parameters, generationData, context) => {
+    const { workflow: targetWorkflowName, inputMapping = [], outputMapping = [] } = parameters;
+    
+    if (!targetWorkflowName) {
+      throw new Error('executeWorkflow requires "workflow" parameter');
+    }
+    
+    console.log(`[Process] Executing nested workflow: ${targetWorkflowName}`);
+    
+    const { workflowsData, serverConfig } = context;
+    
+    if (!workflowsData || !workflowsData.workflows) {
+      throw new Error('Workflows data not available in context');
+    }
+    
+    // Find the target workflow
+    const targetWorkflow = workflowsData.workflows.find(w => w.name === targetWorkflowName);
+    if (!targetWorkflow) {
+      throw new Error(`Target workflow "${targetWorkflowName}" not found`);
+    }
+    
+    // Create nested request data starting with basic fields
+    const nestedRequestData = {
+      workflow: targetWorkflowName,
+      seed: Math.floor(Math.random() * 4294967295) // Generate new seed for nested workflow
+    };
+    
+    console.log(`[Process] Applying input mapping with ${inputMapping.length} rules...`);
+    
+    // Apply input mapping
+    for (const mapping of inputMapping) {
+      // Text field mapping
+      if (mapping.from && mapping.to) {
+        const value = generationData[mapping.from];
+        if (value !== undefined) {
+          nestedRequestData[mapping.to] = value;
+          console.log(`[Process] Mapped text field: ${mapping.from} -> ${mapping.to}`);
+        }
+      }
+      // Image mapping
+      else if (mapping.image && mapping.toMediaInput !== undefined) {
+        const mediaIndex = mapping.toMediaInput;
+        const imageKey = mapping.image === 'generated' ? 'saveImagePath' : mapping.image;
+        
+        // Get the image path from generationData
+        const imagePath = generationData[imageKey];
+        if (imagePath) {
+          try {
+            // Read the image file from disk
+            console.log(`[Process] Reading image file: ${imagePath}`);
+            const imageBuffer = fs.readFileSync(imagePath);
+            
+            // Extract filename from path
+            const filename = path.basename(imagePath);
+            
+            // Upload to ComfyUI
+            console.log(`[Process] Uploading image to ComfyUI: ${filename}`);
+            const uploadResult = await uploadFileToComfyUI(imageBuffer, filename, "image", "input", true);
+            
+            // Store the ComfyUI filename in nestedRequestData
+            nestedRequestData[`image_${mediaIndex}_filename`] = uploadResult.filename;
+            console.log(`[Process] Mapped image: ${imageKey} -> image_${mediaIndex} (ComfyUI: ${uploadResult.filename})`);
+            
+            // Map associated metadata fields
+            const metadataFields = ['description', 'summary', 'tags', 'name', 'uid', 'imageFormat'];
+            for (const field of metadataFields) {
+              const sourceField = imageKey === 'saveImagePath' ? field : `${imageKey}_${field}`;
+              const targetField = `image_${mediaIndex}_${field}`;
+              const value = generationData[sourceField];
+              
+              if (value !== undefined) {
+                nestedRequestData[targetField] = value;
+                console.log(`[Process] Mapped metadata: ${sourceField} -> ${targetField}`);
+              }
+            }
+          } catch (uploadError) {
+            console.error(`[Process] Failed to upload image to ComfyUI:`, uploadError);
+            throw new Error(`Failed to upload image for nested workflow: ${uploadError.message}`);
+          }
+        }
+      }
+      // Audio mapping
+      else if (mapping.audio && mapping.toMediaInput !== undefined) {
+        const mediaIndex = mapping.toMediaInput;
+        const audioKey = mapping.audio === 'generated' ? 'saveAudioPath' : mapping.audio;
+        
+        // Get the audio path from generationData
+        const audioPath = generationData[audioKey];
+        if (audioPath) {
+          try {
+            // Read the audio file from disk
+            console.log(`[Process] Reading audio file: ${audioPath}`);
+            const audioBuffer = fs.readFileSync(audioPath);
+            
+            // Extract filename from path
+            const filename = path.basename(audioPath);
+            
+            // Upload to ComfyUI
+            console.log(`[Process] Uploading audio to ComfyUI: ${filename}`);
+            const uploadResult = await uploadFileToComfyUI(audioBuffer, filename, "audio", "input", true);
+            
+            // Store the ComfyUI filename in nestedRequestData
+            nestedRequestData[`audio_${mediaIndex}`] = uploadResult.filename;
+            console.log(`[Process] Mapped audio: ${audioKey} -> audio_${mediaIndex} (ComfyUI: ${uploadResult.filename})`);
+            
+            // Map associated metadata fields
+            const metadataFields = ['description', 'summary', 'tags', 'name', 'uid'];
+            for (const field of metadataFields) {
+              const sourceField = audioKey === 'saveAudioPath' ? field : `${audioKey}_${field}`;
+              const targetField = `audio_${mediaIndex}_${field}`;
+              const value = generationData[sourceField];
+              
+              if (value !== undefined) {
+                nestedRequestData[targetField] = value;
+                console.log(`[Process] Mapped metadata: ${sourceField} -> ${targetField}`);
+              }
+            }
+          } catch (uploadError) {
+            console.error(`[Process] Failed to upload audio to ComfyUI:`, uploadError);
+            throw new Error(`Failed to upload audio for nested workflow: ${uploadError.message}`);
+          }
+        }
+      }
+    }
+    
+    // Fill in required fields with blanks if not provided
+    const requiredFields = ['tags', 'prompt', 'description', 'summary', 'name'];
+    for (const field of requiredFields) {
+      if (nestedRequestData[field] === undefined || nestedRequestData[field] === null) {
+        nestedRequestData[field] = '';
+      }
+    }
+    
+    console.log(`[Process] Executing nested workflow with request data:`, nestedRequestData);
+    
+    // Create a temporary task ID for the nested workflow (not saved to database)
+    const nestedTaskId = generateTaskId();
+    
+    // Create task entry (will not be visible as it won't be saved to database)
+    createTask(nestedTaskId, {
+      workflow: targetWorkflowName,
+      promptId: null,
+      requestData: nestedRequestData,
+      workflowConfig: targetWorkflow
+    });
+    
+    try {
+      // Execute the nested workflow in silent mode (skip database entry)
+      await processGenerationTask(nestedTaskId, nestedRequestData, targetWorkflow, serverConfig, true);
+      
+      // Get the nested task to extract result data
+      const nestedTask = getTask(nestedTaskId);
+      if (!nestedTask || !nestedTask.result) {
+        throw new Error('Nested workflow did not produce a result');
+      }
+      
+      const nestedResult = nestedTask.result;
+      console.log(`[Process] Nested workflow completed successfully`);
+      
+      // Apply output mapping for text fields
+      console.log(`[Process] Applying output mapping with ${outputMapping.length} rules...`);
+      for (const mapping of outputMapping) {
+        if (mapping.from && mapping.to) {
+          const value = nestedResult[mapping.from];
+          if (value !== undefined) {
+            generationData[mapping.to] = value;
+            console.log(`[Process] Mapped output field: ${mapping.from} -> ${mapping.to}`);
+          }
+        }
+      }
+      
+      // Automatically update media URLs from nested workflow
+      if (nestedResult.imageUrl) {
+        generationData.imageUrl = nestedResult.imageUrl;
+        generationData.saveImagePath = nestedResult.saveImagePath;
+        console.log(`[Process] Updated imageUrl from nested workflow: ${nestedResult.imageUrl}`);
+      }
+      
+      if (nestedResult.audioUrl) {
+        generationData.audioUrl = nestedResult.audioUrl;
+        generationData.saveAudioPath = nestedResult.saveAudioPath;
+        console.log(`[Process] Updated audioUrl from nested workflow: ${nestedResult.audioUrl}`);
+      }
+      
+      console.log(`[Process] Nested workflow execution completed successfully`);
+    } catch (error) {
+      console.error(`[Process] Nested workflow failed:`, error.message);
+      throw new Error(`Nested workflow "${targetWorkflowName}" failed: ${error.message}`);
+    }
+  }
+};
+
 // Initialize generate module with ComfyUI API path
 export function initializeGenerateModule(apiPath) {
   comfyUIAPIPath = apiPath;
@@ -63,6 +415,11 @@ export function setAddMediaDataEntry(func) {
   addMediaDataEntry = func;
 }
 
+export function setWorkflowsData(workflows) {
+  workflowsData = workflows;
+  console.log('Workflows data set in generate module');
+}
+
 // Re-export SSE functions for backwards compatibility
 export {
   emitProgressUpdate,
@@ -71,6 +428,9 @@ export {
   emitTaskErrorByTaskId,
   handleSSEConnection
 };
+
+// Export validation function for workflow nesting
+export { validateNoNestedExecuteWorkflow };
 
 // Function to upload image to ComfyUI
 export async function uploadFileToComfyUI(fileBuffer, filename, fileType = "image", storageType = "input", overwrite = false) {
@@ -250,10 +610,13 @@ export async function checkPromptStatus(promptId, maxAttempts = 1800, intervalMs
  * @returns {Object} Object containing totalSteps, preGenCount, importantNodeCount, and postGenCount
  */
 function calculateTotalSteps(preGenTasks, workflowNodes, postGenTasks) {
-  // Count pre-gen tasks with prompt parameter
+  // Count pre-gen tasks with prompt or process parameter
   let preGenCount = 0;
   if (preGenTasks && Array.isArray(preGenTasks)) {
-    preGenCount = preGenTasks.filter(task => task.prompt !== undefined && task.prompt !== null).length;
+    preGenCount = preGenTasks.filter(task => 
+      (task.prompt !== undefined && task.prompt !== null) || 
+      (task.process !== undefined && task.process !== null)
+    ).length;
   }
   
   // Count workflow nodes that match IMPORTANT_NODE_TYPES (linear counting, no execution order)
@@ -267,10 +630,13 @@ function calculateTotalSteps(preGenTasks, workflowNodes, postGenTasks) {
     }
   }
   
-  // Count post-gen tasks with prompt parameter
+  // Count post-gen tasks with prompt or process parameter
   let postGenCount = 0;
   if (postGenTasks && Array.isArray(postGenTasks)) {
-    postGenCount = postGenTasks.filter(task => task.prompt !== undefined && task.prompt !== null).length;
+    postGenCount = postGenTasks.filter(task => 
+      (task.prompt !== undefined && task.prompt !== null) || 
+      (task.process !== undefined && task.process !== null)
+    ).length;
   }
   
   // Calculate total
@@ -662,9 +1028,9 @@ export async function handleMediaGeneration(req, res, workflowConfig, serverConf
 }
 
 // Background processing function
-async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig) {
+async function processGenerationTask(taskId, requestData, workflowConfig, serverConfig, silent = false) {
   try {
-    const { base: workflowBasePath, replace: modifications, extractOutputPathFromTextFile, extractOutputTexts, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
+    const { base: workflowBasePath, replace: modifications, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
     const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
@@ -772,23 +1138,30 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     if (preGenerationTasks && Array.isArray(preGenerationTasks) && preGenerationTasks.length > 0) {
       console.log(`Processing ${preGenerationTasks.length} pre-generation tasks...`);
       
+      // Compute context for process handlers (will be needed later)
+      const __dirname = path.dirname(new URL(import.meta.url).pathname);
+      const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
+      const storagePath = path.join(actualDirname, 'storage');
+      
       for (let i = 0; i < preGenerationTasks.length; i++) {
-        const promptConfig = preGenerationTasks[i];
+        const taskConfig = preGenerationTasks[i];
         
-        // Only count tasks with prompt parameter
-        const hasPrompt = promptConfig.prompt !== undefined && promptConfig.prompt !== null;
+        // Determine task type: prompt task or process task
+        const hasPrompt = taskConfig.prompt !== undefined && taskConfig.prompt !== null;
+        const hasProcess = taskConfig.process !== undefined && taskConfig.process !== null;
+        const shouldCount = hasPrompt || hasProcess;
         
         // Check if task has a condition
-        if (promptConfig.condition) {
+        if (taskConfig.condition) {
           const dataSources = {
             data: generationData,           // Primary: new 'data' key for conditions
             value: generationData
           };
-          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
+          const shouldExecute = checkExecutionCondition(dataSources, taskConfig.condition);
           if (!shouldExecute) {
-            console.log(`Skipping pre-generation task for ${promptConfig.to} due to unmet condition`);
-            // Increment step counter only if this task has a prompt
-            if (hasPrompt) {
+            console.log(`Skipping pre-generation task due to unmet condition`);
+            // Increment step counter only if this task should be counted
+            if (shouldCount) {
               currentStep++;
             }
             continue;
@@ -796,30 +1169,60 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
         }
         
         try {
-          // Only show progress for tasks with prompt parameter
-          if (hasPrompt) {
-            // Use global step counter for progress
+          // Process task handling
+          if (hasProcess) {
+            // Show progress for process task
             const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = `Generating ${promptConfig.to}`;
+            const stepName = taskConfig.name || `Processing ${taskConfig.process}`;
             
             // Emit SSE progress update for start
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
-          }
-          
-          await modifyGenerationDataWithPrompt(promptConfig, generationData);
-          
-          // Increment step counter only if this task has a prompt
-          if (hasPrompt) {
+            
+            // Get the process handler
+            const handler = PROCESS_HANDLERS[taskConfig.process];
+            if (!handler) {
+              throw new Error(`Unknown process handler: ${taskConfig.process}`);
+            }
+            
+            // Build context for process handler
+            const savePath = generationData.saveImagePath || '';
+            const context = { storagePath, savePath, workflowsData, serverConfig };
+            
+            // Execute the process handler
+            await handler(taskConfig.parameters || {}, generationData, context);
+            
+            // Increment step counter
             currentStep++;
             const completionPercentage = Math.round((currentStep / totalSteps) * 100);
-            const completionStepName = `Generating ${promptConfig.to}`;
             
             // Emit SSE progress update for completion
-            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          }
+          // Prompt task handling
+          else if (hasPrompt) {
+            // Show progress for prompt task
+            const percentage = Math.round((currentStep / totalSteps) * 100);
+            const stepName = taskConfig.name || `Generating ${taskConfig.to}`;
+            
+            // Emit SSE progress update for start
+            emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+            
+            await modifyGenerationDataWithPrompt(taskConfig, generationData);
+            
+            // Increment step counter
+            currentStep++;
+            const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+            
+            // Emit SSE progress update for completion
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          }
+          // Data copy task (from/to) or template task - no progress tracking
+          else {
+            await modifyGenerationDataWithPrompt(taskConfig, generationData);
           }
         } catch (error) {
-          console.error(`Pre-generation task failed for ${promptConfig.to}:`, error.message);
-          // For pre-generation tasks, fail gracefully and stop generation
+          console.error(`Pre-generation task failed:`, error.message);
+          // For pre-generation tasks, fail immediately and stop generation
           throw new Error(`Pre-generation failed: ${error.message}`);
         }
       }
@@ -877,6 +1280,10 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     
     // Update savePath variable for compatibility
     const savePath = generationData.saveImagePath;
+
+    // Set initial imageUrl from savePath (can be overridden by post-generation tasks)
+    const filename = path.basename(savePath);
+    generationData.imageUrl = `/media/${filename}`;
 
     // Apply dynamic modifications based on the modifications array
     if (modifications && Array.isArray(modifications)) {
@@ -971,48 +1378,130 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       console.log(`Workflow execution complete. Updated currentStep to ${currentStep}/${taskAfterWorkflow.totalSteps}`);
     }
 
-    // Handle extractOutputPathFromTextFile if specified
-    if (extractOutputPathFromTextFile) {
-      console.log(`Extracting output path from text file: ${extractOutputPathFromTextFile}`);
+    // Track post-generation errors
+    const postGenErrors = [];
+    
+    // Process post-generation tasks from config
+    if (postGenerationTasks && Array.isArray(postGenerationTasks)) {
+      console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
       
-      // Compute absolute storage path
+      // Retrieve current step from task
+      const task = getTask(taskId);
+      let currentStep = task?.currentStep || 0;
+      const totalSteps = task?.totalSteps || 1;
+      
+      // Compute context for process handlers
       const __dirname = path.dirname(new URL(import.meta.url).pathname);
       const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
       const storagePath = path.join(actualDirname, 'storage');
       
-      try {
-        // Read the output path from the text file
-        let actualOutputPath = readOutputPathFromTextFile(extractOutputPathFromTextFile, storagePath);
-        console.log(`Extracted output path: ${actualOutputPath}`);
+      for (let i = 0; i < postGenerationTasks.length; i++) {
+        const taskConfig = postGenerationTasks[i];
         
-        // Replace extension based on format parameter if provided
-        if (generationData.imageFormat) {
-          // Extract extension from format (e.g., "image/webp" -> "webp")
-          const formatExtension = generationData.imageFormat;
-          const extractedDir = path.dirname(actualOutputPath);
-          const extractedBasename = path.basename(actualOutputPath, path.extname(actualOutputPath));
-          actualOutputPath = path.join(extractedDir, `${extractedBasename}.${formatExtension}`);
-          console.log(`Modified output path based on format: ${actualOutputPath}`);
-        } else {
-          throw new Error('imageFormat is required to determine output file extension');
-        }
+        // Determine task type: prompt task or process task
+        const hasPrompt = taskConfig.prompt !== undefined && taskConfig.prompt !== null;
+        const hasProcess = taskConfig.process !== undefined && taskConfig.process !== null;
+        const shouldCount = hasPrompt || hasProcess;
         
-        // Copy the file from the extracted path to savePath
-        if (fs.existsSync(actualOutputPath)) {
-          fs.copyFileSync(actualOutputPath, savePath);
-          console.log(`Successfully copied file from ${actualOutputPath} to ${savePath}`);
-          
-          // Apply loop fade blending if enabled in workflow options
-          if (workflowConfig.blendLoopFrames) {
-            console.log('Applying loop fade blending to animation...');
-            await createCrossFade(savePath);
+        // Check if task has a condition
+        if (taskConfig.condition) {
+          const dataSources = {
+            data: generationData,           // Primary: new 'data' key for conditions
+            generationData: generationData, // Additional key for post-gen tasks
+            value: generationData           // Backward compatibility
+          };
+          const shouldExecute = checkExecutionCondition(dataSources, taskConfig.condition);
+          if (!shouldExecute) {
+            const taskName = taskConfig.name || (hasProcess ? `process ${taskConfig.process}` : `prompt to ${taskConfig.to}`);
+            console.log(`Skipping post-generation task ${taskName} due to unmet condition`);
+            // Increment step counter only if this task should be counted
+            if (shouldCount) {
+              currentStep++;
+            }
+            continue;
           }
-        } else {
-          throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
         }
-      } catch (error) {
-        console.error(`Failed to extract and copy output file:`, error);
-        throw new Error(`Failed to process output file: ${error.message}`);
+        
+        try {
+          // Process task handling
+          if (hasProcess) {
+            // Show progress for process task
+            const percentage = Math.round((currentStep / totalSteps) * 100);
+            const stepName = taskConfig.name || `Processing ${taskConfig.process}`;
+            
+            // Emit SSE progress update for start
+            emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+            
+            // Get the process handler
+            const handler = PROCESS_HANDLERS[taskConfig.process];
+            if (!handler) {
+              throw new Error(`Unknown process handler: ${taskConfig.process}`);
+            }
+            
+            // Build context for process handler
+            const context = { storagePath, savePath, workflowsData, serverConfig };
+            
+            // Execute the process handler (fail immediately on error)
+            await handler(taskConfig.parameters || {}, generationData, context);
+            
+            // Increment step counter
+            currentStep++;
+            const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+            
+            // Emit SSE progress update for completion
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          }
+          // Prompt task handling
+          else if (hasPrompt) {
+            // Show progress for prompt task
+            const percentage = Math.round((currentStep / totalSteps) * 100);
+            const stepName = taskConfig.name || (taskConfig.to === 'description' 
+              ? `Analyzing image` 
+              : `Generating ${taskConfig.to}`);
+            
+            // Emit SSE progress update for start
+            emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
+            
+            await modifyGenerationDataWithPrompt(taskConfig, generationData);
+            
+            // Increment step counter
+            currentStep++;
+            const completionPercentage = Math.round((currentStep / totalSteps) * 100);
+            
+            // Emit SSE progress update for completion
+            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          }
+          // Data copy task (from/to) or template task - no progress tracking
+          else {
+            await modifyGenerationDataWithPrompt(taskConfig, generationData);
+          }
+        } catch (error) {
+          // Process tasks fail immediately
+          if (hasProcess) {
+            console.error(`Post-generation process task failed:`, error.message);
+            throw error;
+          }
+          // Prompt tasks fail gracefully
+          else if (hasPrompt) {
+            console.warn(`Failed to process prompt for ${taskConfig.to}:`, error.message);
+            
+            // Track the error for reporting
+            postGenErrors.push({ field: taskConfig.to, error: error.message });
+            
+            // Set a fallback value if the prompt fails
+            if (!generationData[taskConfig.to]) {
+              generationData[taskConfig.to] = taskConfig.to === 'description' 
+                ? 'Image analysis unavailable' 
+                : 'Generated Content';
+            }
+            // Increment step counter
+            currentStep++;
+          }
+          // Other tasks fail immediately
+          else {
+            throw error;
+          }
+        }
       }
     }
 
@@ -1031,128 +1520,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
     }
 
-    // Handle extractOutputTexts if specified
-    if (extractOutputTexts && Array.isArray(extractOutputTexts)) {
-      console.log(`Extracting text content from ${extractOutputTexts.length} file(s)...`);
-      
-      // Compute absolute storage path
-      const __dirname = path.dirname(new URL(import.meta.url).pathname);
-      const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
-      const storagePath = path.join(actualDirname, 'storage');
-      
-      for (const propertyName of extractOutputTexts) {
-        try {
-          // Construct the text filename (e.g., "summary" -> "summary.txt")
-          const textFilename = `${propertyName}.txt`;
-          console.log(`Extracting text from ${textFilename} to property "${propertyName}"`);
-          
-          // Read the text file content
-          const textContent = readOutputPathFromTextFile(textFilename, storagePath);
-          
-          // Assign the content to generationData
-          generationData[propertyName] = textContent;
-          console.log(`Successfully extracted text content: ${textContent.substring(0, 100)}${textContent.length > 100 ? '...' : ''}`);
-        } catch (error) {
-          console.error(`Failed to extract text from ${propertyName}.txt:`, error.message);
-          // Don't throw - allow generation to continue even if text extraction fails
-          generationData[propertyName] = '';
-        }
-      }
-    }
-
-    // Track post-generation errors
-    const postGenErrors = [];
-    
-    // Process post-generation tasks from config if workflow type is not video
-    if (postGenerationTasks && Array.isArray(postGenerationTasks)) {
-      console.log(`Processing ${postGenerationTasks.length} post-generation tasks...`);
-      
-      // Retrieve current step from task
-      const task = getTask(taskId);
-      let currentStep = task?.currentStep || 0;
-      const totalSteps = task?.totalSteps || 1;
-      
-      for (let i = 0; i < postGenerationTasks.length; i++) {
-        const promptConfig = postGenerationTasks[i];
-        
-        // Only count tasks with prompt parameter
-        const hasPrompt = promptConfig.prompt !== undefined && promptConfig.prompt !== null;
-        
-        // Check if task has a condition
-        if (promptConfig.condition) {
-          const dataSources = {
-            data: generationData,           // Primary: new 'data' key for conditions
-            generationData: generationData, // Additional key for post-gen tasks
-            value: generationData           // Backward compatibility
-          };
-          const shouldExecute = checkExecutionCondition(dataSources, promptConfig.condition);
-          if (!shouldExecute) {
-            console.log(`Skipping post-generation task for ${promptConfig.to} due to unmet condition`);
-            // Increment step counter only if this task has a prompt
-            if (hasPrompt) {
-              currentStep++;
-            }
-            continue;
-          }
-        }
-        
-        try {
-          // Only show progress for tasks with prompt parameter
-          if (hasPrompt) {
-            // Use global step counter for progress
-            const percentage = Math.round((currentStep / totalSteps) * 100);
-            const stepName = promptConfig.to === 'description' 
-              ? `Analyzing image` 
-              : `Generating ${promptConfig.to}`;
-            
-            // Emit SSE progress update for start
-            emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
-          }
-          
-          await modifyGenerationDataWithPrompt(promptConfig, generationData);
-          
-          // Increment step counter only if this task has a prompt
-          if (hasPrompt) {
-            currentStep++;
-            const completionPercentage = Math.round((currentStep / totalSteps) * 100);
-            const completionStepName = promptConfig.to === 'description' 
-              ? `Analyzing image` 
-              : `Generating ${promptConfig.to}`;
-            
-            // Emit SSE progress update for completion
-            emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, completionStepName + ' complete');
-          }
-        } catch (error) {
-          console.warn(`Failed to process prompt for ${promptConfig.to}:`, error.message);
-          
-          // Track the error for reporting
-          postGenErrors.push({ field: promptConfig.to, error: error.message });
-          
-          // Set a fallback value if the prompt fails
-          if (!generationData[promptConfig.to]) {
-            generationData[promptConfig.to] = promptConfig.to === 'description' 
-              ? 'Image analysis unavailable' 
-              : 'Generated Content';
-          }
-          // Increment step counter only if this task has a prompt
-          if (hasPrompt) {
-            currentStep++;
-          }
-        }
-      }
-    }
-
-    // Return the image URL path (relative to /media/ endpoint)
-    const filename = path.basename(savePath);
-    const imageUrl = `/media/${filename}`;
-
     // Calculate time taken in seconds
     const startTime = taskTimers.get(taskId);
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     console.log(`Generation completed in ${timeTaken} seconds`);
 
-    // Add all fields to generationData before saving
-    generationData.imageUrl = imageUrl;
+    // Add final fields to generationData before saving
     generationData.workflow = workflow;
     generationData.inpaint = inpaint || false;
     generationData.inpaintArea = inpaintArea || null;
@@ -1163,10 +1536,12 @@ async function processGenerationTask(taskId, requestData, workflowConfig, server
     if (!generationData.summary) generationData.summary = '';
     if (!generationData.tags) generationData.tags = '';
 
-    // Save image data to database using entire generationData object
-    if (addMediaDataEntry) {
+    // Save image data to database using entire generationData object (skip if silent mode)
+    if (!silent && addMediaDataEntry) {
       addMediaDataEntry(generationData);
       console.log('Image data entry saved to database with UID:', generationData.uid);
+    } else if (silent) {
+      console.log('Silent mode: Skipping database entry for nested workflow');
     }
 
     // Prepare completion data

@@ -352,6 +352,9 @@ export function emitTaskCompletion(promptIdOrTaskId, result) {
   const task = activeTasks.get(taskId);
   if (!task) return;
   
+  // Store the result on the task object itself for later access
+  task.result = result;
+  
   const message = createCompletionResponse(taskId, result);
   
   // Log completion event
