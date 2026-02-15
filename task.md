@@ -16,11 +16,11 @@ Clean up after tech debts introduced by the nested workflows feature
 
 [x] Add the folder select button back to the Inpaint page in the same position as the main page, but set it as always disabled - it is only used to indicate the current folder name, and there's no need to build action logic for it.
 
-[] Failed workflows:
+[x] Failed workflows:
 - AceStep 1.5
 - HeartMula
 
-[] Untested workflows:
+[x] Untested workflows:
 - Qwen Edit (Remove BG)
 - Klein Edits (Remove BG)
 
