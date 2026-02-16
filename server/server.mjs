@@ -1,9 +1,10 @@
 import express from 'express';
 import path from 'path';
-import { uploadFileToComfyUI, initializeGenerateModule, setUploadAddMediaDataEntry } from './generate.mjs';
 import { initializeOrchestrator, setAddMediaDataEntry, setWorkflowsData } from './features/generation/orchestrator.mjs';
 import { loadWorkflows, validateNoNestedExecuteWorkflow } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
+import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
+import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
 import { logProgressEvent, emitProgressUpdate, emitTaskCompletion, emitTaskError, handleSSEConnection } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
@@ -50,8 +51,8 @@ try {
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
 
-  // Initialize generate module with ComfyUI API path
-  initializeGenerateModule(config.comfyuiAPIPath);
+  // Initialize ComfyUI client with API path (used for file uploads)
+  initComfyClient(config.comfyuiAPIPath);
 
   // Initialize orchestrator with ComfyUI API path
   initializeOrchestrator(config.comfyuiAPIPath);

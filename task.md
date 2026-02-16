@@ -47,5 +47,5 @@ Refactor the monolithic `server.mjs` and `generate.mjs` into a specialized, doma
 
 ### Phase 4: Integration & Cleanup
 [x] Updates `server/server.mjs` to mount the new Feature Routers.
-[ ] Verify all endpoints (Upload -> Generate -> Gallery -> Delete).
-[ ] Remove legacy massive files (`generate.mjs`, old `server.mjs` code).
+[x] Verify all endpoints (Upload -> Generate -> Gallery -> Delete).
+[x] Remove legacy massive files (`generate.mjs`, old `server.mjs` code).
