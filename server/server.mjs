@@ -3,126 +3,66 @@ import path from 'path';
 import fs from 'fs';
 import csv from 'csv-parser';
 import multer from 'multer';
-import { handleMediaGeneration, setAddMediaDataEntry, uploadFileToComfyUI, handleSSEConnection, emitProgressUpdate, emitTaskCompletion, emitTaskError, initializeGenerateModule, modifyGenerationDataWithPrompt, handleMediaUpload, validateNoNestedExecuteWorkflow, setWorkflowsData } from './generate.mjs';
+import { uploadFileToComfyUI, handleMediaUpload, initializeGenerateModule, setUploadAddMediaDataEntry } from './generate.mjs';
+import { handleMediaGeneration, initializeOrchestrator, setAddMediaDataEntry, setWorkflowsData, modifyGenerationDataWithPrompt } from './features/generation/orchestrator.mjs';
+import { loadWorkflows, validateNoNestedExecuteWorkflow } from './features/generation/workflow-validator.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from './llm.mjs';
-import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent } from './sse.mjs';
+import { createTask, deleteTask, getTask, resetProgressLog, logProgressEvent, emitProgressUpdate, emitTaskCompletion, emitTaskError } from './sse.mjs';
 import { initializeServices, checkAndStartServices } from './services.mjs';
 import { findNextIndex } from './util.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
 import { handleSaveExport, handlePostExport, resolveMediaPath } from './export.mjs';
 
+// Core infrastructure
+import { SERVER_DIR, PUBLIC_DIR, RESOURCE_DIR, STORAGE_DIR } from './core/paths.mjs';
+import { loadConfig } from './core/config.mjs';
+import {
+  loadMediaData, saveMediaData, addMediaDataEntry,
+  getAllMediaData, findMediaByUid, findMediaIndexByUid,
+  replaceMediaAtIndex, deleteMediaByUids,
+  getFolders, getCurrentFolder, setCurrentFolder,
+  addFolder, findFolderByUid, findFolderByLabel,
+  removeFolderByUid, reassignMediaFolder
+} from './core/database.mjs';
+
+// Keep actualDirname as an alias for SERVER_DIR for the remaining
+// references that haven't been migrated yet.
+const actualDirname = SERVER_DIR;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Get __dirname equivalent for ES modules
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-// Fix Windows path issue by removing leading slash
-const actualDirname = process.platform === 'win32' && __dirname.startsWith('/') ? __dirname.slice(1) : __dirname;
-
-// Global database object
-let globalData = { mediaData: [], folders: [], currentFolder: '' };
-
-// Load image data from JSON file
-function loadMediaData() {
-  try {
-    const imageDataPath = path.join(actualDirname, 'database', 'media-data.json');
-    if (fs.existsSync(imageDataPath)) {
-      const data = fs.readFileSync(imageDataPath, 'utf8');
-      globalData = JSON.parse(data);
-      
-      // Ensure folders and currentFolder exist
-      if (!globalData.folders) {
-        globalData.folders = [];
-      }
-      if (!globalData.currentFolder && globalData.currentFolder !== '') {
-        globalData.currentFolder = '';
-      }
-      if (!globalData.mediaData) {
-        globalData.mediaData = [];
-      }
-      
-      console.log('Image data loaded:', globalData.mediaData.length, 'entries,', globalData.folders.length, 'folders');
-    } else {
-      console.log('Image data file not found, starting with empty data');
-      globalData = { mediaData: [], folders: [], currentFolder: '' };
-    }
-  } catch (error) {
-    console.error('Failed to load image data:', error);
-    globalData = { mediaData: [], folders: [], currentFolder: '' };
-  }
-}
-
-// Save image data to JSON file
-function saveMediaData() {
-  try {
-    const databaseDir = path.join(actualDirname, 'database');
-    const imageDataPath = path.join(databaseDir, 'media-data.json');
-    
-    // Create database directory if it doesn't exist
-    if (!fs.existsSync(databaseDir)) {
-      fs.mkdirSync(databaseDir, { recursive: true });
-      console.log('Created database directory');
-    }
-    
-    fs.writeFileSync(imageDataPath, JSON.stringify(globalData, null, 2));
-    console.log('Image data saved successfully');
-  } catch (error) {
-    console.error('Failed to save image data:', error);
-  }
-}
-
-// Add image data entry
-export function addMediaDataEntry(entry) {
-  const now = new Date();
-  entry.timestamp = now.toISOString();
-  entry.uid = now.getTime(); // Generate UID using Date.getTime()
-  
-  // Add current folder to the entry
-  entry.folder = globalData.currentFolder || '';
-  
-  globalData.mediaData.push(entry);
-  saveMediaData();
-}
-
-// Load configuration
+// ---------------------------------------------------------------------------
+// Bootstrap: load config, workflows, and initialize sub-modules
+// ---------------------------------------------------------------------------
 let config;
 let comfyuiWorkflows;
 try {
-  const configPath = path.join(actualDirname, 'config.json');
-  const defaultConfigPath = path.join(actualDirname, 'config.default.json');
-  
-  // If config.json doesn't exist, copy from config.default.json
-  if (!fs.existsSync(configPath)) {
-    if (fs.existsSync(defaultConfigPath)) {
-      fs.copyFileSync(defaultConfigPath, configPath);
-      console.log('Created config.json from config.default.json');
-    } else {
-      throw new Error('Neither config.json nor config.default.json found');
-    }
-  }
-  
-  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config = loadConfig();
   console.log('Configuration loaded:', config);
-  
-  // Load ComfyUI workflows
-  comfyuiWorkflows = JSON.parse(fs.readFileSync(path.join(actualDirname, 'resource', 'comfyui-workflows.json'), 'utf8'));
-  console.log('ComfyUI workflows loaded:', comfyuiWorkflows);
-  
+
+  // Load ComfyUI workflows via the workflow-validator module
+  comfyuiWorkflows = loadWorkflows();
+
   // Initialize services module with config
   initializeServices(config);
-  
-  // Set up the image data entry function for generate.mjs
+
+  // Set up the image data entry function for orchestrator and upload modules
   setAddMediaDataEntry(addMediaDataEntry);
-  
+  setUploadAddMediaDataEntry(addMediaDataEntry);
+
   // Set workflows data in generate module
   setWorkflowsData(comfyuiWorkflows);
-  
+
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
-  
+
   // Initialize generate module with ComfyUI API path
   initializeGenerateModule(config.comfyuiAPIPath);
-  
+
+  // Initialize orchestrator with ComfyUI API path
+  initializeOrchestrator(config.comfyuiAPIPath);
+
   // Initialize ComfyUI WebSocket with API path from config
   initComfyUIWebSocket(config.comfyuiAPIPath);
 } catch (error) {
@@ -425,11 +365,11 @@ app.post('/generate', upload.any(), async (req, res) => {
             let uploadFilename;
             if (isAudio) {
               const audioUrl = req.body[`${from}_uid`] ? 
-                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.audioUrl : null;
+                findMediaByUid(parseInt(req.body[`${from}_uid`]))?.audioUrl : null;
               uploadFilename = audioUrl ? audioUrl.replace('/media/', '') : `audio_${Date.now()}${fileExt}`;
             } else {
               const imageUrl = req.body[`${from}_uid`] ? 
-                globalData.mediaData.find(m => m.uid === parseInt(req.body[`${from}_uid`]))?.imageUrl : null;
+                findMediaByUid(parseInt(req.body[`${from}_uid`]))?.imageUrl : null;
               uploadFilename = imageUrl ? imageUrl.replace('/media/', '') : `image_${Date.now()}${fileExt}`;
             }
             
@@ -459,7 +399,7 @@ app.post('/generate', upload.any(), async (req, res) => {
     
     console.log('Starting media generation with request data: ', req.body);
     // Call handleImageGeneration with workflow data and modifications
-    handleMediaGeneration(req, res, workflowData, config);
+    handleMediaGeneration(req, res, workflowData, config, uploadFileToComfyUI);
   } catch (error) {
     console.error('Error in image endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -475,7 +415,7 @@ app.get('/media-data', (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     // Get folder parameter, default to currentFolder if not provided
-    const folderParam = req.query.folder !== undefined ? req.query.folder : globalData.currentFolder;
+    const folderParam = req.query.folder !== undefined ? req.query.folder : getCurrentFolder();
     const folderId = folderParam || '';
     
     // Parse tags from comma-separated string
@@ -484,7 +424,7 @@ app.get('/media-data', (req, res) => {
     console.log(`Image data endpoint called with query="${query}", tags=[${tags.join(', ')}], folder="${folderId}", sort="${sort}", limit=${limit}`);
     
     // Filter by query, tags, and folder
-    let filteredData = globalData.mediaData.filter(item => {
+    let filteredData = getAllMediaData().filter(item => {
       // Folder match - check if item belongs to the requested folder
       let folderMatch = true;
       if (folderId === '') {
@@ -553,7 +493,7 @@ app.get('/media-data', (req, res) => {
     // Apply limit
     const limitedData = filteredData.slice(0, limit);
     
-    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${globalData.mediaData.length} total`);
+    console.log(`Returning ${limitedData.length} entries out of ${filteredData.length} filtered from ${getAllMediaData().length} total`);
     
     res.json(limitedData);
   } catch (error) {
@@ -576,7 +516,7 @@ app.get('/media-data/:uid', (req, res) => {
     console.log(`Image data by UID endpoint called with uid=${uid}`);
     
     // Search through imageData array to find matching UID
-    const matchingImage = globalData.mediaData.find(item => item.uid === uid);
+    const matchingImage = findMediaByUid(uid);
     
     if (!matchingImage) {
       console.log(`No image found with UID: ${uid}`);
@@ -615,13 +555,12 @@ app.delete('/media-data/delete', (req, res) => {
     console.log(`Delete request for UIDs: ${uids.join(', ')}`);
     
     // Count entries before deletion
-    const originalCount = globalData.mediaData.length;
+    const originalCount = getAllMediaData().length;
     
     // Remove entries with matching UIDs
-    globalData.mediaData = globalData.mediaData.filter(item => !uids.includes(item.uid));
+    const deletedCount = deleteMediaByUids(uids);
     
-    // Count entries after deletion
-    const deletedCount = originalCount - globalData.mediaData.length;
+    // Deletion count returned by deleteMediaByUids above
     
     // Save changes to file
     try {
@@ -671,7 +610,7 @@ app.post('/edit', (req, res) => {
     
     // Process each item
     for (const updatedData of dataToUpdate) {
-      const imageIndex = globalData.mediaData.findIndex(item => item.uid === updatedData.uid);
+      const imageIndex = findMediaIndexByUid(updatedData.uid);
       
       if (imageIndex === -1) {
         notFoundUids.push(updatedData.uid);
@@ -679,7 +618,7 @@ app.post('/edit', (req, res) => {
       }
       
       // Replace the entire object in place with the new data
-      globalData.mediaData[imageIndex] = updatedData;
+      replaceMediaAtIndex(imageIndex, updatedData);
       updatedItems.push(updatedData);
     }
     
@@ -737,14 +676,14 @@ app.post('/regenerate', async (req, res) => {
     console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
     
     // Find the image data
-    const imageIndex = globalData.mediaData.findIndex(item => item.uid === uid);
+    const imageIndex = findMediaIndexByUid(uid);
     
     if (imageIndex === -1) {
       console.log(`No image found with UID: ${uid}`);
       return res.status(404).json({ error: `Image with uid ${uid} not found` });
     }
     
-    const imageEntry = globalData.mediaData[imageIndex];
+    const imageEntry = getAllMediaData()[imageIndex];
     
     // Reconstruct saveImagePath from imageUrl
     // imageUrl format: /media/filename.ext -> storage/filename.ext
@@ -853,25 +792,18 @@ app.post('/regenerate', async (req, res) => {
 // GET endpoint for folder data
 app.get('/folder', (req, res) => {
   try {
-    // Ensure folders and currentFolder exist
-    if (!globalData.folders) {
-      globalData.folders = [];
-    }
-    if (!globalData.currentFolder && globalData.currentFolder !== '') {
-      globalData.currentFolder = '';
-    }
-    
     // Build folder list with "Unsorted" as first item
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...globalData.folders
+      ...getFolders()
     ];
     
-    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${globalData.currentFolder}"`);
+    const current = getCurrentFolder();
+    console.log(`Folder list retrieved: ${folderList.length} folders, current: "${current}"`);
     
     res.json({
       list: folderList,
-      current: globalData.currentFolder
+      current
     });
   } catch (error) {
     console.error('Error in GET /folder endpoint:', error);
@@ -893,25 +825,20 @@ app.post('/folder', (req, res) => {
       return res.status(400).json({ error: 'Must provide either uid or label' });
     }
     
-    // Initialize folders array if needed
-    if (!globalData.folders) {
-      globalData.folders = [];
-    }
-    
     let folder;
     
     // Case 1: Only uid provided - select existing folder
     if (hasUid && !hasLabel) {
       if (uid === '' || uid === null) {
         // Selecting Unsorted
-        globalData.currentFolder = '';
+        setCurrentFolder('');
         console.log('Selected Unsorted folder');
       } else {
-        folder = globalData.folders.find(f => f.uid === uid);
+        folder = findFolderByUid(uid);
         if (!folder) {
           return res.status(404).json({ error: `Folder with uid ${uid} not found` });
         }
-        globalData.currentFolder = folder.uid;
+        setCurrentFolder(folder.uid);
         console.log(`Selected folder: ${folder.label} (${folder.uid})`);
       }
     }
@@ -922,19 +849,19 @@ app.post('/folder', (req, res) => {
       }
       
       // Check if folder with this label already exists
-      folder = globalData.folders.find(f => f.label === label.trim());
+      folder = findFolderByLabel(label.trim());
       
       if (!folder) {
         // Create new folder with unique uid
         const newUid = `folder-${Date.now()}`;
         folder = { uid: newUid, label: label.trim() };
-        globalData.folders.push(folder);
+        addFolder(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else {
         console.log(`Folder already exists: ${folder.label} (${folder.uid})`);
       }
       
-      globalData.currentFolder = folder.uid;
+      setCurrentFolder(folder.uid);
     }
     // Case 3: Both uid and label provided
     else {
@@ -942,12 +869,12 @@ app.post('/folder', (req, res) => {
         return res.status(400).json({ error: 'Invalid folder label' });
       }
       
-      folder = globalData.folders.find(f => f.uid === uid);
+      folder = findFolderByUid(uid);
       
       if (!folder) {
         // Create folder with specified uid and label
         folder = { uid, label: label.trim() };
-        globalData.folders.push(folder);
+        addFolder(folder);
         console.log(`Created new folder: ${folder.label} (${folder.uid})`);
       } else if (folder.label !== label.trim()) {
         // Rename existing folder
@@ -958,7 +885,7 @@ app.post('/folder', (req, res) => {
         console.log(`Folder already exists with matching label: ${folder.label} (${folder.uid})`);
       }
       
-      globalData.currentFolder = folder.uid;
+      setCurrentFolder(folder.uid);
     }
     
     // Save changes
@@ -967,12 +894,12 @@ app.post('/folder', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...globalData.folders
+      ...getFolders()
     ];
     
     res.json({
       list: folderList,
-      current: globalData.currentFolder
+      current: getCurrentFolder()
     });
   } catch (error) {
     console.error('Error in POST /folder endpoint:', error);
@@ -999,13 +926,8 @@ app.put('/folder', (req, res) => {
       return res.status(400).json({ error: 'Cannot rename the Unsorted folder' });
     }
     
-    // Initialize folders array if needed
-    if (!globalData.folders) {
-      globalData.folders = [];
-    }
-    
     // Find folder by uid
-    const folder = globalData.folders.find(f => f.uid === uid);
+    const folder = findFolderByUid(uid);
     
     if (!folder) {
       console.log(`Folder not found: ${uid}`);
@@ -1023,12 +945,12 @@ app.put('/folder', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...globalData.folders
+      ...getFolders()
     ];
     
     res.json({
       list: folderList,
-      current: globalData.currentFolder
+      current: getCurrentFolder()
     });
   } catch (error) {
     console.error('Error in PUT /folder endpoint:', error);
@@ -1051,37 +973,24 @@ app.delete('/folder/:uid', (req, res) => {
       return res.status(400).json({ error: 'Cannot delete the Unsorted folder' });
     }
     
-    // Initialize folders array if needed
-    if (!globalData.folders) {
-      globalData.folders = [];
-    }
-    
     // Find and remove folder
-    const folderIndex = globalData.folders.findIndex(f => f.uid === uid);
+    const deletedFolder = removeFolderByUid(uid);
     
-    if (folderIndex === -1) {
+    if (!deletedFolder) {
       console.log(`Folder not found: ${uid}`);
       return res.status(404).json({ error: `Folder with uid ${uid} not found` });
     }
     
-    const deletedFolder = globalData.folders[folderIndex];
-    globalData.folders.splice(folderIndex, 1);
     console.log(`Deleted folder: ${deletedFolder.label} (${deletedFolder.uid})`);
     
     // If deleted folder was current, set current to unsorted
-    if (globalData.currentFolder === uid) {
-      globalData.currentFolder = '';
+    if (getCurrentFolder() === uid) {
+      setCurrentFolder('');
       console.log('Deleted folder was current, set current to Unsorted');
     }
     
     // Update all image data entries with this folder uid to have empty string
-    let updatedCount = 0;
-    globalData.mediaData.forEach(item => {
-      if (item.folder === uid) {
-        item.folder = '';
-        updatedCount++;
-      }
-    });
+    const updatedCount = reassignMediaFolder(uid, '');
     
     if (updatedCount > 0) {
       console.log(`Moved ${updatedCount} images from deleted folder to Unsorted`);
@@ -1093,12 +1002,12 @@ app.delete('/folder/:uid', (req, res) => {
     // Return updated folder list
     const folderList = [
       { uid: '', label: 'Unsorted' },
-      ...globalData.folders
+      ...getFolders()
     ];
     
     res.json({
       list: folderList,
-      current: globalData.currentFolder
+      current: getCurrentFolder()
     });
   } catch (error) {
     console.error('Error in DELETE /folder/:uid endpoint:', error);
@@ -1177,7 +1086,7 @@ app.post('/export', async (req, res) => {
     
     // Find media data
     const uid = parseInt(mediaId);
-    const mediaData = globalData.mediaData.find(item => item.uid === uid);
+    const mediaData = findMediaByUid(uid);
     
     if (!mediaData) {
       return res.status(404).json({ error: `Media not found with id: ${mediaId}` });
@@ -1342,7 +1251,7 @@ app.post('/generate/inpaint', upload.fields([
       }
       
       // Call handleImageGeneration with workflow data and modifications
-      handleMediaGeneration(req, res, workflowData, config);
+      handleMediaGeneration(req, res, workflowData, config, uploadFileToComfyUI);
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);
