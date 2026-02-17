@@ -22,8 +22,8 @@ import {
   emitTaskCompletion,
   emitTaskErrorByTaskId,
   resetProgressLog
-} from '../../sse.mjs';
-import { modifyDataWithPrompt, resetPromptLog } from '../../llm.mjs';
+} from '../../core/sse.mjs';
+import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import { RESOURCE_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------

@@ -26,8 +26,8 @@ import {
   emitTaskCompletion,
   emitTaskErrorByTaskId,
   resetProgressLog
-} from '../../sse.mjs';
-import { resetPromptLog } from '../../llm.mjs';
+} from '../../core/sse.mjs';
+import { resetPromptLog } from '../../core/llm.mjs';
 
 // Function to add media data entry (will be set by server.mjs)
 let addMediaDataEntry = null;

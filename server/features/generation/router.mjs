@@ -12,12 +12,12 @@ import path from 'path';
 import { upload } from '../upload/router.mjs';
 import { handleMediaGeneration } from './orchestrator.mjs';
 import { validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
-import { modifyDataWithPrompt, resetPromptLog } from '../../llm.mjs';
+import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
   createTask, deleteTask, getTask,
   resetProgressLog,
   emitProgressUpdate, emitTaskError
-} from '../../sse.mjs';
+} from '../../core/sse.mjs';
 import {
   findMediaByUid, findMediaIndexByUid, getAllMediaData, saveMediaData
 } from '../../core/database.mjs';
@@ -274,6 +274,167 @@ router.post('/regenerate', async (req, res) => {
   } catch (error) {
     console.error('Error in regenerate endpoint:', error);
     res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /generate/inpaint – specialized generation with image + mask inputs
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /generate/inpaint
+ *
+ * Specialized generation endpoint for inpainting workflows. Accepts both an
+ * image and mask file, uploads them to ComfyUI, and processes through the
+ * standard generation pipeline with additional inpaint-specific parameters.
+ */
+router.post('/generate/inpaint', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'mask', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    console.log('=== Inpaint endpoint called ===');
+    
+    // Log form data fields
+    const { workflow, name, seed, prompt, inpaintArea } = req.body;
+    console.log('Form data received:');
+    console.log('- workflow:', workflow);
+    console.log('- name:', name);
+    console.log('- seed:', seed);
+    console.log('- prompt:', prompt);
+    console.log('- inpaintArea:', inpaintArea);
+    console.log('- image_0_imageFormat:', req.body.image_0_imageFormat);
+    console.log('- All req.body keys:', Object.keys(req.body));
+    
+    // Validate required fields
+    if (!workflow) {
+      return res.status(400).json({ error: 'Workflow parameter is required' });
+    }
+    if (!name) {
+      return res.status(400).json({ error: 'Name parameter is required' });
+    }
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt parameter is required' });
+    }
+    
+    // Validate and parse inpaintArea if provided
+    let parsedInpaintArea = null;
+    if (inpaintArea) {
+      try {
+        parsedInpaintArea = JSON.parse(inpaintArea);
+        if (parsedInpaintArea && typeof parsedInpaintArea === 'object' && 
+            typeof parsedInpaintArea.x1 === 'number' && 
+            typeof parsedInpaintArea.y1 === 'number' && 
+            typeof parsedInpaintArea.x2 === 'number' && 
+            typeof parsedInpaintArea.y2 === 'number') {
+          console.log('Valid inpaintArea parsed:', parsedInpaintArea);
+        } else {
+          return res.status(400).json({ error: 'Invalid inpaintArea format - must contain x1, y1, x2, y2 coordinates' });
+        }
+      } catch (parseError) {
+        return res.status(400).json({ error: 'Invalid inpaintArea JSON format' });
+      }
+    }
+    
+    // Validate uploaded files
+    if (!req.files || !req.files.image || !req.files.mask) {
+      return res.status(400).json({ error: 'Both image and mask files are required' });
+    }
+    
+    const imageFile = req.files.image[0];
+    const maskFile = req.files.mask[0];
+    
+    console.log('Files received:');
+    console.log('- image:', imageFile.originalname, 'size:', imageFile.size, 'type:', imageFile.mimetype);
+    console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
+    
+    // Retrieve shared dependencies from app.locals
+    const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+    
+    // Generate filenames for ComfyUI upload
+    // For inpaint image: reuse storage filename if from gallery, otherwise use temp name
+    const imageUrl = req.body.imageUrl;
+    const imageFilename = imageUrl ? imageUrl.replace('/media/', '') : `inpaint_image_${Date.now()}.png`;
+    
+    // For mask: use filename provided by client (includes dimensions and area for deduplication)
+    const maskFilename = req.body.maskFilename || `mask_${Date.now()}.png`;
+    
+    try {
+      // Upload both images to ComfyUI
+      console.log('Uploading images to ComfyUI...');
+      
+      const [imageUploadResult, maskUploadResult] = await Promise.all([
+        uploadFileToComfyUI(imageFile.buffer, imageFilename, "image", "input", true),
+        uploadFileToComfyUI(maskFile.buffer, maskFilename, "image", "input", true)
+      ]);
+      
+      console.log('Both images uploaded successfully to ComfyUI');
+      
+      // Find the workflow in comfyuiWorkflows
+      const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
+      if (!workflowData) {
+        return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+      }
+      
+      // Add postGenerationTasks from comfyui-workflows to workflowData
+      if (comfyuiWorkflows.postGenerationTasks) {
+        workflowData.postGenerationTasks = comfyuiWorkflows.postGenerationTasks;
+      }
+      
+      // Generate random seed if not provided
+      if (!req.body.seed) {
+        req.body.seed = Math.floor(Math.random() * 4294967295);
+        console.log('Generated random seed:', req.body.seed);
+      }
+      
+      // Fill in expected but missing image data values with blank strings
+      const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+      requiredImageDataFields.forEach(field => {
+        if (req.body[field] === undefined || req.body[field] === null) {
+          req.body[`image_0_${field}`] = '';
+          console.log(`Filled missing field '${field}' with blank string`);
+        }
+      });
+      
+      // Prepare request body with imagePath and maskPath from uploaded filenames
+      req.body.image_0_filename = imageUploadResult.filename;
+      req.body.mask_filename = maskUploadResult.filename;
+      req.body.inpaint = true;
+      
+      // Include parsed inpaintArea if provided
+      if (parsedInpaintArea) {
+        req.body.inpaintArea = parsedInpaintArea;
+      }
+      
+      // Remove uploads data from request body before calling handleMediaGeneration
+      delete req.body.uploads;
+      
+      // Validate that workflow doesn't contain nested executeWorkflow processes
+      const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+      if (!validation.valid) {
+        console.error('Workflow validation failed:', validation.error);
+        return res.status(500).json({ error: 'Workflow validation failed', details: validation.error });
+      }
+      
+      // Call handleMediaGeneration with workflow data and modifications
+      handleMediaGeneration(req, res, workflowData, config, uploadFileToComfyUI);
+      
+    } catch (uploadError) {
+      console.error('Failed to upload images to ComfyUI:', uploadError);
+      return res.status(500).json({
+        error: 'Failed to upload images to ComfyUI',
+        details: uploadError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in inpaint endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to process inpaint request', 
+      details: error.message 
+    });
   }
 });
 

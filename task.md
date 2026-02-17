@@ -49,3 +49,14 @@ Refactor the monolithic `server.mjs` and `generate.mjs` into a specialized, doma
 [x] Updates `server/server.mjs` to mount the new Feature Routers.
 [x] Verify all endpoints (Upload -> Generate -> Gallery -> Delete).
 [x] Remove legacy massive files (`generate.mjs`, old `server.mjs` code).
+
+### Phase 5: Services & Core Infrastructure
+[x] Create `server/features/export/` (router.mjs, service.mjs) and move `export.mjs` logic.
+[x] Move `server/sse.mjs` to `server/core/sse.mjs`.
+[x] Move `server/llm.mjs` to `server/core/llm.mjs`.
+[x] Move `server/services.mjs` to `server/core/service-manager.mjs`.
+[x] Update `server/server.mjs` to use new paths and mount export router.
+[x] Verify system startup and all features.
+
+### Phase 6: Final Domain Cleanup
+[x] Move `/generate/inpaint` route from `server/server.mjs` to `server/features/generation/router.mjs`.
