@@ -2,7 +2,7 @@ import { html } from 'htm/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { styled } from 'goober';
 import { Select } from '../custom-ui/io/select.mjs';
-import { fetchJson } from '../util.mjs';
+import { fetchJson } from '../custom-ui/util.mjs';
 import { getThemeValue } from '../custom-ui/theme.mjs';
 
 const Container = styled('div')`

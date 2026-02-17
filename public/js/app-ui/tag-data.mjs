@@ -1,7 +1,7 @@
 // Tag Data Module
 // Loads and provides access to tag data including definitions and category tree
 
-import { fetchJson } from '../util.mjs';
+import { fetchJson } from '../custom-ui/util.mjs';
 
 let definitions = {};
 let categoryTree = {};

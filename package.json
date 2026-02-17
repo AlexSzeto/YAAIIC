@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server/server.mjs",
-    "sync": "node public/js/custom-ui/lib-sync.mjs sync",
+    "pull": "node public/js/custom-ui/lib-sync.mjs pull",
     "push": "node public/js/custom-ui/lib-sync.mjs push"
   },
   "author": "",

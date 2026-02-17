@@ -1,15 +1,15 @@
 {
   "defaultImageGenerationTasks": [
     {
-      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "model": "user-v4/joycaption-beta:latest",
       "imagePath": "saveImagePath",
-      "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
+      "prompt": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions. Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel.",
       "to": "description"
     },
     {
-      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+      "model": "user-v4/joycaption-beta:latest",
       "imagePath": "saveImagePath",
-      "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
+      "prompt": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions. Write a straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with \"This image is…\" or similar phrasing. Do NOT mention the image's resolution. Do NOT use any ambiguous language. If it is a work of art, do not include the artist's name or the title of the work. Do NOT use polite euphemisms—lean into blunt, casual phrasing. Include information about the ages of any people/characters when applicable. Your response will be used by a text-to-image model, so avoid useless meta phrases like \"This image shows…\", \"You are looking at...\", etc.",
       "to": "summary"
     },
     {
@@ -17,13 +17,15 @@
         "where": { "data": "name" },
         "equals": { "value": "" }
       },
-      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
+      "model": "user-v4/joycaption-beta:latest",
+      "imagePath": "saveImagePath",
+      "prompt": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions. Write a caption for this image as if it were being used for a social media post. Limit the caption to 3 words.",
       "to": "name"
     },
     {
-      "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-      "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
+      "model": "user-v4/joycaption-beta:latest",
+      "imagePath": "saveImagePath",
+      "prompt": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions. Generate only comma-separated Danbooru tags (lowercase_underscores). Only include general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. Exclude censorship tags even if the image is censored. No extra text.",
       "to": "tags"
     }
   ],
@@ -2335,6 +2337,65 @@
         {
           "from": "lyrics",
           "to": "summary"
+        }
+      ]
+    },
+    {
+      "name": "Text to Sound (StableAudio)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudio": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 30
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              { "label": "MP3", "value": "mp3" },
+              { "label": "WAV", "value": "wav" },
+              { "label": "FLAC", "value": "flac" },
+              { "label": "OGG", "value": "ogg" }
+            ]
+          }
+        ]
+      },
+      "base": "stableaudio-text-to-sound.json",
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": ["21", "inputs", "value"]
+        },
+        {
+          "from": "seed",
+          "to": ["24", "inputs", "value"]
+        },
+        {
+          "from": "length",
+          "to": ["22", "inputs", "value"]
+        },
+        {
+          "from": "saveImagePath",
+          "to": ["30", "inputs", "path"]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": ["20", "inputs", "path"]
         }
       ]
     },

@@ -1,5 +1,5 @@
 // Tags Management Module
-import { fetchJson } from '../util.mjs';
+import { fetchJson } from '../custom-ui/util.mjs';
 
 let tags = [];
 let isLoaded = false;
