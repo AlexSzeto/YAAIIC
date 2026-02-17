@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getOllamaAPIPath, getOllamaUseCPU } from './services.mjs';
+import { getOllamaAPIPath, getOllamaUseCPU } from './service-manager.mjs';
 
 // Track the last used model to manage VRAM
 let lastUsedModel = null;
