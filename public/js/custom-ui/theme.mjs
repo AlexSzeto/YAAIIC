@@ -37,7 +37,7 @@
  * ```
  */
 
-import { getCookie, setCookie } from '../util.mjs';
+import { getCookie, setCookie } from './util.mjs';
 
 // ============================================================================
 // Spacing Sub-Theme

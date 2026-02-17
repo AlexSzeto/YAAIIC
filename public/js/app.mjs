@@ -23,7 +23,7 @@ import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
 
 import { sseManager } from './app-ui/sse-manager.mjs';
-import { fetchJson, extractNameFromFilename } from './util.mjs';
+import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';

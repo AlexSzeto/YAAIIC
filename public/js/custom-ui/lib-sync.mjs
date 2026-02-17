@@ -1,360 +1,142 @@
 /**
- * A single file application that synchronizes files between multiple on device folders and a central, version controlled repository.
- * The application has three simple commands: init, sync, and push.
+ * A single file application that synchronizes files between the current folder and a central, version controlled repository.
+ * The application has two simple commands: push and pull.
  * 
- * init: Initializes the application by creating a configuration file and a central repository. config.json is read and all files in
- * the folder, including the config file and this file, are copied to the central repository.
+ * push: Overwrites the central repository with the current directory content.
+ *       It performs a MIRROR operation: files in current dir are copied to repo, and files in repo not in current dir are DELETED.
  * 
- * sync: Synchronizes the on device folders with the central repository. On launch, the application will mirror all files from the central
- * repository to the on device folders, updating and deleting files as necessary. Thereafter, the application will monitor the current folder
- * for changes and update the central repository immediately whenever a change is detected.
- * 
- * push: Overwrites the central repository with the current directory content, then mirrors to all sync folders and enters watch mode.
- * Use this when you want to force the current directory to be the source of truth.
+ * pull: Overwrites the current directory with the central repository content.
+ *       It performs a MIRROR operation: files in repo are copied to current dir, and files in current dir not in repo are DELETED.
+ *       WARNING: This is a hard reset of the local directory.
  */
 
 import fs from 'fs/promises';
-import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Robustly determine if this script is being executed directly
+const currentFile = fileURLToPath(import.meta.url);
+const executionFile = path.resolve(process.argv[1]);
+const isMain = currentFile.toLowerCase() === executionFile.toLowerCase();
 
+const __dirname = path.dirname(currentFile);
 const CONFIG_FILE = 'config.json';
-const DEFAULT_CONFIG = {
-  centralRepo: './central-repo',
-  syncFolders: []
-};
 
 /**
- * Recursively copy all files from source to destination
- * @param {string} src - Source directory
- * @param {string} dest - Destination directory
- */
-async function copyRecursive(src, dest) {
-  await fs.mkdir(dest, { recursive: true });
-  const entries = await fs.readdir(src, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    
-    if (entry.isDirectory()) {
-      await copyRecursive(srcPath, destPath);
-    } else {
-      await fs.copyFile(srcPath, destPath);
-    }
-  }
-}
-
-/**
- * Get all files recursively from a directory
- * @param {string} dir - Directory to scan
- * @param {string} baseDir - Base directory for relative paths
- * @returns {Promise<string[]>} Array of relative file paths
+ * Recursively get all files in a directory
+ * @param {string} dir 
+ * @param {string} baseDir 
+ * @returns {Promise<string[]>} Array of relative paths
  */
 async function getAllFiles(dir, baseDir = dir) {
   const files = [];
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await getAllFiles(fullPath, baseDir));
-    } else {
-      files.push(path.relative(baseDir, fullPath));
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...await getAllFiles(fullPath, baseDir));
+      } else {
+        files.push(path.relative(baseDir, fullPath));
+      }
     }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
   }
-  
   return files;
 }
 
 /**
- * Initialize the sync system
+ * Mirror source directory to destination directory
+ * @param {string} srcDir 
+ * @param {string} destDir 
+ * @param {boolean} selfUpdate - If true, allows overwriting the running script
  */
-async function init() {
-  console.log('Initializing lib-sync...');
+async function mirrorDir(srcDir, destDir) {
+  console.log(`Mirroring ${srcDir} -> ${destDir}`);
   
-  // Check if config exists - REQUIRED
-  const configPath = path.join(__dirname, CONFIG_FILE);
-  let config;
-  
-  try {
-    const configData = await fs.readFile(configPath, 'utf-8');
-    config = JSON.parse(configData);
-    console.log('Found existing config.json');
-  } catch (err) {
-    console.error('Error: config.json not found in lib-sync.mjs directory.');
-    console.error('Please create config.json in the same folder as lib-sync.mjs');
-    process.exit(1);
-  }
-  
-  // Create central repository
-  const repoPath = path.resolve(config.centralRepo);
-  await fs.mkdir(repoPath, { recursive: true });
-  console.log(`Central repository created at: ${repoPath}`);
-  
-  // Copy all files from lib-sync.mjs directory to central repository
-  console.log('Copying files to central repository...');
-  await copyRecursive(__dirname, repoPath);
-  
-  console.log('Initialization complete!');
-}
+  // Ensure dest exists
+  await fs.mkdir(destDir, { recursive: true });
 
-/**
- * Sync a file from central repo to all sync folders
- * @param {string} relativePath - Relative path of the file
- * @param {object} config - Configuration object
- */
-async function syncFileToFolders(relativePath, config) {
-  const centralPath = path.join(path.resolve(config.centralRepo), relativePath);
-  
-  for (const folder of config.syncFolders) {
-    const destPath = path.join(path.resolve(folder), relativePath);
-    
-    try {
-      // Create directory if needed
-      await fs.mkdir(path.dirname(destPath), { recursive: true });
-      
-      // Copy file
-      await fs.copyFile(centralPath, destPath);
-      console.log(`Synced: ${relativePath} -> ${folder}`);
-    } catch (err) {
-      console.error(`Error syncing ${relativePath} to ${folder}:`, err.message);
-    }
-  }
-}
+  const srcFiles = await getAllFiles(srcDir);
+  const destFiles = await getAllFiles(destDir);
 
-/**
- * Delete a file from all sync folders
- * @param {string} relativePath - Relative path of the file
- * @param {object} config - Configuration object
- */
-async function deleteFileFromFolders(relativePath, config) {
-  for (const folder of config.syncFolders) {
-    const destPath = path.join(path.resolve(folder), relativePath);
+  // Copy/Update files from source
+  for (const file of srcFiles) {
+    const srcPath = path.join(srcDir, file);
+    const destPath = path.join(destDir, file);
     
-    try {
-      await fs.unlink(destPath);
-      console.log(`Deleted: ${relativePath} from ${folder}`);
-    } catch (err) {
-      // Ignore if file doesn't exist
-      if (err.code !== 'ENOENT') {
-        console.error(`Error deleting ${relativePath} from ${folder}:`, err.message);
-      }
-    }
+    // Skip config.json to avoid overwriting configuration with default/repo version if desired?
+    // Actually, user wants full sync. But config might contain local repo path.
+    // If we pull config.json from repo, we might overwrite local repo path?
+    // The requirement is "hard reset". So we should overwrite everything.
+    
+    await fs.mkdir(path.dirname(destPath), { recursive: true });
+    await fs.copyFile(srcPath, destPath);
   }
-}
 
-/**
- * Mirror central repository to all sync folders
- * @param {object} config - Configuration object
- */
-async function mirrorToFolders(config) {
-  console.log('Mirroring central repository to sync folders...');
-  
-  const repoPath = path.resolve(config.centralRepo);
-  const repoFiles = await getAllFiles(repoPath);
-  
-  for (const folder of config.syncFolders) {
-    const folderPath = path.resolve(folder);
-    console.log(`Syncing to: ${folderPath}`);
-    
-    // Get existing files in folder
-    let existingFiles = [];
-    try {
-      existingFiles = await getAllFiles(folderPath);
-    } catch (err) {
-      // Folder might not exist yet
-      await fs.mkdir(folderPath, { recursive: true });
-    }
-    
-    // Copy all files from repo
-    for (const file of repoFiles) {
-      const srcPath = path.join(repoPath, file);
-      const destPath = path.join(folderPath, file);
-      
-      await fs.mkdir(path.dirname(destPath), { recursive: true });
-      await fs.copyFile(srcPath, destPath);
-    }
-    
-    // Delete files that don't exist in repo
-    for (const file of existingFiles) {
-      if (!repoFiles.includes(file)) {
-        const destPath = path.join(folderPath, file);
+  // Delete files in dest not in source
+  for (const file of destFiles) {
+    if (!srcFiles.includes(file)) {
+      const destPath = path.join(destDir, file);
+      try {
         await fs.unlink(destPath);
-        console.log(`Deleted obsolete file: ${file}`);
+        console.log(`Deleted: ${file}`);
+      } catch (err) {
+        console.error(`Failed to delete ${file}:`, err.message);
       }
     }
   }
   
-  console.log('Mirror complete!');
+  console.log('Mirror complete.');
 }
 
-/**
- * Watch current folder and sync changes to central repository
- * @param {object} config - Configuration object
- */
-async function watchAndSync(config) {
-  const baseDir = __dirname;
-  const repoPath = path.resolve(config.centralRepo);
-  
-  console.log(`Watching ${baseDir} for changes...`);
-  console.log('Press Ctrl+C to stop.');
-  
-  const watcher = fsSync.watch(baseDir, { recursive: true }, async (eventType, filename) => {
-    if (!filename) return;
-    
-    // Ignore changes in the central repo itself
-    const fullPath = path.join(baseDir, filename);
-    if (fullPath.startsWith(repoPath)) return;
-    
-    const srcPath = path.join(baseDir, filename);
-    const destPath = path.join(repoPath, filename);
-    
-    try {
-      // Check if file exists
-      const exists = await fs.access(srcPath).then(() => true).catch(() => false);
-      
-      if (exists) {
-        // File created or modified
-        const stats = await fs.stat(srcPath);
-        if (stats.isFile()) {
-          await fs.mkdir(path.dirname(destPath), { recursive: true });
-          await fs.copyFile(srcPath, destPath);
-          console.log(`Updated in central repo: ${filename}`);
-        }
-      } else {
-        // File deleted
-        try {
-          await fs.unlink(destPath);
-          console.log(`Deleted from central repo: ${filename}`);
-        } catch (err) {
-          // Ignore if file doesn't exist
-        }
-      }
-    } catch (err) {
-      console.error(`Error syncing ${filename}:`, err.message);
-    }
-  });
-  
-  // Keep process alive
-  process.on('SIGINT', () => {
-    console.log('\nStopping file watcher...');
-    watcher.close();
-    process.exit(0);
-  });
-}
-
-/**
- * Sync command - mirror repo to folders and watch for changes
- */
-async function sync() {
-  console.log('Starting sync...');
-  
-  // Load config - REQUIRED
+async function loadConfig() {
   const configPath = path.join(__dirname, CONFIG_FILE);
-  let config;
-  
   try {
-    const configData = await fs.readFile(configPath, 'utf-8');
-    config = JSON.parse(configData);
+    const data = await fs.readFile(configPath, 'utf-8');
+    return JSON.parse(data);
   } catch (err) {
-    console.error('Error: config.json not found in lib-sync.mjs directory.');
-    console.error('Please create config.json in the same folder as lib-sync.mjs');
+    console.error('Error: config.json not found in lib-sync directory.');
     process.exit(1);
   }
-  
-  // Check if central repo exists
-  const repoPath = path.resolve(config.centralRepo);
-  try {
-    await fs.access(repoPath);
-  } catch (err) {
-    console.error('Error: Central repository not found. Run "init" first.');
-    process.exit(1);
-  }
-  
-  // Mirror to all sync folders
-  await mirrorToFolders(config);
-  
-  // Watch for changes
-  await watchAndSync(config);
 }
 
-/**
- * Push command - overwrite central repo with current directory and sync
- */
 async function push() {
-  console.log('Starting push...');
-  
-  // Load config - REQUIRED
-  const configPath = path.join(__dirname, CONFIG_FILE);
-  let config;
-  
-  try {
-    const configData = await fs.readFile(configPath, 'utf-8');
-    config = JSON.parse(configData);
-  } catch (err) {
-    console.error('Error: config.json not found in lib-sync.mjs directory.');
-    console.error('Please create config.json in the same folder as lib-sync.mjs');
-    process.exit(1);
-  }
-  
-  // Create/overwrite central repository
+  const config = await loadConfig();
   const repoPath = path.resolve(config.centralRepo);
-  console.log(`Overwriting central repository at: ${repoPath}`);
   
-  // Remove existing central repo if it exists
-  try {
-    await fs.rm(repoPath, { recursive: true, force: true });
-  } catch (err) {
-    // Ignore if doesn't exist
-  }
-  
-  // Create fresh central repo
-  await fs.mkdir(repoPath, { recursive: true });
-  
-  // Copy all files from current directory to central repository
-  console.log('Copying files to central repository...');
-  await copyRecursive(__dirname, repoPath);
-  console.log('Central repository updated!');
-  
-  // Mirror to all sync folders
-  await mirrorToFolders(config);
-  
-  // Watch for changes
-  await watchAndSync(config);
+  console.log('Pushing to central repository...');
+  await mirrorDir(__dirname, repoPath);
 }
 
-/**
- * Main entry point
- */
+async function pull() {
+  const config = await loadConfig();
+  const repoPath = path.resolve(config.centralRepo);
+  
+  console.log('Pulling from central repository (Hard Reset)...');
+  await mirrorDir(repoPath, __dirname);
+}
+
 async function main() {
-  console.log('lib-sync v1.0.0');
   const command = process.argv[2];
   
   switch (command) {
-    case 'init':
-      await init();
-      break;
-    case 'sync':
-      await sync();
-      break;
     case 'push':
       await push();
       break;
+    case 'pull':
+      await pull();
+      break;
     default:
-      console.log('Usage: node lib-sync.mjs [init|sync|push]');
-      console.log('  init - Initialize the sync system');
-      console.log('  sync - Sync files between folders and watch for changes');
-      console.log('  push - Overwrite central repo with current directory and sync');
+      console.log('Usage: node lib-sync.mjs [push|pull]');
+      console.log('  push - Mirror current folder TO central repo');
+      console.log('  pull - Mirror central repo TO current folder (Hard Reset)');
       process.exit(1);
   }
 }
 
-// Run if executed directly
-if (import.meta.url === `file:///${process.argv[1]}`.replace(/\\/g, '/')) {
+if (isMain) {
   main().catch(err => {
     console.error('Error:', err);
     process.exit(1);

@@ -18,7 +18,7 @@ import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { sseManager } from './app-ui/sse-manager.mjs';
-import { fetchJson, fetchWithRetry, getQueryParam } from './util.mjs';
+import { fetchJson, fetchWithRetry, getQueryParam } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
