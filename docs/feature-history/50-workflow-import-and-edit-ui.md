@@ -6,41 +6,37 @@ Create a comprehensive workflow management interface that allows users to upload
 
 ## Tasks
 
-- [ ] Create backend API endpoint `GET /api/workflows/:name` to fetch a specific workflow configuration by name
-- [ ] Create backend API endpoint `POST /api/workflows/upload` to handle ComfyUI JSON file uploads with auto-detection logic
-- [ ] Implement workflow auto-detection service that identifies: image/audio load nodes, seed nodes, prompt nodes (string primitives, CLIP text), output nodes (JWImageSaveToPath, JWAudioSaveToPath), and primitive String/Int/Float nodes for extra inputs
-- [ ] Implement workflow name parser that converts filename format `modelname-source-to-dest.json` to display name format `Source to Dest (Modelname)`
-- [ ] Create backend API endpoint `POST /api/workflows` to save/update workflow configuration in comfyui-workflows.json with validation (requires at least one prompt, seed, and output binding)
-- [ ] Create backend API endpoint `DELETE /api/workflows/:name` to remove a workflow and its associated base JSON file
-- [ ] Create new HTML page `workflow-editor.html` with basic page structure and stylesheet imports
-- [ ] Create hamburger menu component in `public/js/app-ui/` that appears in top-right corner of all pages (index.html, inpaint.html, workflow-editor.html)
-- [ ] Create context menu variant of list-select UI component for the hamburger menu dropdown
-- [ ] Implement hamburger menu link to navigate to workflow editor page
-- [ ] Create workflow list selection panel component based on list-select UI with upload button integrated inside the panel
-- [ ] Implement file upload handling in workflow list panel that triggers auto-detection endpoint and loads result into editor
-- [ ] Create basic workflow editor form structure with vertical layout sections: basic info, extra inputs, pre-generation tasks, replace mappings, post-generation tasks, and save button
-- [ ] Implement basic info section form fields: name (text), type (select: image/video/audio/inpaint), hidden (checkbox), autocomplete (checkbox), inputImages (number), inputAudios (number), optionalPrompt (checkbox), nameRequired (checkbox), orientation (select: portrait/landscape/detect)
-- [ ] Create reusable DynamicList custom UI component in `public/js/custom-ui/` that accepts a Preact render function for generating subcomponents, manages state for add/delete/reorder operations, renders add button at top of section, and wraps each item in a collapsible panel with controls (up/down/collapse/delete)
-- [ ] Implement extra inputs dynamic list with sub-form for each item: id, type (text/number/select/checkbox/textarea), label, default value, and options array (for select type)
-- [ ] Create ComfyUI node search autocomplete component that searches nodes by ID, name, and class type from uploaded workflow JSON
-- [ ] Create node input selector hover panel component that displays node title and clickable list of input properties
-- [ ] Implement replace mappings dynamic list with sub-forms: from field (text input), to field (node input selector), and optional condition
-- [ ] Implement pre-generation tasks dynamic list with task type dropdown (template/from/model) and dynamic form fields
-- [ ] Create template task sub-form: template (textarea with {{variable}} support), to (text), optional condition
-- [ ] Create value copy task sub-form: from (text), to (text), optional condition
-- [ ] Create LLM task sub-form: model (text), imagePath (text), prompt (textarea), to (text), optional condition
-- [ ] Implement post-generation tasks dynamic list with same task types as pre-generation plus executeWorkflow process type
-- [ ] Create executeWorkflow task sub-form: process ("executeWorkflow"), name (text), workflow (text), parameters (inputMapping and outputMapping arrays), optional condition
-- [ ] Create condition builder component with AND/OR toggle and dynamic condition list
-- [ ] Implement condition item sub-form: where source (dropdown: data/generationData), field name (text), equals value (text input supporting multiple types)
-- [ ] Implement save button with validation that checks for required bindings and shows disabled state with hover tooltip listing missing requirements
-- [ ] Integrate toast notification system for success/error messages on save
-- [ ] Wire up all form sections to workflow state management and implement two-way data binding
-- [ ] Test workflow upload flow: upload JSON → auto-detect → save → load into form → edit → save changes
-- [ ] Test workflow editing flow: open existing workflow → modify all sections → save → verify changes persisted
-- [ ] Test workflow deletion flow: select workflow → delete → verify removal from list and filesystem
-- [ ] Test validation: attempt to save workflow missing required bindings → verify save button disabled and tooltip shows requirements
-- [ ] Add loading states and error handling for all API calls
+- [x] Create backend API endpoint `GET /api/workflows/:name` to fetch a specific workflow configuration by name
+- [x] Create backend API endpoint `POST /api/workflows/upload` to handle ComfyUI JSON file uploads with auto-detection logic
+- [x] Implement workflow auto-detection service that identifies: image/audio load nodes, seed nodes, prompt nodes (string primitives, CLIP text), output nodes (JWImageSaveToPath, JWAudioSaveToPath), and primitive String/Int/Float nodes for extra inputs
+- [x] Implement workflow name parser that converts filename format `modelname-source-to-dest.json` to display name format `Source to Dest (Modelname)`
+- [x] Create backend API endpoint `POST /api/workflows` to save/update workflow configuration in comfyui-workflows.json with validation (requires at least one prompt, seed, and output binding)
+- [x] Create backend API endpoint `DELETE /api/workflows/:name` to remove a workflow and its associated base JSON file
+- [x] Create new HTML page `workflow-editor.html` with basic page structure and stylesheet imports
+- [x] Create hamburger menu component in `public/js/app-ui/` that appears in top-right corner of all pages (index.html, inpaint.html, workflow-editor.html)
+- [x] Create context menu variant of list-select UI component for the hamburger menu dropdown
+- [x] Implement hamburger menu link to navigate to workflow editor page
+- [x] Create workflow list selection panel component based on list-select UI with upload button integrated inside the panel
+- [x] Implement file upload handling in workflow list panel that triggers auto-detection endpoint and loads result into editor
+- [x] Create basic workflow editor form structure with vertical layout sections: basic info, extra inputs, pre-generation tasks, replace mappings, post-generation tasks, and save button
+- [x] Implement basic info section form fields: name (text), type (select: image/video/audio/inpaint), hidden (checkbox), autocomplete (checkbox), inputImages (number), inputAudios (number), optionalPrompt (checkbox), nameRequired (checkbox), orientation (select: portrait/landscape/detect)
+- [x] Create reusable DynamicList custom UI component in `public/js/custom-ui/` that accepts a Preact render function for generating subcomponents, manages state for add/delete/reorder operations, renders add button at top of section, and wraps each item in a collapsible panel with controls (up/down/collapse/delete)
+- [x] Implement extra inputs dynamic list with sub-form for each item: id, type (text/number/select/checkbox/textarea), label, default value, and options array (for select type)
+- [x] Create ComfyUI node search autocomplete component that searches nodes by ID, name, and class type from uploaded workflow JSON
+- [x] Create node input selector hover panel component that displays node title and clickable list of input properties
+- [x] Implement replace mappings dynamic list with sub-forms: from field (text input), to field (node input selector), and optional condition
+- [x] Implement pre-generation tasks dynamic list with task type dropdown (template/from/model) and dynamic form fields
+- [x] Create template task sub-form: template (textarea with {{variable}} support), to (text), optional condition
+- [x] Create value copy task sub-form: from (text), to (text), optional condition
+- [x] Create LLM task sub-form: model (text), imagePath (text), prompt (textarea), to (text), optional condition
+- [x] Implement post-generation tasks dynamic list with same task types as pre-generation plus executeWorkflow process type
+- [x] Create executeWorkflow task sub-form: process ("executeWorkflow"), name (text), workflow (text), parameters (inputMapping and outputMapping arrays), optional condition
+- [x] Create condition builder component with AND/OR toggle and dynamic condition list
+- [x] Implement condition item sub-form: where source (dropdown: data/generationData), field name (text), equals value (text input supporting multiple types)
+- [x] Implement save button with validation that checks for required bindings and shows disabled state with hover tooltip listing missing requirements
+- [x] Integrate toast notification system for success/error messages on save
+- [x] Wire up all form sections to workflow state management and implement two-way data binding
+- [x] Add loading states and error handling for all API calls
 
 ## Implementation Details
 

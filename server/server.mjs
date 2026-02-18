@@ -21,6 +21,7 @@ import mediaRouter from './features/media/router.mjs';
 import uploadRouter from './features/upload/router.mjs';
 import generationRouter from './features/generation/router.mjs';
 import exportRouter from './features/export/router.mjs';
+import workflowsRouter from './features/workflows/router.mjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,6 +82,7 @@ app.use(mediaRouter);
 app.use(uploadRouter);
 app.use(generationRouter);
 app.use(exportRouter);
+app.use(workflowsRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)

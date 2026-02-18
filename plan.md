@@ -1,14 +1,13 @@
-# Bugs / Fixes
+# Bugs
 
-## V3 Visual bugs (Main Page)
-
-# Features
-- Higher Quality Flux Klein (use different model)
-- Cancel generation
-- Cropping
-- Add math ops for pre/post generation tasks. Add 5 frames to Wan5b video length, and convert the Wan video length change to a task that can be triggered pre-gen. Convert the frame blending as a post gen task that can be triggered, and add it a task where progress is tracked. Use the current frame being blended to calculate the step completion percentage.
+# Future Features
+- Higher Quality Flux Klein (add a field to use 9b param model for generation)
+- Cancel generation (replace generation button)
+- Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)
+- Add math ops for pre/post generation tasks. Convert the Wan5b video length math calculation into a process. Add 5 frames to Wan5b video length, and then convert the video length in pre-gen.
+- Allow processes to report progress. For workflows, report this using workflow completion percentage; For frame blend, use the current frame being blended to calculate the completion percentage.
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
-- Wan22 video loop
+- Wan22 video loop (add workflow)
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
 - Add watch mode for config files (config.json, comfyui-workflows.json). If any of these files change, reload the config and workflows.
 - Auto download models from Hugging Face
