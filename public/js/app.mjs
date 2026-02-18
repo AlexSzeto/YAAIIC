@@ -29,6 +29,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
 import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
+import { HamburgerMenu } from './app-ui/HamburgerMenu.mjs';
 
 // =========================================================================
 // Styled Components
@@ -1224,6 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <${App} />
           </${ToastProvider}>
         </${Page}>
+        <${HamburgerMenu} />
       </${HoverPanelProvider}>
     `, root);
     console.log('App V3 mounted successfully');

@@ -24,6 +24,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
+import { HamburgerMenu } from './app-ui/HamburgerMenu.mjs';
 
 /**
  * Helper function to generate random seed
@@ -606,6 +607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <${InpaintApp} />
         </${ToastProvider}>
       </${Page}>
+      <${HamburgerMenu} />
     `, root);
     console.log('Inpaint App V3 mounted successfully');
     
