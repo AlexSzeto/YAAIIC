@@ -6,6 +6,7 @@ import { currentTheme } from '../custom-ui/theme.mjs';
 import { NavigatorControl as PaginationControls } from '../custom-ui/nav/navigator.mjs';
 import { usePagination } from '../custom-ui/nav/use-pagination.mjs';
 import { fetchJson, FetchError } from '../custom-ui/util.mjs';
+import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs';
 import { showDialog } from '../custom-ui/overlays/dialog.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
@@ -347,12 +348,13 @@ export function Gallery({
 
   // -- Effects --
 
-  // Load data when opened
+  // Load data when opened; stop audio and clear state when closed
   useEffect(() => {
     if (isOpen) {
       setSelectedItems([]);
       fetchGalleryData();
     } else {
+      globalAudioPlayer.stop();
       setSearchQuery('');
       setGalleryData([]);
     }

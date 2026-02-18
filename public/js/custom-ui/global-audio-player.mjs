@@ -19,6 +19,8 @@ class GlobalAudioPlayer {
       this.audioElement.addEventListener('play', () => this.notifyListeners());
       this.audioElement.addEventListener('pause', () => this.notifyListeners());
       this.audioElement.addEventListener('ended', () => this.notifyListeners());
+      // Notify when metadata (duration) becomes available so UI can update
+      this.audioElement.addEventListener('loadedmetadata', () => this.notifyListeners());
     }
   }
 

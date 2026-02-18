@@ -9,6 +9,5 @@ The global audio player should return a two way handle whenever a start play req
 Add a stop all audio function to the global audio player. For YAAIIG, ALL audio playback should be on a single channel, that is, any audio that is initiated should stop all previous audio playback. Create a dynamic `maxAudioChannels` setting in the global audio player that can be used to determine whether other audio needs to be terminated (if set to -1, there's no limit)
 
 ## Tasks
-[ ] Stop all preview audio when the gallery is closed
-[ ] Fix the AudioPlayer component showing the pause icon when the global audio is stopped (when switching between audio results)
-
+[x] Stop all preview audio when the gallery is closed
+[x] Fix the AudioPlayer component showing the pause icon when the global audio is stopped (when switching between audio results)
