@@ -1,4 +1,4 @@
-# Task Planning Rules of Thumb
+# Task Planning Rules
 
 A well-structured task file ensures that development goals are clear, measurable, and free of ambiguity. It serves as the primary contract between the user and the assistant, ensuring that implementation details align with the user's expectations.
 
@@ -7,7 +7,7 @@ A well-structured task file ensures that development goals are clear, measurable
 - **Tasks Checklist**: All tasks should be placed under the `## Tasks` section, with each task preceded by a checkbox (i.e. `[] Task description`). Each task should focus on a single goal or outcome, and if there are multiple goals, they should be broken into separate tasks.
 - **Implementation Details**: Any code snippets, class definitions, data formats, or other implementation details should be included in the `## Implementation Details` section of the task file. This section provides necessary context but should not dictate step-by-step instructions unless critical restrictions apply.
 
-# Implementation Rules of Thumb
+# Implementation Rules
 
 Consistency in implementation is key to maintainability. The codebase follows strict patterns for frontend component architecture, styling, and data management. Deviations should only occur with explicit user approval.
 

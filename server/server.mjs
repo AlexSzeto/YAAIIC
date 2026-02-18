@@ -103,7 +103,7 @@ app.get('/progress/:taskId', handleSSEConnection);
 // Serve images from storage folder
 app.use('/media', express.static(STORAGE_DIR));
 
-// GET endpoint for workflow list
+// GET /workflows – public list (non-hidden only, for the generator UI)
 app.get('/workflows', (req, res) => {
   try {
     const workflows = comfyuiWorkflows.workflows
@@ -116,6 +116,23 @@ app.get('/workflows', (req, res) => {
   } catch (error) {
     console.error('Error getting workflows:', error);
     res.status(500).json({ error: 'Failed to load workflows' });
+  }
+});
+
+// GET /api/workflows – full list (all workflows including hidden, for the editor UI)
+// Reads from disk each call so it always reflects the latest saved state.
+app.get('/api/workflows', (req, res) => {
+  try {
+    const data = loadWorkflows();
+    const summaries = data.workflows.map(({ name, hidden, options }) => ({
+      name,
+      hidden: !!hidden,
+      type: options?.type,
+    }));
+    res.json({ workflows: summaries });
+  } catch (error) {
+    console.error('Error listing all workflows:', error);
+    res.status(500).json({ error: 'Failed to list workflows' });
   }
 });
 

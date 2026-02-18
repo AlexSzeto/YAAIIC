@@ -95,6 +95,8 @@ const ICON_MAP = {
   'group': 'group',
   
   // Miscellaneous
+  'home': 'home',
+  'image': 'image',
   'plus': 'add',
   'minus': 'remove',
   'star': 'star',
@@ -132,7 +134,10 @@ const ICON_MAP = {
   'folder': 'folder',
   'redo': 'redo',
   'broken-arrow-up': 'arrow_warm_up',
- 
+  'up-arrow': 'arrow_upward',
+  'down-arrow': 'arrow_downward',
+  'upload': 'upload',
+
 };
 
 /**
@@ -200,8 +205,16 @@ export class Icon extends Component {
 
     if (iconSystem === 'material-symbols') {
       // Use Material Symbols
-      const materialName = ICON_MAP[name] || name;
-      
+      // Only render if the name is explicitly mapped; otherwise show an invisible
+      // placeholder of the correct dimensions to avoid rendering raw text.
+      const materialName = ICON_MAP[name];
+
+      if (!materialName) {
+        return html`<span
+          style=${{ display: 'inline-block', width: size, height: size, flexShrink: '0' }}
+        />`;
+      }
+
       // Build class list for Material Symbols
       const classes = ['material-symbols-outlined'];
       
