@@ -219,8 +219,41 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
 // ---------------------------------------------------------------------------
 
 /**
- * Entry point called by the Express route handler.
+ * Creates a generation task in the SSE manager and returns its `taskId`.
+ * Does **not** start processing — callers are responsible for invoking
+ * {@link processGenerationTask} (synchronously or in the background).
  *
+ * @param {Object} reqBody         - Request body from the client.
+ * @param {Object} workflowConfig  - The matched workflow object.
+ * @param {Object} [serverConfig]  - Server-wide configuration (reserved).
+ * @param {Object} [options]       - Additional options (reserved).
+ * @returns {{ taskId: string }}
+ */
+export function initializeGenerationTask(reqBody, workflowConfig, serverConfig, options) {
+  const { base: workflowBasePath } = workflowConfig;
+  const { workflow } = reqBody;
+
+  console.log('Using workflow:', workflowBasePath);
+
+  const taskId = generateTaskId();
+  taskTimers.set(taskId, Date.now());
+
+  createTask(taskId, {
+    workflow,
+    promptId: null,
+    requestData: { ...reqBody },
+    workflowConfig
+  });
+
+  console.log(`Created task ${taskId}`);
+
+  return { taskId };
+}
+
+/**
+ * @deprecated Use {@link initializeGenerationTask} + {@link processGenerationTask} instead.
+ *
+ * Entry point called by the Express route handler.
  * Creates a task, responds immediately with the `taskId`, and kicks off
  * {@link processGenerationTask} in the background.
  *
@@ -231,38 +264,16 @@ export async function modifyGenerationDataWithPrompt(promptData, generationData)
  * @param {Function} uploadFileToComfyUI - File-upload helper (injected).
  */
 export async function handleMediaGeneration(req, res, workflowConfig, serverConfig, uploadFileToComfyUI) {
-  const { base: workflowBasePath } = workflowConfig;
-  const { workflow } = req.body;
+  const { taskId } = initializeGenerationTask(req.body, workflowConfig, serverConfig);
 
-  console.log('Using workflow:', workflowBasePath);
-
-  // Generate unique task ID
-  const taskId = generateTaskId();
-
-  // Start timer for this task
-  taskTimers.set(taskId, Date.now());
-
-  // Create task entry
-  createTask(taskId, {
-    workflow,
-    promptId: null,
-    requestData: { ...req.body },
-    workflowConfig
-  });
-
-  console.log(`Created task ${taskId}`);
-
-  // Return taskId immediately
   res.json({
     success: true,
-    taskId: taskId,
+    taskId,
     message: 'Generation task created'
   });
 
-  // Process generation in background
   processGenerationTask(taskId, req.body, workflowConfig, serverConfig, false, uploadFileToComfyUI).catch(error => {
     console.error(`Error in background task ${taskId}:`, error);
-    emitTaskErrorByTaskId(taskId, 'Generation failed', error.message);
   });
 }
 
@@ -726,9 +737,12 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     taskTimers.delete(taskId);
     console.log(`Task ${taskId} completed successfully`);
 
+    return completionData;
+
   } catch (error) {
     console.error(`Error in task ${taskId}:`, error);
     taskTimers.delete(taskId);
     emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
+    throw error;
   }
 }
