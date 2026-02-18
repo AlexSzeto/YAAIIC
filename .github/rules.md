@@ -12,10 +12,15 @@ A well-structured task file ensures that development goals are clear, measurable
 Consistency in implementation is key to maintainability. The codebase follows strict patterns for frontend component architecture, styling, and data management. Deviations should only occur with explicit user approval.
 
 ## 1. Frontend Architecture
+- **File Naming Conventions**: All source files should be lowercase with dashes (e.g., `workflow-editor.mjs`, `node-input-selector.mjs`).
 - **Framework & Libraries**: Always use `preact` + `htm/preact` for dynamic components. React (via JSX) is not used.
+- **Theme Usage**: All pages must utilize the `Page` component and initiate theming via `currentTheme.subscribe` to ensure consistent theming across the app.
 - **Component Strategy**:
     - **Functional Components (Preferred)**: Use functional components with hooks (`useState`, `useEffect`, `useCallback`) for most UI elements. This aligns with modern Preact patterns seen in `App.mjs`.
     - **Class Components (Allowed)**: Use `Component` from `preact` for complex stateful logic or when lifecycle methods (`componentDidMount`, `componentWillUnmount`) offer cleaner abstraction than hooks (e.g., `ProgressBanner.mjs`).
+    - **Reusable Components First**: Always prioritize existing reusable components from `public/js/custom-ui/` before creating new ones. This includes basic layouts (`HorizontalLayout`, `VerticalLayout`) and standard UI elements. Only create new components when no suitable reusable alternative exists.
+    - **New Component Criteria**: When considering a new UI component, evaluate whether it would be reused elsewhere in this project or in similar projects. If yes, implement it as a reusable custom UI component in `public/js/custom-ui/`. If it's project-specific and unlikely to be reused, create it in `public/js/app-ui/` instead.
+    - **Custom UI Component Documentation**: Every new custom UI component added to `public/js/custom-ui/` must include usage examples in `public/js/custom-ui/test.html` to demonstrate its API and typical use cases.
 - **File Structure**:
     - **Reusable Components**: Place generic, reusable UI components in `public/js/custom-ui/` (e.g., `io/`, `layout/`, `msg/`).
     - **App-Specific Logic**: Place application-specific components and logic in `public/js/app-ui/`.
@@ -35,6 +40,7 @@ Consistency in implementation is key to maintainability. The codebase follows st
 
 ## 3. Styling & Theming
 - **Naming Conventions**:
+    - All source files should be lowercase with dashes (e.g., `workflow-editor.mjs`, `node-input-selector.mjs`).
     - Use PascalCase for styled components (e.g., `StyledButton`).
     - Always attach a readable class name for debugging: `StyledButton.className = 'styled-button';`.
 - **Theme Usage**:
