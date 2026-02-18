@@ -24,7 +24,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
-import { HamburgerMenu } from './app-ui/HamburgerMenu.mjs';
+import { HamburgerMenu } from './custom-ui/nav/HamburgerMenu.mjs';
 
 /**
  * Helper function to generate random seed
@@ -519,6 +519,10 @@ function InpaintApp() {
           >
             Home
           </${Button}>
+          <${HamburgerMenu}
+            items=${[{ label: 'Workflow Editor', href: '/workflow-editor.html', icon: 'cog' }]}
+            title="More pages"
+          />
         </${HorizontalLayout}>
       </${AppHeader}>
       
@@ -607,7 +611,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           <${InpaintApp} />
         </${ToastProvider}>
       </${Page}>
-      <${HamburgerMenu} />
     `, root);
     console.log('Inpaint App V3 mounted successfully');
     

@@ -29,7 +29,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
 import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
-import { HamburgerMenu } from './app-ui/HamburgerMenu.mjs';
+import { HamburgerMenu } from './custom-ui/nav/HamburgerMenu.mjs';
 
 // =========================================================================
 // Styled Components
@@ -1055,7 +1055,7 @@ function App() {
           >
             ${currentFolder.label}
           </${Button}>
-          <${Button} 
+          <${Button}
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
             variant="medium-icon-text"
@@ -1063,6 +1063,10 @@ function App() {
           >
             Gallery
           </${Button}>
+          <${HamburgerMenu}
+            items=${[{ label: 'Workflow Editor', href: '/workflow-editor.html', icon: 'cog' }]}
+            title="More pages"
+          />
         </${HorizontalLayout}>
       </${AppHeader}>
       
@@ -1225,7 +1229,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <${App} />
           </${ToastProvider}>
         </${Page}>
-        <${HamburgerMenu} />
       </${HoverPanelProvider}>
     `, root);
     console.log('App V3 mounted successfully');
