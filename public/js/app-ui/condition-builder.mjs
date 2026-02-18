@@ -1,5 +1,5 @@
 /**
- * ConditionBuilder.mjs – AND/OR condition group builder.
+ * condition-builder.mjs – AND/OR condition group builder.
  *
  * Renders an AND/OR toggle and a list of condition items. Each condition item
  * specifies a source (data / generationData), a field name, and an expected
@@ -15,6 +15,8 @@ import { useCallback } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Select } from '../custom-ui/io/select.mjs';
 
 // ============================================================================
 // Styled Components
@@ -43,45 +45,11 @@ ToggleLabel.className = 'condition-toggle-label';
 
 const ConditionRow = styled('div')`
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
   flex-wrap: wrap;
 `;
 ConditionRow.className = 'condition-row';
-
-const StyledSelect = styled('select')`
-  padding: 6px 8px;
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
-  border: ${props => `2px solid ${props.theme.colors.border.primary}`};
-  background-color: ${props => props.theme.colors.background.tertiary};
-  color: ${props => props.theme.colors.text.primary};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary.border};
-  }
-`;
-StyledSelect.className = 'condition-select';
-
-const StyledInput = styled('input')`
-  flex: 1;
-  min-width: 80px;
-  padding: 6px 8px;
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
-  border: ${props => `2px solid ${props.theme.colors.border.primary}`};
-  background-color: ${props => props.theme.colors.background.tertiary};
-  color: ${props => props.theme.colors.text.primary};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary.border};
-  }
-`;
-StyledInput.className = 'condition-input';
 
 // ============================================================================
 // Helpers
@@ -107,68 +75,51 @@ function valueToString(v) {
   return String(v);
 }
 
+const SOURCE_OPTIONS = [
+  { label: 'data', value: 'data' },
+  { label: 'generationData', value: 'generationData' },
+];
+
 // ============================================================================
 // ConditionItem
 // ============================================================================
 
-function ConditionItem({ condition, index, onChange, onDelete, theme }) {
+function ConditionItem({ condition, index, onChange, onDelete }) {
   const source    = condition.where ? Object.keys(condition.where)[0] : 'data';
   const fieldName = condition.where ? condition.where[source] : '';
   const rawValue  = condition.equals?.value;
 
   const updateCondition = useCallback((updates) => {
-    const newCond = { ...condition, ...updates };
-    onChange(index, newCond);
+    onChange(index, { ...condition, ...updates });
   }, [condition, index, onChange]);
-
-  const handleSourceChange = useCallback((e) => {
-    updateCondition({ where: { [e.target.value]: fieldName } });
-  }, [fieldName, updateCondition]);
-
-  const handleFieldChange = useCallback((e) => {
-    updateCondition({ where: { [source]: e.target.value } });
-  }, [source, updateCondition]);
-
-  const handleValueChange = useCallback((e) => {
-    updateCondition({ equals: { value: coerceValue(e.target.value) } });
-  }, [updateCondition]);
 
   return html`
     <${ConditionRow}>
-      <${StyledSelect}
-        theme=${theme}
+      <${Select}
+        options=${SOURCE_OPTIONS}
         value=${source}
-        onChange=${handleSourceChange}
-      >
-        <option value="data">data</option>
-        <option value="generationData">generationData</option>
-      </${StyledSelect}>
-
-      <${StyledInput}
-        theme=${theme}
+        onChange=${(e) => updateCondition({ where: { [e.target.value]: fieldName } })}
+      />
+      <${Input}
         placeholder="field name"
         value=${fieldName}
-        onInput=${handleFieldChange}
+        onInput=${(e) => updateCondition({ where: { [source]: e.target.value } })}
       />
-
-      <span style="color:${theme.colors.text.secondary};font-size:${theme.typography.fontSize.small}">
-        equals
-      </span>
-
-      <${StyledInput}
-        theme=${theme}
+      <span style="padding-bottom:10px;white-space:nowrap;font-size:0.85em;">equals</span>
+      <${Input}
         placeholder="value"
         value=${valueToString(rawValue)}
-        onInput=${handleValueChange}
+        onInput=${(e) => updateCondition({ equals: { value: coerceValue(e.target.value) } })}
       />
-
-      <${Button}
-        variant="small-icon"
-        icon="trash"
-        color="danger"
-        onClick=${() => onDelete(index)}
-        title="Remove condition"
-      />
+      <div style="padding-bottom:6px;">
+        <${Button}
+          variant="small-icon"
+          icon="trash"
+          color="danger"
+          onClick=${() => onDelete(index)}
+          title="Remove condition"
+        />
+      </div>
     </${ConditionRow}>
   `;
 }
@@ -217,8 +168,7 @@ export function ConditionBuilder({ value, onChange }) {
   }, [mode, conditions, emit]);
 
   const handleChange = useCallback((index, newCond) => {
-    const next = conditions.map((c, i) => i === index ? newCond : c);
-    emit(mode, next);
+    emit(mode, conditions.map((c, i) => i === index ? newCond : c));
   }, [mode, conditions, emit]);
 
   const handleDelete = useCallback((index) => {
@@ -232,6 +182,7 @@ export function ConditionBuilder({ value, onChange }) {
         <${Button}
           variant="small-text"
           color=${mode === 'and' ? 'primary' : 'secondary'}
+          disabled=${conditions.length === 0}
           onClick=${handleToggleMode}
           title="Toggle AND / OR"
         >
@@ -253,7 +204,6 @@ export function ConditionBuilder({ value, onChange }) {
           index=${i}
           onChange=${handleChange}
           onDelete=${handleDelete}
-          theme=${theme}
         />
       `)}
     </${Root}>

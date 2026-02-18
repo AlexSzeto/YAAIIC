@@ -27,8 +27,8 @@ const ICON_MAP = {
 
   // Navigation and controls
   'check': 'check',
-  'chevron-down': 'chevron_down',
-  'chevron-up': 'chevron_up',
+  'chevron-down': 'keyboard_arrow_down',
+  'chevron-up': 'keyboard_arrow_up',
   'menu': 'menu',
   
   // Actions

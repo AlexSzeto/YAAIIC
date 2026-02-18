@@ -1,5 +1,5 @@
 /**
- * WorkflowEditor.mjs – Main workflow editor component.
+ * workflow-editor.mjs – Main workflow editor component.
  *
  * Renders:
  *  - A workflow list/selection panel with upload capability
@@ -13,12 +13,15 @@ import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 import { useToast } from '../custom-ui/msg/toast.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
+import { Input } from '../custom-ui/io/input.mjs';
+import { Select } from '../custom-ui/io/select.mjs';
+import { Checkbox } from '../custom-ui/io/checkbox.mjs';
 import { Panel } from '../custom-ui/layout/panel.mjs';
 import { H1, H2, VerticalLayout, HorizontalLayout } from '../custom-ui/themed-base.mjs';
-import { DynamicList } from '../custom-ui/DynamicList.mjs';
-import { NodeInputSelector } from './NodeInputSelector.mjs';
-import { TaskForm, getTaskType } from './TaskForm.mjs';
-import { ConditionBuilder } from './ConditionBuilder.mjs';
+import { DynamicList } from '../custom-ui/dynamic-list.mjs';
+import { NodeInputSelector } from './node-input-selector.mjs';
+import { TaskForm, getTaskType } from './task-form.mjs';
+import { ConditionBuilder } from './condition-builder.mjs';
 
 // ============================================================================
 // Styled Components
@@ -33,82 +36,6 @@ const PageRoot = styled('div')`
   margin: 0 auto;
 `;
 PageRoot.className = 'workflow-editor-page';
-
-const SectionTitle = styled('h3')`
-  margin: 0 0 8px 0;
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.large};
-  font-weight: ${props => props.theme.typography.fontWeight.bold};
-  color: ${props => props.theme.colors.text.primary};
-`;
-SectionTitle.className = 'editor-section-title';
-
-const FieldLabel = styled('label')`
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.small};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  color: ${props => props.theme.colors.text.secondary};
-`;
-FieldLabel.className = 'editor-field-label';
-
-const FieldGroup = styled('div')`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: ${props => props.flex || '1'};
-  min-width: ${props => props.minWidth || '0'};
-`;
-FieldGroup.className = 'editor-field-group';
-
-const StyledInput = styled('input')`
-  padding: 8px 10px;
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
-  border: ${props => `2px solid ${props.theme.colors.border.primary}`};
-  background-color: ${props => props.theme.colors.background.tertiary};
-  color: ${props => props.theme.colors.text.primary};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  width: 100%;
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary.border};
-  }
-`;
-StyledInput.className = 'editor-styled-input';
-
-const StyledSelect = styled('select')`
-  padding: 8px 10px;
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
-  border: ${props => `2px solid ${props.theme.colors.border.primary}`};
-  background-color: ${props => props.theme.colors.background.tertiary};
-  color: ${props => props.theme.colors.text.primary};
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  width: 100%;
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary.border};
-  }
-`;
-StyledSelect.className = 'editor-styled-select';
-
-const CheckboxRow = styled('div')`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-CheckboxRow.className = 'editor-checkbox-row';
-
-const CheckboxLabel = styled('label')`
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  color: ${props => props.theme.colors.text.primary};
-  cursor: pointer;
-  user-select: none;
-`;
-CheckboxLabel.className = 'editor-checkbox-label';
 
 const FormRow = styled('div')`
   display: flex;
@@ -158,7 +85,7 @@ const WorkflowListItem = styled('div')`
   border-radius: ${props => props.theme.spacing.small.borderRadius};
   cursor: pointer;
   background-color: ${props => props.selected
-    ? props.theme.colors.primary.backgroundLight
+    ? props.theme.colors.primary.background
     : 'transparent'};
   border-left: ${props => props.selected
     ? `3px solid ${props.theme.colors.primary.background}`
@@ -167,7 +94,7 @@ const WorkflowListItem = styled('div')`
 
   &:hover {
     background-color: ${props => props.selected
-      ? props.theme.colors.primary.backgroundLight
+      ? props.theme.colors.primary.background
       : props.theme.colors.background.hover};
   }
 `;
@@ -176,7 +103,7 @@ WorkflowListItem.className = 'workflow-list-item';
 const WorkflowItemName = styled('span')`
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
-  color: ${props => props.theme.colors.text.primary};
+  color: ${props => props.selected ? props.theme.colors.primary.text : props.theme.colors.text.primary};
   flex: 1;
 `;
 WorkflowItemName.className = 'workflow-item-name';
@@ -235,76 +162,66 @@ function BasicInfoForm({ workflow, onChange, theme }) {
     onChange({ ...workflow, options: { ...opts, ...patch } });
   }, [workflow, opts, onChange]);
 
+  const typeOptions = [
+    { label: 'Image', value: 'image' },
+    { label: 'Video', value: 'video' },
+    { label: 'Audio', value: 'audio' },
+    { label: 'Inpaint', value: 'inpaint' },
+  ];
+
+  const orientationOptions = [
+    { label: 'Portrait', value: 'portrait' },
+    { label: 'Landscape', value: 'landscape' },
+    { label: 'Detect', value: 'detect' },
+  ];
+
   return html`
     <${VerticalLayout} gap="medium">
       <${FormRow} theme=${theme}>
-        <${FieldGroup} flex="2">
-          <${FieldLabel} theme=${theme}>Name</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${workflow.name || ''}
-            onInput=${(e) => onChange({ ...workflow, name: e.target.value })}
-            placeholder="Workflow display name"
-          />
-        </${FieldGroup}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Base file</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${workflow.base || ''}
-            onInput=${(e) => onChange({ ...workflow, base: e.target.value })}
-            placeholder="filename.json"
-            disabled
-          />
-        </${FieldGroup}>
+        <${Input}
+          label="Name"
+          fullWidth
+          value=${workflow.name || ''}
+          onInput=${(e) => onChange({ ...workflow, name: e.target.value })}
+          placeholder="Workflow display name"
+        />
+        <${Input}
+          label="Base file"
+          fullWidth
+          value=${workflow.base || ''}
+          onInput=${(e) => onChange({ ...workflow, base: e.target.value })}
+          placeholder="filename.json"
+          disabled
+        />
       </${FormRow}>
 
       <${FormRow} theme=${theme}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Type</${FieldLabel}>
-          <${StyledSelect}
-            theme=${theme}
-            value=${opts.type || 'image'}
-            onChange=${(e) => updateOpts({ type: e.target.value })}
-          >
-            <option value="image">Image</option>
-            <option value="video">Video</option>
-            <option value="audio">Audio</option>
-            <option value="inpaint">Inpaint</option>
-          </${StyledSelect}>
-        </${FieldGroup}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Orientation</${FieldLabel}>
-          <${StyledSelect}
-            theme=${theme}
-            value=${opts.orientation || 'portrait'}
-            onChange=${(e) => updateOpts({ orientation: e.target.value })}
-          >
-            <option value="portrait">Portrait</option>
-            <option value="landscape">Landscape</option>
-            <option value="detect">Detect</option>
-          </${StyledSelect}>
-        </${FieldGroup}>
-        <${FieldGroup} minWidth="60px">
-          <${FieldLabel} theme=${theme}>Input Images</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            type="number"
-            min="0"
-            value=${opts.inputImages ?? 0}
-            onInput=${(e) => updateOpts({ inputImages: parseInt(e.target.value, 10) || 0 })}
-          />
-        </${FieldGroup}>
-        <${FieldGroup} minWidth="60px">
-          <${FieldLabel} theme=${theme}>Input Audios</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            type="number"
-            min="0"
-            value=${opts.inputAudios ?? 0}
-            onInput=${(e) => updateOpts({ inputAudios: parseInt(e.target.value, 10) || 0 })}
-          />
-        </${FieldGroup}>
+        <${Select}
+          label="Type"
+          fullWidth
+          options=${typeOptions}
+          value=${opts.type || 'image'}
+          onChange=${(e) => updateOpts({ type: e.target.value })}
+        />
+        <${Select}
+          label="Orientation"
+          fullWidth
+          options=${orientationOptions}
+          value=${opts.orientation || 'portrait'}
+          onChange=${(e) => updateOpts({ orientation: e.target.value })}
+        />
+        <${Input}
+          label="Input Images"
+          type="number"
+          value=${opts.inputImages ?? 0}
+          onInput=${(e) => updateOpts({ inputImages: parseInt(e.target.value, 10) || 0 })}
+        />
+        <${Input}
+          label="Input Audios"
+          type="number"
+          value=${opts.inputAudios ?? 0}
+          onInput=${(e) => updateOpts({ inputAudios: parseInt(e.target.value, 10) || 0 })}
+        />
       </${FormRow}>
 
       <${FormRow} theme=${theme}>
@@ -314,15 +231,12 @@ function BasicInfoForm({ workflow, onChange, theme }) {
           ['optionalPrompt', 'Optional prompt'],
           ['nameRequired',   'Name required'],
         ].map(([key, label]) => html`
-          <${CheckboxRow} key=${key}>
-            <input
-              type="checkbox"
-              id=${'chk-' + key}
-              checked=${opts[key] || false}
-              onChange=${(e) => updateOpts({ [key]: e.target.checked })}
-            />
-            <${CheckboxLabel} theme=${theme} for=${'chk-' + key}>${label}</${CheckboxLabel}>
-          </${CheckboxRow}>
+          <${Checkbox}
+            key=${key}
+            label=${label}
+            checked=${opts[key] || false}
+            onChange=${(e) => updateOpts({ [key]: e.target.checked })}
+          />
         `)}
       </${FormRow}>
     </${VerticalLayout}>
@@ -330,70 +244,96 @@ function BasicInfoForm({ workflow, onChange, theme }) {
 }
 
 // ============================================================================
+// OptionItemForm (single select option: { label, value })
+// ============================================================================
+
+function OptionItemForm({ item, onChange }) {
+  return html`
+    <${HorizontalLayout} gap="small">
+      <${Input}
+        label="Label"
+        fullWidth
+        value=${item.label || ''}
+        onInput=${(e) => onChange({ ...item, label: e.target.value })}
+        placeholder="Display label"
+      />
+      <${Input}
+        label="Value"
+        fullWidth
+        value=${item.value || ''}
+        onInput=${(e) => onChange({ ...item, value: e.target.value })}
+        placeholder="Stored value"
+      />
+    </${HorizontalLayout}>
+  `;
+}
+
+// ============================================================================
 // ExtraInputForm (single item inside ExtraInputsList)
 // ============================================================================
 
-function ExtraInputForm({ item, onChange, theme }) {
+function ExtraInputForm({ item, onChange }) {
   const hasOptions = item.type === 'select';
+
+  const typeOptions = [
+    { label: 'Text', value: 'text' },
+    { label: 'Number', value: 'number' },
+    { label: 'Select', value: 'select' },
+    { label: 'Checkbox', value: 'checkbox' },
+    { label: 'Textarea', value: 'textarea' },
+  ];
 
   return html`
     <${VerticalLayout} gap="small">
-      <${FormRow} theme=${theme}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>ID</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${item.id || ''}
-            onInput=${(e) => onChange({ ...item, id: e.target.value })}
-            placeholder="snake_case_id"
-          />
-        </${FieldGroup}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Label</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${item.label || ''}
-            onInput=${(e) => onChange({ ...item, label: e.target.value })}
-            placeholder="Display label"
-          />
-        </${FieldGroup}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Type</${FieldLabel}>
-          <${StyledSelect}
-            theme=${theme}
-            value=${item.type || 'text'}
-            onChange=${(e) => onChange({ ...item, type: e.target.value })}
-          >
-            <option value="text">Text</option>
-            <option value="number">Number</option>
-            <option value="select">Select</option>
-            <option value="checkbox">Checkbox</option>
-            <option value="textarea">Textarea</option>
-          </${StyledSelect}>
-        </${FieldGroup}>
-      </${FormRow}>
-      <${FieldGroup}>
-        <${FieldLabel} theme=${theme}>Default value</${FieldLabel}>
-        <${StyledInput}
-          theme=${theme}
-          value=${item.default !== undefined ? String(item.default) : ''}
-          onInput=${(e) => onChange({ ...item, default: e.target.value })}
-          placeholder="Default"
+      <${HorizontalLayout} gap="small">
+        <${Input}
+          label="ID"
+          fullWidth
+          value=${item.id || ''}
+          onInput=${(e) => onChange({ ...item, id: e.target.value })}
+          placeholder="snake_case_id"
         />
-      </${FieldGroup}>
+        <${Input}
+          label="Label"
+          fullWidth
+          value=${item.label || ''}
+          onInput=${(e) => onChange({ ...item, label: e.target.value })}
+          placeholder="Display label"
+        />
+        <${Select}
+          label="Type"
+          fullWidth
+          options=${typeOptions}
+          value=${item.type || 'text'}
+          onChange=${(e) => onChange({ ...item, type: e.target.value, options: [] })}
+        />
+      </${HorizontalLayout}>
+      <${Input}
+        label="Default value"
+        fullWidth
+        value=${item.default !== undefined ? String(item.default) : ''}
+        onInput=${(e) => onChange({ ...item, default: e.target.value })}
+        placeholder="Default"
+      />
       ${hasOptions && html`
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>Options (comma-separated)</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${(item.options || []).join(', ')}
-            onInput=${(e) => onChange({
-              ...item,
-              options: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-            })}
-            placeholder="option1, option2, option3"
-          />
-        </${FieldGroup}>
+        <${DynamicList}
+          title="Options"
+          items=${item.options || []}
+          renderItem=${(opt, i) => html`
+            <${OptionItemForm}
+              item=${opt}
+              onChange=${(updated) => {
+                const next = [...(item.options || [])];
+                next[i] = updated;
+                onChange({ ...item, options: next });
+              }}
+            />
+          `}
+          getTitle=${(opt) => opt.label || opt.value || 'Option'}
+          createItem=${() => ({ label: '', value: '' })}
+          onChange=${(opts) => onChange({ ...item, options: opts })}
+          addLabel="Add Option"
+        />
       `}
     </${VerticalLayout}>
   `;
@@ -420,19 +360,17 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
 
   return html`
     <${VerticalLayout} gap="small">
-      <${FormRow} theme=${theme}>
-        <${FieldGroup}>
-          <${FieldLabel} theme=${theme}>From (data field)</${FieldLabel}>
-          <${StyledInput}
-            theme=${theme}
-            value=${item.from || ''}
-            onInput=${(e) => onChange({ ...item, from: e.target.value })}
-            placeholder="e.g. seed, prompt, saveImagePath"
-          />
-        </${FieldGroup}>
-      </${FormRow}>
-      <${FieldGroup}>
-        <${FieldLabel} theme=${theme}>To (node input path)</${FieldLabel}>
+      <${Input}
+        label="From (data field)"
+        fullWidth
+        value=${item.from || ''}
+        onInput=${(e) => onChange({ ...item, from: e.target.value })}
+        placeholder="e.g. seed, prompt, saveImagePath"
+      />
+      <div>
+        <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
+          To (node input path)
+        </div>
         ${workflowJson && Object.keys(workflowJson).length > 0
           ? html`
             <${NodeInputSelector}
@@ -447,8 +385,8 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
             `}
           `
           : html`
-            <${StyledInput}
-              theme=${theme}
+            <${Input}
+              fullWidth
               value=${toDisplay}
               onInput=${(e) => {
                 try {
@@ -461,14 +399,16 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
             />
           `
         }
-      </${FieldGroup}>
-      <${FieldGroup}>
-        <${FieldLabel} theme=${theme}>Condition (optional)</${FieldLabel}>
+      </div>
+      <div>
+        <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
+          Condition (optional)
+        </div>
         <${ConditionBuilder}
           value=${item.condition || null}
           onChange=${handleConditionChange}
         />
-      </${FieldGroup}>
+      </div>
     </${VerticalLayout}>
   `;
 }
@@ -691,7 +631,7 @@ export function WorkflowEditor() {
                     selected=${workflow?.name === wf.name}
                     onClick=${() => loadWorkflow(wf.name)}
                   >
-                    <${WorkflowItemName} theme=${theme}>${wf.name}</${WorkflowItemName}>
+                    <${WorkflowItemName} theme=${theme} selected=${workflow?.name === wf.name}>${wf.name}</${WorkflowItemName}>
                     ${wf.hidden && html`<${Badge} theme=${theme}>hidden</${Badge}>`}
                     <${Badge} theme=${theme}>${wf.type || 'image'}</${Badge}>
                   </${WorkflowListItem}>
@@ -712,132 +652,120 @@ export function WorkflowEditor() {
 
           <!-- Basic Info -->
           <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
-              <${SectionTitle} theme=${theme}>Basic Info</${SectionTitle}>
-              <${BasicInfoForm}
-                workflow=${workflow}
-                onChange=${setWorkflow}
-                theme=${theme}
-              />
-            </${VerticalLayout}>
+            <${BasicInfoForm}
+              workflow=${workflow}
+              onChange=${setWorkflow}
+              theme=${theme}
+            />
           </${Panel}>
 
           <!-- Extra Inputs -->
           <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
-              <${SectionTitle} theme=${theme}>Extra Inputs</${SectionTitle}>
-              <${DynamicList}
-                items=${workflow.options?.extraInputs || []}
-                renderItem=${(item, i) => html`
-                  <${ExtraInputForm}
-                    item=${item}
-                    index=${i}
-                    theme=${theme}
-                    onChange=${(updated) => {
-                      const next = [...(workflow.options?.extraInputs || [])];
-                      next[i] = updated;
-                      updateOptions({ extraInputs: next });
-                    }}
-                  />
-                `}
-                getTitle=${(item) => item.label || item.id || 'New input'}
-                createItem=${() => ({ id: '', type: 'text', label: '', default: '', options: [] })}
-                onChange=${(items) => updateOptions({ extraInputs: items })}
-                addLabel="Add Input"
-              />
-            </${VerticalLayout}>
-          </${Panel}>
-
-          <!-- Replace Mappings -->
-          <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
-              <${SectionTitle} theme=${theme}>Replace Mappings</${SectionTitle}>
-              <${DynamicList}
-                items=${workflow.replace || []}
-                renderItem=${(item, i) => html`
-                  <${ReplaceMappingForm}
-                    item=${item}
-                    index=${i}
-                    workflowJson=${workflowJson}
-                    theme=${theme}
-                    onChange=${(updated) => {
-                      const next = [...(workflow.replace || [])];
-                      next[i] = updated;
-                      updateWorkflow({ replace: next });
-                    }}
-                  />
-                `}
-                getTitle=${(item) => item.from
-                  ? `${item.from} → ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`
-                  : 'New mapping'}
-                createItem=${() => ({ from: '', to: [] })}
-                onChange=${(items) => updateWorkflow({ replace: items })}
-                addLabel="Add Mapping"
-              />
-            </${VerticalLayout}>
+            <${DynamicList}
+              title="Extra Inputs"
+              items=${workflow.options?.extraInputs || []}
+              renderItem=${(item, i) => html`
+                <${ExtraInputForm}
+                  item=${item}
+                  index=${i}
+                  onChange=${(updated) => {
+                    const next = [...(workflow.options?.extraInputs || [])];
+                    next[i] = updated;
+                    updateOptions({ extraInputs: next });
+                  }}
+                />
+              `}
+              getTitle=${(item) => item.label || item.id || 'New input'}
+              createItem=${() => ({ id: '', type: 'text', label: '', default: '', options: [] })}
+              onChange=${(items) => updateOptions({ extraInputs: items })}
+              addLabel="Add Input"
+            />
           </${Panel}>
 
           <!-- Pre-generation Tasks -->
           <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
-              <${SectionTitle} theme=${theme}>Pre-generation Tasks</${SectionTitle}>
-              <${DynamicList}
-                items=${workflow.preGenerationTasks || []}
-                renderItem=${(item, i) => html`
-                  <${TaskForm}
-                    task=${item}
-                    allowExecuteWorkflow=${false}
-                    onChange=${(updated) => {
-                      const next = [...(workflow.preGenerationTasks || [])];
-                      next[i] = updated;
-                      updateWorkflow({ preGenerationTasks: next });
-                    }}
-                  />
-                `}
-                getTitle=${(item) => {
-                  const t = getTaskType(item);
-                  if (t === 'template') return `Template → ${item.to || '?'}`;
-                  if (t === 'from')     return `Copy ${item.from || '?'} → ${item.to || '?'}`;
-                  if (t === 'model')    return `LLM → ${item.to || '?'}`;
-                  return 'Task';
-                }}
-                createItem=${() => ({ template: '', to: '' })}
-                onChange=${(items) => updateWorkflow({ preGenerationTasks: items })}
-                addLabel="Add Task"
-              />
-            </${VerticalLayout}>
+            <${DynamicList}
+              title="Pre-generation Tasks"
+              items=${workflow.preGenerationTasks || []}
+              renderItem=${(item, i) => html`
+                <${TaskForm}
+                  task=${item}
+                  allowExecuteWorkflow=${false}
+                  onChange=${(updated) => {
+                    const next = [...(workflow.preGenerationTasks || [])];
+                    next[i] = updated;
+                    updateWorkflow({ preGenerationTasks: next });
+                  }}
+                />
+              `}
+              getTitle=${(item) => {
+                const t = getTaskType(item);
+                if (t === 'template') return `Template → ${item.to || '?'}`;
+                if (t === 'from')     return `Copy ${item.from || '?'} → ${item.to || '?'}`;
+                if (t === 'model')    return `LLM → ${item.to || '?'}`;
+                return 'Task';
+              }}
+              createItem=${() => ({ template: '', to: '' })}
+              onChange=${(items) => updateWorkflow({ preGenerationTasks: items })}
+              addLabel="Add Task"
+            />
+          </${Panel}>
+
+          <!-- Replace Mappings -->
+          <${Panel} variant="outlined">
+            <${DynamicList}
+              title="Replace Mappings"
+              items=${workflow.replace || []}
+              renderItem=${(item, i) => html`
+                <${ReplaceMappingForm}
+                  item=${item}
+                  index=${i}
+                  workflowJson=${workflowJson}
+                  theme=${theme}
+                  onChange=${(updated) => {
+                    const next = [...(workflow.replace || [])];
+                    next[i] = updated;
+                    updateWorkflow({ replace: next });
+                  }}
+                />
+              `}
+              getTitle=${(item) => item.from
+                ? `${item.from} → ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`
+                : 'New mapping'}
+              createItem=${() => ({ from: '', to: [] })}
+              onChange=${(items) => updateWorkflow({ replace: items })}
+              addLabel="Add Mapping"
+            />
           </${Panel}>
 
           <!-- Post-generation Tasks -->
           <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
-              <${SectionTitle} theme=${theme}>Post-generation Tasks</${SectionTitle}>
-              <${DynamicList}
-                items=${workflow.postGenerationTasks || []}
-                renderItem=${(item, i) => html`
-                  <${TaskForm}
-                    task=${item}
-                    allowExecuteWorkflow=${true}
-                    onChange=${(updated) => {
-                      const next = [...(workflow.postGenerationTasks || [])];
-                      next[i] = updated;
-                      updateWorkflow({ postGenerationTasks: next });
-                    }}
-                  />
-                `}
-                getTitle=${(item) => {
-                  const t = getTaskType(item);
-                  if (t === 'template')        return `Template → ${item.to || '?'}`;
-                  if (t === 'from')             return `Copy ${item.from || '?'} → ${item.to || '?'}`;
-                  if (t === 'model')            return `LLM → ${item.to || '?'}`;
-                  if (t === 'executeWorkflow')  return `Execute: ${item.workflow || '?'}`;
-                  return 'Task';
-                }}
-                createItem=${() => ({ template: '', to: '' })}
-                onChange=${(items) => updateWorkflow({ postGenerationTasks: items })}
-                addLabel="Add Task"
-              />
-            </${VerticalLayout}>
+            <${DynamicList}
+              title="Post-generation Tasks"
+              items=${workflow.postGenerationTasks || []}
+              renderItem=${(item, i) => html`
+                <${TaskForm}
+                  task=${item}
+                  allowExecuteWorkflow=${true}
+                  onChange=${(updated) => {
+                    const next = [...(workflow.postGenerationTasks || [])];
+                    next[i] = updated;
+                    updateWorkflow({ postGenerationTasks: next });
+                  }}
+                />
+              `}
+              getTitle=${(item) => {
+                const t = getTaskType(item);
+                if (t === 'template')        return `Template → ${item.to || '?'}`;
+                if (t === 'from')             return `Copy ${item.from || '?'} → ${item.to || '?'}`;
+                if (t === 'model')            return `LLM → ${item.to || '?'}`;
+                if (t === 'executeWorkflow')  return `Execute: ${item.workflow || '?'}`;
+                return 'Task';
+              }}
+              createItem=${() => ({ template: '', to: '' })}
+              onChange=${(items) => updateWorkflow({ postGenerationTasks: items })}
+              addLabel="Add Task"
+            />
           </${Panel}>
 
           <!-- Save / Delete -->

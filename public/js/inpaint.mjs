@@ -9,7 +9,7 @@ import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
 
-import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
+import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint-canvas.mjs';
@@ -24,7 +24,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
-import { HamburgerMenu } from './custom-ui/nav/HamburgerMenu.mjs';
+import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 
 /**
  * Helper function to generate random seed
@@ -107,9 +107,6 @@ async function createOriginalImageCanvas(imageUrl) {
 function InpaintApp() {
   const toast = useToast();
   
-  // Theme state
-  const [themeName, setThemeName] = useState(currentTheme.value.name);
-  
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -130,20 +127,6 @@ function InpaintApp() {
     seedLocked: false
   });
 
-  // Theme toggle handler
-  const handleToggleTheme = () => {
-    toggleTheme();
-    setThemeName(currentTheme.value.name);
-  };
-
-  // Subscribe to theme changes
-  useEffect(() => {
-    const unsubscribe = currentTheme.subscribe((theme) => {
-      setThemeName(theme.name);
-    });
-    return unsubscribe;
-  }, []);
-  
   // Favicon spinning effect for active tasks
   useEffect(() => {
     if (!window.favloader) return;
@@ -453,12 +436,6 @@ function InpaintApp() {
     }, null, null, null, currentFolder.uid);
   };
 
-  // Handle done button
-  const handleDone = () => {
-    console.log('Navigating back to main page');
-    window.location.href = '/';
-  };
-
   // Handle carousel selection
   const handleCarouselSelect = (item) => {
     setMediaData(item);
@@ -499,12 +476,6 @@ function InpaintApp() {
         <${H1}>YAAIIG <small>Inpaint V3</small></${H1}>
         <${HorizontalLayout} gap="small">
           <${Button}
-            variant="large-icon"
-            icon=${themeName === 'dark' ? 'sun' : 'moon'}
-            onClick=${handleToggleTheme}
-            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
-          />
-          <${Button}
             variant="medium-icon-text"
             icon="folder"
             disabled=${true}
@@ -512,17 +483,7 @@ function InpaintApp() {
           >
             ${currentFolder.label}
           </${Button}>
-          <${Button}
-            icon="home"
-            onClick=${handleDone}
-            title="Return to main page"
-          >
-            Home
-          </${Button}>
-          <${HamburgerMenu}
-            items=${[{ label: 'Workflow Editor', href: '/workflow-editor.html', icon: 'cog' }]}
-            title="More pages"
-          />
+          <${HamburgerMenu} />
         </${HorizontalLayout}>
       </${AppHeader}>
       

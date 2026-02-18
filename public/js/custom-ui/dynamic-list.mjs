@@ -1,10 +1,12 @@
 /**
- * DynamicList.mjs – Reusable dynamic list with add/delete/reorder operations.
+ * dynamic-list.mjs – Reusable dynamic list with add/delete/reorder operations.
  *
  * Each item is rendered inside a collapsible panel with up/down/delete controls.
  * A caller-supplied render function generates the sub-form for each item.
+ * An optional `title` prop renders a section header row with the add button
+ * aligned to the right edge of that row.
  *
- * @module custom-ui/DynamicList
+ * @module custom-ui/dynamic-list
  */
 import { html } from 'htm/preact';
 import { useState, useCallback } from 'preact/hooks';
@@ -23,6 +25,21 @@ const ListRoot = styled('div')`
   gap: ${props => props.theme.spacing.small.gap};
 `;
 ListRoot.className = 'dynamic-list-root';
+
+const ListHeader = styled('div')`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+ListHeader.className = 'dynamic-list-header';
+
+const ListTitle = styled('span')`
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.large};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  color: ${props => props.theme.colors.text.primary};
+`;
+ListTitle.className = 'dynamic-list-title';
 
 const ItemShell = styled('div')`
   border: ${props => `${props.theme.border.width} ${props.theme.border.style} ${props.theme.colors.border.secondary}`};
@@ -64,12 +81,6 @@ const ItemBody = styled('div')`
   display: ${props => props.collapsed ? 'none' : 'block'};
 `;
 ItemBody.className = 'dynamic-list-item-body';
-
-const AddRow = styled('div')`
-  display: flex;
-  justify-content: flex-start;
-`;
-AddRow.className = 'dynamic-list-add-row';
 
 // ============================================================================
 // DynamicListItem Component
@@ -137,18 +148,24 @@ function DynamicListItem({
 /**
  * DynamicList – Generic ordered list with add / delete / reorder controls.
  *
+ * When `title` is provided, it renders a header row with the title on the left
+ * and the add button on the right (`small-icon-text`). Without a title, the
+ * add button renders inline above the items.
+ *
  * @param {Object}   props
- * @param {Array}    props.items           - Array of item data objects.
- * @param {Function} props.renderItem      - `(item, index) => VNode` sub-form renderer.
- * @param {Function} props.getTitle        - `(item, index) => string` item header label.
- * @param {Function} props.createItem      - `() => Object` factory for a blank new item.
- * @param {Function} props.onChange        - `(items) => void` called on every mutation.
- * @param {string}   [props.addLabel]      - Label for the add button (default "Add item").
+ * @param {string}   [props.title]          - Optional section title rendered in the header row.
+ * @param {Array}    props.items            - Array of item data objects.
+ * @param {Function} props.renderItem       - `(item, index) => VNode` sub-form renderer.
+ * @param {Function} props.getTitle         - `(item, index) => string` item header label.
+ * @param {Function} props.createItem       - `() => Object` factory for a blank new item.
+ * @param {Function} props.onChange         - `(items) => void` called on every mutation.
+ * @param {string}   [props.addLabel]       - Label for the add button (default "Add item").
  * @returns {preact.VNode}
  *
  * @example
  * html`
  *   <${DynamicList}
+ *     title="Extra Inputs"
  *     items=${extraInputs}
  *     renderItem=${(item, i) => html`<${ExtraInputForm} item=${item} index=${i} onChange=${handleChange} />`}
  *     getTitle=${(item) => item.label || 'Untitled'}
@@ -159,6 +176,7 @@ function DynamicListItem({
  * `
  */
 export function DynamicList({
+  title,
   items = [],
   renderItem,
   getTitle,
@@ -191,18 +209,28 @@ export function DynamicList({
     onChange(next);
   }, [items, onChange]);
 
+  const addButton = html`
+    <${Button}
+      variant="small-icon-text"
+      icon="plus"
+      color="primary"
+      onClick=${handleAdd}
+    >
+      ${addLabel}
+    </${Button}>
+  `;
+
   return html`
     <${ListRoot} theme=${theme}>
-      <${AddRow}>
-        <${Button}
-          variant="medium-icon-text"
-          icon="plus"
-          color="primary"
-          onClick=${handleAdd}
-        >
-          ${addLabel}
-        </${Button}>
-      </${AddRow}>
+      ${title
+        ? html`
+          <${ListHeader}>
+            <${ListTitle} theme=${theme}>${title}</${ListTitle}>
+            ${addButton}
+          </${ListHeader}>
+        `
+        : addButton
+      }
 
       ${items.map((item, index) => html`
         <${DynamicListItem}

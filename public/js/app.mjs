@@ -11,7 +11,7 @@ import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
-import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
+import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/generation-form.mjs';
@@ -29,7 +29,7 @@ import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
 import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
-import { HamburgerMenu } from './custom-ui/nav/HamburgerMenu.mjs';
+import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 
 // =========================================================================
 // Styled Components
@@ -68,8 +68,6 @@ function App() {
   const hoverPanel = useHoverPanel();
   
   // Theme state
-  const [themeName, setThemeName] = useState(currentTheme.value.name);
-  
   // State management
   const [workflow, setWorkflow] = useState(null);
   const [formState, setFormState] = useState({
@@ -106,20 +104,6 @@ function App() {
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
 
-  // Theme toggle handler
-  const handleToggleTheme = () => {
-    toggleTheme();
-    setThemeName(currentTheme.value.name);
-  };
-
-  // Subscribe to theme changes
-  useEffect(() => {
-    const unsubscribe = currentTheme.subscribe((theme) => {
-      setThemeName(theme.name);
-    });
-    return unsubscribe;
-  }, []);
-  
   // Favicon spinning effect for active tasks
   useEffect(() => {
     if (!window.favloader) return;
@@ -1040,14 +1024,7 @@ function App() {
       <${AppHeader}>
         <${H1}>YAAIIG <small>V3</small></${H1}>
         <${HorizontalLayout} gap="small">
-          <${Button} 
-            id="theme-toggle-btn"
-            onClick=${handleToggleTheme}
-            variant="large-icon"
-            icon=${themeName === 'dark' ? 'sun' : 'moon'}
-            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
-          />
-          <${Button} 
+          <${Button}
             id="folder-btn"
             onClick=${handleOpenFolderSelect}
             variant="medium-icon-text"
@@ -1063,10 +1040,7 @@ function App() {
           >
             Gallery
           </${Button}>
-          <${HamburgerMenu}
-            items=${[{ label: 'Workflow Editor', href: '/workflow-editor.html', icon: 'cog' }]}
-            title="More pages"
-          />
+          <${HamburgerMenu} />
         </${HorizontalLayout}>
       </${AppHeader}>
       

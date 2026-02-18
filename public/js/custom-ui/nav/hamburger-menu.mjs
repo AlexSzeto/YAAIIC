@@ -1,18 +1,19 @@
 /**
- * HamburgerMenu.mjs – Generic navigation hamburger menu.
+ * hamburger-menu.mjs – Generic navigation dropdown panel.
  *
- * An inline component (not fixed-position) that renders a `Button` trigger and
- * an animated dropdown of navigation links. Designed to be placed inside an
- * existing header layout, to the right of other action buttons.
+ * Provides a floating panel of navigation links that can be positioned relative
+ * to any trigger. Designed to be used by an app-specific wrapper that supplies
+ * the trigger button and the items list.
  *
- * @module custom-ui/nav/HamburgerMenu
+ * Can also be repurposed as a context menu by passing arbitrary onClick items
+ * instead of href items.
+ *
+ * @module custom-ui/nav/hamburger-menu
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
-import { Button } from '../io/button.mjs';
-import { Icon } from '../layout/icon.mjs';
 
 // ============================================================================
 // Styled Components
@@ -21,7 +22,7 @@ import { Icon } from '../layout/icon.mjs';
 const MenuRoot = styled('div')`
   position: relative;
 `;
-MenuRoot.className = 'hamburger-menu-root';
+MenuRoot.className = 'nav-panel-root';
 
 const Dropdown = styled('div')`
   position: absolute;
@@ -40,7 +41,7 @@ const Dropdown = styled('div')`
   transition: opacity ${props => props.theme.transitions.fast},
               transform ${props => props.theme.transitions.fast};
 `;
-Dropdown.className = 'hamburger-dropdown';
+Dropdown.className = 'nav-panel-dropdown';
 
 const NavItem = styled('a')`
   display: flex;
@@ -53,50 +54,49 @@ const NavItem = styled('a')`
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
   font-weight: ${props => props.active ? props.theme.typography.fontWeight.bold : props.theme.typography.fontWeight.normal};
+  cursor: pointer;
   transition: background-color ${props => props.theme.transitions.fast};
 
   &:hover {
+    text-decoration: none;
+    color: ${props => props.active ? props.theme.colors.primary.text : props.theme.colors.text.primary};
     background-color: ${props => props.active
       ? props.theme.colors.primary.background
       : props.theme.colors.background.hover};
   }
 `;
-NavItem.className = 'hamburger-nav-item';
+NavItem.className = 'nav-panel-item';
 
 // ============================================================================
-// HamburgerMenu Component
+// NavPanel Component
 // ============================================================================
 
 /**
- * HamburgerMenu – Inline navigation menu for use inside a page header.
+ * NavPanel – Generic floating dropdown panel of navigation / action items.
+ *
+ * Renders inline (position: relative on root) so it attaches to whatever
+ * element wraps it. The trigger button lives outside this component in the
+ * app-specific wrapper.
  *
  * @param {Object}   props
- * @param {Array}    props.items              - Navigation items: `[{ label, href, icon }]`
- * @param {string}   [props.title='Menu']     - Tooltip / aria-label for the trigger button
+ * @param {boolean}  props.open            - Whether the panel is visible.
+ * @param {Function} props.onClose         - Called when the user clicks outside.
+ * @param {Array}    props.items           - Navigation items:
+ *   `[{ label, href?, onClick?, icon?, active? }]`
+ *   - `href`    → rendered as `<a href>` navigation
+ *   - `onClick` → rendered as `<a>` with click handler (no href)
+ * @param {preact.ComponentChildren} [props.children] - Trigger element (button).
  * @returns {preact.VNode}
- *
- * @example
- * html`
- *   <${HamburgerMenu}
- *     items=${[{ label: 'Workflow Editor', href: '/workflow-editor.html', icon: 'cog' }]}
- *   />
- * `
  */
-export function HamburgerMenu({ items = [], title = 'Menu' }) {
-  const [theme, setTheme] = useState(currentTheme.value);
-  const [open,  setOpen]  = useState(false);
-  const rootRef           = useRef(null);
-
-  useEffect(() => {
-    const unsub = currentTheme.subscribe(setTheme);
-    return () => unsub();
-  }, []);
+export function NavPanel({ open, onClose, items = [], children }) {
+  const theme   = currentTheme.value;
+  const rootRef = useRef(null);
 
   const handleDocumentClick = useCallback((e) => {
     if (rootRef.current && !rootRef.current.contains(e.target)) {
-      setOpen(false);
+      onClose();
     }
-  }, []);
+  }, [onClose]);
 
   useEffect(() => {
     if (open) {
@@ -107,42 +107,33 @@ export function HamburgerMenu({ items = [], title = 'Menu' }) {
     return () => document.removeEventListener('mousedown', handleDocumentClick);
   }, [open, handleDocumentClick]);
 
-  const currentPath = window.location.pathname;
-
   return html`
     <${MenuRoot} ref=${rootRef}>
-      <${Button}
-        variant="large-icon"
-        icon=${open ? 'x' : 'menu'}
-        onClick=${() => setOpen(o => !o)}
-        title=${title}
-        aria-label=${title}
-        aria-expanded=${open}
-        aria-haspopup="true"
-      />
+      ${children}
 
       <${Dropdown} theme=${theme} open=${open}>
-        ${items.map(item => {
-          const active =
-            currentPath === item.href ||
-            (item.href === '/' && currentPath === '/index.html');
-          return html`
-            <${NavItem}
-              key=${item.href}
-              href=${item.href}
-              theme=${theme}
-              active=${active}
-              onClick=${() => setOpen(false)}
-            >
-              <${Icon}
-                name=${item.icon}
-                size="18px"
-                color=${active ? theme.colors.primary.text : theme.colors.text.secondary}
-              />
-              ${item.label}
-            </${NavItem}>
-          `;
-        })}
+        ${items.map(item => html`
+          <${NavItem}
+            key=${item.label}
+            href=${item.href}
+            theme=${theme}
+            active=${item.active || false}
+            onClick=${(e) => {
+              if (item.onClick) {
+                e.preventDefault();
+                item.onClick();
+              }
+              onClose();
+            }}
+          >
+            ${item.icon && html`
+              <span class="material-symbols-outlined" style="font-size:18px;color:${item.active ? theme.colors.primary.text : theme.colors.text.secondary}">
+                ${item.icon}
+              </span>
+            `}
+            ${item.label}
+          </${NavItem}>
+        `)}
       </${Dropdown}>
     </${MenuRoot}>
   `;
