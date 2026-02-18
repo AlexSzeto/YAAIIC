@@ -57,9 +57,15 @@ const GeneratedImage = styled('img')`
   max-height: 70vh;
   border-radius: 4px;
   display: block;
-  cursor: pointer;
 `;
 GeneratedImage.className = 'generated-image';
+
+const ViewButtonOverlay = styled('div')`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+`;
+ViewButtonOverlay.className = 'view-button-overlay';
 
 const RightColumn = styled('div')`
   flex: 1;
@@ -273,10 +279,19 @@ export function GeneratedResult({
           <${LeftColumn}>
             <${MediaContainer}>
               <${GeneratedImage}
-                src=${image.imageUrl} 
-                alt=${image.name || 'Generated Image'} 
-                onClick=${() => createImageModal(image.imageUrl, true)}
+                src=${image.imageUrl}
+                alt=${image.name || 'Generated Image'}
               />
+              ${image.type !== 'audio' ? html`
+                <${ViewButtonOverlay}>
+                  <${Button}
+                    variant="small-icon"
+                    icon="open_in_new"
+                    onClick=${() => createImageModal(image.imageUrl, false)}
+                    title="View image"
+                  />
+                </${ViewButtonOverlay}>
+              ` : null}
               ${image.timeTaken !== undefined && image.timeTaken !== null ? html`
                 <${TimeOverlay}>
                   <${Panel} variant="glass" padding="small">

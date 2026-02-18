@@ -10,7 +10,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { upload } from '../upload/router.mjs';
-import { handleMediaGeneration } from './orchestrator.mjs';
+import { initializeGenerationTask, processGenerationTask } from './orchestrator.mjs';
 import { validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
@@ -154,10 +154,77 @@ router.post('/generate', upload.any(), async (req, res) => {
     }
 
     console.log('Starting media generation with request data: ', req.body);
-    handleMediaGeneration(req, res, workflowData, config, uploadFileToComfyUI);
+
+    const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+
+    // Respond immediately so the client can subscribe to SSE progress events
+    res.json({ success: true, taskId, message: 'Generation task created' });
+
+    // Run the pipeline in the background; SSE notifies on completion/error
+    processGenerationTask(taskId, req.body, workflowData, config, false, uploadFileToComfyUI).catch(error => {
+      console.error(`Error in background task ${taskId}:`, error);
+    });
   } catch (error) {
     console.error('Error in generate endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /generate/sync – synchronous generation (blocks until complete)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /generate/sync
+ *
+ * Like `POST /generate` but blocks until generation finishes and returns the
+ * full result as JSON.  The result is NOT logged to `media-data.json` (silent
+ * mode), but the output file persists in storage.
+ *
+ * Intended for programmatic / headless clients that need a single round-trip.
+ */
+router.post('/generate/sync', async (req, res) => {
+  try {
+    const { workflow } = req.body;
+
+    if (!workflow) {
+      return res.status(400).json({ error: 'Workflow parameter is required' });
+    }
+
+    const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+    }
+
+    if (!req.body.seed) {
+      req.body.seed = Math.floor(Math.random() * 4294967295);
+    }
+
+    const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+    requiredImageDataFields.forEach(field => {
+      if (req.body[field] === undefined || req.body[field] === null) {
+        req.body[field] = '';
+      }
+    });
+
+    const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+    if (!validation.valid) {
+      return res.status(400).json({ error: 'Workflow validation failed', details: validation.error });
+    }
+
+    const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+
+    // Block until generation completes; silent=true skips media-data.json entry
+    const result = await processGenerationTask(taskId, req.body, workflowData, config, true, uploadFileToComfyUI);
+    return res.json(result);
+
+  } catch (error) {
+    console.error('Error in generate/sync endpoint:', error);
+    res.status(500).json({ error: 'Generation failed', details: error.message });
   }
 });
 
@@ -408,7 +475,6 @@ router.post('/generate/inpaint', upload.fields([
         req.body.inpaintArea = parsedInpaintArea;
       }
       
-      // Remove uploads data from request body before calling handleMediaGeneration
       delete req.body.uploads;
       
       // Validate that workflow doesn't contain nested executeWorkflow processes
@@ -418,8 +484,13 @@ router.post('/generate/inpaint', upload.fields([
         return res.status(500).json({ error: 'Workflow validation failed', details: validation.error });
       }
       
-      // Call handleMediaGeneration with workflow data and modifications
-      handleMediaGeneration(req, res, workflowData, config, uploadFileToComfyUI);
+      const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+
+      res.json({ success: true, taskId, message: 'Generation task created' });
+
+      processGenerationTask(taskId, req.body, workflowData, config, false, uploadFileToComfyUI).catch(error => {
+        console.error(`Error in background inpaint task ${taskId}:`, error);
+      });
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);

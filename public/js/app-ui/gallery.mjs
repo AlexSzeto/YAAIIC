@@ -6,8 +6,8 @@ import { currentTheme } from '../custom-ui/theme.mjs';
 import { NavigatorControl as PaginationControls } from '../custom-ui/nav/navigator.mjs';
 import { usePagination } from '../custom-ui/nav/use-pagination.mjs';
 import { fetchJson, FetchError } from '../custom-ui/util.mjs';
+import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs';
 import { showDialog } from '../custom-ui/overlays/dialog.mjs';
-import { createImageModal } from '../custom-ui/overlays/modal.mjs';
 import { showFolderSelect } from './folder-select.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
 import { Input } from '../custom-ui/io/input.mjs';
@@ -348,12 +348,13 @@ export function Gallery({
 
   // -- Effects --
 
-  // Load data when opened
+  // Load data when opened; stop audio and clear state when closed
   useEffect(() => {
     if (isOpen) {
       setSelectedItems([]);
       fetchGalleryData();
     } else {
+      globalAudioPlayer.stop();
       setSearchQuery('');
       setGalleryData([]);
     }
@@ -416,24 +417,12 @@ export function Gallery({
     return !typesArray.includes(mediaType);
   };
 
-  const handleItemClick = (item) => {
-    if (!item || !item.imageUrl) return;
-
-    // Create modal with select button - text changes based on mode
-    const buttonText = selectionMode ? 'Select' : 'View';
-    createImageModal(item.imageUrl, true, item.name || null, () => {
-      if (selectionMode && onSelect) {
-        onSelect(item);
-        onClose();
-      } else {
-        // Normal mode: "loading" single item
-        if (onLoad) {
-          onLoad([item]);
-          console.log('Loading single-item gallery:', item.name);
-        }
-        onClose();
-      }
-    }, buttonText);
+  // Selection mode: clicking a card directly selects the item and closes the gallery
+  const handleSelectionClick = (item) => {
+    if (onSelect) {
+      onSelect(item);
+      onClose();
+    }
   };
 
   const handleItemSelect = (data, isSelected) => {
@@ -581,11 +570,12 @@ export function Gallery({
 
       const isSelected = selectedItems.includes(item.uid);
       const onSelectCallback = selectionMode ? null : handleItemSelect;
+      const onImageClickCallback = selectionMode ? handleSelectionClick : null;
       const disableCheckbox = selectionMode;
       const shouldDisable = selectionMode && shouldDisableMediaForSelection(item, fileTypeFilter);
 
       // previewFactory returns a DOM node
-      const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, handleItemClick, shouldDisable, onSelectAsInput);
+      const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, onImageClickCallback, shouldDisable, onSelectAsInput);
       
       if (preview) {
         items.push(html`

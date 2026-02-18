@@ -1,9 +1,10 @@
 import { html } from 'htm/preact';
-import { Component, createRef } from 'preact';
-import { styled, css } from '../goober-setup.mjs';
+import { Component } from 'preact';
+import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
+import { globalAudioPlayer } from '../global-audio-player.mjs';
 
 // =========================================================================
 // Styled Components
@@ -215,88 +216,80 @@ export class AudioPlayer extends Component {
     this.state = {
       theme: currentTheme.value,
       isPlaying: false,
-      duration: 0,
-      isLoading: true
+      duration: 0
     };
-    this.audioRef = createRef();
   }
 
   componentDidMount() {
     this.unsubscribeTheme = currentTheme.subscribe((theme) => {
       this.setState({ theme });
     });
-
-    const audio = this.audioRef.current;
-    if (audio) {
-      audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
-      audio.addEventListener('ended', this.handleEnded);
-      audio.addEventListener('error', this.handleError);
-    }
+    // Sync play/pause and duration with the global audio player
+    this.unsubscribeAudio = globalAudioPlayer.subscribe(this.handleAudioStateChange);
   }
 
   componentWillUnmount() {
-    if (this.unsubscribeTheme) {
-      this.unsubscribeTheme();
-    }
+    if (this.unsubscribeTheme) this.unsubscribeTheme();
+    if (this.unsubscribeAudio) this.unsubscribeAudio();
 
-    const audio = this.audioRef.current;
-    if (audio) {
-      audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
-      audio.removeEventListener('ended', this.handleEnded);
-      audio.removeEventListener('error', this.handleError);
-      
-      // Pause and cleanup audio element
-      audio.pause();
-      audio.src = '';
+    // Stop audio if this component's URL is currently playing
+    const { audioUrl } = this.props;
+    if (audioUrl && globalAudioPlayer.isPlaying(audioUrl)) {
+      globalAudioPlayer.stop();
     }
   }
 
-  handleLoadedMetadata = () => {
-    const audio = this.audioRef.current;
-    if (audio) {
-      this.setState({
-        duration: audio.duration,
-        isLoading: false
-      });
+  componentDidUpdate(prevProps) {
+    // When the audio source changes, stop the previous audio and reset state
+    if (prevProps.audioUrl !== this.props.audioUrl) {
+      if (prevProps.audioUrl && globalAudioPlayer.isPlaying(prevProps.audioUrl)) {
+        globalAudioPlayer.stop();
+      }
+      this.setState({ isPlaying: false, duration: 0 });
     }
-  };
+  }
 
-  handleEnded = () => {
-    this.setState({ isPlaying: false });
-  };
+  handleAudioStateChange = () => {
+    const { audioUrl } = this.props;
+    const isPlaying = globalAudioPlayer.isPlaying(audioUrl);
+    const updates = { isPlaying };
 
-  handleError = (e) => {
-    console.error('Audio error:', e);
-    this.setState({ isLoading: false });
+    // Update duration when our audio's metadata is available
+    if (
+      globalAudioPlayer.currentAudioUrl === audioUrl &&
+      globalAudioPlayer.audioElement
+    ) {
+      const d = globalAudioPlayer.audioElement.duration;
+      if (isFinite(d)) {
+        updates.duration = d;
+      }
+    }
+
+    this.setState(updates);
   };
 
   togglePlayPause = () => {
-    const audio = this.audioRef.current;
-    if (!audio) return;
-
-    if (this.state.isPlaying) {
-      audio.pause();
-      this.setState({ isPlaying: false });
-    } else {
-      audio.play();
-      this.setState({ isPlaying: true });
-    }
+    const { audioUrl } = this.props;
+    if (!audioUrl) return;
+    globalAudioPlayer.toggle(audioUrl);
   };
 
   render() {
     const { audioUrl } = this.props;
-    const { theme, isPlaying, duration, isLoading } = this.state;
+    const { theme, isPlaying, duration } = this.state;
 
     if (!audioUrl) return null;
 
+    // Only pass the shared audio element when it is loaded with our URL,
+    // so AudioTimeline tracks the correct position and seeking works.
+    const audioElement =
+      globalAudioPlayer.audioElement &&
+      globalAudioPlayer.currentAudioUrl === audioUrl
+        ? globalAudioPlayer.audioElement
+        : null;
+
     return html`
       <${Wrapper} padding=${theme.spacing.small.padding}>
-        <audio 
-          ref=${this.audioRef}
-          src=${audioUrl}
-          preload="metadata"
-        />
-        
         <${Panel} variant="glass" padding="small">
           <${Controls} gap=${theme.spacing.medium.gap}>
             <${Button}
@@ -304,12 +297,11 @@ export class AudioPlayer extends Component {
               color="secondary"
               icon=${isPlaying ? 'pause' : 'play'}
               onClick=${this.togglePlayPause}
-              disabled=${isLoading}
               title=${isPlaying ? 'Pause' : 'Play'}
             />
-            
+
             <${AudioTimeline}
-              audioElement=${this.audioRef.current}
+              audioElement=${audioElement}
               duration=${duration}
             />
           </${Controls}>

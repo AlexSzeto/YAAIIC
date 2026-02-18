@@ -39,17 +39,7 @@ const GalleryItemImage = styled('img')`
   object-fit: cover;
   background-color: ${() => currentTheme.value.colors.border.primary};
 
-  ${props => props.imageError ? `
-    background-color: ${() => currentTheme.value.colors.background.card};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: ${() => currentTheme.value.colors.text.muted};
-    font-size: 10px;
-    cursor: default;
-  ` : props.disabled ? `
-    cursor: default;
-  ` : props.hasAudio ? `
+  ${props => (props.imageError || props.disabled) ? `
     cursor: default;
   ` : `
     cursor: pointer;
@@ -73,9 +63,10 @@ const GalleryItemInfoContent = styled('div')`
   font-size: 12px;
   color: ${() => currentTheme.value.colors.text.primary};
 
-  ${props => props.hasAudio ? `
+  ${props => (props.hasAudio || props.hasViewButton) ? `
     flex-direction: row;
     gap: 8px;
+    align-items: center;
   ` : ''}
 `;
 GalleryItemInfoContent.className = 'gallery-item-info-content';
@@ -85,6 +76,12 @@ const GalleryAudioButton = styled('div')`
   flex-shrink: 0;
 `;
 GalleryAudioButton.className = 'gallery-audio-button';
+
+const GalleryViewButton = styled('div')`
+  pointer-events: auto;
+  flex-shrink: 0;
+`;
+GalleryViewButton.className = 'gallery-view-button';
 
 const GalleryItemTextContent = styled('div')`
   display: flex;
@@ -228,43 +225,19 @@ export class GalleryPreview extends Component {
     }
   }
 
-  handleImageClick = (e) => {
-    // Don't open modal if disabled
-    if (this.props.disabled) {
-      return;
-    }
-    
-    // Don't open modal if clicking on checkbox or checkbox container
-    if (e.target.type === 'checkbox') {
-      return;
-    }
-    
-    // Don't open modal if clicking on audio button - check for button element or parent
+  handleCardClick = (e) => {
+    if (this.props.disabled) return;
+
+    // Buttons and checkboxes handle their own clicks via stopPropagation; guard defensively
     const target = e.target;
-    if (target.tagName === 'BUTTON' || target.closest('button')) {
-      return;
-    }
-    
-    const { item, onSelectAsInput } = this.props;
-    
-    // Don't open modal for audio items in gallery mode
-    if (item && item.audioUrl && !this.props.onImageClick && !onSelectAsInput) {
-      return;
-    }
-    
-    // If a custom image click handler is provided, delegate to it
-    if (this.props.onImageClick) {
-      this.props.onImageClick(item);
-      return;
-    }
-    if (item.imageUrl && !this.state.imageError) {
-      // Pass item.name as title to modal, and onSelectAsInput as the select callback
-      createImageModal(
-        item.imageUrl, 
-        !!onSelectAsInput, // allowSelect only if we have a handler
-        item.name || null,
-        onSelectAsInput ? () => onSelectAsInput(item) : null
-      );
+    if (target.type === 'checkbox' || target.tagName === 'BUTTON' || target.closest('button')) return;
+
+    const { item, onSelect, isSelected, onImageClick } = this.props;
+
+    if (onSelect) {
+      onSelect(item, !isSelected);
+    } else if (onImageClick) {
+      onImageClick(item);
     }
   }
 
@@ -288,10 +261,20 @@ export class GalleryPreview extends Component {
     return 'No date';
   }
 
+  handleViewClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const { item } = this.props;
+    if (item && item.imageUrl && !this.state.imageError) {
+      createImageModal(item.imageUrl, false);
+    }
+  }
+
   render() {
     const { item, onSelect, isSelected, disableCheckbox = false, disabled = false } = this.props;
     const { imageError, isAudioPlaying } = this.state;
     const hasAudio = item && item.audioUrl;
+    const hasViewButton = item && item.type !== 'audio';
 
     return html`
       <${GalleryItemContainer}
@@ -314,15 +297,14 @@ export class GalleryPreview extends Component {
           alt=${item.name || 'Generated image'}
           imageError=${imageError}
           disabled=${disabled}
-          hasAudio=${hasAudio}
           onError=${this.handleImageError}
-          onClick=${this.handleImageClick}
+          onClick=${this.handleCardClick}
         >
           ${imageError && 'No image'}
         </${GalleryItemImage}>
         <${GalleryItemInfo}>
           <${Panel} variant="glass" style=${{ padding: '8px 8px' }}>
-            <${GalleryItemInfoContent} hasAudio=${hasAudio}>
+            <${GalleryItemInfoContent} hasAudio=${hasAudio} hasViewButton=${hasViewButton}>
               ${hasAudio && html`
                 <${GalleryAudioButton} onClick=${this.handleAudioToggle}>
                   <${Button}
@@ -331,6 +313,15 @@ export class GalleryPreview extends Component {
                     title=${isAudioPlaying ? 'Stop' : 'Play'}
                   />
                 </${GalleryAudioButton}>
+              `}
+              ${hasViewButton && html`
+                <${GalleryViewButton} onClick=${this.handleViewClick}>
+                  <${Button}
+                    variant="small-icon"
+                    icon="open_in_new"
+                    title="View image"
+                  />
+                </${GalleryViewButton}>
               `}
               <${GalleryItemTextContent}>
                 <${GalleryItemName}>
