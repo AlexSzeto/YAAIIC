@@ -523,11 +523,6 @@
         }
       ],
       "base": "illustrious-image-style.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -1074,14 +1069,6 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "mask"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -1126,14 +1113,6 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "mask"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -1274,11 +1253,6 @@
         }
       ],
       "base": "qwen-image-to-image.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
@@ -1415,11 +1389,6 @@
         }
       ],
       "base": "flux-klein-image-edit.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
@@ -1556,14 +1525,6 @@
         }
       ],
       "base": "flux-klein-image-edit-multisource.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "image_1"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
@@ -1659,14 +1620,6 @@
         }
       ],
       "base": "wan-image-to-video.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "image_1"
-        }
-      ],
       "replace": [
         {
           "condition": {
@@ -1798,11 +1751,6 @@
         }
       ],
       "base": "wan5b-image-to-video-loop.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "condition": {
@@ -1944,14 +1892,6 @@
         }
       ],
       "base": "wan5b-image-to-video.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "image_1"
-        }
-      ],
       "replace": [
         {
           "condition": {
@@ -2433,11 +2373,6 @@
         }        
       ],
       "base": "chatterbox-text-to-speech.json",
-      "upload": [
-        {
-          "from": "audio_0"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
@@ -2560,11 +2495,6 @@
         ]
       },
       "base": "qwen3tts-text-to-audio.json",
-      "upload": [
-        {
-          "from": "audio_0"
-        }
-      ],
       "preGenerationTasks": [
         {
           "template": "jpg",
@@ -2641,11 +2571,6 @@
           "from": "image_0_description",
           "to": "description"
          }
-      ],
-      "upload": [
-        {
-          "from": "image_0"
-        }
       ],
       "base": "rmbg-remove-background.json",
       "replace": [

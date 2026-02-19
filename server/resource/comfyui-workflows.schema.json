@@ -95,6 +95,11 @@
           "type": "string",
           "description": "The unique display name of the workflow"
         },
+        "hidden": {
+          "type": "boolean",
+          "description": "Whether to hide this workflow from client workflow lists",
+          "default": false
+        },
         "options": {
           "$ref": "#/definitions/workflowOptions",
           "description": "UI behavior and validation configuration"
@@ -102,13 +107,6 @@
         "base": {
           "type": "string",
           "description": "The filename of the underlying ComfyUI workflow JSON file in server/resource/"
-        },
-        "upload": {
-          "type": "array",
-          "description": "Defines how to handle uploaded files and map them to internal variables",
-          "items": {
-            "$ref": "#/definitions/uploadMapping"
-          }
         },
         "replace": {
           "type": "array",
@@ -194,11 +192,6 @@
           "description": "Output orientation handling",
           "enum": ["portrait", "landscape", "detect"]
         },
-        "hidden": {
-          "type": "boolean",
-          "description": "Whether to hide this workflow from client workflow lists",
-          "default": false
-        },
         "extraInputs": {
           "type": "array",
           "description": "Additional input fields to render in the UI for this workflow",
@@ -252,25 +245,13 @@
       "required": ["id", "type", "label"],
       "additionalProperties": false
     },
-    "uploadMapping": {
-      "type": "object",
-      "description": "Maps uploaded file to internal variable",
-      "properties": {
-        "from": {
-          "type": "string",
-          "description": "Field name in the upload (e.g., 'image_0', 'image_1', 'mask', 'audio_0'). Uploaded files are automatically available as {from}_filename variables for use in replace mappings."
-        }
-      },
-      "required": ["from"],
-      "additionalProperties": false
-    },
     "directReplacement": {
       "type": "object",
       "description": "Direct mapping replacement that maps request data or internal variables to workflow nodes",
       "properties": {
         "from": {
           "type": "string",
-          "description": "Source variable name (e.g., 'prompt', 'seed', 'saveImagePath', 'imagePath', 'firstFramePath', 'ollamaAPIPath', 'saveAudioPath')"
+          "description": "Source variable name (e.g., 'prompt', 'seed', 'saveImagePath', 'imagePath', 'firstFramePath', 'ollamaAPIPath', 'saveAudioPath'). For uploaded files, use 'image_N_filename' (where N = 0 to inputImages-1), 'audio_N_filename' (where N = 0 to inputAudios-1), or 'mask_filename' (for inpaint workflows) — these are auto-derived by the router from options.inputImages, options.inputAudios, and options.type."
         },
         "to": {
           "type": "array",

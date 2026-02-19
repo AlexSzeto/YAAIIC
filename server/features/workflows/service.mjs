@@ -10,7 +10,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { WORKFLOWS_PATH, RESOURCE_DIR } from '../../core/paths.mjs';
+import { WORKFLOWS_PATH, WORKFLOWS_DIR } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
 // Helpers: file I/O for comfyui-workflows.json
@@ -92,7 +92,6 @@ export function parseWorkflowName(filename) {
  */
 export function autoDetectWorkflow(workflowJson, suggestedName) {
   const replace = [];
-  const upload  = [];
   const extraInputs = [];
   const detectedNodes = {
     images: [],
@@ -136,15 +135,17 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     const ct = node.class_type;
 
     if (ct === 'LoadImage') {
+      const i = imageCount;
       imageCount++;
-      upload.push({ from: `image_${imageCount}`, to: [nodeId, 'inputs', 'image'] });
+      replace.push({ from: `image_${i}_filename`, to: [nodeId, 'inputs', 'image'] });
       detectedNodes.images.push({ nodeId, classType: ct });
       mappedNodeIds.add(nodeId);
     }
 
     if (ct === 'LoadAudio') {
+      const i = audioCount;
       audioCount++;
-      upload.push({ from: `audio_${audioCount}`, to: [nodeId, 'inputs', 'audio'] });
+      replace.push({ from: `audio_${i}_filename`, to: [nodeId, 'inputs', 'audio'] });
       detectedNodes.audios.push({ nodeId, classType: ct });
       workflowType = 'audio';
       mappedNodeIds.add(nodeId);
@@ -263,7 +264,6 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     preGenerationTasks: [],
     postGenerationTasks: [],
     replace,
-    upload,
   };
 
   return { workflow, detectedNodes };
@@ -348,7 +348,7 @@ export function deleteWorkflow(name, deleteBaseFile = false) {
   const [removed] = data.workflows.splice(index, 1);
 
   if (deleteBaseFile && removed.base) {
-    const basePath = path.join(RESOURCE_DIR, removed.base);
+    const basePath = path.join(WORKFLOWS_DIR, removed.base);
     if (fs.existsSync(basePath)) {
       fs.unlinkSync(basePath);
     }
@@ -383,9 +383,9 @@ export function validateWorkflow(workflowData) {
   if (!workflowData.base) {
     errors.push('Base workflow file is required');
   } else {
-    const basePath = path.join(RESOURCE_DIR, workflowData.base);
+    const basePath = path.join(WORKFLOWS_DIR, workflowData.base);
     if (!fs.existsSync(basePath)) {
-      errors.push(`Base workflow file "${workflowData.base}" not found in server/resource/`);
+      errors.push(`Base workflow file "${workflowData.base}" not found in server/resource/workflows/`);
     }
   }
 
