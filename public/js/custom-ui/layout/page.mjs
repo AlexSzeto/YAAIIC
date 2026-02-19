@@ -111,22 +111,6 @@ function applyGlobalStyles(theme) {
     .icon-spin {
       animation: icon-spin 1s linear infinite;
     }
-
-    /* Custom select picker positioning */
-    select {
-      /* For progressive enhancement in supporting browsers */
-      @supports (appearance: base-select) {
-        appearance: base-select;
-      }
-    }    
-    select::picker-icon {
-      content: '╲╱';
-      font-size: 0.5em;
-      // font-weight: bold;
-      position: relative;
-      top: 1em;
-      color: ${theme.colors.text.primary};
-    }
   `;
 }
 

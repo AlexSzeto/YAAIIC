@@ -30,6 +30,7 @@ const ListHeader = styled('div')`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin: 8px 0;
 `;
 ListHeader.className = 'dynamic-list-header';
 
@@ -53,7 +54,7 @@ const ItemHeader = styled('div')`
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: ${props => props.theme.spacing.small.padding};
   background-color: ${props => props.theme.colors.background.secondary};
   cursor: pointer;
   user-select: none;

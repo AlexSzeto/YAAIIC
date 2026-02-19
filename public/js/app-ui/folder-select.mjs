@@ -148,66 +148,72 @@ export function showFolderSelect(onSelectFolder, onRenameFolder, onDeleteFolder,
       items,
       itemIcon: 'folder',
       actionLabel: 'New Folder',
-      showActions: true,
       showActionButton: true,
       selectedId: currentFolder,
       emptyMessage: items.length === 0 ? 'Loading...' : 'No folders available',
-      
+
       onSelectItem: async (item) => {
         if (onSelectFolder) {
           await onSelectFolder(item.id);
         }
       },
-      
-      onEdit: async (item) => {
-        // Prevent editing Unsorted folder
-        if (item.isUnsorted) {
-          await showDialog('The Unsorted folder cannot be renamed.', 'Cannot Rename');
-          return;
-        }
-        const newLabel = await showTextPrompt('Rename Folder', item.label, 'Folder name');
-        if (newLabel && newLabel.trim() && newLabel !== item.label) {
-          const success = await renameFolder(item.id, newLabel);
-          if (success) {
-            if (onRenameFolder) {
-              onRenameFolder(item.id, newLabel.trim());
+
+      itemActions: [
+        {
+          icon: 'edit',
+          title: 'Rename',
+          onClick: async (item) => {
+            // Prevent editing Unsorted folder
+            if (item.isUnsorted) {
+              await showDialog('The Unsorted folder cannot be renamed.', 'Cannot Rename');
+              return;
             }
-            // Re-show modal with updated items
-            if (cleanupRef) {
-              cleanupRef();
+            const newLabel = await showTextPrompt('Rename Folder', item.label, 'Folder name');
+            if (newLabel && newLabel.trim() && newLabel !== item.label) {
+              const success = await renameFolder(item.id, newLabel);
+              if (success) {
+                if (onRenameFolder) {
+                  onRenameFolder(item.id, newLabel.trim());
+                }
+                // Re-show modal with updated items
+                if (cleanupRef) cleanupRef();
+                showModal();
+              }
             }
-            showModal();
-          }
-        }
-      },
-      
-      onDelete: async (item) => {
-        // Prevent deleting Unsorted folder
-        if (item.isUnsorted) {
-          await showDialog('The Unsorted folder cannot be deleted.', 'Cannot Delete');
-          return;
-        }
-        const result = await showDialog(
-          `Delete folder "${item.label}"? All images in this folder will be moved to Unsorted.`,
-          'Confirm Delete',
-          ['Delete', 'Cancel']
-        );
-        
-        if (result === 'Delete') {
-          const success = await deleteFolder(item.id);
-          if (success) {
-            if (onDeleteFolder) {
-              onDeleteFolder(item.id);
+          },
+          closeAfter: false,
+        },
+        {
+          icon: 'trash',
+          color: 'danger',
+          title: 'Delete',
+          onClick: async (item) => {
+            // Prevent deleting Unsorted folder
+            if (item.isUnsorted) {
+              await showDialog('The Unsorted folder cannot be deleted.', 'Cannot Delete');
+              return;
             }
-            // Re-show modal with updated items
-            if (cleanupRef) {
-              cleanupRef();
+            const result = await showDialog(
+              `Delete folder "${item.label}"? All images in this folder will be moved to Unsorted.`,
+              'Confirm Delete',
+              ['Delete', 'Cancel']
+            );
+            if (result === 'Delete') {
+              const success = await deleteFolder(item.id);
+              if (success) {
+                if (onDeleteFolder) {
+                  onDeleteFolder(item.id);
+                }
+                // Re-show modal with updated items
+                if (cleanupRef) cleanupRef();
+                showModal();
+              }
             }
-            showModal();
-          }
-        }
-      },
-      
+          },
+          closeAfter: false,
+        },
+      ],
+
       onAction: async () => {
         const folderName = await showTextPrompt('New Folder', '', 'Folder name');
         if (folderName && folderName.trim()) {

@@ -2,7 +2,7 @@
  * workflow-editor.mjs – Main workflow editor component.
  *
  * Renders:
- *  - A workflow list/selection panel with upload capability
+ *  - A header with an "Open" button that launches a ListSelectModal for workflow selection
  *  - A vertical form with all workflow configuration sections
  *  - Save / delete controls with validation
  *  - Toast notifications on save/error
@@ -17,13 +17,15 @@ import { Input } from '../custom-ui/io/input.mjs';
 import { Select } from '../custom-ui/io/select.mjs';
 import { Checkbox } from '../custom-ui/io/checkbox.mjs';
 import { Panel } from '../custom-ui/layout/panel.mjs';
-import { H1, H2, VerticalLayout, HorizontalLayout } from '../custom-ui/themed-base.mjs';
+import { H1, VerticalLayout, HorizontalLayout, H3 } from '../custom-ui/themed-base.mjs';
 import { DynamicList } from '../custom-ui/dynamic-list.mjs';
 import { NodeInputSelector } from './node-input-selector.mjs';
 import { TaskForm, getTaskType } from './task-form.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
 import { HamburgerMenu } from './hamburger-menu.mjs';
 import { Icon } from '../custom-ui/layout/icon.mjs';
+import ListSelectModal from '../custom-ui/overlays/list-select.mjs';
+import { AppHeader } from './themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -34,7 +36,7 @@ const PageRoot = styled('div')`
   flex-direction: column;
   gap: ${props => props.theme.spacing.large.gap};
   padding: ${props => props.theme.spacing.large.padding};
-  max-width: 900px;
+  /* max-width: 900px; */
   margin: 0 auto;
 `;
 PageRoot.className = 'workflow-editor-page';
@@ -72,58 +74,6 @@ const SaveTooltip = styled('div')`
 `;
 SaveTooltip.className = 'editor-save-tooltip';
 
-const WorkflowListPanel = styled('div')`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.small.gap};
-`;
-WorkflowListPanel.className = 'workflow-list-panel';
-
-const WorkflowListItem = styled('div')`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
-  cursor: pointer;
-  background-color: ${props => props.selected
-    ? props.theme.colors.primary.background
-    : 'transparent'};
-  border-left: ${props => props.selected
-    ? `3px solid ${props.theme.colors.primary.background}`
-    : '3px solid transparent'};
-  transition: background-color ${props => props.theme.transitions.fast};
-
-  &:hover {
-    background-color: ${props => props.selected
-      ? props.theme.colors.primary.background
-      : props.theme.colors.background.hover};
-  }
-`;
-WorkflowListItem.className = 'workflow-list-item';
-
-const WorkflowItemName = styled('span')`
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  color: ${props => props.selected ? props.theme.colors.primary.text : props.theme.colors.text.primary};
-  flex: 1;
-`;
-WorkflowItemName.className = 'workflow-item-name';
-
-const Badge = styled('span')`
-  font-size: ${props => props.theme.typography.fontSize.small};
-  padding: 2px 6px;
-  border-radius: 10px;
-  background-color: ${props => props.theme.colors.background.secondary};
-  color: ${props => props.theme.colors.text.secondary};
-`;
-Badge.className = 'workflow-badge';
-
-const HiddenInput = styled('input')`
-  display: none;
-`;
-HiddenInput.className = 'hidden-file-input';
-
 const EmptyState = styled('div')`
   padding: 20px;
   text-align: center;
@@ -132,6 +82,22 @@ const EmptyState = styled('div')`
   color: ${props => props.theme.colors.text.muted};
 `;
 EmptyState.className = 'workflow-empty-state';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Returns the icon name for a workflow summary based on its properties.
+ * @param {{ hidden?: boolean, type?: string }} wf
+ * @returns {string}
+ */
+function getWorkflowIcon(wf) {
+  if (wf.hidden) return 'eye-slash';
+  if (wf.type === 'video') return 'video';
+  if (wf.type === 'audio') return 'music';
+  return 'image';
+}
 
 // ============================================================================
 // Validation helpers (mirrors server-side logic)
@@ -158,7 +124,7 @@ function validateWorkflowFrontend(workflow) {
 // BasicInfoForm
 // ============================================================================
 
-function BasicInfoForm({ workflow, onChange, theme }) {
+function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
   const opts = workflow.options || {};
 
   const updateOpts = useCallback((patch) => {
@@ -178,6 +144,8 @@ function BasicInfoForm({ workflow, onChange, theme }) {
     { label: 'Detect', value: 'detect' },
   ];
 
+  const baseFileOptions = (baseFiles || []).map(f => ({ label: f, value: f }));
+
   return html`
     <${VerticalLayout} gap="medium">
       <${FormRow} theme=${theme}>
@@ -188,14 +156,19 @@ function BasicInfoForm({ workflow, onChange, theme }) {
           onInput=${(e) => onChange({ ...workflow, name: e.target.value })}
           placeholder="Workflow display name"
         />
-        <${Input}
+      </${FormRow}>
+      <${FormRow} theme=${theme}>
+        <${Select}
           label="Base file"
-          fullWidth
+          fullWidth="true"
+          options=${baseFileOptions}
           value=${workflow.base || ''}
-          onInput=${(e) => onChange({ ...workflow, base: e.target.value })}
-          placeholder="filename.json"
-          disabled
+          onChange=${(e) => {
+            onChange({ ...workflow, base: e.target.value });
+            if (onBaseChange) onBaseChange(e.target.value);
+          }}
         />
+
       </${FormRow}>
 
       <${FormRow} theme=${theme}>
@@ -373,7 +346,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
   }, [item, onChange]);
 
   return html`
-    <${VerticalLayout} gap="small">
+    <${VerticalLayout} gap="medium">
       <${Input}
         label="From (data field)"
         value=${item.from || ''}
@@ -409,15 +382,13 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
           `
         }
       </div>
-      <div>
-        <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
-          Condition (optional)
-        </div>
+      <${VerticalLayout} gap="small">
+        <${H3}>Condition (optional)</${H3}>
         <${ConditionBuilder}
           value=${item.condition || null}
           onChange=${handleConditionChange}
         />
-      </div>
+      </${VerticalLayout}>
     </${VerticalLayout}>
   `;
 }
@@ -444,19 +415,25 @@ export function WorkflowEditor() {
   const [workflowList,    setWorkflowList]    = useState([]);
   const [listLoading,     setListLoading]     = useState(false);
 
+  // Modal open state
+  const [isModalOpen,     setIsModalOpen]     = useState(false);
+
+  // Available base files from disk
+  const [baseFiles,       setBaseFiles]       = useState([]);
+
   // Currently loaded full workflow object
   const [workflow,        setWorkflow]        = useState(null);
   const [workflowJson,    setWorkflowJson]    = useState({}); // raw ComfyUI JSON
   const [isSaving,        setIsSaving]        = useState(false);
   const [isDeleting,      setIsDeleting]      = useState(false);
   const [showTooltip,     setShowTooltip]     = useState(false);
-  const [uploading,       setUploading]       = useState(false);
 
   const fileInputRef = useRef(null);
 
-  // Load workflow list on mount
+  // Load workflow list and base files on mount
   useEffect(() => {
     loadWorkflowList();
+    loadBaseFiles();
   }, []);
 
   async function loadWorkflowList() {
@@ -470,6 +447,17 @@ export function WorkflowEditor() {
       toast.error(`Failed to load workflows: ${e.message}`);
     } finally {
       setListLoading(false);
+    }
+  }
+
+  async function loadBaseFiles() {
+    try {
+      const res = await fetch('/api/workflows/base-files');
+      if (!res.ok) return;
+      const data = await res.json();
+      setBaseFiles(data.files || []);
+    } catch {
+      // non-critical; silently ignore
     }
   }
 
@@ -498,8 +486,38 @@ export function WorkflowEditor() {
     }
   }
 
+  async function handleDuplicate(name) {
+    try {
+      const res = await fetch(`/api/workflows/${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const fetchedWorkflow = data.workflow;
+
+      // Strip trailing " (copy)" or " (copy N)" suffix, then append " (copy)"
+      const baseName = fetchedWorkflow.name.replace(/ \(copy(?: \d+)?\)$/, '');
+      const copyName = `${baseName} (copy)`;
+
+      setWorkflow({ ...fetchedWorkflow, name: copyName });
+
+      // Load raw ComfyUI JSON for the copied workflow's base file
+      if (fetchedWorkflow.base) {
+        try {
+          const jsonRes = await fetch(`/api/workflows/base-files/${encodeURIComponent(fetchedWorkflow.base)}`);
+          if (jsonRes.ok) {
+            setWorkflowJson(await jsonRes.json());
+          } else {
+            setWorkflowJson({});
+          }
+        } catch {
+          setWorkflowJson({});
+        }
+      }
+    } catch (e) {
+      toast.error(`Failed to duplicate workflow: ${e.message}`);
+    }
+  }
+
   async function handleUpload(file) {
-    setUploading(true);
     try {
       const formData = new FormData();
       formData.append('workflow', file);
@@ -515,11 +533,10 @@ export function WorkflowEditor() {
       setWorkflowJson(data.workflowJson || {});
 
       await loadWorkflowList();
+      await loadBaseFiles();
       toast.success(`Uploaded "${data.workflow.name}"`);
     } catch (e) {
       toast.error(`Upload failed: ${e.message}`);
-    } finally {
-      setUploading(false);
     }
   }
 
@@ -572,6 +589,19 @@ export function WorkflowEditor() {
     }
   }
 
+  async function handleBaseChange(filename) {
+    try {
+      const res = await fetch(`/api/workflows/base-files/${encodeURIComponent(filename)}`);
+      if (res.ok) {
+        setWorkflowJson(await res.json());
+      } else {
+        setWorkflowJson({});
+      }
+    } catch {
+      setWorkflowJson({});
+    }
+  }
+
   const validationErrors = validateWorkflowFrontend(workflow);
   const canSave = validationErrors.length === 0;
 
@@ -598,68 +628,20 @@ export function WorkflowEditor() {
     <${PageRoot} theme=${theme}>
 
       <!-- Page header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;">
+      <${AppHeader}>
         <${H1}>Workflow Editor</${H1}>
-        <${HamburgerMenu} />
-      </div>
-
-      <!-- Workflow list + upload -->
-      <${Panel} variant="outlined">
-        <${VerticalLayout} gap="small">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <${H2}>Workflows</${H2}>
-            <${HorizontalLayout} gap="small">
-              <${Button}
-                variant="medium-icon-text"
-                icon="upload"
-                color="secondary"
-                loading=${uploading}
-                onClick=${() => fileInputRef.current?.click()}
-              >
-                Upload JSON
-              </${Button}>
-              <input
-                ref=${fileInputRef}
-                type="file"
-                accept=".json,application/json"
-                style="display:none"
-                onChange=${(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUpload(f);
-                  e.target.value = '';
-                }}
-              />
-            </${HorizontalLayout}>
-          </div>
-
-          <${WorkflowListPanel} theme=${theme}>
-            ${listLoading
-              ? html`<${EmptyState} theme=${theme}>Loading…</${EmptyState}>`
-              : workflowList.length === 0
-                ? html`<${EmptyState} theme=${theme}>No workflows yet. Upload a ComfyUI JSON to get started.</${EmptyState}>`
-                : workflowList.map(wf => html`
-                  <${WorkflowListItem}
-                    key=${wf.name}
-                    theme=${theme}
-                    selected=${workflow?.name === wf.name}
-                    onClick=${() => loadWorkflow(wf.name)}
-                  >
-                    <${WorkflowItemName} theme=${theme} selected=${workflow?.name === wf.name}>${wf.name}</${WorkflowItemName}>
-                    ${wf.hidden && html`<${Badge} theme=${theme}>hidden</${Badge}>`}
-                    <${Badge} theme=${theme}>${wf.type || 'image'}</${Badge}>
-                    <${Button}
-                      variant="small-icon"
-                      color="danger"
-                      icon="trash"
-                      disabled=${isDeleting}
-                      onClick=${(e) => { e.stopPropagation(); handleDelete(wf.name); }}
-                    />
-                  </${WorkflowListItem}>
-                `)
-            }
-          </${WorkflowListPanel}>
-        </${VerticalLayout}>
-      </${Panel}>
+        <${HorizontalLayout} gap="small">
+          <${Button}
+            variant="medium-icon-text"
+            icon="folder"
+            color="secondary"
+            onClick=${() => setIsModalOpen(true)}
+          >
+            Open
+          </${Button}>
+          <${HamburgerMenu} />
+        </${HorizontalLayout}>
+      </${AppHeader}>
 
       <!-- Editor form (only shown when a workflow is loaded) -->
       ${!workflow
@@ -675,6 +657,8 @@ export function WorkflowEditor() {
             <${BasicInfoForm}
               workflow=${workflow}
               onChange=${setWorkflow}
+              baseFiles=${baseFiles}
+              onBaseChange=${handleBaseChange}
               theme=${theme}
             />
           </${Panel}>
@@ -687,7 +671,6 @@ export function WorkflowEditor() {
               renderItem=${(item, i) => html`
                 <${ExtraInputForm}
                   item=${item}
-                  index=${i}
                   onChange=${(updated) => {
                     const next = [...(workflow.options?.extraInputs || [])];
                     next[i] = updated;
@@ -828,6 +811,49 @@ export function WorkflowEditor() {
           </${HorizontalLayout}>
         `
       }
+
+      <!-- Hidden file input for upload -->
+      <input
+        ref=${fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style="display:none"
+        onChange=${(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleUpload(f);
+          e.target.value = '';
+        }}
+      />
+
+      <!-- Workflow selection modal -->
+      <${ListSelectModal}
+        isOpen=${isModalOpen}
+        onClose=${() => setIsModalOpen(false)}
+        title="Workflows"
+        variant="wide"
+        items=${workflowList.map(wf => ({ id: wf.name, label: wf.name, icon: getWorkflowIcon(wf) }))}
+        selectedId=${workflow?.name}
+        onSelectItem=${(item) => { loadWorkflow(item.id); setIsModalOpen(false); }}
+        itemActions=${[
+          {
+            icon: 'copy',
+            title: 'Duplicate',
+            onClick: (item) => handleDuplicate(item.id),
+            closeAfter: true,
+          },
+          {
+            icon: 'trash',
+            color: 'danger',
+            title: 'Delete',
+            onClick: (item) => handleDelete(item.id),
+            closeAfter: false,
+          },
+        ]}
+        actionLabel="Upload"
+        onAction=${() => fileInputRef.current?.click()}
+        emptyMessage=${listLoading ? 'Loading…' : 'No workflows yet. Click Upload to get started.'}
+      />
+
     </${PageRoot}>
   `;
 }

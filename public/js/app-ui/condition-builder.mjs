@@ -36,17 +36,10 @@ const ToggleRow = styled('div')`
 `;
 ToggleRow.className = 'condition-builder-toggle-row';
 
-const ToggleLabel = styled('span')`
-  font-family: ${props => props.theme.typography.fontFamily};
-  font-size: ${props => props.theme.typography.fontSize.small};
-  color: ${props => props.theme.colors.text.secondary};
-`;
-ToggleLabel.className = 'condition-toggle-label';
-
 const ConditionRow = styled('div')`
   display: flex;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 `;
 ConditionRow.className = 'condition-row';
@@ -78,6 +71,11 @@ function valueToString(v) {
 // ============================================================================
 // ConditionItem
 // ============================================================================
+
+const MODE_OPTIONS = [
+  { label: 'All of', value: 'and' },
+  { label: 'One of', value: 'or' },
+];
 
 const CHECK_TYPE_OPTIONS = [
   { label: 'equals', value: 'equals' },
@@ -121,15 +119,13 @@ function ConditionItem({ condition, index, onChange, onDelete }) {
         value=${valueToString(rawValue)}
         onInput=${(e) => updateCondition({ [checkType]: { value: coerceValue(e.target.value) } })}
       />
-      <div style="padding-bottom:6px;">
-        <${Button}
-          variant="small-icon"
-          icon="trash"
-          color="danger"
-          onClick=${() => onDelete(index)}
-          title="Remove condition"
-        />
-      </div>
+      <${Button}
+        variant="medium-icon"
+        icon="trash"
+        color="danger"
+        onClick=${() => onDelete(index)}
+        title="Remove condition"
+      />
     </${ConditionRow}>
   `;
 }
@@ -174,9 +170,9 @@ export function ConditionBuilder({ value, onChange }) {
     }
   }, [onChange]);
 
-  const handleToggleMode = useCallback(() => {
-    emit(mode === 'and' ? 'or' : 'and', conditions);
-  }, [mode, conditions, emit]);
+  const handleModeChange = useCallback((e) => {
+    emit(e.target.value, conditions);
+  }, [conditions, emit]);
 
   const handleAdd = useCallback(() => {
     emit(mode, [...conditions, { where: { data: '' }, equals: { value: '' } }]);
@@ -193,16 +189,11 @@ export function ConditionBuilder({ value, onChange }) {
   return html`
     <${Root} theme=${theme}>
       <${ToggleRow}>
-        <${ToggleLabel} theme=${theme}>Condition logic:</${ToggleLabel}>
-        <${Button}
-          variant="small-text"
-          color=${mode === 'and' ? 'primary' : 'secondary'}
-          disabled=${conditions.length === 0}
-          onClick=${handleToggleMode}
-          title="Toggle AND / OR"
-        >
-          ${mode.toUpperCase()}
-        </${Button}>
+        <${Select}
+          options=${MODE_OPTIONS}
+          value=${mode}
+          onChange=${handleModeChange}
+        />
         <${Button}
           variant="small-icon"
           icon="plus"

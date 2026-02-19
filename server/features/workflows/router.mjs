@@ -18,6 +18,7 @@ import { COMFYUI_WORKFLOWS_DIR, WORKFLOWS_PATH } from '../../core/paths.mjs';
 import {
   getWorkflowByName,
   listWorkflowSummaries,
+  listBaseFiles,
   saveWorkflow,
   deleteWorkflow,
   autoDetectWorkflow,
@@ -109,6 +110,48 @@ router.post('/api/workflows/upload', upload.single('workflow'), (req, res) => {
   } catch (error) {
     console.error('Error uploading workflow:', error);
     res.status(500).json({ error: 'Failed to upload workflow', details: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/workflows/base-files – list all .json files in COMFYUI_WORKFLOWS_DIR
+// ---------------------------------------------------------------------------
+// NOTE: must come BEFORE /:name to avoid route shadowing
+
+router.get('/api/workflows/base-files', (req, res) => {
+  try {
+    const files = listBaseFiles();
+    res.json({ files });
+  } catch (error) {
+    console.error('Error listing base files:', error);
+    res.status(500).json({ error: 'Failed to list base files' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/workflows/base-files/:filename – serve a raw ComfyUI JSON by filename
+// ---------------------------------------------------------------------------
+// NOTE: must come BEFORE /:name to avoid route shadowing
+
+router.get('/api/workflows/base-files/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+
+    // Reject path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const filePath = path.join(COMFYUI_WORKFLOWS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: `File "${filename}" not found` });
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error serving base file:', error);
+    res.status(500).json({ error: 'Failed to load base file' });
   }
 });
 

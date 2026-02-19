@@ -378,6 +378,26 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
 }
 
 // ---------------------------------------------------------------------------
+// Base File Listing
+// ---------------------------------------------------------------------------
+
+/**
+ * List all .json filenames available in COMFYUI_WORKFLOWS_DIR, sorted alphabetically.
+ *
+ * @returns {string[]} Sorted array of filenames (e.g. ["flux-image-to-video.json"])
+ */
+export function listBaseFiles() {
+  try {
+    const entries = fs.readdirSync(COMFYUI_WORKFLOWS_DIR);
+    return entries
+      .filter(f => f.toLowerCase().endsWith('.json'))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CRUD Operations
 // ---------------------------------------------------------------------------
 

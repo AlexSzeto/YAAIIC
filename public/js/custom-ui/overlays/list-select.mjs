@@ -1,7 +1,7 @@
 /**
  * list-select.mjs - Generic list selection modal with customizable items and actions
- * 
- * Provides a modal dialog for selecting items from a list with optional edit/delete actions.
+ *
+ * Provides a modal dialog for selecting items from a list with optional per-item action buttons.
  */
 import { render, Component } from 'preact';
 import { html } from 'htm/preact';
@@ -15,8 +15,13 @@ import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle } from './modal-base.
 // Styled Components
 // ============================================================================
 
+const VARIANT_WIDTHS = {
+  default: '500px',
+  narrow: '340px',
+  wide: '700px'
+}
 const ModalWrapper = styled('div')`
-  width: 500px;
+  width: ${props => VARIANT_WIDTHS[props.variant] || VARIANT_WIDTHS.default};
   max-width: 90vw;
   max-height: 80vh;
   display: flex;
@@ -57,16 +62,16 @@ const ItemContainer = styled('div')`
   cursor: ${props => props.unselectable ? 'default' : 'pointer'};
   transition: background-color ${props => props.theme.transitions.fast};
   opacity: ${props => props.unselectable ? 0.5 : 1};
-  
+
   ${props => !props.unselectable ? `
     &:hover {
       background-color: ${props.theme.colors.background.hover};
     }
   ` : ''}
-  
+
   ${props => props.isSelected ? `
     background-color: rgba(100, 150, 255, 0.15);
-    border-left: 3px solid ${props.theme.colors.primary.background};    
+    border-left: 3px solid ${props.theme.colors.primary.background};
   ` : ''}
 `;
 ItemContainer.className = 'item-container';
@@ -107,8 +112,8 @@ Footer.className = 'footer';
 // ============================================================================
 
 /**
- * ListItem - Renders a single list item row with optional actions
- * 
+ * ListItem - Renders a single list item row with optional per-item action buttons
+ *
  * @param {Object} props
  * @param {Object} props.item - Item data object
  * @param {string} props.item.id - Unique item identifier
@@ -118,58 +123,50 @@ Footer.className = 'footer';
  * @param {string} [props.itemIcon] - Default icon to use if item doesn't specify one
  * @param {boolean} props.isSelected - Whether this item is currently selected
  * @param {Function} props.onSelect - Callback when item is selected
- * @param {Function} [props.onEdit] - Optional edit callback
- * @param {Function} [props.onDelete] - Optional delete callback
- * @param {boolean} props.showActions - Whether to show edit/delete actions
+ * @param {Array} [props.itemActions] - Array of { icon, color?, title?, onClick, closeAfter? }
+ * @param {Function} props.onClose - Modal close callback (used when closeAfter: true)
  * @param {Object} props.theme - Current theme object
  * @returns {preact.VNode}
  */
-function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, showActions, theme }) {
-  const handleEditClick = (e) => {
-    e.stopPropagation();
-    if (onEdit) onEdit(item);
-  };
-
-  const handleDeleteClick = (e) => {
-    e.stopPropagation();
-    if (onDelete) onDelete(item);
-  };
-
+function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, theme }) {
   const icon = item.icon || itemIcon || 'list-ul';
 
+  const handleActionClick = (e, action) => {
+    e.stopPropagation();
+    action.onClick(item);
+    if (action.closeAfter && onClose) {
+      onClose();
+    }
+  };
+
   return html`
-    <${ItemContainer} 
+    <${ItemContainer}
       isSelected=${isSelected}
       unselectable=${item.unselectable}
       theme=${theme}
       onClick=${() => !item.unselectable && onSelect(item)}
     >
       <${ItemLabel} theme=${theme}>
-        <${Icon} 
-          name=${icon} 
-          type='solid' 
-          color=${theme.colors.text.secondary} 
+        <${Icon}
+          name=${icon}
+          type='solid'
+          color=${theme.colors.text.secondary}
           size='20px'
         />
         <${ItemName} theme=${theme}>${item.label}</${ItemName}>
       </${ItemLabel}>
-      ${showActions ? html`
+      ${itemActions && itemActions.length > 0 ? html`
         <${ItemActions} theme=${theme}>
-          <${Button}
-            variant="small-icon"
-            icon="edit"
-            onClick=${handleEditClick}
-            disabled=${item.disabled || !onEdit}
-            title=${item.disabled ? 'Cannot edit this item' : 'Edit item'}
-          />
-          <${Button}
-            variant="small-icon"
-            icon="trash"
-            color="danger"
-            onClick=${handleDeleteClick}
-            disabled=${item.disabled || !onDelete}
-            title=${item.disabled ? 'Cannot delete this item' : 'Delete item'}
-          />
+          ${itemActions.map(action => html`
+            <${Button}
+              key=${action.icon}
+              variant="small-icon"
+              icon=${action.icon}
+              color=${action.color || 'secondary'}
+              title=${action.title || ''}
+              onClick=${(e) => handleActionClick(e, action)}
+            />
+          `)}
         </${ItemActions}>
       ` : null}
     </${ItemContainer}>
@@ -183,29 +180,32 @@ function ListItem({ item, itemIcon, isSelected, onSelect, onEdit, onDelete, show
 
 /**
  * ListSelectModal - Modal dialog for selecting items from a list
- * 
+ *
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether modal is visible
  * @param {string} [props.title='Select Item'] - Modal title
  * @param {Array<Object>} [props.items=[]] - Array of item objects with id, label, optional icon, optional disabled
  * @param {string} [props.itemIcon] - Default icon for items that don't specify one
  * @param {string} [props.actionLabel] - Label for the action button (e.g., "New Item")
- * @param {boolean} [props.showActions=false] - Show edit/delete buttons on items
+ * @param {Array} [props.itemActions] - Per-item action buttons: [{ icon, color?, title?, onClick, closeAfter? }]
  * @param {boolean} [props.showActionButton=true] - Show the action button in footer
+ * @param {'default'|'narrow'} [props.variant='default'] - Modal width variant ('default'=500px, 'narrow'=340px)
  * @param {string} [props.selectedId] - Currently selected item id
  * @param {string} [props.emptyMessage='No items available'] - Message to show when items array is empty
  * @param {Function} [props.onSelectItem] - Callback when item is selected: (item) => void
- * @param {Function} [props.onEdit] - Callback when edit is clicked: (item) => void
- * @param {Function} [props.onDelete] - Callback when delete is clicked: (item) => void
  * @param {Function} [props.onAction] - Callback for action button: () => void
  * @param {Function} [props.onClose] - Callback when modal is closed: () => void
  * @returns {preact.VNode|null}
- * 
+ *
  * @example
  * <ListSelectModal
  *   isOpen={true}
  *   title="Select Folder"
  *   items={[{ id: '1', label: 'Documents', icon: 'folder' }]}
+ *   itemActions={[
+ *     { icon: 'edit', title: 'Rename', onClick: (item) => handleRename(item) },
+ *     { icon: 'trash', color: 'danger', title: 'Delete', onClick: (item) => handleDelete(item), closeAfter: false }
+ *   ]}
  *   onSelectItem={(item) => console.log('Selected:', item)}
  *   onClose={() => setIsOpen(false)}
  * />
@@ -254,23 +254,11 @@ class ListSelectModal extends Component {
 
   handleItemSelect = async (item) => {
     this.setState({ selectedId: item.id });
-    
+
     if (this.props.onSelectItem) {
       await this.props.onSelectItem(item);
     }
     this.handleClose();
-  }
-
-  handleEdit = async (item) => {
-    if (this.props.onEdit) {
-      await this.props.onEdit(item);
-    }
-  }
-
-  handleDelete = async (item) => {
-    if (this.props.onDelete) {
-      await this.props.onDelete(item);
-    }
   }
 
   handleAction = async () => {
@@ -281,22 +269,25 @@ class ListSelectModal extends Component {
 
   render() {
     const { isLoading, selectedId, theme } = this.state;
-    const { 
-      isOpen, 
-      title = 'Select Item', 
-      items = [], 
+    const {
+      isOpen,
+      title = 'Select Item',
+      items = [],
       itemIcon,
       actionLabel,
-      showActions = false,
-      showActionButton = true
+      itemActions,
+      showActionButton = true,
+      variant = 'default',
     } = this.props;
 
     if (!isOpen) {
       return null;
     }
 
+    const emptyMessage = this.props.emptyMessage || 'No items available';
+
     return html`
-      <${BaseOverlay} 
+      <${BaseOverlay}
         bgColor=${theme.colors.overlay.background}
         onClick=${this.handleOverlayClick}
       >
@@ -309,7 +300,7 @@ class ListSelectModal extends Component {
           minWidth="auto"
           shadowColor=${theme.shadow.colorStrong}
         >
-          <${ModalWrapper}>
+          <${ModalWrapper} variant=${variant}>
             <${BaseHeader} marginBottom="16px">
               <${BaseTitle}
                 color=${theme.colors.text.primary}
@@ -319,12 +310,12 @@ class ListSelectModal extends Component {
                 ${title}
               </${BaseTitle}>
             </${BaseHeader}>
-            
+
             <${Content} theme=${theme}>
               ${isLoading ? html`
                 <${LoadingMessage} theme=${theme}>Loading...</${LoadingMessage}>
               ` : items.length === 0 ? html`
-                <${LoadingMessage} theme=${theme}>No items available</${LoadingMessage}>
+                <${LoadingMessage} theme=${theme}>${emptyMessage}</${LoadingMessage}>
               ` : html`
                 <${List} theme=${theme}>
                   ${items.map(item => html`
@@ -334,18 +325,17 @@ class ListSelectModal extends Component {
                       itemIcon=${itemIcon}
                       isSelected=${item.id === selectedId}
                       onSelect=${this.handleItemSelect}
-                      onEdit=${showActions ? this.handleEdit : null}
-                      onDelete=${showActions ? this.handleDelete : null}
-                      showActions=${showActions}
+                      itemActions=${itemActions}
+                      onClose=${this.handleClose}
                       theme=${theme}
                     />
                   `)}
                 </${List}>
               `}
             </${Content}>
-            
+
             <${Footer} theme=${theme}>
-              <${Button} 
+              <${Button}
                 variant="medium-text"
                 color="secondary"
                 onClick=${this.handleClose}
@@ -353,7 +343,7 @@ class ListSelectModal extends Component {
                 Cancel
               </>
               ${showActionButton && actionLabel ? html`
-                <${Button} 
+                <${Button}
                   variant="medium-text"
                   color="primary"
                   onClick=${this.handleAction}
@@ -376,27 +366,26 @@ class ListSelectModal extends Component {
 
 /**
  * showListSelect - Shows a list selection modal
- * 
+ *
  * A convenience function that creates and renders the ListSelectModal component
  * in a portal container. Returns a cleanup function to close and unmount the modal.
- * 
+ *
  * @param {Object} options - Configuration options
  * @param {string} [options.title='Select Item'] - Modal title
  * @param {Array<Object>} [options.items=[]] - List items with id, label, icon (optional), disabled (optional)
  * @param {string} [options.itemIcon] - Default boxicon name for items
  * @param {string} [options.actionLabel] - Label for action button (e.g., "New Item")
- * @param {boolean} [options.showActions=false] - Show edit/delete buttons on items
+ * @param {Array} [options.itemActions] - Per-item action buttons: [{ icon, color?, title?, onClick, closeAfter? }]
  * @param {boolean} [options.showActionButton=true] - Show the action button in footer
+ * @param {'default'|'narrow'} [options.variant='default'] - Modal width ('default'=500px, 'narrow'=340px)
  * @param {string} [options.selectedId] - Currently selected item id
- * @param {string} [options.emptyMessage='No items available'] - Message to show when items array is empty (use 'Loading...' for loading state)
+ * @param {string} [options.emptyMessage='No items available'] - Message to show when items array is empty
  * @param {Function} [options.onSelectItem] - Callback when item is selected: (item) => void
- * @param {Function} [options.onEdit] - Callback when edit is clicked: (item) => void
- * @param {Function} [options.onDelete] - Callback when delete is clicked: (item) => void
  * @param {Function} [options.onAction] - Callback for action button: () => void
  * @param {Function} [options.onClose] - Callback when modal is closed: () => void
- * 
+ *
  * @returns {Function} Cleanup function to close the modal
- * 
+ *
  * @example
  * // Basic usage
  * const cleanup = showListSelect({
@@ -405,17 +394,18 @@ class ListSelectModal extends Component {
  *   itemIcon: 'export',
  *   onSelectItem: (item) => console.log('Selected:', item)
  * });
- * 
+ *
  * @example
- * // With edit/delete actions
+ * // With per-item actions
  * const cleanup = showListSelect({
  *   title: 'Manage Items',
  *   items: [{ id: '1', label: 'Item 1' }],
- *   showActions: true,
+ *   itemActions: [
+ *     { icon: 'edit', title: 'Edit', onClick: (item) => handleEdit(item) },
+ *     { icon: 'trash', color: 'danger', title: 'Delete', onClick: (item) => handleDelete(item) }
+ *   ],
  *   actionLabel: 'New Item',
  *   onSelectItem: (item) => handleSelect(item),
- *   onEdit: (item) => handleEdit(item),
- *   onDelete: (item) => handleDelete(item),
  *   onAction: () => createNewItem()
  * });
  */
@@ -444,13 +434,12 @@ export function showListSelect(options) {
     items=${options.items || []}
     itemIcon=${options.itemIcon}
     actionLabel=${options.actionLabel}
-    showActions=${options.showActions || false}
+    itemActions=${options.itemActions}
     showActionButton=${options.showActionButton !== false}
+    variant=${options.variant || 'default'}
     selectedId=${options.selectedId}
     emptyMessage=${options.emptyMessage}
     onSelectItem=${options.onSelectItem}
-    onEdit=${options.onEdit}
-    onDelete=${options.onDelete}
     onAction=${options.onAction}
     onClose=${handleClose}
   />`, container);

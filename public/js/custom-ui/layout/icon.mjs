@@ -139,6 +139,7 @@ const ICON_MAP = {
   'down-arrow': 'arrow_downward',
   'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
+  'eye-slash': 'visibility_off',
 
 };
 

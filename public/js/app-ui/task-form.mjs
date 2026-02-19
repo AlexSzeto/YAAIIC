@@ -25,6 +25,7 @@ import { Textarea } from '../custom-ui/io/textarea.mjs';
 import { DynamicList } from '../custom-ui/dynamic-list.mjs';
 import { Icon } from '../custom-ui/layout/icon.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
+import { H3, VerticalLayout } from '../custom-ui/themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -382,29 +383,30 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
 
   return html`
     <${FormRoot} theme=${theme}>
-      <${Select}
-        label="Task type"
-        options=${typeOptions}
-        value=${taskType}
-        onChange=${handleTypeChange}
-        style=${{ maxWidth: '200px' }}
-      />
+      <${VerticalLayout} gap="medium">
+        <div>
+          <${Select}
+            label="Task type"
+            options=${typeOptions}
+            value=${taskType}
+            onChange=${handleTypeChange}
+            style=${{ maxWidth: '200px' }}
+          />
 
-      ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
-      ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
-      ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
-      ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
-      ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
-
-      <div>
-        <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
-          Condition (optional)
+          ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
+          ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
+          ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
+          ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
+          ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
         </div>
-        <${ConditionBuilder}
-          value=${task.condition || null}
-          onChange=${handleConditionChange}
-        />
-      </div>
+        <${VerticalLayout} gap="small">
+          <${H3}>Condition (optional)</${H3}>
+          <${ConditionBuilder}
+            value=${task.condition || null}
+            onChange=${handleConditionChange}
+          />
+        </${VerticalLayout}>
+      </${VerticalLayout}>
     </${FormRoot}>
   `;
 }
