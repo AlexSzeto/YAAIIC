@@ -97,21 +97,26 @@ router.post('/generate', upload.any(), async (req, res) => {
       });
     }
 
-    // --- Upload files to ComfyUI when the workflow declares upload specs ---
-    if (workflowData.upload && Array.isArray(workflowData.upload) && req.files && req.files.length > 0) {
+    // --- Upload files to ComfyUI, deriving specs from workflow options ---
+    if (req.files && req.files.length > 0) {
       try {
         console.log('Processing uploaded files for workflow...');
 
         const uploadedFilesByName = {};
         req.files.forEach(file => { uploadedFilesByName[file.fieldname] = file; });
 
-        for (const uploadSpec of workflowData.upload) {
-          const { from } = uploadSpec;
+        // Derive upload specs from options (replaces workflowData.upload)
+        const uploadSpecs = [];
+        const inputImages = workflowData.options?.inputImages || 0;
+        const inputAudios = workflowData.options?.inputAudios || 0;
+        for (let i = 0; i < inputImages; i++) uploadSpecs.push({ from: `image_${i}`, type: 'image' });
+        for (let i = 0; i < inputAudios; i++) uploadSpecs.push({ from: `audio_${i}`, type: 'audio' });
+        if (workflowData.options?.type === 'inpaint') uploadSpecs.push({ from: 'mask', type: 'image' });
 
+        for (const { from, type: fileType } of uploadSpecs) {
           if (uploadedFilesByName[from]) {
             const uploadedFile = uploadedFilesByName[from];
-            const isAudio = from.startsWith('audio_');
-            const fileType = isAudio ? 'audio' : 'image';
+            const isAudio = fileType === 'audio';
 
             console.log(`Processing uploaded ${fileType} for field '${from}'...`);
 
