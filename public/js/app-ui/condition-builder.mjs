@@ -8,7 +8,7 @@
  * Output JSON structure:
  * { "and": [ { "where": { "data": "field" }, "equals": { "value": "v" } } ] }
  * or
- * { "or":  [ { "where": { "generationData": "field" }, "equals": { "value": true } } ] }
+ * { "or":  [ { "where": { "data": "field" }, "equals": { "value": true } } ] }
  */
 import { html } from 'htm/preact';
 import { useCallback } from 'preact/hooks';
@@ -75,41 +75,51 @@ function valueToString(v) {
   return String(v);
 }
 
-const SOURCE_OPTIONS = [
-  { label: 'data', value: 'data' },
-  { label: 'generationData', value: 'generationData' },
-];
-
 // ============================================================================
 // ConditionItem
 // ============================================================================
 
+const CHECK_TYPE_OPTIONS = [
+  { label: 'equals', value: 'equals' },
+  { label: 'is not', value: 'isNot' },
+];
+
 function ConditionItem({ condition, index, onChange, onDelete }) {
-  const source    = condition.where ? Object.keys(condition.where)[0] : 'data';
-  const fieldName = condition.where ? condition.where[source] : '';
-  const rawValue  = condition.equals?.value;
+  const fieldName = condition.where?.data ?? '';
+  const checkType = condition.isNot !== undefined ? 'isNot' : 'equals';
+  const rawValue  = condition[checkType]?.value;
 
   const updateCondition = useCallback((updates) => {
     onChange(index, { ...condition, ...updates });
   }, [condition, index, onChange]);
 
+  const handleCheckTypeChange = useCallback((e) => {
+    const newType = e.target.value;
+    const oldType = checkType;
+    if (newType === oldType) return;
+    const next = { ...condition };
+    const preserved = next[oldType]?.value;
+    delete next[oldType];
+    next[newType] = { value: preserved };
+    onChange(index, next);
+  }, [condition, checkType, index, onChange]);
+
   return html`
     <${ConditionRow}>
-      <${Select}
-        options=${SOURCE_OPTIONS}
-        value=${source}
-        onChange=${(e) => updateCondition({ where: { [e.target.value]: fieldName } })}
-      />
       <${Input}
         placeholder="field name"
         value=${fieldName}
-        onInput=${(e) => updateCondition({ where: { [source]: e.target.value } })}
+        onInput=${(e) => updateCondition({ where: { data: e.target.value } })}
       />
-      <span style="padding-bottom:10px;white-space:nowrap;font-size:0.85em;">equals</span>
+      <${Select}
+        options=${CHECK_TYPE_OPTIONS}
+        value=${checkType}
+        onChange=${handleCheckTypeChange}
+      />
       <${Input}
         placeholder="value"
         value=${valueToString(rawValue)}
-        onInput=${(e) => updateCondition({ equals: { value: coerceValue(e.target.value) } })}
+        onInput=${(e) => updateCondition({ [checkType]: { value: coerceValue(e.target.value) } })}
       />
       <div style="padding-bottom:6px;">
         <${Button}
@@ -147,9 +157,14 @@ function ConditionItem({ condition, index, onChange, onDelete }) {
 export function ConditionBuilder({ value, onChange }) {
   const theme = currentTheme.value;
 
+  // Normalize bare single-condition objects (has `where` but no `and`/`or` wrapper)
+  const normalized = value && value.where && !value.and && !value.or
+    ? { and: [value] }
+    : value;
+
   // Normalise: extract mode ('and'|'or') and conditions array
-  const mode       = value && value.or ? 'or' : 'and';
-  const conditions = (value && (value.and || value.or)) || [];
+  const mode       = normalized && normalized.or ? 'or' : 'and';
+  const conditions = (normalized && (normalized.and || normalized.or)) || [];
 
   const emit = useCallback((newMode, newConditions) => {
     if (newConditions.length === 0) {

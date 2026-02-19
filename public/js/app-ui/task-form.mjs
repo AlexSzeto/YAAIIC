@@ -2,25 +2,28 @@
  * task-form.mjs – Polymorphic task form for pre/post-generation tasks.
  *
  * Task types supported:
- *  - template   : { template, to, condition? }
- *  - from        : { from, to, condition? }
- *  - model (LLM) : { model, imagePath, prompt, to, condition? }
- *  - executeWorkflow : { process: "executeWorkflow", name, workflow, parameters: { inputMapping, outputMapping }, condition? }
+ *  - template             : { template, to, condition? }
+ *  - from                 : { from, to, condition? }
+ *  - model (LLM)          : { model, imagePath, prompt, to, condition? }
+ *  - additionalProcessing : { process: <processorName>, parameters: {}, condition? }
+ *  - executeWorkflow      : { process: "executeWorkflow", name, workflow, parameters: { inputMapping, outputMapping }, condition? }
  *
  * The task type is determined by which discriminating key is present:
  *  - has `template` → "template"
  *  - has `from` → "from"
  *  - has `model` → "model"
+ *  - has `process` matching ADDITIONAL_PROCESSORS → "additionalProcessing"
  *  - has `process === "executeWorkflow"` → "executeWorkflow"
  */
 import { html } from 'htm/preact';
-import { useCallback } from 'preact/hooks';
+import { useCallback, useState, useEffect } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 import { Input } from '../custom-ui/io/input.mjs';
 import { Select } from '../custom-ui/io/select.mjs';
 import { Textarea } from '../custom-ui/io/textarea.mjs';
 import { DynamicList } from '../custom-ui/dynamic-list.mjs';
+import { Icon } from '../custom-ui/layout/icon.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
 
 // ============================================================================
@@ -38,25 +41,39 @@ FormRoot.className = 'task-form-root';
 // Helpers
 // ============================================================================
 
+const ADDITIONAL_PROCESSORS = [
+  { value: 'extractOutputMediaFromTextFile', label: 'Extract output media from text file' },
+  { value: 'crossfadeVideoFrames',           label: 'Crossfade video frames' },
+  { value: 'extractOutputTexts',             label: 'Extract output texts' },
+];
+
+const ADDITIONAL_PROCESSOR_DEFAULTS = {
+  extractOutputMediaFromTextFile: { filename: '' },
+  crossfadeVideoFrames:           { blendFrames: 10 },
+  extractOutputTexts:             { properties: [] },
+};
+
 /**
  * Detect task type from its fields.
  * @param {Object} task
- * @returns {'template'|'from'|'model'|'executeWorkflow'}
+ * @returns {'template'|'from'|'model'|'additionalProcessing'|'executeWorkflow'}
  */
 export function getTaskType(task) {
-  if (task.process === 'executeWorkflow') return 'executeWorkflow';
-  if (task.template !== undefined)        return 'template';
-  if (task.from     !== undefined)        return 'from';
-  if (task.model    !== undefined)        return 'model';
+  if (task.process === 'executeWorkflow')                              return 'executeWorkflow';
+  if (ADDITIONAL_PROCESSORS.some(p => p.value === task.process))     return 'additionalProcessing';
+  if (task.template !== undefined)                                     return 'template';
+  if (task.from     !== undefined)                                     return 'from';
+  if (task.model    !== undefined)                                     return 'model';
   return 'template'; // default
 }
 
 /** Blank task skeletons for each type */
 const BLANK_TASKS = {
-  template:         { template: '', to: '' },
-  from:             { from: '', to: '' },
-  model:            { model: '', imagePath: 'saveImagePath', prompt: '', to: '' },
-  executeWorkflow:  { process: 'executeWorkflow', name: '', workflow: '', parameters: { inputMapping: [], outputMapping: [] } },
+  template:             { template: '', to: '' },
+  from:                 { from: '', to: '' },
+  model:                { model: '', imagePath: 'saveImagePath', prompt: '', to: '' },
+  additionalProcessing: { process: 'extractOutputMediaFromTextFile', parameters: { filename: '' } },
+  executeWorkflow:      { process: 'executeWorkflow', name: '', parameters: { workflow: '', inputMapping: [], outputMapping: [] } },
 };
 
 /**
@@ -70,9 +87,10 @@ function convertTaskType(task, newType) {
 }
 
 const TASK_TYPE_OPTIONS = [
-  { value: 'template', label: 'Template fill' },
-  { value: 'from',     label: 'Value copy' },
-  { value: 'model',    label: 'LLM task' },
+  { value: 'template',             label: 'Template fill' },
+  { value: 'from',                 label: 'Value copy' },
+  { value: 'model',                label: 'LLM task' },
+  { value: 'additionalProcessing', label: 'Additional processing' },
 ];
 
 const TASK_TYPE_OPTIONS_WITH_EXECUTE = [
@@ -95,10 +113,10 @@ function TemplateTaskForm({ task, onChange }) {
     />
     <${Input}
       label="To (target field)"
-      fullWidth
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. imageFormat"
+      style=${{ maxWidth: '200px' }}
     />
   `;
 }
@@ -111,17 +129,17 @@ function FromTaskForm({ task, onChange }) {
   return html`
     <${Input}
       label="From (source field)"
-      fullWidth
       value=${task.from || ''}
       onInput=${(e) => onChange({ ...task, from: e.target.value })}
       placeholder="e.g. prompt"
+      style=${{ maxWidth: '200px' }}
     />
     <${Input}
       label="To (target field)"
-      fullWidth
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. description"
+      style=${{ maxWidth: '200px' }}
     />
   `;
 }
@@ -134,17 +152,17 @@ function ModelTaskForm({ task, onChange }) {
   return html`
     <${Input}
       label="Model"
-      fullWidth
       value=${task.model || ''}
       onInput=${(e) => onChange({ ...task, model: e.target.value })}
       placeholder="e.g. user-v4/joycaption-beta:latest"
+      style=${{ maxWidth: '200px' }}
     />
     <${Input}
       label="Image path field"
-      fullWidth
       value=${task.imagePath || ''}
       onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
       placeholder="e.g. saveImagePath"
+      style=${{ maxWidth: '200px' }}
     />
     <${Textarea}
       label="Prompt"
@@ -155,11 +173,81 @@ function ModelTaskForm({ task, onChange }) {
     />
     <${Input}
       label="To (target field)"
-      fullWidth
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. description"
+      style=${{ maxWidth: '200px' }}
     />
+  `;
+}
+
+// ============================================================================
+// Sub-form: Additional processing task
+// ============================================================================
+
+function AdditionalProcessingTaskForm({ task, onChange }) {
+  const process = task.process || ADDITIONAL_PROCESSORS[0].value;
+  const params  = task.parameters || {};
+
+  const handleProcessChange = useCallback((e) => {
+    const newProcess = e.target.value;
+    onChange({ ...task, process: newProcess, parameters: { ...ADDITIONAL_PROCESSOR_DEFAULTS[newProcess] } });
+  }, [task, onChange]);
+
+  const updateParam = useCallback((key, value) => {
+    onChange({ ...task, parameters: { ...params, [key]: value } });
+  }, [task, params, onChange]);
+
+  return html`
+    <${Select}
+      label="Processor"
+      options=${ADDITIONAL_PROCESSORS}
+      value=${process}
+      onChange=${handleProcessChange}
+      style=${{ maxWidth: '200px' }}
+    />
+
+    ${process === 'extractOutputMediaFromTextFile' && html`
+      <${Input}
+        label="Filename"
+        value=${params.filename || ''}
+        onInput=${(e) => updateParam('filename', e.target.value)}
+        placeholder="output text file name"
+        style=${{ maxWidth: '200px' }}
+      />
+    `}
+
+    ${process === 'crossfadeVideoFrames' && html`
+      <${Input}
+        label="Blend frames"
+        type="number"
+        value=${params.blendFrames ?? 10}
+        onInput=${(e) => updateParam('blendFrames', parseInt(e.target.value, 10) || 0)}
+        style=${{ maxWidth: '200px' }}
+      />
+    `}
+
+    ${process === 'extractOutputTexts' && html`
+      <${DynamicList}
+        title="Properties"
+        items=${params.properties || []}
+        renderItem=${(item, i) => html`
+          <${Input}
+            fullWidth
+            value=${item}
+            onInput=${(e) => {
+              const next = [...(params.properties || [])];
+              next[i] = e.target.value;
+              updateParam('properties', next);
+            }}
+          />
+        `}
+        getTitle=${(item) => item || 'Property name'}
+        createItem=${() => ''}
+        onChange=${(items) => updateParam('properties', items)}
+        addLabel="Add Property"
+      />
+    `}
   `;
 }
 
@@ -171,42 +259,52 @@ function MappingForm({ mapping, onChange }) {
   return html`
     <${Input}
       label="From"
-      fullWidth
       value=${mapping.from || ''}
       onInput=${(e) => onChange({ ...mapping, from: e.target.value })}
       placeholder="source field"
+      style=${{ maxWidth: '200px' }}
     />
     <${Input}
       label="To"
-      fullWidth
       value=${mapping.to || ''}
       onInput=${(e) => onChange({ ...mapping, to: e.target.value })}
       placeholder="target field"
+      style=${{ maxWidth: '200px' }}
     />
   `;
 }
 
 function ExecuteWorkflowTaskForm({ task, onChange }) {
-  const params = task.parameters || { inputMapping: [], outputMapping: [] };
+  const params = task.parameters || { workflow: '', inputMapping: [], outputMapping: [] };
+  const [workflowOptions, setWorkflowOptions] = useState([]);
 
-  const updateParams = (key, items) => {
-    onChange({ ...task, parameters: { ...params, [key]: items } });
+  useEffect(() => {
+    fetch('/api/workflows')
+      .then(r => r.ok ? r.json() : { workflows: [] })
+      .then(data => {
+        setWorkflowOptions((data.workflows || []).map(wf => ({ label: wf.name, value: wf.name })));
+      })
+      .catch(() => {});
+  }, []);
+
+  const updateParams = (key, value) => {
+    onChange({ ...task, parameters: { ...params, [key]: value } });
   };
 
   return html`
     <${Input}
       label="Name (display label)"
-      fullWidth
       value=${task.name || ''}
       onInput=${(e) => onChange({ ...task, name: e.target.value })}
       placeholder="optional display name"
+      style=${{ maxWidth: '200px' }}
     />
-    <${Input}
-      label="Workflow name"
-      fullWidth
-      value=${task.workflow || ''}
-      onInput=${(e) => onChange({ ...task, workflow: e.target.value })}
-      placeholder="e.g. Text to Image (Flux)"
+    <${Select}
+      label="Workflow"
+      options=${workflowOptions}
+      value=${params.workflow || ''}
+      onChange=${(e) => updateParams('workflow', e.target.value)}
+      style=${{ maxWidth: '200px' }}
     />
 
     <${DynamicList}
@@ -222,7 +320,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
           }}
         />
       `}
-      getTitle=${(item) => item.from ? `${item.from} → ${item.to || '?'}` : 'New mapping'}
+      getTitle=${(item) => item.from ? html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}` : 'New mapping'}
       createItem=${() => ({ from: '', to: '' })}
       onChange=${(items) => updateParams('inputMapping', items)}
       addLabel="Add Input Mapping"
@@ -241,7 +339,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
           }}
         />
       `}
-      getTitle=${(item) => item.from ? `${item.from} → ${item.to || '?'}` : 'New mapping'}
+      getTitle=${(item) => item.from ? html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}` : 'New mapping'}
       createItem=${() => ({ from: '', to: '' })}
       onChange=${(items) => updateParams('outputMapping', items)}
       addLabel="Add Output Mapping"
@@ -286,16 +384,17 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
     <${FormRoot} theme=${theme}>
       <${Select}
         label="Task type"
-        fullWidth
         options=${typeOptions}
         value=${taskType}
         onChange=${handleTypeChange}
+        style=${{ maxWidth: '200px' }}
       />
 
-      ${taskType === 'template'        && html`<${TemplateTaskForm}        task=${task} onChange=${onChange} />`}
-      ${taskType === 'from'            && html`<${FromTaskForm}            task=${task} onChange=${onChange} />`}
-      ${taskType === 'model'           && html`<${ModelTaskForm}           task=${task} onChange=${onChange} />`}
-      ${taskType === 'executeWorkflow' && html`<${ExecuteWorkflowTaskForm} task=${task} onChange=${onChange} />`}
+      ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
+      ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
+      ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
+      ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
+      ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
 
       <div>
         <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">

@@ -13,7 +13,7 @@ import { html } from 'htm/preact';
 import { useState, useEffect } from 'preact/hooks';
 import { currentTheme, toggleTheme } from '../custom-ui/theme.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
-import { NavPanel } from '../custom-ui/nav/hamburger-menu.mjs';
+import { NavigationMenu } from '../custom-ui/nav/navigation-menu.mjs';
 
 /**
  * HamburgerMenu – App navigation trigger + dropdown.
@@ -59,7 +59,7 @@ export function HamburgerMenu() {
   ];
 
   return html`
-    <${NavPanel}
+    <${NavigationMenu}
       open=${open}
       onClose=${() => setOpen(false)}
       items=${items}
@@ -73,6 +73,6 @@ export function HamburgerMenu() {
         aria-expanded=${open}
         aria-haspopup="true"
       />
-    </${NavPanel}>
+    </${NavigationMenu}>
   `;
 }

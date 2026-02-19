@@ -22,6 +22,8 @@ import { DynamicList } from '../custom-ui/dynamic-list.mjs';
 import { NodeInputSelector } from './node-input-selector.mjs';
 import { TaskForm, getTaskType } from './task-form.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
+import { HamburgerMenu } from './hamburger-menu.mjs';
+import { Icon } from '../custom-ui/layout/icon.mjs';
 
 // ============================================================================
 // Styled Components
@@ -198,29 +200,31 @@ function BasicInfoForm({ workflow, onChange, theme }) {
       <${FormRow} theme=${theme}>
         <${Select}
           label="Type"
-          fullWidth
           options=${typeOptions}
           value=${opts.type || 'image'}
           onChange=${(e) => updateOpts({ type: e.target.value })}
+          style=${{ maxWidth: '200px' }}
         />
         <${Select}
           label="Orientation"
-          fullWidth
           options=${orientationOptions}
           value=${opts.orientation || 'portrait'}
           onChange=${(e) => updateOpts({ orientation: e.target.value })}
+          style=${{ maxWidth: '200px' }}
         />
         <${Input}
           label="Input Images"
           type="number"
           value=${opts.inputImages ?? 0}
           onInput=${(e) => updateOpts({ inputImages: parseInt(e.target.value, 10) || 0 })}
+          style=${{ maxWidth: '200px' }}
         />
         <${Input}
           label="Input Audios"
           type="number"
           value=${opts.inputAudios ?? 0}
           onInput=${(e) => updateOpts({ inputAudios: parseInt(e.target.value, 10) || 0 })}
+          style=${{ maxWidth: '200px' }}
         />
       </${FormRow}>
 
@@ -231,12 +235,14 @@ function BasicInfoForm({ workflow, onChange, theme }) {
           ['optionalPrompt', 'Optional prompt'],
           ['nameRequired',   'Name required'],
         ].map(([key, label]) => html`
-          <${Checkbox}
-            key=${key}
-            label=${label}
-            checked=${opts[key] || false}
-            onChange=${(e) => updateOpts({ [key]: e.target.checked })}
-          />
+          <div style="min-width:200px;display:flex;align-items:flex-end;">
+            <${Checkbox}
+              key=${key}
+              label=${label}
+              checked=${opts[key] || false}
+              onChange=${(e) => updateOpts({ [key]: e.target.checked })}
+            />
+          </div>
         `)}
       </${FormRow}>
     </${VerticalLayout}>
@@ -252,17 +258,17 @@ function OptionItemForm({ item, onChange }) {
     <${HorizontalLayout} gap="small">
       <${Input}
         label="Label"
-        fullWidth
         value=${item.label || ''}
         onInput=${(e) => onChange({ ...item, label: e.target.value })}
         placeholder="Display label"
+        style=${{ maxWidth: '200px' }}
       />
       <${Input}
         label="Value"
-        fullWidth
         value=${item.value || ''}
         onInput=${(e) => onChange({ ...item, value: e.target.value })}
         placeholder="Stored value"
+        style=${{ maxWidth: '200px' }}
       />
     </${HorizontalLayout}>
   `;
@@ -288,32 +294,32 @@ function ExtraInputForm({ item, onChange }) {
       <${HorizontalLayout} gap="small">
         <${Input}
           label="ID"
-          fullWidth
           value=${item.id || ''}
           onInput=${(e) => onChange({ ...item, id: e.target.value })}
           placeholder="snake_case_id"
+          style=${{ maxWidth: '200px' }}
         />
         <${Input}
           label="Label"
-          fullWidth
           value=${item.label || ''}
           onInput=${(e) => onChange({ ...item, label: e.target.value })}
           placeholder="Display label"
+          style=${{ maxWidth: '200px' }}
         />
         <${Select}
           label="Type"
-          fullWidth
           options=${typeOptions}
           value=${item.type || 'text'}
           onChange=${(e) => onChange({ ...item, type: e.target.value, options: [] })}
+          style=${{ maxWidth: '200px' }}
         />
       </${HorizontalLayout}>
       <${Input}
         label="Default value"
-        fullWidth
         value=${item.default !== undefined ? String(item.default) : ''}
         onInput=${(e) => onChange({ ...item, default: e.target.value })}
         placeholder="Default"
+        style=${{ maxWidth: '200px' }}
       />
       ${hasOptions && html`
         <${DynamicList}
@@ -362,10 +368,10 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
     <${VerticalLayout} gap="small">
       <${Input}
         label="From (data field)"
-        fullWidth
         value=${item.from || ''}
         onInput=${(e) => onChange({ ...item, from: e.target.value })}
         placeholder="e.g. seed, prompt, saveImagePath"
+        style=${{ maxWidth: '200px' }}
       />
       <div>
         <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
@@ -378,11 +384,6 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
               value=${toValue}
               onChange=${handleNodeInputChange}
             />
-            ${toValue && html`
-              <div style="font-size:${theme.typography.fontSize.small};color:${theme.colors.text.muted};margin-top:2px;">
-                ${toDisplay}
-              </div>
-            `}
           `
           : html`
             <${Input}
@@ -587,8 +588,9 @@ export function WorkflowEditor() {
     <${PageRoot} theme=${theme}>
 
       <!-- Page header -->
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
         <${H1}>Workflow Editor</${H1}>
+        <${HamburgerMenu} />
       </div>
 
       <!-- Workflow list + upload -->
@@ -700,9 +702,9 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template') return `Template → ${item.to || '?'}`;
-                if (t === 'from')     return `Copy ${item.from || '?'} → ${item.to || '?'}`;
-                if (t === 'model')    return `LLM → ${item.to || '?'}`;
+                if (t === 'template') return html`Template <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'from')     return html`Copy ${item.from || '?'} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'model')    return html`LLM <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}
@@ -729,9 +731,16 @@ export function WorkflowEditor() {
                   }}
                 />
               `}
-              getTitle=${(item) => item.from
-                ? `${item.from} → ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`
-                : 'New mapping'}
+              getTitle=${(item) => {
+                if (!item.from) return 'New mapping';
+                if (Array.isArray(item.to) && item.to.length === 3) {
+                  const nodeId    = item.to[0];
+                  const inputName = item.to[2];
+                  const nodeTitle = workflowJson[nodeId]?._meta?.title ?? workflowJson[nodeId]?.class_type ?? nodeId;
+                  return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${nodeId} (${nodeTitle}) <${Icon} name="arrow-right-stroke" size="14px" /> ${inputName}`;
+                }
+                return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`;
+              }}
               createItem=${() => ({ from: '', to: [] })}
               onChange=${(items) => updateWorkflow({ replace: items })}
               addLabel="Add Mapping"
@@ -756,10 +765,10 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template')        return `Template → ${item.to || '?'}`;
-                if (t === 'from')             return `Copy ${item.from || '?'} → ${item.to || '?'}`;
-                if (t === 'model')            return `LLM → ${item.to || '?'}`;
-                if (t === 'executeWorkflow')  return `Execute: ${item.workflow || '?'}`;
+                if (t === 'template')        return html`Template <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'from')             return html`Copy ${item.from || '?'} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'model')            return html`LLM <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'executeWorkflow')  return `Execute: ${item.parameters?.workflow || '?'}`;
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}

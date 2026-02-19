@@ -137,6 +137,7 @@ const ICON_MAP = {
   'up-arrow': 'arrow_upward',
   'down-arrow': 'arrow_downward',
   'upload': 'upload',
+  'arrow-right-stroke': 'arrow_right_alt',
 
 };
 

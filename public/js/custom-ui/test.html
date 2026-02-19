@@ -52,6 +52,7 @@
     import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
     import { HoverPanelProvider, useHoverPanel } from './overlays/hover-panel.mjs';
     import { useRef } from 'preact/hooks';
+    import { Icon } from './layout/icon.mjs';
 
     
     // =========================================================================
@@ -669,6 +670,10 @@
               <//>
               
               <${Section}>
+                <${SectionTitle}>Icons</${SectionTitle}>
+                <${Icon} name="arrow-right-stroke" size="24px" />
+              </${Section}>
+              <${Section}>
                 <${SectionTitle}>Button Component</${SectionTitle}>
                 <p style="margin-bottom: 16px; opacity: 0.7;">All button variants with color themes</p>
                 
@@ -844,7 +849,7 @@
                 <//>
               </${Section}>
               
-              <${Section}>
+              <${Section}>              
                 <${SectionTitle}>Textarea Component</${SectionTitle}>
                 <${ComponentGrid}>
                   <${Textarea} label="Basic Textarea" name="basic" placeholder="Enter text here..." />

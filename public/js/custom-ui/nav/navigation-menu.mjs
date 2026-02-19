@@ -1,5 +1,5 @@
 /**
- * hamburger-menu.mjs – Generic navigation dropdown panel.
+ * navigation-menu.mjs – Generic navigation dropdown panel.
  *
  * Provides a floating panel of navigation links that can be positioned relative
  * to any trigger. Designed to be used by an app-specific wrapper that supplies
@@ -8,7 +8,7 @@
  * Can also be repurposed as a context menu by passing arbitrary onClick items
  * instead of href items.
  *
- * @module custom-ui/nav/hamburger-menu
+ * @module custom-ui/nav/navigation-menu
  */
 import { html } from 'htm/preact';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
@@ -68,11 +68,11 @@ const NavItem = styled('a')`
 NavItem.className = 'nav-panel-item';
 
 // ============================================================================
-// NavPanel Component
+// NavigationMenu Component
 // ============================================================================
 
 /**
- * NavPanel – Generic floating dropdown panel of navigation / action items.
+ * NavigationMenu – Generic floating dropdown panel of navigation / action items.
  *
  * Renders inline (position: relative on root) so it attaches to whatever
  * element wraps it. The trigger button lives outside this component in the
@@ -88,7 +88,7 @@ NavItem.className = 'nav-panel-item';
  * @param {preact.ComponentChildren} [props.children] - Trigger element (button).
  * @returns {preact.VNode}
  */
-export function NavPanel({ open, onClose, items = [], children }) {
+export function NavigationMenu({ open, onClose, items = [], children }) {
   const theme   = currentTheme.value;
   const rootRef = useRef(null);
 
