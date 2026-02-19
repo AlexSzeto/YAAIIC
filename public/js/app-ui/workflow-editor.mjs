@@ -148,8 +148,9 @@ function validateWorkflowFrontend(workflow) {
     errors.push('Missing required prompt binding');
   if (!replace.some(r => r.from === 'seed'))
     errors.push('Missing required seed binding');
-  if (!replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath'))
-    errors.push('Missing required output path binding (saveImagePath or saveAudioPath)');
+  if (!replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath')
+      && !(workflow.postGenerationTasks || []).some(t => t.process === 'extractOutputMediaFromTextFile'))
+    errors.push('Missing required output path binding (saveImagePath, saveAudioPath, or extractOutputMediaFromTextFile post-task)');
   return errors;
 }
 
@@ -229,8 +230,15 @@ function BasicInfoForm({ workflow, onChange, theme }) {
       </${FormRow}>
 
       <${FormRow} theme=${theme}>
+        <div style="min-width:200px;display:flex;align-items:flex-end;">
+          <${Checkbox}
+            key="hidden"
+            label="Hidden from main UI"
+            checked=${workflow.hidden || false}
+            onChange=${(e) => onChange({ ...workflow, hidden: e.target.checked })}
+          />
+        </div>
         ${[
-          ['hidden',         'Hidden from main UI'],
           ['autocomplete',   'Autocomplete'],
           ['optionalPrompt', 'Optional prompt'],
           ['nameRequired',   'Name required'],
@@ -541,18 +549,20 @@ export function WorkflowEditor() {
     }
   }
 
-  async function handleDelete() {
-    if (!workflow) return;
-    if (!window.confirm(`Delete "${workflow.name}"? This cannot be undone.`)) return;
+  async function handleDelete(name) {
+    if (!name) return;
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/workflows/${encodeURIComponent(workflow.name)}`, {
+      const res = await fetch(`/api/workflows/${encodeURIComponent(name)}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error(await res.text());
-      setWorkflow(null);
-      setWorkflowJson({});
+      if (workflow?.name === name) {
+        setWorkflow(null);
+        setWorkflowJson({});
+      }
       await loadWorkflowList();
       toast.success('Workflow deleted');
     } catch (e) {
@@ -637,6 +647,13 @@ export function WorkflowEditor() {
                     <${WorkflowItemName} theme=${theme} selected=${workflow?.name === wf.name}>${wf.name}</${WorkflowItemName}>
                     ${wf.hidden && html`<${Badge} theme=${theme}>hidden</${Badge}>`}
                     <${Badge} theme=${theme}>${wf.type || 'image'}</${Badge}>
+                    <${Button}
+                      variant="small-icon"
+                      color="danger"
+                      icon="trash"
+                      disabled=${isDeleting}
+                      onClick=${(e) => { e.stopPropagation(); handleDelete(wf.name); }}
+                    />
                   </${WorkflowListItem}>
                 `)
             }
@@ -804,7 +821,7 @@ export function WorkflowEditor() {
               color="danger"
               loading=${isDeleting}
               disabled=${isDeleting}
-              onClick=${handleDelete}
+              onClick=${() => handleDelete(workflow.name)}
             >
               Delete
             </${Button}>

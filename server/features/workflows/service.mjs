@@ -126,6 +126,10 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
       workflowType = 'audio';
       mappedNodeIds.add(nodeId);
     }
+
+    if (ct === 'VHS_VideoCombine') {
+      workflowType = 'video';
+    }
   }
 
   // Second pass: input nodes
@@ -161,8 +165,73 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     if (hasMask) workflowType = 'inpaint';
   }
 
-  // Third pass: seed nodes
+  // Third pass: typed primitive nodes (PrimitiveString, PrimitiveStringMultiline,
+  // PrimitiveInt, PrimitiveFloat, PrimitiveBoolean). These take priority over
+  // the generic seed/prompt passes below.
+  const typedPrimitiveClasses = new Set([
+    'PrimitiveString', 'PrimitiveStringMultiline',
+    'PrimitiveInt', 'PrimitiveFloat',
+    'PrimitiveBoolean',
+  ]);
+  let seedMapped   = false;
+  let promptMapped = false;
+
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (typeof node !== 'object' || !node.class_type) continue;
+    if (mappedNodeIds.has(nodeId)) continue;
+    if (!typedPrimitiveClasses.has(node.class_type)) continue;
+
+    const ct    = node.class_type;
+    const title = (node._meta?.title || '').toLowerCase().trim();
+
+    if (title === 'name') {
+      replace.push({ from: 'name', to: [nodeId, 'inputs', 'value'] });
+      detectedNodes.extras.push({ nodeId, classType: ct, title, role: 'name' });
+      mappedNodeIds.add(nodeId);
+      continue;
+    }
+
+    if (title === 'prompt') {
+      replace.push({ from: 'prompt', to: [nodeId, 'inputs', 'value'] });
+      detectedNodes.prompts.push({ nodeId, classType: ct, title });
+      mappedNodeIds.add(nodeId);
+      promptMapped = true;
+      continue;
+    }
+
+    if (title === 'seed') {
+      replace.push({ from: 'seed', to: [nodeId, 'inputs', 'value'] });
+      detectedNodes.seeds.push({ nodeId, classType: ct, title });
+      mappedNodeIds.add(nodeId);
+      seedMapped = true;
+      continue;
+    }
+
+    // Unmatched typed primitive → extra input
+    const inputType = (ct === 'PrimitiveBoolean')
+      ? 'checkbox'
+      : (ct === 'PrimitiveInt' || ct === 'PrimitiveFloat')
+        ? 'number'
+        : 'text';
+
+    const rawTitle  = node._meta?.title || node.title || `param_${extraInputs.length + 1}`;
+    const id = rawTitle.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    extraInputs.push({
+      id,
+      type: inputType,
+      label: rawTitle,
+      default: node.inputs?.value ?? '',
+      options: [],
+    });
+    replace.push({ from: id, to: [nodeId, 'inputs', 'value'] });
+    detectedNodes.extras.push({ nodeId, classType: ct, title: rawTitle });
+    mappedNodeIds.add(nodeId);
+  }
+
+  // Fourth pass: seed nodes (skipped if a typed primitive already covered seed)
+  for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (seedMapped) break;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
 
@@ -172,6 +241,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
       replace.push({ from: 'seed', to: [nodeId, 'inputs', 'seed'] });
       detectedNodes.seeds.push({ nodeId, classType: ct });
       mappedNodeIds.add(nodeId);
+      seedMapped = true;
       continue;
     }
 
@@ -179,11 +249,13 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
       replace.push({ from: 'seed', to: [nodeId, 'inputs', 'seed'] });
       detectedNodes.seeds.push({ nodeId, classType: ct, field: 'seed' });
       mappedNodeIds.add(nodeId);
+      seedMapped = true;
     }
   }
 
-  // Fourth pass: prompt nodes
+  // Fifth pass: prompt nodes (skipped if a typed primitive already covered prompt)
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (promptMapped) break;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
 
@@ -211,7 +283,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     }
   }
 
-  // Fifth pass: extra input candidates (unmapped PrimitiveNodes)
+  // Sixth pass: extra input candidates (unmapped PrimitiveNodes)
   let extraIndex = 0;
   for (const [nodeId, node] of Object.entries(workflowJson)) {
     if (typeof node !== 'object' || !node.class_type) continue;
@@ -248,6 +320,42 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     mappedNodeIds.add(nodeId);
   }
 
+  // Seventh pass: easy saveText nodes → post-generation tasks
+  const postGenerationTasks = [];
+
+  // Check for video-filename save-text → extractOutputMediaFromTextFile
+  for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (typeof node !== 'object' || !node.class_type) continue;
+    if (node.class_type !== 'easy saveText') continue;
+    if (node.inputs?.file_name === 'video-filename' && node.inputs?.file_extension === 'txt') {
+      postGenerationTasks.push({
+        process: 'extractOutputMediaFromTextFile',
+        parameters: { filename: 'video-filename.txt' },
+      });
+      mappedNodeIds.add(nodeId);
+    }
+  }
+
+  // Check remaining easy saveText nodes for known data properties → extractOutputTexts
+  const knownDataProps = ['tag', 'prompt', 'description', 'summary'];
+  const extractedProps = [];
+  for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (typeof node !== 'object' || !node.class_type) continue;
+    if (mappedNodeIds.has(nodeId)) continue;
+    if (node.class_type !== 'easy saveText') continue;
+    const fileName = node.inputs?.file_name;
+    if (knownDataProps.includes(fileName)) {
+      extractedProps.push(fileName);
+      mappedNodeIds.add(nodeId);
+    }
+  }
+  if (extractedProps.length > 0) {
+    postGenerationTasks.push({
+      process: 'extractOutputTexts',
+      parameters: { properties: extractedProps },
+    });
+  }
+
   const workflow = {
     name: suggestedName,
     hidden: true,
@@ -257,12 +365,12 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
       inputImages: imageCount,
       inputAudios: audioCount,
       optionalPrompt: false,
-      nameRequired: false,
+      nameRequired: true,
       orientation: 'portrait',
       extraInputs,
     },
     preGenerationTasks: [],
-    postGenerationTasks: [],
+    postGenerationTasks,
     replace,
   };
 
@@ -331,13 +439,13 @@ export function saveWorkflow(workflowData) {
 }
 
 /**
- * Delete a workflow by name and optionally remove its associated base JSON file.
+ * Delete a workflow by name. Automatically removes the associated base JSON
+ * file if no other remaining workflow references the same filename.
  *
  * @param {string} name
- * @param {boolean} [deleteBaseFile=false]
  * @returns {{ success: boolean, error?: string }}
  */
-export function deleteWorkflow(name, deleteBaseFile = false) {
+export function deleteWorkflow(name) {
   const data = readWorkflowsFile();
   const index = data.workflows.findIndex(w => w.name === name);
 
@@ -347,10 +455,14 @@ export function deleteWorkflow(name, deleteBaseFile = false) {
 
   const [removed] = data.workflows.splice(index, 1);
 
-  if (deleteBaseFile && removed.base) {
-    const basePath = path.join(COMFYUI_WORKFLOWS_DIR, removed.base);
-    if (fs.existsSync(basePath)) {
-      fs.unlinkSync(basePath);
+  // Only delete the base file if no remaining workflow shares it
+  if (removed.base) {
+    const isShared = data.workflows.some(w => w.base === removed.base);
+    if (!isShared) {
+      const basePath = path.join(COMFYUI_WORKFLOWS_DIR, removed.base);
+      if (fs.existsSync(basePath)) {
+        fs.unlinkSync(basePath);
+      }
     }
   }
 
@@ -393,11 +505,12 @@ export function validateWorkflow(workflowData) {
 
   const hasPrompt = replace.some(r => r.from === 'prompt' || r.from === 'enhancedPrompt' || r.from?.startsWith('prompt'));
   const hasSeed   = replace.some(r => r.from === 'seed');
-  const hasOutput = replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath');
+  const hasOutput = replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath')
+    || (workflowData.postGenerationTasks || []).some(t => t.process === 'extractOutputMediaFromTextFile');
 
   if (!hasPrompt)  errors.push('Missing required prompt binding in replace mappings');
   if (!hasSeed)    errors.push('Missing required seed binding in replace mappings');
-  if (!hasOutput)  errors.push('Missing required output path binding (saveImagePath or saveAudioPath)');
+  if (!hasOutput)  errors.push('Missing required output path binding (saveImagePath, saveAudioPath, or extractOutputMediaFromTextFile post-task)');
 
   return errors;
 }

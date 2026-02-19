@@ -190,10 +190,8 @@ router.post('/api/workflows', (req, res) => {
 
 router.delete('/api/workflows/:name', (req, res) => {
   try {
-    const name           = decodeURIComponent(req.params.name);
-    const deleteBaseFile = req.query.deleteFile === 'true';
-
-    const result = deleteWorkflow(name, deleteBaseFile);
+    const name   = decodeURIComponent(req.params.name);
+    const result = deleteWorkflow(name);
 
     if (!result.success) {
       return res.status(404).json({ error: result.error });
