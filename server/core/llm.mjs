@@ -297,6 +297,20 @@ export async function sendImagePrompt(imagePath, prompt, model = 'llava', to = n
 }
 
 /**
+ * Fetch the list of models currently installed in Ollama.
+ * @returns {Promise<string[]>} Array of model name strings (e.g. ["llama2:latest", "gemma3:4b"])
+ */
+export async function listOllamaModels() {
+  const ollamaAPIPath = getOllamaAPIPath();
+  const response = await fetch(`${ollamaAPIPath}/api/tags`);
+  if (!response.ok) {
+    throw new Error(`Ollama API request failed: ${response.status} ${response.statusText}`);
+  }
+  const data = await response.json();
+  return (data.models || []).map(m => m.name);
+}
+
+/**
  * Modify data object with a prompt-based generation task
  * @param {Object} promptData - Configuration for the prompt task
  * @param {string} promptData.model - LLM model to use (optional if template is provided)

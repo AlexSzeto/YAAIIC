@@ -83,6 +83,8 @@ const EmptyState = styled('div')`
 `;
 EmptyState.className = 'workflow-empty-state';
 
+const InlineArrowIcon = html`<${Icon} name="arrow-right-stroke" size="14px" style=${{ position: 'relative', top: '2px' }}/>`
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -301,6 +303,7 @@ function ExtraInputForm({ item, onChange }) {
       ${hasOptions && html`
         <${DynamicList}
           title="Options"
+          condensed
           items=${item.options || []}
           renderItem=${(opt, i) => html`
             <${OptionItemForm}
@@ -312,7 +315,6 @@ function ExtraInputForm({ item, onChange }) {
               }}
             />
           `}
-          getTitle=${(opt) => opt.label || opt.value || 'Option'}
           createItem=${() => ({ label: '', value: '' })}
           onChange=${(opts) => onChange({ ...item, options: opts })}
           addLabel="Add Option"
@@ -481,6 +483,27 @@ export function WorkflowEditor() {
       }
     } catch (e) {
       toast.error(`Failed to load workflow: ${e.message}`);
+    }
+  }
+
+  async function handleMoveWorkflow(name, direction) {
+    const index = workflowList.findIndex(wf => wf.name === name);
+    if (index === -1) return;
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= workflowList.length) return;
+
+    const next = [...workflowList];
+    [next[index], next[newIndex]] = [next[newIndex], next[index]];
+    setWorkflowList(next);
+
+    try {
+      await fetch('/api/workflows/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: next.map(wf => wf.name) }),
+      });
+    } catch (e) {
+      toast.error(`Failed to save workflow order: ${e.message}`);
     }
   }
 
@@ -701,9 +724,9 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template') return html`Template <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
-                if (t === 'from')     return html`Copy ${item.from || '?'} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
-                if (t === 'model')    return html`LLM <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'template') return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'from')     return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'model')    return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}
@@ -736,9 +759,9 @@ export function WorkflowEditor() {
                   const nodeId    = item.to[0];
                   const inputName = item.to[2];
                   const nodeTitle = workflowJson[nodeId]?._meta?.title ?? workflowJson[nodeId]?.class_type ?? nodeId;
-                  return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${nodeId}. ${nodeTitle} <${Icon} name="arrow-right-stroke" size="14px" /> ${inputName}`;
+                  return html`${item.from} ${InlineArrowIcon} ${nodeId}. ${nodeTitle} ${InlineArrowIcon} ${inputName}`;
                 }
-                return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`;
+                return html`${item.from} ${InlineArrowIcon} ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`;
               }}
               createItem=${() => ({ from: '', to: [] })}
               onChange=${(items) => updateWorkflow({ replace: items })}
@@ -764,9 +787,9 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template')        return html`Template <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
-                if (t === 'from')             return html`Copy ${item.from || '?'} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
-                if (t === 'model')            return html`LLM <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}`;
+                if (t === 'template')        return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'from')             return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'model')            return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'executeWorkflow')  return `Execute: ${item.parameters?.workflow || '?'}`;
                 return 'Task';
               }}
@@ -833,6 +856,20 @@ export function WorkflowEditor() {
         selectedId=${workflow?.name}
         onSelectItem=${(item) => { loadWorkflow(item.id); setIsModalOpen(false); }}
         itemActions=${[
+          {
+            icon: 'up-arrow',
+            title: 'Move up',
+            onClick: (item) => handleMoveWorkflow(item.id, -1),
+            disabled: (item) => workflowList.findIndex(wf => wf.name === item.id) === 0,
+            closeAfter: false,
+          },
+          {
+            icon: 'down-arrow',
+            title: 'Move down',
+            onClick: (item) => handleMoveWorkflow(item.id, 1),
+            disabled: (item) => workflowList.findIndex(wf => wf.name === item.id) === workflowList.length - 1,
+            closeAfter: false,
+          },
           {
             icon: 'copy',
             title: 'Duplicate',

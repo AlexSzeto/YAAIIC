@@ -9,7 +9,7 @@
  * @module custom-ui/layout/dynamic-list
  */
 import { html } from 'htm/preact';
-import { useState, useCallback } from 'preact/hooks';
+import { useState, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
@@ -83,6 +83,19 @@ const ItemBody = styled('div')`
 `;
 ItemBody.className = 'dynamic-list-item-body';
 
+const CondensedItemRow = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.small.gap};
+`;
+CondensedItemRow.className = 'dynamic-list-condensed-item-row';
+
+const CondensedItemContent = styled('div')`
+  flex: 1;
+  min-width: 0;
+`;
+CondensedItemContent.className = 'dynamic-list-condensed-item-content';
+
 // ============================================================================
 // DynamicListItem Component
 // ============================================================================
@@ -96,9 +109,10 @@ function DynamicListItem({
   onMoveUp,
   onMoveDown,
   onDelete,
+  initialCollapsed = true,
   theme,
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const stopProp = useCallback((e) => e.stopPropagation(), []);
 
@@ -143,6 +157,56 @@ function DynamicListItem({
 }
 
 // ============================================================================
+// CondensedDynamicListItem Component
+// ============================================================================
+
+/**
+ * Condensed variant: no panel/shell, no collapse toggle.
+ * Content sits directly to the left of the action buttons in a single row.
+ */
+function CondensedDynamicListItem({
+  item,
+  index,
+  total,
+  renderItem,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+  theme,
+}) {
+  return html`
+    <${CondensedItemRow} theme=${theme}>
+      <${CondensedItemContent}>
+        ${renderItem(item, index)}
+      </${CondensedItemContent}>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <${Button}
+          variant="small-icon"
+          icon="up-arrow"
+          disabled=${index === 0}
+          onClick=${onMoveUp}
+          title="Move up"
+        />
+        <${Button}
+          variant="small-icon"
+          icon="down-arrow"
+          disabled=${index === total - 1}
+          onClick=${onMoveDown}
+          title="Move down"
+        />
+        <${Button}
+          variant="small-icon"
+          icon="trash"
+          color="danger"
+          onClick=${onDelete}
+          title="Delete"
+        />
+      </div>
+    </${CondensedItemRow}>
+  `;
+}
+
+// ============================================================================
 // DynamicList Component
 // ============================================================================
 
@@ -153,14 +217,19 @@ function DynamicListItem({
  * and the add button on the right (`small-icon-text`). Without a title, the
  * add button renders inline above the items.
  *
+ * When `condensed` is true, items are rendered without a panel container or
+ * collapse toggle. Content sits directly to the left of the action buttons.
+ * This mode is suited for compact sub-lists (e.g. string arrays, simple mappings).
+ *
  * @param {Object}   props
  * @param {string}   [props.title]          - Optional section title rendered in the header row.
  * @param {Array}    props.items            - Array of item data objects.
  * @param {Function} props.renderItem       - `(item, index) => VNode` sub-form renderer.
- * @param {Function} props.getTitle         - `(item, index) => string` item header label.
+ * @param {Function} [props.getTitle]       - `(item, index) => string` item header label (unused in condensed mode).
  * @param {Function} props.createItem       - `() => Object` factory for a blank new item.
  * @param {Function} props.onChange         - `(items) => void` called on every mutation.
  * @param {string}   [props.addLabel]       - Label for the add button (default "Add item").
+ * @param {boolean}  [props.condensed=false] - Use condensed inline layout (no panel, no collapse).
  * @returns {preact.VNode}
  *
  * @example
@@ -184,10 +253,16 @@ export function DynamicList({
   createItem,
   onChange,
   addLabel = 'Add item',
+  condensed = false,
 }) {
   const theme = currentTheme.value;
 
+  // Track which index was just added so that item mounts uncollapsed.
+  // Using a ref avoids triggering an extra render cycle.
+  const newlyAddedIndexRef = useRef(null);
+
   const handleAdd = useCallback(() => {
+    newlyAddedIndexRef.current = items.length;
     onChange([...items, createItem()]);
   }, [items, createItem, onChange]);
 
@@ -212,12 +287,11 @@ export function DynamicList({
 
   const addButton = html`
     <${Button}
-      variant="small-icon-text"
+      variant="small-icon"
       icon="plus"
-      color="primary"
+      color="secondary"
       onClick=${handleAdd}
     >
-      ${addLabel}
     </${Button}>
   `;
 
@@ -233,20 +307,41 @@ export function DynamicList({
         : addButton
       }
 
-      ${items.map((item, index) => html`
-        <${DynamicListItem}
-          key=${index}
-          item=${item}
-          index=${index}
-          total=${items.length}
-          title=${getTitle(item, index)}
-          renderItem=${renderItem}
-          onMoveUp=${() => handleMoveUp(index)}
-          onMoveDown=${() => handleMoveDown(index)}
-          onDelete=${() => handleDelete(index)}
-          theme=${theme}
-        />
-      `)}
+      ${items.map((item, index) => {
+        // Consume the newly-added marker so it only applies on first mount.
+        const isNew = newlyAddedIndexRef.current === index;
+        if (isNew) newlyAddedIndexRef.current = null;
+
+        return condensed
+          ? html`
+            <${CondensedDynamicListItem}
+              key=${index}
+              item=${item}
+              index=${index}
+              total=${items.length}
+              renderItem=${renderItem}
+              onMoveUp=${() => handleMoveUp(index)}
+              onMoveDown=${() => handleMoveDown(index)}
+              onDelete=${() => handleDelete(index)}
+              theme=${theme}
+            />
+          `
+          : html`
+            <${DynamicListItem}
+              key=${index}
+              item=${item}
+              index=${index}
+              total=${items.length}
+              title=${getTitle(item, index)}
+              renderItem=${renderItem}
+              onMoveUp=${() => handleMoveUp(index)}
+              onMoveDown=${() => handleMoveDown(index)}
+              onDelete=${() => handleDelete(index)}
+              initialCollapsed=${!isNew}
+              theme=${theme}
+            />
+          `;
+      })}
     </${ListRoot}>
   `;
 }

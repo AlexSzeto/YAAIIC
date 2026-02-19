@@ -152,14 +152,25 @@ function FromTaskForm({ task, onChange }) {
 // ============================================================================
 
 function ModelTaskForm({ task, onChange }) {
+  const [modelOptions, setModelOptions] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/llm/models')
+      .then(r => r.ok ? r.json() : { models: [] })
+      .then(data => {
+        setModelOptions((data.models || []).map(m => ({ label: m, value: m })));
+      })
+      .catch(() => {});
+  }, []);
+
   return html`
     <${HorizontalLayout} gap="medium">
-      <${Input}
+      <${Select}
         label="Model"
+        options=${modelOptions}
         value=${task.model || ''}
-        onInput=${(e) => onChange({ ...task, model: e.target.value })}
-        placeholder="e.g. user-v4/joycaption-beta:latest"
-        style=${{ maxWidth: '200px' }}
+        onChange=${(e) => onChange({ ...task, model: e.target.value })}
+        style=${{ maxWidth: '280px' }}
       />
       <${Input}
         label="Image path field"
@@ -182,7 +193,7 @@ function ModelTaskForm({ task, onChange }) {
       value=${task.prompt || ''}
       onInput=${(e) => onChange({ ...task, prompt: e.target.value })}
       placeholder="LLM system prompt…"
-    />    
+    />
   `;
 }
 
@@ -235,6 +246,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
     ${process === 'extractOutputTexts' && html`
       <${DynamicList}
         title="Properties"
+        condensed
         items=${params.properties || []}
         renderItem=${(item, i) => html`
           <${Input}
@@ -247,7 +259,6 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
             }}
           />
         `}
-        getTitle=${(item) => item || 'Property name'}
         createItem=${() => ''}
         onChange=${(items) => updateParam('properties', items)}
         addLabel="Add Property"
@@ -316,6 +327,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
 
     <${DynamicList}
       title="Input Mappings"
+      condensed
       items=${params.inputMapping || []}
       renderItem=${(item, i) => html`
         <${MappingForm}
@@ -327,7 +339,6 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
           }}
         />
       `}
-      getTitle=${(item) => item.from ? html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}` : 'New mapping'}
       createItem=${() => ({ from: '', to: '' })}
       onChange=${(items) => updateParams('inputMapping', items)}
       addLabel="Add Input Mapping"
@@ -335,6 +346,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
 
     <${DynamicList}
       title="Output Mappings"
+      condensed
       items=${params.outputMapping || []}
       renderItem=${(item, i) => html`
         <${MappingForm}
@@ -346,7 +358,6 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
           }}
         />
       `}
-      getTitle=${(item) => item.from ? html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${item.to || '?'}` : 'New mapping'}
       createItem=${() => ({ from: '', to: '' })}
       onChange=${(items) => updateParams('outputMapping', items)}
       addLabel="Add Output Mapping"

@@ -21,6 +21,7 @@ import {
   listBaseFiles,
   saveWorkflow,
   deleteWorkflow,
+  reorderWorkflows,
   autoDetectWorkflow,
   parseWorkflowName,
 } from './service.mjs';
@@ -179,6 +180,31 @@ router.get('/api/workflows/:name/base', (req, res) => {
   } catch (error) {
     console.error('Error serving base workflow:', error);
     res.status(500).json({ error: 'Failed to load base workflow file' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/workflows/reorder – persist a new workflow display order
+// ---------------------------------------------------------------------------
+// NOTE: must come BEFORE /:name to avoid route shadowing
+
+router.put('/api/workflows/reorder', (req, res) => {
+  try {
+    const { order } = req.body;
+
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ error: '"order" must be an array of workflow names' });
+    }
+
+    const result = reorderWorkflows(order);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error reordering workflows:', error);
+    res.status(500).json({ error: 'Failed to reorder workflows', details: error.message });
   }
 });
 

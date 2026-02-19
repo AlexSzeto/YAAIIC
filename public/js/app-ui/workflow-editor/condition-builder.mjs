@@ -73,8 +73,8 @@ function valueToString(v) {
 // ============================================================================
 
 const MODE_OPTIONS = [
-  { label: 'All of', value: 'and' },
-  { label: 'One of', value: 'or' },
+  { label: 'Satisfy all', value: 'and' },
+  { label: 'Satisfy one', value: 'or' },
 ];
 
 const CHECK_TYPE_OPTIONS = [
@@ -194,6 +194,7 @@ export function ConditionBuilder({ value, onChange }) {
           options=${MODE_OPTIONS}
           value=${mode}
           onChange=${handleModeChange}
+          disabled=${conditions.length === 0}
         />
         <${Button}
           variant="small-icon"

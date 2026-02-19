@@ -459,6 +459,36 @@ export function saveWorkflow(workflowData) {
 }
 
 /**
+ * Reorder workflows according to an ordered array of workflow names.
+ * Names not present in the provided array are appended after the reordered ones.
+ *
+ * @param {string[]} orderedNames - Workflow names in the desired order.
+ * @returns {{ success: boolean, error?: string }}
+ */
+export function reorderWorkflows(orderedNames) {
+  if (!Array.isArray(orderedNames)) {
+    return { success: false, error: 'orderedNames must be an array' };
+  }
+
+  const data = readWorkflowsFile();
+  const byName = Object.fromEntries(data.workflows.map(w => [w.name, w]));
+
+  const reordered = orderedNames
+    .filter(name => byName[name])
+    .map(name => byName[name]);
+
+  // Append any workflows not included in orderedNames (safety net)
+  const included = new Set(orderedNames);
+  for (const wf of data.workflows) {
+    if (!included.has(wf.name)) reordered.push(wf);
+  }
+
+  data.workflows = reordered;
+  writeWorkflowsFile(data);
+  return { success: true };
+}
+
+/**
  * Delete a workflow by name. Automatically removes the associated base JSON
  * file if no other remaining workflow references the same filename.
  *

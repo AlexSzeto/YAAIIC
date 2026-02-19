@@ -93,7 +93,7 @@ ItemName.className = 'item-name';
 
 const ItemActions = styled('div')`
   display: flex;
-  gap: ${props => props.theme.spacing.medium.gap};
+  gap: ${props => props.theme.spacing.small.gap};
   align-items: center;
 `;
 ItemActions.className = 'item-actions';
@@ -157,16 +157,22 @@ function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, 
       </${ItemLabel}>
       ${itemActions && itemActions.length > 0 ? html`
         <${ItemActions} theme=${theme}>
-          ${itemActions.map(action => html`
-            <${Button}
-              key=${action.icon}
-              variant="small-icon"
-              icon=${action.icon}
-              color=${action.color || 'secondary'}
-              title=${action.title || ''}
-              onClick=${(e) => handleActionClick(e, action)}
-            />
-          `)}
+          ${itemActions.map(action => {
+            const isDisabled = typeof action.disabled === 'function'
+              ? action.disabled(item)
+              : !!action.disabled;
+            return html`
+              <${Button}
+                key=${action.icon}
+                variant="small-icon"
+                icon=${action.icon}
+                color=${action.color || 'secondary'}
+                title=${action.title || ''}
+                disabled=${isDisabled}
+                onClick=${(e) => handleActionClick(e, action)}
+              />
+            `;
+          })}
         </${ItemActions}>
       ` : null}
     </${ItemContainer}>
