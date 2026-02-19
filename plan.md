@@ -1,4 +1,8 @@
 # Bugs
+- [ ] Fix select component text overflow
+- [ ] Dynamic list item title add css (display: flex; gap: 4px; align-items: center;)
+
+## Implementation Details
 
 # Future Features
 - Higher Quality Flux Klein (add a field to use 9b param model for generation)
