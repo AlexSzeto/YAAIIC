@@ -2145,6 +2145,78 @@
       ]
     },
     {
+      "name": "Remove Background (RMBG)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
+        {
+          "template": "png",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_tags"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_tags",
+          "to": "tags"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_summary",
+          "to": "summary"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_description",
+          "to": "description"
+        }
+      ],
+      "base": "rmbg-remove-background.json",
+      "replace": [
+        {
+          "from": "image_0_filename",
+          "to": [
+            "2",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "4",
+            "inputs",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
       "name": "Image to Video (WAN22)",
       "options": {
         "type": "video",
@@ -3732,78 +3804,6 @@
             "10",
             "inputs",
             "audio"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Remove Background (RMBG)",
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 1,
-        "optionalPrompt": true,
-        "nameRequired": true,
-        "orientation": "detect"
-      },
-      "preGenerationTasks": [
-        {
-          "template": "png",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_tags"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "from": "image_0_tags",
-          "to": "tags"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_summary"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "from": "image_0_summary",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_description"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "from": "image_0_description",
-          "to": "description"
-        }
-      ],
-      "base": "rmbg-remove-background.json",
-      "replace": [
-        {
-          "from": "image_0_filename",
-          "to": [
-            "2",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "4",
-            "inputs",
-            "path"
           ]
         }
       ]

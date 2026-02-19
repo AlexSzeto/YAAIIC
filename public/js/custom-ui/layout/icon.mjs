@@ -97,6 +97,7 @@ const ICON_MAP = {
   
   // Miscellaneous
   'home': 'home',
+  'brush': 'brush',
   'image': 'image',
   'plus': 'add',
   'minus': 'remove',

@@ -73,8 +73,8 @@ function valueToString(v) {
 // ============================================================================
 
 const MODE_OPTIONS = [
-  { label: 'Satisfy all', value: 'and' },
-  { label: 'Satisfy one', value: 'or' },
+  { label: 'Satisfy All', value: 'and' },
+  { label: 'Satisfy One', value: 'or' },
 ];
 
 const CHECK_TYPE_OPTIONS = [

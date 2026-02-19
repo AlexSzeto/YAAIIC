@@ -96,6 +96,7 @@ const InlineArrowIcon = html`<${Icon} name="arrow-right-stroke" size="14px" styl
  */
 function getWorkflowIcon(wf) {
   if (wf.hidden) return 'eye-slash';
+  if (wf.type === 'inpaint') return 'brush';
   if (wf.type === 'video') return 'video';
   if (wf.type === 'audio') return 'music';
   return 'image';
@@ -293,7 +294,7 @@ function ExtraInputForm({ item, onChange }) {
           style=${{ maxWidth: '200px' }}
         />
         <${Input}
-          label="Default value"
+          label="Default Value"
           value=${item.default !== undefined ? String(item.default) : ''}
           onInput=${(e) => onChange({ ...item, default: e.target.value })}
           placeholder="Default"
@@ -347,7 +348,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
     <${VerticalLayout} gap="medium">
       <${HorizontalLayout} gap="medium">
       <${Input}
-        label="From (data field)"
+        label="Source Field"
         value=${item.from || ''}
         onInput=${(e) => onChange({ ...item, from: e.target.value })}
         placeholder="e.g. seed, prompt, saveImagePath"
@@ -355,7 +356,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
       />
       <div>
         <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
-          To (node input path)
+          Target Node Input
         </div>
         ${workflowJson && Object.keys(workflowJson).length > 0
           ? html`

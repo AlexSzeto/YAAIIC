@@ -407,7 +407,7 @@ export function GeneratedResult({
           </${Button}>
           <${Button}
             variant="primary"
-            icon="image"
+            icon="brush"
             onClick=${() => onInpaint && onInpaint(image)}
             disabled=${isInpaintDisabled}
             title="Inpaint this image"

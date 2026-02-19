@@ -88,10 +88,10 @@ function convertTaskType(task, newType) {
 }
 
 const TASK_TYPE_OPTIONS = [
-  { value: 'template',             label: 'Template fill' },
-  { value: 'from',                 label: 'Value copy' },
-  { value: 'model',                label: 'LLM task' },
-  { value: 'additionalProcessing', label: 'Additional processing' },
+  { value: 'template',             label: 'Template Replace' },
+  { value: 'from',                 label: 'Copy Value' },
+  { value: 'model',                label: 'Generate Value' },
+  { value: 'additionalProcessing', label: 'Additional Process' },
 ];
 
 const TASK_TYPE_OPTIONS_WITH_EXECUTE = [
@@ -106,7 +106,7 @@ const TASK_TYPE_OPTIONS_WITH_EXECUTE = [
 function TemplateTaskForm({ task, onChange }) {
   return html`
     <${Input}
-      label="To (target field)"
+      label="Target Field"
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. imageFormat"
@@ -130,14 +130,14 @@ function FromTaskForm({ task, onChange }) {
   return html`
     <${HorizontalLayout} gap="medium">
       <${Input}
-        label="From (source field)"
+        label="Source Field"
         value=${task.from || ''}
         onInput=${(e) => onChange({ ...task, from: e.target.value })}
         placeholder="e.g. prompt"
         style=${{ maxWidth: '200px' }}
       />
       <${Input}
-        label="To (target field)"
+        label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
@@ -173,14 +173,14 @@ function ModelTaskForm({ task, onChange }) {
         style=${{ maxWidth: '280px' }}
       />
       <${Input}
-        label="Image path field"
+        label="Image Attachment Field"
         value=${task.imagePath || ''}
         onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
         placeholder="e.g. saveImagePath"
         style=${{ maxWidth: '200px' }}
       />
       <${Input}
-        label="To (target field)"
+        label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
@@ -402,7 +402,7 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
     <${FormRoot} theme=${theme}>
       <${VerticalLayout} gap="medium" style=${{ width: '100%' }}>
         <${Select}
-          label="Task type"
+          label="Task Type"
           options=${typeOptions}
           value=${taskType}
           onChange=${handleTypeChange}
