@@ -39,3 +39,7 @@ checkpoint
 
 - Download URLs for Low Quant Album Gen:
 1. https://huggingface.co/Old-Fisherman/SDXL_Finetune_GGUF_Files/blob/main/GGUF_Models/juggernautXL_juggXIByRundiffusion_Q4_K_S.gguf
+2. https://civitai.com/models/93931?modelVersionId=2270853
+
+- Downlod URLs for AceStep 1.5:
+1. https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/checkpoints/ace_step_1.5_turbo_aio.safetensors
