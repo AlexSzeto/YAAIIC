@@ -17,7 +17,7 @@ import { Select } from '../../custom-ui/io/select.mjs';
 
 const SelectorRow = styled('div')`
   display: flex;
-  gap: ${props => props.theme.spacing.small.gap};
+  gap: ${props => props.theme.spacing.medium.gap};
   align-items: flex-start;
 `;
 SelectorRow.className = 'node-input-selector-row';
@@ -81,7 +81,7 @@ export function NodeInputSelector({ workflowJson = {}, value = null, onChange })
     ...Object.entries(workflowJson)
       .filter(([, node]) => node && typeof node === 'object' && node.class_type)
       .map(([nodeId, node]) => ({
-        label: `${getNodeTitle(nodeId, node)} (${nodeId})`,
+        label: `${nodeId}. ${getNodeTitle(nodeId, node)}`,
         value: nodeId,
       })),
   ];

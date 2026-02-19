@@ -18,7 +18,7 @@ import { Select } from '../../custom-ui/io/select.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H1, VerticalLayout, HorizontalLayout, H3 } from '../../custom-ui/themed-base.mjs';
-import { DynamicList } from '../../custom-ui/dynamic-list.mjs';
+import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { NodeInputSelector } from './node-input-selector.mjs';
 import { TaskForm, getTaskType } from './task-form.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
@@ -736,7 +736,7 @@ export function WorkflowEditor() {
                   const nodeId    = item.to[0];
                   const inputName = item.to[2];
                   const nodeTitle = workflowJson[nodeId]?._meta?.title ?? workflowJson[nodeId]?.class_type ?? nodeId;
-                  return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${nodeId} (${nodeTitle}) <${Icon} name="arrow-right-stroke" size="14px" /> ${inputName}`;
+                  return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${nodeId}. ${nodeTitle} <${Icon} name="arrow-right-stroke" size="14px" /> ${inputName}`;
                 }
                 return html`${item.from} <${Icon} name="arrow-right-stroke" size="14px" /> ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`;
               }}

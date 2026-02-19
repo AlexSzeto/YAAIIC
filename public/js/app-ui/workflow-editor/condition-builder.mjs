@@ -25,21 +25,21 @@ import { Select } from '../../custom-ui/io/select.mjs';
 const Root = styled('div')`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.spacing.small.gap};
+  gap: ${props => props.theme.spacing.medium.gap};
 `;
 Root.className = 'condition-builder-root';
 
 const ToggleRow = styled('div')`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${props => props.theme.spacing.medium.gap};
 `;
 ToggleRow.className = 'condition-builder-toggle-row';
 
 const ConditionRow = styled('div')`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${props => props.theme.spacing.medium.gap};
   flex-wrap: wrap;
 `;
 ConditionRow.className = 'condition-row';
@@ -83,6 +83,7 @@ const CHECK_TYPE_OPTIONS = [
 ];
 
 function ConditionItem({ condition, index, onChange, onDelete }) {
+  const theme = currentTheme.value;
   const fieldName = condition.where?.data ?? '';
   const checkType = condition.isNot !== undefined ? 'isNot' : 'equals';
   const rawValue  = condition[checkType]?.value;
@@ -103,7 +104,7 @@ function ConditionItem({ condition, index, onChange, onDelete }) {
   }, [condition, checkType, index, onChange]);
 
   return html`
-    <${ConditionRow}>
+    <${ConditionRow} theme=${theme}>
       <${Input}
         placeholder="field name"
         value=${fieldName}
@@ -188,7 +189,7 @@ export function ConditionBuilder({ value, onChange }) {
 
   return html`
     <${Root} theme=${theme}>
-      <${ToggleRow}>
+      <${ToggleRow} theme=${theme}>
         <${Select}
           options=${MODE_OPTIONS}
           value=${mode}

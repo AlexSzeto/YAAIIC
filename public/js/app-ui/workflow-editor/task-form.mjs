@@ -22,7 +22,7 @@ import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { Textarea } from '../../custom-ui/io/textarea.mjs';
-import { DynamicList } from '../../custom-ui/dynamic-list.mjs';
+import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
 import { H3, HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
@@ -105,13 +105,6 @@ const TASK_TYPE_OPTIONS_WITH_EXECUTE = [
 
 function TemplateTaskForm({ task, onChange }) {
   return html`
-    <${Textarea}
-      label="Template (use {{variable}} for substitutions)"
-      fullWidth
-      value=${task.template || ''}
-      onInput=${(e) => onChange({ ...task, template: e.target.value })}
-      placeholder="e.g. jpg or {{prompt}}-output"
-    />
     <${Input}
       label="To (target field)"
       value=${task.to || ''}
@@ -119,6 +112,13 @@ function TemplateTaskForm({ task, onChange }) {
       placeholder="e.g. imageFormat"
       style=${{ maxWidth: '200px' }}
     />
+    <${Textarea}
+      label="Template (use {{variable}} for substitutions)"
+      fullWidth
+      value=${task.template || ''}
+      onInput=${(e) => onChange({ ...task, template: e.target.value })}
+      placeholder="e.g. jpg or {{prompt}}-output"
+    />    
   `;
 }
 
@@ -128,20 +128,22 @@ function TemplateTaskForm({ task, onChange }) {
 
 function FromTaskForm({ task, onChange }) {
   return html`
-    <${Input}
-      label="From (source field)"
-      value=${task.from || ''}
-      onInput=${(e) => onChange({ ...task, from: e.target.value })}
-      placeholder="e.g. prompt"
-      style=${{ maxWidth: '200px' }}
-    />
-    <${Input}
-      label="To (target field)"
-      value=${task.to || ''}
-      onInput=${(e) => onChange({ ...task, to: e.target.value })}
-      placeholder="e.g. description"
-      style=${{ maxWidth: '200px' }}
-    />
+    <${HorizontalLayout} gap="medium">
+      <${Input}
+        label="From (source field)"
+        value=${task.from || ''}
+        onInput=${(e) => onChange({ ...task, from: e.target.value })}
+        placeholder="e.g. prompt"
+        style=${{ maxWidth: '200px' }}
+      />
+      <${Input}
+        label="To (target field)"
+        value=${task.to || ''}
+        onInput=${(e) => onChange({ ...task, to: e.target.value })}
+        placeholder="e.g. description"
+        style=${{ maxWidth: '200px' }}
+      />
+    </${HorizontalLayout}>
   `;
 }
 
@@ -151,34 +153,36 @@ function FromTaskForm({ task, onChange }) {
 
 function ModelTaskForm({ task, onChange }) {
   return html`
-    <${Input}
-      label="Model"
-      value=${task.model || ''}
-      onInput=${(e) => onChange({ ...task, model: e.target.value })}
-      placeholder="e.g. user-v4/joycaption-beta:latest"
-      style=${{ maxWidth: '200px' }}
-    />
-    <${Input}
-      label="Image path field"
-      value=${task.imagePath || ''}
-      onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
-      placeholder="e.g. saveImagePath"
-      style=${{ maxWidth: '200px' }}
-    />
+    <${HorizontalLayout} gap="medium">
+      <${Input}
+        label="Model"
+        value=${task.model || ''}
+        onInput=${(e) => onChange({ ...task, model: e.target.value })}
+        placeholder="e.g. user-v4/joycaption-beta:latest"
+        style=${{ maxWidth: '200px' }}
+      />
+      <${Input}
+        label="Image path field"
+        value=${task.imagePath || ''}
+        onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
+        placeholder="e.g. saveImagePath"
+        style=${{ maxWidth: '200px' }}
+      />
+      <${Input}
+        label="To (target field)"
+        value=${task.to || ''}
+        onInput=${(e) => onChange({ ...task, to: e.target.value })}
+        placeholder="e.g. description"
+        style=${{ maxWidth: '200px' }}
+      />
+    </${HorizontalLayout}>
     <${Textarea}
       label="Prompt"
       fullWidth
       value=${task.prompt || ''}
       onInput=${(e) => onChange({ ...task, prompt: e.target.value })}
       placeholder="LLM system prompt…"
-    />
-    <${Input}
-      label="To (target field)"
-      value=${task.to || ''}
-      onInput=${(e) => onChange({ ...task, to: e.target.value })}
-      placeholder="e.g. description"
-      style=${{ maxWidth: '200px' }}
-    />
+    />    
   `;
 }
 
@@ -258,20 +262,22 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
 
 function MappingForm({ mapping, onChange }) {
   return html`
-    <${Input}
-      label="From"
-      value=${mapping.from || ''}
-      onInput=${(e) => onChange({ ...mapping, from: e.target.value })}
-      placeholder="source field"
-      style=${{ maxWidth: '200px' }}
-    />
-    <${Input}
-      label="To"
-      value=${mapping.to || ''}
-      onInput=${(e) => onChange({ ...mapping, to: e.target.value })}
-      placeholder="target field"
-      style=${{ maxWidth: '200px' }}
-    />
+    <${HorizontalLayout} gap="medium">
+      <${Input}
+        label="From"
+        value=${mapping.from || ''}
+        onInput=${(e) => onChange({ ...mapping, from: e.target.value })}
+        placeholder="source field"
+        style=${{ maxWidth: '200px' }}
+      />
+      <${Input}
+        label="To"
+        value=${mapping.to || ''}
+        onInput=${(e) => onChange({ ...mapping, to: e.target.value })}
+        placeholder="target field"
+        style=${{ maxWidth: '200px' }}
+      />
+    </${HorizontalLayout}>
   `;
 }
 
@@ -383,22 +389,20 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
 
   return html`
     <${FormRoot} theme=${theme}>
-      <${VerticalLayout} gap="medium">
-        <${HorizontalLayout} gap="medium">
-          <${Select}
-            label="Task type"
-            options=${typeOptions}
-            value=${taskType}
-            onChange=${handleTypeChange}
-            style=${{ maxWidth: '200px' }}
-          />
+      <${VerticalLayout} gap="medium" style=${{ width: '100%' }}>
+        <${Select}
+          label="Task type"
+          options=${typeOptions}
+          value=${taskType}
+          onChange=${handleTypeChange}
+          style=${{ maxWidth: '200px' }}
+        />
 
-          ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
-          ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
-          ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
-          ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
-          ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
-        </${HorizontalLayout}>
+        ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
+        ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
+        ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
+        ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
+        ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
         <${VerticalLayout} gap="small">
           <${H3}>Condition (optional)</${H3}>
           <${ConditionBuilder}

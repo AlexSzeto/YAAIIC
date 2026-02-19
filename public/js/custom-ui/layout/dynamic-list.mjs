@@ -6,14 +6,14 @@
  * An optional `title` prop renders a section header row with the add button
  * aligned to the right edge of that row.
  *
- * @module custom-ui/dynamic-list
+ * @module custom-ui/layout/dynamic-list
  */
 import { html } from 'htm/preact';
 import { useState, useCallback } from 'preact/hooks';
-import { styled } from './goober-setup.mjs';
-import { currentTheme } from './theme.mjs';
-import { Button } from './io/button.mjs';
-import { Icon } from './layout/icon.mjs';
+import { styled } from '../goober-setup.mjs';
+import { currentTheme } from '../theme.mjs';
+import { Button } from '../io/button.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // ============================================================================
 // Styled Components
@@ -98,7 +98,7 @@ function DynamicListItem({
   onDelete,
   theme,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const stopProp = useCallback((e) => e.stopPropagation(), []);
 
