@@ -24,7 +24,7 @@ import {
   resetProgressLog
 } from '../../core/sse.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
-import { WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
+import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -348,7 +348,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     lastUsedWorkflow = workflowBasePath;
 
     // Load the ComfyUI workflow
-    const workflowPath = path.join(WORKFLOWS_DIR, workflowBasePath);
+    const workflowPath = path.join(COMFYUI_WORKFLOWS_DIR, workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
     // storagePath: absolute path to /storage folder

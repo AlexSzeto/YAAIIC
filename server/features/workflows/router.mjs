@@ -14,7 +14,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { WORKFLOWS_DIR, WORKFLOWS_PATH } from '../../core/paths.mjs';
+import { COMFYUI_WORKFLOWS_DIR, WORKFLOWS_PATH } from '../../core/paths.mjs';
 import {
   getWorkflowByName,
   listWorkflowSummaries,
@@ -81,7 +81,7 @@ router.post('/api/workflows/upload', upload.single('workflow'), (req, res) => {
     const originalName  = req.file.originalname;
     const sanitized     = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const baseFilename  = sanitized.endsWith('.json') ? sanitized : `${sanitized}.json`;
-    const destPath      = path.join(WORKFLOWS_DIR, baseFilename);
+    const destPath      = path.join(COMFYUI_WORKFLOWS_DIR, baseFilename);
 
     fs.writeFileSync(destPath, JSON.stringify(workflowJson, null, 2), 'utf8');
     console.log(`Workflow JSON saved to ${destPath}`);
@@ -126,7 +126,7 @@ router.get('/api/workflows/:name/base', (req, res) => {
       return res.status(404).json({ error: 'Base workflow file not found' });
     }
 
-    const basePath = path.join(WORKFLOWS_DIR, workflow.base);
+    const basePath = path.join(COMFYUI_WORKFLOWS_DIR, workflow.base);
     if (!fs.existsSync(basePath)) {
       return res.status(404).json({ error: `File "${workflow.base}" not found` });
     }

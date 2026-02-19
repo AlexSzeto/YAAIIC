@@ -16,7 +16,7 @@ import { checkPromptStatus } from '../generation/orchestrator.mjs';
 import { uploadFile } from '../generation/comfy-client.mjs';
 import { CLIENT_ID } from '../../comfyui-websocket.mjs';
 import { setObjectPathValue, findNextIndex } from '../../util.mjs';
-import { STORAGE_DIR, WORKFLOWS_DIR } from '../../core/paths.mjs';
+import { STORAGE_DIR, COMFYUI_WORKFLOWS_DIR } from '../../core/paths.mjs';
 import {
   generateTaskId,
   createTask,
@@ -112,7 +112,7 @@ async function generateAlbumCover(taskId, requestData, workflowConfig, workflows
   const generationData = { ...requestData };
 
   // Load the ComfyUI workflow
-  const workflowPath = path.join(WORKFLOWS_DIR, workflowBasePath);
+  const workflowPath = path.join(COMFYUI_WORKFLOWS_DIR, workflowBasePath);
   let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
   // Set up generationData fields

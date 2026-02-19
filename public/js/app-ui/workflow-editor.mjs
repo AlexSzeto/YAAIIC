@@ -608,10 +608,11 @@ export function WorkflowEditor() {
               >
                 Upload JSON
               </${Button}>
-              <${HiddenInput}
+              <input
                 ref=${fileInputRef}
                 type="file"
                 accept=".json,application/json"
+                style="display:none"
                 onChange=${(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleUpload(f);

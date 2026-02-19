@@ -10,7 +10,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { WORKFLOWS_PATH, WORKFLOWS_DIR } from '../../core/paths.mjs';
+import { WORKFLOWS_PATH, COMFYUI_WORKFLOWS_DIR } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
 // Helpers: file I/O for comfyui-workflows.json
@@ -348,7 +348,7 @@ export function deleteWorkflow(name, deleteBaseFile = false) {
   const [removed] = data.workflows.splice(index, 1);
 
   if (deleteBaseFile && removed.base) {
-    const basePath = path.join(WORKFLOWS_DIR, removed.base);
+    const basePath = path.join(COMFYUI_WORKFLOWS_DIR, removed.base);
     if (fs.existsSync(basePath)) {
       fs.unlinkSync(basePath);
     }
@@ -383,7 +383,7 @@ export function validateWorkflow(workflowData) {
   if (!workflowData.base) {
     errors.push('Base workflow file is required');
   } else {
-    const basePath = path.join(WORKFLOWS_DIR, workflowData.base);
+    const basePath = path.join(COMFYUI_WORKFLOWS_DIR, workflowData.base);
     if (!fs.existsSync(basePath)) {
       errors.push(`Base workflow file "${workflowData.base}" not found in server/resource/workflows/`);
     }
