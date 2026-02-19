@@ -1,22 +1,22 @@
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { Textarea } from '../custom-ui/io/textarea.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { SeedControl } from './seed-control.mjs';
-import { ImageSelect } from '../custom-ui/media/image-select.mjs';
-import { AudioSelect } from '../custom-ui/media/audio-select.mjs';
-import { createExtraInputsRenderer } from './extra-inputs-renderer.mjs';
-import { HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
-import { createTagSelectionHandler } from './tag-insertion-util.mjs';
-import { TagSelectorPanel } from './tag-selector-panel.mjs';
-import { suppressContextMenu } from '../custom-ui/util.mjs';
-import { isTagDefinitionsLoaded } from './tag-data.mjs';
+import { Textarea } from '../../custom-ui/io/textarea.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { SeedControl } from '../seed-control.mjs';
+import { ImageSelect } from '../../custom-ui/media/image-select.mjs';
+import { AudioSelect } from '../../custom-ui/media/audio-select.mjs';
+import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
+import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { createTagSelectionHandler } from '../tag-insertion-util.mjs';
+import { TagSelectorPanel } from '../tag-selector-panel.mjs';
+import { suppressContextMenu } from '../../custom-ui/util.mjs';
+import { isTagDefinitionsLoaded } from '../tag-data.mjs';
 
 /**
  * Generation Form Component
  * Orchestrates all input fields for image/video generation
- * 
+ *
  * @param {Object} props
  * @param {Object|null} props.workflow - Selected workflow object
  * @param {Object} props.formState - Form field values
@@ -26,13 +26,13 @@ import { isTagDefinitionsLoaded } from './tag-data.mjs';
  * @param {Function} [props.onOpenGallery] - Callback to open gallery
  * @param {Function} [props.onUploadClick] - Callback for upload button
  */
-export function GenerationForm({ 
-  workflow, 
-  formState, 
-  onFieldChange, 
-  isGenerating, 
-  onGenerate, 
-  onOpenGallery, 
+export function GenerationForm({
+  workflow,
+  formState,
+  onFieldChange,
+  isGenerating,
+  onGenerate,
+  onOpenGallery,
   onUploadClick,
   inputImages = [],
   onImageChange,
@@ -41,35 +41,35 @@ export function GenerationForm({
   onAudioChange,
   onSelectAudioFromGallery
 }) {
-  
+
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
   const textareaRef = useRef(null);
-  
+
   // Set up contextmenu listener for tag selector
   useEffect(() => {
     const textarea = document.getElementById('description');
     if (!textarea) return;
-    
+
     textareaRef.current = textarea;
-    
+
     const cleanup = suppressContextMenu(textarea, () => {
       // Only show panel if workflow has autocomplete enabled and tags are loaded
       if (!workflow?.autocomplete || !isTagDefinitionsLoaded()) {
         return; // Right-click suppressed, but no panel shown
       }
-      
+
       // Show the tag selector panel
       setShowTagPanel(true);
     });
-    
+
     return cleanup;
   }, [workflow]);
-  
+
   const handleChange = (fieldName) => (e) => {
     onFieldChange(fieldName, e.target.value);
   };
-  
+
   // Handler for tag selection from tag selector panel
   const handleTagSelect = (tagName) => {
     const handler = createTagSelectionHandler(
@@ -78,7 +78,7 @@ export function GenerationForm({
     );
     handler(tagName);
   };
-  
+
   // Handler to close tag panel
   const handleCloseTagPanel = () => {
     setShowTagPanel(false);
@@ -89,10 +89,10 @@ export function GenerationForm({
   };
 
   const isVideoWorkflow = workflow?.type === 'video';
-  
+
   // Create renderExtraInputs function using the reusable renderer
   const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
-  
+
   // Compute whether generate button should be disabled
   const isGenerateDisabled = (() => {
     // Disabled while generating
@@ -118,7 +118,7 @@ export function GenerationForm({
 
   return html`
     <${VerticalLayout}>
-      
+
       <${HorizontalLayout}>
         <${Input}
           label="Name"
@@ -193,7 +193,7 @@ export function GenerationForm({
 
       <!-- Row 4: Action Buttons -->
       <${HorizontalLayout} gap="small">
-        <${Button} 
+        <${Button}
           variant="primary"
           icon="play"
           onClick=${onGenerate}
@@ -205,7 +205,7 @@ export function GenerationForm({
 
 
 
-        <${Button} 
+        <${Button}
           variant="primary"
           icon="upload"
           title="Upload Media"

@@ -14,9 +14,9 @@ import { AppHeader } from './app-ui/themed-base.mjs';
 import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
-import { GenerationForm } from './app-ui/generation-form.mjs';
-import { GeneratedResult } from './app-ui/generated-result.mjs';
-import { Gallery } from './app-ui/gallery.mjs';
+import { GenerationForm } from './app-ui/main/generation-form.mjs';
+import { GeneratedResult } from './app-ui/main/generated-result.mjs';
+import { Gallery } from './app-ui/main/gallery.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
@@ -28,7 +28,7 @@ import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
-import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
+import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 
 // =========================================================================

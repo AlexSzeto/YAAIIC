@@ -1,12 +1,12 @@
 import { render, Component } from 'preact'
 import { html } from 'htm/preact'
-import { styled } from '../custom-ui/goober-setup.mjs'
-import { createImageModal } from '../custom-ui/overlays/modal.mjs'
-import { Checkbox } from '../custom-ui/io/checkbox.mjs'
-import { Button } from '../custom-ui/io/button.mjs'
-import { Panel } from '../custom-ui/layout/panel.mjs'
-import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs'
-import { currentTheme } from '../custom-ui/theme.mjs'
+import { styled } from '../../custom-ui/goober-setup.mjs'
+import { createImageModal } from '../../custom-ui/overlays/modal.mjs'
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs'
+import { Button } from '../../custom-ui/io/button.mjs'
+import { Panel } from '../../custom-ui/layout/panel.mjs'
+import { globalAudioPlayer } from '../../custom-ui/global-audio-player.mjs'
+import { currentTheme } from '../../custom-ui/theme.mjs'
 
 // Styled components
 const GalleryItemContainer = styled('div')`
@@ -131,13 +131,13 @@ GalleryItemCheckboxContainer.className = 'gallery-item-checkbox-container';
 export class GalleryPreview extends Component {
   constructor(props) {
     super(props);
-    
+
     this.state = {
       imageError: false,
       isHovering: false,
       isAudioPlaying: false
     };
-    
+
     this.containerRef = null;
     this.unsubscribeAudioPlayer = null;
   }
@@ -145,7 +145,7 @@ export class GalleryPreview extends Component {
   componentDidMount() {
     // Add keyboard listener for spacebar
     document.addEventListener('keydown', this.handleKeyDown);
-    
+
     // Subscribe to audio player state changes
     this.unsubscribeAudioPlayer = globalAudioPlayer.subscribe(() => {
       const { item } = this.props;
@@ -158,12 +158,12 @@ export class GalleryPreview extends Component {
   componentWillUnmount() {
     // Clean up keyboard listener
     document.removeEventListener('keydown', this.handleKeyDown);
-    
+
     // Unsubscribe from audio player
     if (this.unsubscribeAudioPlayer) {
       this.unsubscribeAudioPlayer();
     }
-    
+
     // Stop audio if this preview's audio is currently playing
     const { item } = this.props;
     if (item && item.audioUrl && globalAudioPlayer.isPlaying(item.audioUrl)) {
@@ -174,21 +174,21 @@ export class GalleryPreview extends Component {
   handleKeyDown = (e) => {
     // Check if user is typing in an input field
     const target = e.target;
-    const isInputField = target.tagName === 'INPUT' || 
-                         target.tagName === 'TEXTAREA' || 
+    const isInputField = target.tagName === 'INPUT' ||
+                         target.tagName === 'TEXTAREA' ||
                          target.isContentEditable;
-    
+
     // Only handle keyboard events if:
     // 1. Not typing in an input field
     // 2. This component is actually connected to the DOM (gallery is visible)
     // 3. Component is being hovered over
     // 4. Selection is enabled
-    if (e.code === 'Space' && 
-        !isInputField && 
-        this.containerRef && 
-        this.containerRef.isConnected && 
-        this.state.isHovering && 
-        this.props.onSelect && 
+    if (e.code === 'Space' &&
+        !isInputField &&
+        this.containerRef &&
+        this.containerRef.isConnected &&
+        this.state.isHovering &&
+        this.props.onSelect &&
         !this.props.disableCheckbox) {
       e.preventDefault(); // Prevent page scroll
       this.toggleSelection();
@@ -205,7 +205,7 @@ export class GalleryPreview extends Component {
 
   toggleSelection = () => {
     const { item, onSelect, isSelected } = this.props;
-    
+
     // Toggle the current selection state
     if (onSelect) {
       onSelect(item, !isSelected);
@@ -243,10 +243,10 @@ export class GalleryPreview extends Component {
 
   handleCheckboxChange = (e) => {
     e.stopPropagation(); // Prevent event from bubbling up
-    
+
     const { item, onSelect } = this.props;
     const isSelected = e.target.checked;
-    
+
     // Call the onSelect callback if provided
     if (onSelect) {
       onSelect(item, isSelected);
@@ -342,18 +342,18 @@ export class GalleryPreview extends Component {
 // Factory function to create a gallery preview (for compatibility with existing code)
 export function createGalleryPreview(item, onSelect, isSelected = false, disableCheckbox = false, onImageClick = null, disabled = false, onSelectAsInput = null) {
   const container = document.createElement('div');
-  
+
   // Render the Preact component into the container
-  render(html`<${GalleryPreview} 
-    item=${item} 
-    onSelect=${onSelect} 
-    isSelected=${isSelected} 
-    disableCheckbox=${disableCheckbox} 
-    onImageClick=${onImageClick} 
+  render(html`<${GalleryPreview}
+    item=${item}
+    onSelect=${onSelect}
+    isSelected=${isSelected}
+    disableCheckbox=${disableCheckbox}
+    onImageClick=${onImageClick}
     disabled=${disabled}
     onSelectAsInput=${onSelectAsInput}
   />`, container);
-  
+
   // Return the first child element (the actual gallery item)
   return container.firstElementChild;
 }

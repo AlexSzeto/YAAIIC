@@ -9,23 +9,23 @@
  */
 import { html } from 'htm/preact';
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { useToast } from '../custom-ui/msg/toast.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Select } from '../custom-ui/io/select.mjs';
-import { Checkbox } from '../custom-ui/io/checkbox.mjs';
-import { Panel } from '../custom-ui/layout/panel.mjs';
-import { H1, VerticalLayout, HorizontalLayout, H3 } from '../custom-ui/themed-base.mjs';
-import { DynamicList } from '../custom-ui/dynamic-list.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { useToast } from '../../custom-ui/msg/toast.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { H1, VerticalLayout, HorizontalLayout, H3 } from '../../custom-ui/themed-base.mjs';
+import { DynamicList } from '../../custom-ui/dynamic-list.mjs';
 import { NodeInputSelector } from './node-input-selector.mjs';
 import { TaskForm, getTaskType } from './task-form.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
-import { HamburgerMenu } from './hamburger-menu.mjs';
-import { Icon } from '../custom-ui/layout/icon.mjs';
-import ListSelectModal from '../custom-ui/overlays/list-select.mjs';
-import { AppHeader } from './themed-base.mjs';
+import { HamburgerMenu } from '../hamburger-menu.mjs';
+import { Icon } from '../../custom-ui/layout/icon.mjs';
+import ListSelectModal from '../../custom-ui/overlays/list-select.mjs';
+import { AppHeader } from '../themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -110,10 +110,6 @@ function validateWorkflowFrontend(workflow) {
   if (!workflow.options?.type)      errors.push('Workflow type is required');
   if (!workflow.base)               errors.push('Base workflow file is required');
   const replace = workflow.replace || [];
-  if (!replace.some(r => r.from === 'prompt' || r.from === 'enhancedPrompt' || (r.from && r.from.startsWith('prompt'))))
-    errors.push('Missing required prompt binding');
-  if (!replace.some(r => r.from === 'seed'))
-    errors.push('Missing required seed binding');
   if (!replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath')
       && !(workflow.postGenerationTasks || []).some(t => t.process === 'extractOutputMediaFromTextFile'))
     errors.push('Missing required output path binding (saveImagePath, saveAudioPath, or extractOutputMediaFromTextFile post-task)');
@@ -272,7 +268,7 @@ function ExtraInputForm({ item, onChange }) {
 
   return html`
     <${VerticalLayout} gap="small">
-      <${HorizontalLayout} gap="small">
+      <${HorizontalLayout} gap="medium">
         <${Input}
           label="ID"
           value=${item.id || ''}
@@ -294,14 +290,14 @@ function ExtraInputForm({ item, onChange }) {
           onChange=${(e) => onChange({ ...item, type: e.target.value, options: [] })}
           style=${{ maxWidth: '200px' }}
         />
+        <${Input}
+          label="Default value"
+          value=${item.default !== undefined ? String(item.default) : ''}
+          onInput=${(e) => onChange({ ...item, default: e.target.value })}
+          placeholder="Default"
+          style=${{ maxWidth: '200px' }}
+        />
       </${HorizontalLayout}>
-      <${Input}
-        label="Default value"
-        value=${item.default !== undefined ? String(item.default) : ''}
-        onInput=${(e) => onChange({ ...item, default: e.target.value })}
-        placeholder="Default"
-        style=${{ maxWidth: '200px' }}
-      />
       ${hasOptions && html`
         <${DynamicList}
           title="Options"
@@ -347,6 +343,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
 
   return html`
     <${VerticalLayout} gap="medium">
+      <${HorizontalLayout} gap="medium">
       <${Input}
         label="From (data field)"
         value=${item.from || ''}
@@ -382,6 +379,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
           `
         }
       </div>
+      </${HorizontalLayout}>
       <${VerticalLayout} gap="small">
         <${H3}>Condition (optional)</${H3}>
         <${ConditionBuilder}

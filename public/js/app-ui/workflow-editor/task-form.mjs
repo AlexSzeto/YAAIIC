@@ -17,15 +17,15 @@
  */
 import { html } from 'htm/preact';
 import { useCallback, useState, useEffect } from 'preact/hooks';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Select } from '../custom-ui/io/select.mjs';
-import { Textarea } from '../custom-ui/io/textarea.mjs';
-import { DynamicList } from '../custom-ui/dynamic-list.mjs';
-import { Icon } from '../custom-ui/layout/icon.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
+import { Textarea } from '../../custom-ui/io/textarea.mjs';
+import { DynamicList } from '../../custom-ui/dynamic-list.mjs';
+import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
-import { H3, VerticalLayout } from '../custom-ui/themed-base.mjs';
+import { H3, HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -33,7 +33,7 @@ import { H3, VerticalLayout } from '../custom-ui/themed-base.mjs';
 
 const FormRoot = styled('div')`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: ${props => props.theme.spacing.small.gap};
 `;
 FormRoot.className = 'task-form-root';
@@ -384,7 +384,7 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
   return html`
     <${FormRoot} theme=${theme}>
       <${VerticalLayout} gap="medium">
-        <div>
+        <${HorizontalLayout} gap="medium">
           <${Select}
             label="Task type"
             options=${typeOptions}
@@ -398,7 +398,7 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
           ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
           ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
           ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
-        </div>
+        </${HorizontalLayout}>
         <${VerticalLayout} gap="small">
           <${H3}>Condition (optional)</${H3}>
           <${ConditionBuilder}

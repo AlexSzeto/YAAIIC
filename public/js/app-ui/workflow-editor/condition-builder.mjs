@@ -12,11 +12,11 @@
  */
 import { html } from 'htm/preact';
 import { useCallback } from 'preact/hooks';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Select } from '../custom-ui/io/select.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
 
 // ============================================================================
 // Styled Components

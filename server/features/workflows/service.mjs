@@ -523,13 +523,9 @@ export function validateWorkflow(workflowData) {
 
   const replace = workflowData.replace || [];
 
-  const hasPrompt = replace.some(r => r.from === 'prompt' || r.from === 'enhancedPrompt' || r.from?.startsWith('prompt'));
-  const hasSeed   = replace.some(r => r.from === 'seed');
   const hasOutput = replace.some(r => r.from === 'saveImagePath' || r.from === 'saveAudioPath')
     || (workflowData.postGenerationTasks || []).some(t => t.process === 'extractOutputMediaFromTextFile');
 
-  if (!hasPrompt)  errors.push('Missing required prompt binding in replace mappings');
-  if (!hasSeed)    errors.push('Missing required seed binding in replace mappings');
   if (!hasOutput)  errors.push('Missing required output path binding (saveImagePath, saveAudioPath, or extractOutputMediaFromTextFile post-task)');
 
   return errors;

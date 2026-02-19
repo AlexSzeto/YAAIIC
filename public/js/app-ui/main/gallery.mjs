@@ -1,18 +1,18 @@
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { NavigatorControl as PaginationControls } from '../custom-ui/nav/navigator.mjs';
-import { usePagination } from '../custom-ui/nav/use-pagination.mjs';
-import { fetchJson, FetchError } from '../custom-ui/util.mjs';
-import { globalAudioPlayer } from '../custom-ui/global-audio-player.mjs';
-import { showDialog } from '../custom-ui/overlays/dialog.mjs';
-import { showFolderSelect } from './folder-select.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Icon } from '../custom-ui/layout/icon.mjs';
-import { HorizontalLayout } from '../custom-ui/themed-base.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { NavigatorControl as PaginationControls } from '../../custom-ui/nav/navigator.mjs';
+import { usePagination } from '../../custom-ui/nav/use-pagination.mjs';
+import { fetchJson, FetchError } from '../../custom-ui/util.mjs';
+import { globalAudioPlayer } from '../../custom-ui/global-audio-player.mjs';
+import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { showFolderSelect } from '../folder-select.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Icon } from '../../custom-ui/layout/icon.mjs';
+import { HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 
 // Styled Components
 const ModalOverlay = styled('div')`
@@ -78,7 +78,7 @@ const ItemWrapper = styled('div')`
   border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
   overflow: hidden;
   cursor: pointer;
-  transition: transform ${() => currentTheme.value.transitions.fast}, 
+  transition: transform ${() => currentTheme.value.transitions.fast},
               border-color ${() => currentTheme.value.transitions.fast};
   background-color: ${() => currentTheme.value.colors.background.card};
   display: flex;
@@ -224,11 +224,11 @@ ButtonGroup.className = 'button-group';
 
 /**
  * Gallery Component
- * 
+ *
  * Displays a full-screen modal with a grid of media items (images/videos/audio) with search,
  * pagination, and selection capabilities. Supports both selection mode (for picking items)
  * and viewing mode (for browsing and managing media).
- * 
+ *
  * Features:
  * - Search by text or comma-separated tags
  * - Pagination (24 items per page)
@@ -237,7 +237,7 @@ ButtonGroup.className = 'button-group';
  * - Optional folder filtering
  * - Responsive grid layout (8/6/4/3 columns based on screen width)
  * - Keyboard support (Escape to close)
- * 
+ *
  * @param {Object} props
  * @param {boolean} props.isOpen - Controls modal visibility (required)
  * @param {Function} props.onClose - Callback when modal is closed (required)
@@ -251,7 +251,7 @@ ButtonGroup.className = 'button-group';
  * @param {string} [props.folder] - Optional folder UID to filter results
  * @param {Function} [props.onDelete=null] - Callback when items are deleted, receives array of deleted UIDs
  * @returns {preact.VNode|null}
- * 
+ *
  * @example
  * // Viewing mode with search and bulk operations
  * <Gallery
@@ -261,7 +261,7 @@ ButtonGroup.className = 'button-group';
  *   previewFactory={createPreview}
  *   onLoad={(items) => console.log('Loading', items)}
  * />
- * 
+ *
  * @example
  * // Selection mode for picking a single image
  * <Gallery
@@ -305,7 +305,7 @@ export function Gallery({
       setLoading(true);
       const searchText = searchQuery.trim();
       const url = new URL(queryPath, window.location.origin);
-      
+
       // Tag search vs normal search based on mode
       if (searchMode === 'tag' && searchText) {
         const tags = searchText
@@ -318,24 +318,24 @@ export function Gallery({
         url.searchParams.set('query', searchText);
         url.searchParams.set('tags', '');
       }
-      
+
       // Get all matching data for client-side pagination
       url.searchParams.set('limit', '320');
-      
+
       // Add folder filter if provided
       if (folder !== undefined) {
         url.searchParams.set('folder', folder);
       }
-      
+
       console.log('Fetching gallery data:', url.toString());
-      
+
       const data = await fetchJson(url.toString(), {}, {
         maxRetries: 2,
         retryDelay: 800,
         showUserFeedback: true,
         showSuccessFeedback: false
       });
-      
+
       setGalleryData(data || []);
       // Pagination component will auto-update when dataList changes
     } catch (error) {
@@ -377,7 +377,7 @@ export function Gallery({
     if (!isOpen) return;
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
+
     // Only debounce if we have a query, otherwise immediate fetch (handled by isOpen)
     searchTimeoutRef.current = setTimeout(() => {
       fetchGalleryData();
@@ -406,13 +406,13 @@ export function Gallery({
    */
   const shouldDisableMediaForSelection = (mediaEntry, allowedTypes) => {
     if (!mediaEntry || !allowedTypes) return false;
-    
+
     // Convert legacy string format to array
     const typesArray = typeof allowedTypes === 'string' ? [allowedTypes] : allowedTypes;
-    
+
     // Get media type from entry (defaults to 'image' for backwards compatibility)
     const mediaType = mediaEntry.type || 'image';
-    
+
     // Return true if media type is NOT in the allowed types array
     return !typesArray.includes(mediaType);
   };
@@ -427,7 +427,7 @@ export function Gallery({
 
   const handleItemSelect = (data, isSelected) => {
     if (!data || !data.uid) return;
-    
+
     setSelectedItems(prev => {
       if (isSelected) {
         return prev.includes(data.uid) ? prev : [...prev, data.uid];
@@ -478,8 +478,8 @@ export function Gallery({
     } catch (error) {
       console.error('Error deleting items:', error);
       if (window.showToast) {
-        const msg = error instanceof FetchError && error.data?.message 
-          ? error.data.message 
+        const msg = error instanceof FetchError && error.data?.message
+          ? error.data.message
           : `Failed to delete selected ${itemText}.`;
         window.showToast(msg);
       }
@@ -526,10 +526,10 @@ export function Gallery({
           if (window.showToast) {
             window.showToast(`Successfully moved ${selectedItems.length} ${movedText}`);
           }
-          
+
           // Clear selection
           setSelectedItems([]);
-          
+
           // Refresh gallery data
           await fetchGalleryData();
         }
@@ -537,8 +537,8 @@ export function Gallery({
         console.error('Failed to move items:', error);
         if (window.showToast) {
           const itemText = selectedItems.length === 1 ? 'item' : 'items';
-          const msg = error instanceof FetchError && error.data?.message 
-            ? error.data.message 
+          const msg = error instanceof FetchError && error.data?.message
+            ? error.data.message
             : `Failed to move selected ${itemText}.`;
           window.showToast(msg);
         }
@@ -548,7 +548,7 @@ export function Gallery({
 
   const handleLoadClick = () => {
     if (!onLoad) return;
-    
+
     if (selectedItems.length > 0) {
       const selectedObjects = galleryData.filter(item => selectedItems.includes(item.uid));
       onLoad(selectedObjects);
@@ -576,7 +576,7 @@ export function Gallery({
 
       // previewFactory returns a DOM node
       const preview = previewFactory(item, onSelectCallback, isSelected, disableCheckbox, onImageClickCallback, shouldDisable, onSelectAsInput);
-      
+
       if (preview) {
         items.push(html`
           <${ItemWrapper}

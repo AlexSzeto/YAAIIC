@@ -7,9 +7,9 @@
  */
 import { html } from 'htm/preact';
 import { useState, useEffect } from 'preact/hooks';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { Select } from '../custom-ui/io/select.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
 
 // ============================================================================
 // Styled Components

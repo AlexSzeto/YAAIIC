@@ -1,16 +1,16 @@
 import { useState } from 'preact/hooks';
 import { html, Component } from 'htm/preact';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { ButtonGroup } from '../custom-ui/nav/button-group.mjs';
-import { AudioPlayer } from '../custom-ui/media/audio-player.mjs';
-import { sendToClipboard } from '../custom-ui/util.mjs';
-import { createImageModal } from '../custom-ui/overlays/modal.mjs';
-import { showListSelect } from '../custom-ui/overlays/list-select.mjs';
-import { useToast } from '../custom-ui/msg/toast.mjs';
-import { H2, HorizontalLayout, VerticalLayout } from '../custom-ui/themed-base.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { Panel } from '../custom-ui/layout/panel.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { ButtonGroup } from '../../custom-ui/nav/button-group.mjs';
+import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
+import { sendToClipboard } from '../../custom-ui/util.mjs';
+import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
+import { showListSelect } from '../../custom-ui/overlays/list-select.mjs';
+import { useToast } from '../../custom-ui/msg/toast.mjs';
+import { H2, HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 
 // Styled components
 const Container = styled('div')`
@@ -113,7 +113,7 @@ const InfoInput = styled('input')`
   color: ${() => currentTheme.value.colors.text.primary};
   font-family: ${() => currentTheme.value.typography.fontFamily};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
-  
+
   ${props => props.isEditing ? `
     border-color: ${currentTheme.value.colors.primary.background};
     background-color: ${currentTheme.value.colors.background.primary};
@@ -139,7 +139,7 @@ const InfoTextarea = styled('textarea')`
   font-family: ${() => currentTheme.value.typography.fontFamily};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   resize: vertical;
-  
+
   ${props => props.isEditing ? `
     border-color: ${currentTheme.value.colors.primary.background};
     background-color: ${currentTheme.value.colors.background.primary};
@@ -170,8 +170,8 @@ const TabbedInfoHeader = styled('div')`
 `;
 TabbedInfoHeader.className = 'tabbed-info-header';
 
-export function GeneratedResult({ 
-  image, 
+export function GeneratedResult({
+  image,
   onUseSeed,
   onUsePrompt,
   onUseWorkflow,
@@ -192,7 +192,7 @@ export function GeneratedResult({
   // { field: string | null }
   const [editingField, setEditingField] = useState(null);
   const toast = useToast();
-  
+
   const handleCopy = (text, label) => {
     if (!text) return;
     sendToClipboard(text, `${label} copied to clipboard`);
@@ -217,19 +217,19 @@ export function GeneratedResult({
     try {
       // Determine media type from the image data
       const mediaType = image.type || (image.audioUrl ? 'audio' : 'image');
-      
+
       // Fetch exports filtered by media type
       const response = await fetch(`/exports?type=${mediaType}`);
       if (!response.ok) {
         throw new Error('Failed to fetch exports');
       }
       const exports = await response.json();
-      
+
       if (exports.length === 0) {
         toast.info('No export destinations configured for this media type');
         return;
       }
-      
+
       // Show list select modal with exports
       showListSelect({
         title: 'Export To',
@@ -251,9 +251,9 @@ export function GeneratedResult({
                 mediaId: image.uid
               })
             });
-            
+
             const result = await exportResponse.json();
-            
+
             if (result.success) {
               toast.success(`Exported to ${item.label}`);
             } else {
@@ -264,7 +264,7 @@ export function GeneratedResult({
           }
         }
       });
-      
+
     } catch (error) {
       toast.error(`Failed to load exports: ${error.message}`);
     }
@@ -274,7 +274,7 @@ export function GeneratedResult({
     <${Panel} variant="outlined">
       <${VerticalLayout}>
         <${H2}>Generated Result</${H2}>
-        
+
         <${Content}>
           <${LeftColumn}>
             <${MediaContainer}>
@@ -306,20 +306,20 @@ export function GeneratedResult({
           </${LeftColumn}>
 
           <${RightColumn}>
-            <${InfoField} 
-              label="Workflow" 
+            <${InfoField}
+              label="Workflow"
               field="workflow"
-              value=${image.workflow} 
+              value=${image.workflow}
               onCopy=${() => handleCopy(image.workflow, 'Workflow')}
               onUse=${() => onUseWorkflow && onUseWorkflow(image.workflow)}
               useTitle="Use this workflow"
-              canEdit=${false} 
+              canEdit=${false}
             />
-            
-            <${InfoField} 
-              label="Name" 
+
+            <${InfoField}
+              label="Name"
               field="name"
-              value=${image.name} 
+              value=${image.name}
               isEditing=${editingField === 'name'}
               onEditStart=${() => startEditing('name')}
               onCancel=${stopEditing}
@@ -329,7 +329,7 @@ export function GeneratedResult({
               useTitle="Use this name"
               canEdit=${true}
             />
-            
+
             <${TabbedInfoField}
               tabs=${[
                 {
@@ -373,11 +373,11 @@ export function GeneratedResult({
               editingField=${editingField}
               image=${image}
             />
-            
-            <${InfoField} 
-              label="Seed" 
+
+            <${InfoField}
+              label="Seed"
               field="seed"
-              value=${image.seed} 
+              value=${image.seed}
               onCopy=${() => handleCopy(image.seed, 'Seed')}
               onUse=${() => onUseSeed && onUseSeed(image.seed)}
               useTitle="Use this seed"
@@ -387,7 +387,7 @@ export function GeneratedResult({
         </${HorizontalLayout}>
 
         <${HorizontalLayout} gap="small">
-          <${Button} 
+          <${Button}
             variant="primary"
             icon="broken-arrow-up"
             onClick=${() => onReprompt && onReprompt(image)}
@@ -396,7 +396,7 @@ export function GeneratedResult({
           >
             Reprompt
           </${Button}>
-          <${Button} 
+          <${Button}
             variant="success"
             icon="check-circle"
             onClick=${() => onSelectAsInput && onSelectAsInput(image)}
@@ -405,8 +405,8 @@ export function GeneratedResult({
           >
             Select
           </${Button}>
-          <${Button} 
-            variant="primary" 
+          <${Button}
+            variant="primary"
             icon="image"
             onClick=${() => onInpaint && onInpaint(image)}
             disabled=${isInpaintDisabled}
@@ -423,7 +423,7 @@ export function GeneratedResult({
           >
             Export
           </${Button}>
-          <${Button} 
+          <${Button}
             variant="danger"
             icon="trash"
             onClick=${() => onDelete && onDelete(image)}
@@ -441,7 +441,7 @@ export function GeneratedResult({
 /**
  * TabbedInfoField Component
  * Displays multiple fields (tags, prompt, description) in a tabbed interface
- * 
+ *
  * @param {Object} props
  * @param {Array} props.tabs - Array of tab configurations
  * @param {Function} props.onCopy - Copy handler
@@ -498,16 +498,16 @@ class TabbedInfoField extends Component {
   render() {
     const { tabs, onCopy, editingField, onCancel, onRegenerate, image } = this.props;
     const { selectedTab, editValue } = this.state;
-    
+
     const activeTab = tabs.find(t => t.id === selectedTab);
     if (!activeTab) return null;
 
     const isEditing = editingField === activeTab.id;
     const tabItems = tabs.map(t => ({ id: t.id, name: t.name }));
-    
+
     // Check if this is a video file
     const isVideo = image && /\.(webm|mp4|webp|gif)$/i.test(image.imageUrl || '');
-    
+
     // Check if regenerate is available for this field (only for text fields, not videos, and not prompt)
     const canRegenerate = !isVideo && onRegenerate && (activeTab.id === 'tags' || activeTab.id === 'description' || activeTab.id === 'summary');
 
@@ -569,7 +569,7 @@ class TabbedInfoField extends Component {
         </${TabbedInfoHeader}>
         <${InfoTextarea}
             isEditing=${isEditing}
-            readOnly=${!isEditing} 
+            readOnly=${!isEditing}
             value=${isEditing ? editValue : (activeTab.value || '')}
             onInput=${(e) => this.setState({ editValue: e.target.value })}
         />
@@ -578,12 +578,12 @@ class TabbedInfoField extends Component {
   }
 }
 
-function InfoField({ 
-  label, 
-  value, 
-  isTextarea = false, 
-  onCopy, 
-  onUse, 
+function InfoField({
+  label,
+  value,
+  isTextarea = false,
+  onCopy,
+  onUse,
   useTitle,
   canEdit = false,
   isEditing = false,
@@ -592,11 +592,11 @@ function InfoField({
   onCancel
 }) {
   const [editValue, setEditValue] = useState(value || '');
-  
+
   if (isEditing && editValue === undefined) {
       setEditValue(value || '');
   }
-  
+
   const handleEditClick = () => {
     setEditValue(value || '');
     onEditStart();
@@ -651,19 +651,19 @@ function InfoField({
           `}
         </${InfoButtons}>
       </${InfoHeader}>
-      ${isTextarea 
+      ${isTextarea
         ? html`
             <${InfoTextarea}
                 isEditing=${isEditing}
-                readOnly=${!isEditing} 
+                readOnly=${!isEditing}
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
             />`
         : html`
             <${InfoInput}
-                type="text" 
+                type="text"
                 isEditing=${isEditing}
-                readOnly=${!isEditing} 
+                readOnly=${!isEditing}
                 value=${isEditing ? editValue : (value || '')}
                 onInput=${(e) => setEditValue(e.target.value)}
             />`
