@@ -75,6 +75,7 @@ const ICON_MAP = {
   'folder-plus': 'create_new_folder',
   'file': 'description',
   'file-blank': 'insert_drive_file',
+  'arrow-out-up-right-square': 'open_in_new',
   
   // Settings and configuration
   'cog': 'settings',

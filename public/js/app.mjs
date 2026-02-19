@@ -1025,20 +1025,20 @@ function App() {
         <${H1}>YAAIIG <small>V3</small></${H1}>
         <${HorizontalLayout} gap="small">
           <${Button}
-            id="folder-btn"
-            onClick=${handleOpenFolderSelect}
-            variant="medium-icon-text"
-            icon="folder"
-          >
-            ${currentFolder.label}
-          </${Button}>
-          <${Button}
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
             variant="medium-icon-text"
             icon="images"
           >
             Gallery
+          </${Button}>
+          <${Button}
+            id="folder-btn"
+            onClick=${handleOpenFolderSelect}
+            variant="medium-icon-text"
+            icon="folder"
+          >
+            ${currentFolder.label}
           </${Button}>
           <${HamburgerMenu} />
         </${HorizontalLayout}>

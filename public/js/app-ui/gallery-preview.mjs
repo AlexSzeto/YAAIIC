@@ -318,7 +318,7 @@ export class GalleryPreview extends Component {
                 <${GalleryViewButton} onClick=${this.handleViewClick}>
                   <${Button}
                     variant="small-icon"
-                    icon="open_in_new"
+                    icon="arrow-out-up-right-square"
                     title="View image"
                   />
                 </${GalleryViewButton}>

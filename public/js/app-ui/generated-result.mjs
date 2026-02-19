@@ -286,7 +286,7 @@ export function GeneratedResult({
                 <${ViewButtonOverlay}>
                   <${Button}
                     variant="small-icon"
-                    icon="open_in_new"
+                    icon="arrow-out-up-right-square"
                     onClick=${() => createImageModal(image.imageUrl, false)}
                     title="View image"
                   />
