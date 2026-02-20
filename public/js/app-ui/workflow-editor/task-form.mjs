@@ -96,7 +96,7 @@ const TASK_TYPE_OPTIONS = [
 
 const TASK_TYPE_OPTIONS_WITH_EXECUTE = [
   ...TASK_TYPE_OPTIONS,
-  { value: 'executeWorkflow', label: 'Execute workflow' },
+  { value: 'executeWorkflow', label: 'Execute Workflow' },
 ];
 
 // ============================================================================
@@ -306,7 +306,6 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
   }, []);
 
   const updateParams = (key, value) => {
-    console.log(`Updating executeWorkflow task params: ${key} =`, value);
     onChange({ ...task, parameters: { ...params, [key]: value } });
   };
 
@@ -327,7 +326,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
     />
 
     <${DynamicList}
-      title="Input Mappings"
+      title="Mappings from Main to Nested Workflow"
       condensed
       items=${params.inputMapping || []}
       renderItem=${(item, i) => html`
@@ -346,7 +345,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
     />
 
     <${DynamicList}
-      title="Output Mappings"
+      title="Mappings from Nested to Main Workflow"
       condensed
       items=${params.outputMapping || []}
       renderItem=${(item, i) => html`

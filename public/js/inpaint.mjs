@@ -20,8 +20,8 @@ import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
-import { loadTags } from './app-ui/tags.mjs';
-import { loadTagDefinitions } from './app-ui/tag-data.mjs';
+import { loadTags } from './app-ui/tags/tags.mjs';
+import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
@@ -106,6 +106,9 @@ async function createOriginalImageCanvas(imageUrl) {
  */
 function InpaintApp() {
   const toast = useToast();
+
+  const [, setTheme] = useState(currentTheme.value);
+  useEffect(() => currentTheme.subscribe(setTheme), []);
   
   // State management
   const [loading, setLoading] = useState(true);

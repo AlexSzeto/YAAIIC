@@ -369,8 +369,10 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     // If template is present instead of model, just do string replacement
     if (template) {
       console.log(`Processing template for ${to}: ${processedPrompt}`);
-      dataObject[to] = processedPrompt;
-      console.log(`Stored template result in ${to}: ${processedPrompt}`);
+      const trimmed = processedPrompt.trim();
+      const numValue = Number(trimmed);
+      dataObject[to] = (trimmed !== '' && !isNaN(numValue)) ? numValue : processedPrompt;
+      console.log(`Stored template result in ${to}: ${dataObject[to]}`);
       return dataObject;
     }
     

@@ -170,7 +170,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   // the generic seed/prompt passes below.
   const typedPrimitiveClasses = new Set([
     'PrimitiveString', 'PrimitiveStringMultiline',
-    'PrimitiveInt', 'PrimitiveFloat',
+    'PrimitiveInt', 'easy int', 'PrimitiveFloat',
     'PrimitiveBoolean',
   ]);
   let seedMapped   = false;
@@ -210,7 +210,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     // Unmatched typed primitive → extra input
     const inputType = (ct === 'PrimitiveBoolean')
       ? 'checkbox'
-      : (ct === 'PrimitiveInt' || ct === 'PrimitiveFloat')
+      : (ct === 'PrimitiveInt' || ct === 'easy int' ||ct === 'PrimitiveFloat')
         ? 'number'
         : 'text';
 

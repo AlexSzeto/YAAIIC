@@ -124,6 +124,13 @@
             "type": "checkbox",
             "label": "Remove Background",
             "default": false
+          },
+          {
+            "id": "being_dumb",
+            "type": "text",
+            "label": "Being Dumb!",
+            "default": "",
+            "options": []
           }
         ]
       },
@@ -2806,7 +2813,7 @@
     },
     {
       "name": "Text to Music (ACE-Step 1.3)",
-      "hidden": true,
+      "hidden": false,
       "options": {
         "type": "audio",
         "inputImages": 0,
@@ -2848,15 +2855,18 @@
                 "value": "ogg"
               }
             ]
+          },
+          {
+            "id": "test",
+            "type": "text",
+            "label": "Test",
+            "default": "",
+            "options": []
           }
         ]
       },
       "base": "acestep-text-to-music.json",
       "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
         {
           "condition": {
             "where": {
@@ -2896,35 +2906,11 @@
           ]
         },
         {
-          "from": "seed",
-          "to": [
-            "77",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "89",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
           "from": "length",
           "to": [
             "17",
             "inputs",
             "seconds"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "90",
-            "inputs",
-            "path"
           ]
         },
         {
@@ -2940,6 +2926,33 @@
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -3158,10 +3171,6 @@
       "base": "acestep15-text-to-music.json",
       "preGenerationTasks": [
         {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
           "condition": {
             "where": {
               "data": "lyrics"
@@ -3270,16 +3279,16 @@
               {
                 "from": "name",
                 "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
               }
             ],
             "outputMapping": [
               {
                 "from": "imageUrl",
                 "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
               }
             ]
           }
@@ -3359,14 +3368,6 @@
         {
           "from": "seed",
           "to": [
-            "22:20",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
             "7",
             "inputs",
             "seed"
@@ -3378,14 +3379,6 @@
             "7",
             "inputs",
             "max_audio_length_seconds"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "18",
-            "inputs",
-            "path"
           ]
         },
         {
@@ -3401,6 +3394,33 @@
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -3478,20 +3498,165 @@
           ]
         },
         {
-          "from": "saveImagePath",
-          "to": [
-            "30",
-            "inputs",
-            "path"
-          ]
-        },
-        {
           "from": "saveAudioPath",
           "to": [
             "20",
             "inputs",
             "path"
           ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Text to Voice Design (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "dialog",
+            "type": "textarea",
+            "label": "Dialog"
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-voice-design.json",
+      "preGenerationTasks": [
+        {
+          "condition": {
+            "where": {
+              "data": "dialog"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "gemma3:4b",
+          "prompt": "Write a single paragraph of prose consist of exactly 3 sentences of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{prompt}}. Output the dialog ONLY.",
+          "to": "dialog"
+        },
+        {
+          "from": "dialog",
+          "to": "summary"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "20",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "dialog",
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "4",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": " Generating Portrait",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -3545,33 +3710,17 @@
         {
           "from": "prompt",
           "to": [
-            "15",
+            "3",
             "inputs",
-            "value"
+            "text"
           ]
         },
         {
           "from": "seed",
           "to": [
-            "14",
+            "3",
             "inputs",
             "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "21",
-            "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "20",
-            "inputs",
-            "path"
           ]
         },
         {
@@ -3581,121 +3730,43 @@
             "inputs",
             "audio"
           ]
-        }
-      ]
-    },
-    {
-      "name": "Text to Voice Design (Qwen3-TTS)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 0,
-        "nameRequired": true,
-        "optionalPrompt": false,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          },
-          {
-            "id": "dialog",
-            "type": "textarea",
-            "label": "Dialog"
-          }
-        ]
-      },
-      "base": "qwen3tts-text-to-voice-design.json",
-      "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "dialog"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "model": "gemma3:4b",
-          "prompt": "Write a single paragraph of prose consist of exactly 3 sentences of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{prompt}}. Output the dialog ONLY.",
-          "to": "dialog"
-        },
-        {
-          "from": "dialog",
-          "to": "summary"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "20",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "dialog",
-          "to": [
-            "16",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "34:29",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "4",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "31",
-            "inputs",
-            "path"
-          ]
         },
         {
           "from": "saveAudioPath",
           "to": [
-            "36",
+            "20",
             "inputs",
             "path"
           ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -3737,10 +3808,6 @@
       "base": "qwen3tts-text-to-audio.json",
       "preGenerationTasks": [
         {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
           "from": "prompt",
           "to": "summary"
         }
@@ -3757,33 +3824,9 @@
         {
           "from": "seed",
           "to": [
-            "13:29",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
             "5",
             "inputs",
             "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "15",
-            "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "16",
-            "inputs",
-            "path"
           ]
         },
         {
@@ -3793,8 +3836,126 @@
             "inputs",
             "audio"
           ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "16",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
+    },
+    {
+      "name": "Image to Video Loop (Wan)",
+      "hidden": true,
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "width",
+            "type": "number",
+            "label": "Width",
+            "default": 832,
+            "options": []
+          },
+          {
+            "id": "height",
+            "type": "number",
+            "label": "Height",
+            "default": 480,
+            "options": []
+          }
+        ]
+      },
+      "preGenerationTasks": [],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        }
+      ],
+      "replace": [
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "102",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "103",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        }
+      ],
+      "base": "wan-image-to-video-loop.json"
     }
   ]
 }

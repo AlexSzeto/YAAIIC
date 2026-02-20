@@ -6,7 +6,7 @@
         0
       ],
       "steps": 50,
-      "cfg": 4.98,
+      "cfg": 5,
       "sampler_name": "dpmpp_3m_sde_gpu",
       "scheduler": "exponential",
       "denoise": 1,
@@ -149,115 +149,6 @@
     "class_type": "PrimitiveInt",
     "_meta": {
       "title": "Seed"
-    }
-  },
-  "25": {
-    "inputs": {
-      "text": "weird spots, (((buildings))), low resolution, anime, not photo, not photorealistic, untrue, drawing, painting, doodle, sketch, weird landscape, weird awkward, negative, bad, tilted, deformed, not masterpiece, bad quality, not enough depiction, bad tide depiction, weird tides, tides, buildings, defocused flowers, defocused objects, bad depiction on flowers, bad depiction",
-      "clip": [
-        "31",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "29": {
-    "inputs": {
-      "samples": [
-        "32",
-        0
-      ],
-      "vae": [
-        "31",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "30": {
-    "inputs": {
-      "path": "./image.png",
-      "overwrite": "true",
-      "image": [
-        "29",
-        0
-      ]
-    },
-    "class_type": "JWImageSaveToPath",
-    "_meta": {
-      "title": "Image Save To Path"
-    }
-  },
-  "31": {
-    "inputs": {
-      "ckpt_name": "landscapeAnimePro_v310W768.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "32": {
-    "inputs": {
-      "seed": 289580303259692,
-      "steps": 15,
-      "cfg": 4,
-      "sampler_name": "euler",
-      "scheduler": "normal",
-      "denoise": 1,
-      "model": [
-        "31",
-        0
-      ],
-      "positive": [
-        "35",
-        0
-      ],
-      "negative": [
-        "25",
-        0
-      ],
-      "latent_image": [
-        "33",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
-  },
-  "33": {
-    "inputs": {
-      "width": 256,
-      "height": 256,
-      "batch_size": 1
-    },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Empty Latent Image"
-    }
-  },
-  "35": {
-    "inputs": {
-      "text": [
-        "21",
-        0
-      ],
-      "clip": [
-        "31",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
     }
   }
 }

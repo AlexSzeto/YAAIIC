@@ -7,10 +7,10 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { SeedControl } from '../seed-control.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { getThemeValue } from '../../custom-ui/theme.mjs';
-import { createTagSelectionHandler } from '../tag-insertion-util.mjs';
-import { TagSelectorPanel } from '../tag-selector-panel.mjs';
+import { createTagSelectionHandler } from '../tags/tag-insertion-util.mjs';
+import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
-import { isTagDefinitionsLoaded } from '../tag-data.mjs';
+import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
 
 // Styled components
 const FormContainer = styled('div')`

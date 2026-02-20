@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
-import { initializeOrchestrator, setAddMediaDataEntry, setWorkflowsData } from './features/generation/orchestrator.mjs';
-import { loadWorkflows, validateNoNestedExecuteWorkflow } from './features/generation/workflow-validator.mjs';
+import { initializeOrchestrator, setAddMediaDataEntry } from './features/generation/orchestrator.mjs';
+import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
@@ -31,13 +31,9 @@ const PORT = process.env.PORT || 3000;
 // Bootstrap: load config, workflows, and initialize sub-modules
 // ---------------------------------------------------------------------------
 let config;
-let comfyuiWorkflows;
 try {
   config = loadConfig();
   console.log('Configuration loaded:', config);
-
-  // Load ComfyUI workflows via the workflow-validator module
-  comfyuiWorkflows = loadWorkflows();
 
   // Initialize services module with config
   initializeServices(config);
@@ -45,9 +41,6 @@ try {
   // Set up the image data entry function for orchestrator and upload modules
   setAddMediaDataEntry(addMediaDataEntry);
   setUploadAddMediaDataEntry(addMediaDataEntry);
-
-  // Set workflows data in orchestrator module
-  setWorkflowsData(comfyuiWorkflows);
 
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -73,7 +66,6 @@ app.use(express.json());
 
 // Expose shared dependencies to feature routers via app.locals
 app.locals.config = config;
-app.locals.comfyuiWorkflows = comfyuiWorkflows;
 app.locals.uploadFileToComfyUI = uploadFileToComfyUI;
 
 // ---------------------------------------------------------------------------
@@ -106,9 +98,11 @@ app.get('/progress/:taskId', handleSSEConnection);
 app.use('/media', express.static(STORAGE_DIR));
 
 // GET /workflows – public list (non-hidden only, for the generator UI)
+// Reads from disk each call so it always reflects the latest saved state.
 app.get('/workflows', (req, res) => {
   try {
-    const workflows = comfyuiWorkflows.workflows
+    const data = loadWorkflows();
+    const workflows = data.workflows
       .filter(workflow => !workflow.hidden)
       .map(workflow => ({
         name: workflow.name,
@@ -118,23 +112,6 @@ app.get('/workflows', (req, res) => {
   } catch (error) {
     console.error('Error getting workflows:', error);
     res.status(500).json({ error: 'Failed to load workflows' });
-  }
-});
-
-// GET /api/workflows – full list (all workflows including hidden, for the editor UI)
-// Reads from disk each call so it always reflects the latest saved state.
-app.get('/api/workflows', (req, res) => {
-  try {
-    const data = loadWorkflows();
-    const summaries = data.workflows.map(({ name, hidden, options }) => ({
-      name,
-      hidden: !!hidden,
-      type: options?.type,
-    }));
-    res.json({ workflows: summaries });
-  } catch (error) {
-    console.error('Error listing all workflows:', error);
-    res.status(500).json({ error: 'Failed to list workflows' });
   }
 });
 

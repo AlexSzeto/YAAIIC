@@ -11,7 +11,7 @@ import { Router } from 'express';
 import path from 'path';
 import { upload } from '../upload/router.mjs';
 import { initializeGenerationTask, processGenerationTask } from './orchestrator.mjs';
-import { validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
+import { loadWorkflows, validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
   createTask, deleteTask, getTask,
@@ -45,7 +45,7 @@ router.post('/generate', upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Workflow parameter is required' });
     }
 
-    const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+    const comfyuiWorkflows = loadWorkflows();
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
 
@@ -196,7 +196,7 @@ router.post('/generate/sync', async (req, res) => {
       return res.status(400).json({ error: 'Workflow parameter is required' });
     }
 
-    const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+    const comfyuiWorkflows = loadWorkflows();
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
 
@@ -285,7 +285,7 @@ router.post('/regenerate', async (req, res) => {
     res.json({ taskId, message: 'Regeneration started' });
 
     try {
-      const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+      const comfyuiWorkflows = loadWorkflows();
       const postGenTasks = comfyuiWorkflows.defaultImageGenerationTasks || [];
 
       let completedFields = 0;
@@ -421,7 +421,7 @@ router.post('/generate/inpaint', upload.fields([
     console.log('- mask:', maskFile.originalname, 'size:', maskFile.size, 'type:', maskFile.mimetype);
     
     // Retrieve shared dependencies from app.locals
-    const comfyuiWorkflows = req.app.locals.comfyuiWorkflows;
+    const comfyuiWorkflows = loadWorkflows();
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
     

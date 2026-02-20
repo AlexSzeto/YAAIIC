@@ -11,7 +11,7 @@ import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
-import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
+import { currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/main/generation-form.mjs';
@@ -68,8 +68,10 @@ function App() {
   const toast = useToast();
   const hoverPanel = useHoverPanel();
   
-  // Theme state
-  // State management
+  // Theme state - triggers re-render on theme change so goober styled components update
+  const [, setTheme] = useState(currentTheme.value);
+  useEffect(() => currentTheme.subscribe(setTheme), []);
+
   const [workflow, setWorkflow] = useState(null);
   const [formState, setFormState] = useState({
     name: '',

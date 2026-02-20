@@ -289,7 +289,7 @@
   },
   "120": {
     "inputs": {
-      "value": 480
+      "value": 640
     },
     "class_type": "easy int",
     "_meta": {

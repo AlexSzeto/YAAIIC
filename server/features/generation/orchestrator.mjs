@@ -25,6 +25,7 @@ import {
 } from '../../core/sse.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
+import { loadWorkflows } from './workflow-validator.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -32,9 +33,6 @@ import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.m
 
 /** ComfyUI HTTP API base URL (set via {@link initializeOrchestrator}). */
 let comfyUIAPIPath = null;
-
-/** Parsed comfyui-workflows.json (set via {@link setWorkflowsData}). */
-let workflowsData = null;
 
 /** Track the last used workflow to manage VRAM. */
 let lastUsedWorkflow = null;
@@ -86,15 +84,6 @@ export function initializeOrchestrator(apiPath) {
  */
 export function setAddMediaDataEntry(func) {
   addMediaDataEntry = func;
-}
-
-/**
- * Store the parsed workflows configuration.
- * @param {Object} workflows - The output of `loadWorkflows()`.
- */
-export function setWorkflowsData(workflows) {
-  workflowsData = workflows;
-  console.log('Workflows data set in orchestrator module');
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +281,9 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
   try {
     const { base: workflowBasePath, replace: modifications, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
+
+    // Load fresh from disk so any edits made via the workflow editor are reflected.
+    const workflowsData = loadWorkflows();
     const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
 
@@ -470,7 +462,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     const imageFormat = generationData.imageFormat;
     const audioFormat = generationData.audioFormat;
 
-    if (!imageFormat) {
+    if (!isAudio && !imageFormat) {
       throw new Error('imageFormat is required but not found in generation data. Check workflow configuration and extra inputs.');
     }
 
@@ -648,7 +640,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
           } else if (hasPrompt) {
             const percentage = Math.round((currentStep / totalSteps) * 100);
             const stepName = taskConfig.name || (taskConfig.to === 'description'
-              ? `Analyzing image`
+              ? `Analyzing Image`
               : `Generating ${taskConfig.to}`);
 
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -690,15 +682,15 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       if (!fs.existsSync(generationData.saveAudioPath)) {
         throw new Error(`Generated audio file not found at: ${generationData.saveAudioPath}`);
       }
-      if (!fs.existsSync(saveImagePath)) {
+      if (!fs.existsSync(generationData.saveImagePath)) {
         delete generationData.saveImagePath;
         delete generationData.imageUrl;
         delete generationData.saveImageFilename;
       }
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
     } else {
-      if (!fs.existsSync(saveImagePath)) {
-        throw new Error(`Generated image file not found at: ${saveImagePath}`);
+      if (!fs.existsSync(generationData.saveImagePath)) {
+        throw new Error(`Generated image file not found at: ${generationData.saveImagePath}`);
       }
       console.log(`Image generated successfully`);
     }

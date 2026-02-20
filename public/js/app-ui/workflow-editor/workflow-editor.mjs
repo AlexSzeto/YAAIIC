@@ -556,6 +556,7 @@ export function WorkflowEditor() {
 
       await loadWorkflowList();
       await loadBaseFiles();
+      setIsModalOpen(false);
       toast.success(`Uploaded "${data.workflow.name}"`);
     } catch (e) {
       toast.error(`Upload failed: ${e.message}`);
@@ -759,7 +760,7 @@ export function WorkflowEditor() {
                 if (Array.isArray(item.to) && item.to.length === 3) {
                   const nodeId    = item.to[0];
                   const inputName = item.to[2];
-                  const nodeTitle = workflowJson[nodeId]?._meta?.title ?? workflowJson[nodeId]?.class_type ?? nodeId;
+                  const nodeTitle = workflowJson[nodeId]?._meta?.title ?? workflowJson[nodeId]?.class_type ?? '(Missing Node)';
                   return html`${item.from} ${InlineArrowIcon} ${nodeId}. ${nodeTitle} ${InlineArrowIcon} ${inputName}`;
                 }
                 return html`${item.from} ${InlineArrowIcon} ${Array.isArray(item.to) ? item.to.join('.') : (item.to || '?')}`;
