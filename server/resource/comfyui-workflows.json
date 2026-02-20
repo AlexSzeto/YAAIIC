@@ -33,55 +33,43 @@
       "to": "tags"
     }
   ],
-  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
+  "defaultAudioGenerationWorkflow": "Text to Image (Album)",
   "workflows": [
     {
-      "name": "Text to Image (Album Cover)",
+      "name": "Text to Image (Album)",
       "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
         "inputImages": 0,
+        "inputAudios": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": []
       },
       "preGenerationTasks": [
         {
           "template": "jpg",
           "to": "imageFormat"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "template": "(prompt unavailable for uploaded audio)",
-          "to": "prompt"
-        },
-        {
-          "template": "(description unavailable for uploaded audio)",
-          "to": "description"
-        },
-        {
-          "template": "(summary unavailable for uploaded audio)",
-          "to": "summary"
-        },
-        {
-          "template": "(tags unavailable for uploaded audio)",
-          "to": "tags"
-        }
-      ],
-      "base": "text-to-image-album.json",
-      "replace": [
-        {
-          "from": "ollamaAPIPath",
-          "to": [
-            "20",
-            "inputs",
-            "url"
-          ]
         },
         {
           "from": "name",
+          "to": "prompt"
+        }
+      ],
+      "postGenerationTasks": [],
+      "replace": [
+        {
+          "from": "saveImagePath",
+          "to": [
+            "18",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "prompt",
           "to": [
             "22",
             "inputs",
@@ -95,16 +83,9 @@
             "inputs",
             "seed"
           ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "18",
-            "inputs",
-            "path"
-          ]
         }
-      ]
+      ],
+      "base": "album-text-to-image.json"
     },
     {
       "name": "Text to Image (Illustrious Characters)",
@@ -3227,14 +3208,6 @@
           ]
         },
         {
-          "from": "seed",
-          "to": [
-            "120",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
           "from": "length",
           "to": [
             "98",
@@ -3275,14 +3248,6 @@
           ]
         },
         {
-          "from": "saveImagePath",
-          "to": [
-            "118",
-            "inputs",
-            "path"
-          ]
-        },
-        {
           "from": "saveAudioPath",
           "to": [
             "108",
@@ -3295,6 +3260,29 @@
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },

@@ -44,13 +44,13 @@ export function HamburgerMenu() {
     {
       label: 'Workflow Editor',
       href:  '/workflow-editor.html',
-      icon:  'settings',
+      icon:  'cog',
       active: currentPath === '/workflow-editor.html',
     },
     {
       label: 'Change Theme',
       // icon reflects the theme that WILL be applied after clicking
-      icon:  themeName === 'dark' ? 'sunny' : 'bedtime',
+      icon:  themeName === 'dark' ? 'sun' : 'moon',
       onClick: () => {
         toggleTheme();
         setThemeName(currentTheme.value.name);

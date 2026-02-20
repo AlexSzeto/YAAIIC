@@ -426,8 +426,8 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
               throw new Error(`Unknown process handler: ${taskConfig.process}`);
             }
 
-            const savePath = generationData.saveImagePath || '';
-            const context = { storagePath, savePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
+            const saveImagePath = generationData.saveImagePath || '';
+            const context = { storagePath, saveImagePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
 
             await handler(taskConfig.parameters || {}, generationData, context);
 
@@ -499,10 +499,10 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       console.log('Created audioUrl:', generationData.audioUrl);
     }
 
-    const savePath = generationData.saveImagePath;
+    const saveImagePath = generationData.saveImagePath;
 
     // Set initial imageUrl
-    const filename = path.basename(savePath);
+    const filename = path.basename(saveImagePath);
     generationData.imageUrl = `/media/${filename}`;
 
     // -----------------------------------------------------------------------
@@ -638,7 +638,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
               throw new Error(`Unknown process handler: ${taskConfig.process}`);
             }
 
-            const context = { storagePath, savePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
+            const context = { storagePath, saveImagePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
 
             await handler(taskConfig.parameters || {}, generationData, context);
 
@@ -685,17 +685,22 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     // -----------------------------------------------------------------------
     // FINALISATION
     // -----------------------------------------------------------------------
-    if (!fs.existsSync(savePath)) {
-      throw new Error(`Generated image file not found at: ${savePath}`);
-    }
-
-    console.log(`Image generated successfully`);
 
     if (isAudio && generationData.saveAudioPath) {
       if (!fs.existsSync(generationData.saveAudioPath)) {
         throw new Error(`Generated audio file not found at: ${generationData.saveAudioPath}`);
       }
+      if (!fs.existsSync(saveImagePath)) {
+        delete generationData.saveImagePath;
+        delete generationData.imageUrl;
+        delete generationData.saveImageFilename;
+      }
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
+    } else {
+      if (!fs.existsSync(saveImagePath)) {
+        throw new Error(`Generated image file not found at: ${saveImagePath}`);
+      }
+      console.log(`Image generated successfully`);
     }
 
     // Calculate time taken
@@ -716,7 +721,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     // Save to database (skip if silent mode / nested workflow)
     if (!silent && addMediaDataEntry) {
       addMediaDataEntry(generationData);
-      console.log('Image data entry saved to database with UID:', generationData.uid);
+      console.log('Media entry saved to database with UID:', generationData.uid);
     } else if (silent) {
       console.log('Silent mode: Skipping database entry for nested workflow');
     }

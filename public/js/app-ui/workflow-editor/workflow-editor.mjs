@@ -143,7 +143,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
     { label: 'Detect', value: 'detect' },
   ];
 
-  const baseFileOptions = (baseFiles || []).map(f => ({ label: f, value: f }));
+  const baseFileOptions = (['', ...baseFiles] || []).map(f => ({ label: f || '— choose workflow —', value: f }));
 
   return html`
     <${VerticalLayout} gap="medium">
@@ -158,7 +158,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
       </${FormRow}>
       <${FormRow} theme=${theme}>
         <${Select}
-          label="Base file"
+          label="Base ComfyUI Workflow File"
           fullWidth="true"
           options=${baseFileOptions}
           value=${workflow.base || ''}
@@ -791,7 +791,7 @@ export function WorkflowEditor() {
                 if (t === 'template')        return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'from')             return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'model')            return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'executeWorkflow')  return `Execute: ${item.parameters?.workflow || '?'}`;
+                if (t === 'executeWorkflow')  return `Execute: ${item.parameters?.name || item.parameters?.workflow || '?'}`;
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}

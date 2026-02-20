@@ -151,7 +151,7 @@ function App() {
         }
 
         // Load recent history
-        const recent = await backfillMissingProperties(fetchJson('/media-data?limit=10'));
+        const recent = backfillMissingProperties(await fetchJson('/media-data?limit=10'));
         if (Array.isArray(recent)) {
           setHistory(recent);
           // Optionally set the first image as current
@@ -556,13 +556,13 @@ function App() {
     
     if (data.result && data.result.uid) {
       try {
-        const img = await fetchJson(`/media-data/${data.result.uid}`);
-        setGeneratedImage(img);
+        const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
+        setGeneratedImage(media);
         
         // Add to history
-        setHistory(prev => [img, ...prev]);
+        setHistory(prev => [media, ...prev]);
         
-        toast.success(`Generated: ${img.name || 'Image'}`);
+        toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
         toast.error('Failed to load generated image');
@@ -858,7 +858,7 @@ function App() {
         setCurrentFolder(selectedFolder);
         
         // Refresh gallery to show images from the new folder
-        const recent = await backfillMissingProperties(fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
+        const recent = backfillMissingProperties(await fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
         if (Array.isArray(recent)) {
           setHistory(recent);
           if (recent.length > 0) {

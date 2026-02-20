@@ -14,6 +14,7 @@ import { html } from 'htm/preact';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { Icon } from '../layout/icon.mjs';
 
 // ============================================================================
 // Styled Components
@@ -108,7 +109,7 @@ export function NavigationMenu({ open, onClose, items = [], children }) {
   }, [open, handleDocumentClick]);
 
   return html`
-    <${MenuRoot} ref=${rootRef}>
+    <div ref=${rootRef} class="nav-panel-root" style="position:relative;">
       ${children}
 
       <${Dropdown} theme=${theme} open=${open}>
@@ -127,14 +128,12 @@ export function NavigationMenu({ open, onClose, items = [], children }) {
             }}
           >
             ${item.icon && html`
-              <span class="material-symbols-outlined" style="font-size:18px;color:${item.active ? theme.colors.primary.text : theme.colors.text.secondary}">
-                ${item.icon}
-              </span>
+              <${Icon} name=${item.icon} size="18" color={item.active ? theme.colors.primary.text : theme.colors.text.secondary} />
             `}
             ${item.label}
           </${NavItem}>
         `)}
       </${Dropdown}>
-    </${MenuRoot}>
+    </div>
   `;
 }

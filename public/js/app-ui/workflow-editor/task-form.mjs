@@ -90,7 +90,7 @@ function convertTaskType(task, newType) {
 const TASK_TYPE_OPTIONS = [
   { value: 'template',             label: 'Template Replace' },
   { value: 'from',                 label: 'Copy Value' },
-  { value: 'model',                label: 'Generate Value' },
+  { value: 'model',                label: 'Generate Text' },
   { value: 'additionalProcessing', label: 'Additional Process' },
 ];
 
@@ -300,12 +300,13 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
     fetch('/api/workflows')
       .then(r => r.ok ? r.json() : { workflows: [] })
       .then(data => {
-        setWorkflowOptions((data.workflows || []).map(wf => ({ label: wf.name, value: wf.name })));
+        setWorkflowOptions((['', ...data.workflows] || []).map(wf => ({ label: wf.name ?? '— choose workflow —', value: wf.name })));
       })
       .catch(() => {});
   }, []);
 
   const updateParams = (key, value) => {
+    console.log(`Updating executeWorkflow task params: ${key} =`, value);
     onChange({ ...task, parameters: { ...params, [key]: value } });
   };
 

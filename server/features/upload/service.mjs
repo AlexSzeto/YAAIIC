@@ -103,7 +103,7 @@ export async function processMediaUpload(file, workflowsConfig, name = null) {
  * Helper: generate album cover for audio uploads.
  */
 async function generateAlbumCover(taskId, requestData, workflowConfig, workflowsConfig) {
-  const { base: workflowBasePath, replace: modifications, postGenerationTasks, options } = workflowConfig;
+  const { base: workflowBasePath, replace: modifications, preGenerationTasks, postGenerationTasks, options } = workflowConfig;
   const { seed, saveImagePath, prompt } = requestData;
 
   console.log(`Generating album cover with workflow: ${workflowBasePath}`);
@@ -115,11 +115,24 @@ async function generateAlbumCover(taskId, requestData, workflowConfig, workflows
   const workflowPath = path.join(COMFYUI_WORKFLOWS_DIR, workflowBasePath);
   let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
+  
   // Set up generationData fields
   if (saveImagePath) {
     generationData.saveImageFilename = path.basename(saveImagePath, path.extname(saveImagePath));
   }
   generationData.storagePath = STORAGE_DIR;
+
+  // Run pre-generation tasks (e.g. LLM-driven prompt generation) before
+  // applying modifications, so their results can feed into the workflow.
+  if (preGenerationTasks && Array.isArray(preGenerationTasks)) {
+    for (const taskConfig of preGenerationTasks) {
+      try {
+        await modifyGenerationDataWithPrompt(taskConfig, generationData);
+      } catch (error) {
+        console.warn(`Failed to process album cover pre-gen task for ${taskConfig.to}:`, error.message);
+      }
+    }
+  }
 
   // Apply modifications to the workflow
   if (modifications && Array.isArray(modifications)) {
@@ -252,21 +265,11 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
 
         // Create generationData with both audio and image info
         const generationData = {
+          ...albumResult,
           saveAudioPath: savePath,
           audioUrl: `/media/${filename}`,
           audioFormat: ext.substring(1), // Remove leading dot
-          saveImagePath: albumResult.saveImagePath,
-          imageUrl: albumResult.imageUrl,
-          prompt: albumRequestData.prompt,
-          seed: albumRequestData.seed,
           workflow: 'Uploaded Audio',
-          name: baseName,
-          description: albumResult.description || '(description unavailable for uploaded audio)',
-          summary: albumResult.summary || '(summary unavailable for uploaded audio)',
-          tags: albumResult.tags || '(tags unavailable for uploaded audio)',
-          inpaint: false,
-          inpaintArea: null,
-          timeTaken: 0
         };
 
         // Emit progress: Saving to database
