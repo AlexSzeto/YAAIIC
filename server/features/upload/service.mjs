@@ -224,9 +224,9 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
     const nextIndex = findNextIndex(fileType, STORAGE_DIR);
     const filename = `${fileType}_${nextIndex}${ext}`;
 
-    const savePath = path.join(STORAGE_DIR, filename);
-    fs.writeFileSync(savePath, file.buffer);
-    console.log(`${fileTypeLabel} saved to: ${savePath}`);
+    const saveMediaPath = path.join(STORAGE_DIR, filename);
+    fs.writeFileSync(saveMediaPath, file.buffer);
+    console.log(`${fileTypeLabel} saved to: ${saveMediaPath}`);
 
     // Handle audio files differently
     if (isAudio) {
@@ -266,7 +266,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
         // Create generationData with both audio and image info
         const generationData = {
           ...albumResult,
-          saveAudioPath: savePath,
+          saveAudioPath: saveMediaPath,
           audioUrl: `/media/${filename}`,
           audioFormat: ext.substring(1), // Remove leading dot
           workflow: 'Uploaded Audio',
@@ -320,7 +320,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
 
     // Create generationData object with the saved path
     const generationData = {
-      saveImagePath: savePath,
+      saveImagePath: saveMediaPath,
       prompt: '',
       seed: 0,
       workflow: 'Uploaded Image',

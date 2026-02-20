@@ -2205,418 +2205,6 @@
       ]
     },
     {
-      "name": "Image to Video (WAN22)",
-      "options": {
-        "type": "video",
-        "autocomplete": false,
-        "inputImages": 2,
-        "optionalPrompt": true,
-        "nameRequired": true,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "frames",
-            "type": "number",
-            "label": "Length (frames)",
-            "default": 25
-          },
-          {
-            "id": "framerate",
-            "type": "number",
-            "label": "Frame Rate",
-            "default": 20
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "webp",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "prompt"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-          "to": "prompt"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "image_0_description"
-                },
-                "isNot": {
-                  "value": ""
-                }
-              },
-              {
-                "where": {
-                  "data": "image_1_description"
-                },
-                "isNot": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "In the beginning:\n{{image_0_description}}\n\nIn the end:\n{{image_1_description}}",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "image_0_summary"
-                },
-                "isNot": {
-                  "value": ""
-                }
-              },
-              {
-                "where": {
-                  "data": "image_1_summary"
-                },
-                "isNot": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
-          "to": "summary"
-        }
-      ],
-      "base": "wan-image-to-video.json",
-      "replace": [
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 832,
-          "to": [
-            "64",
-            "inputs",
-            "width"
-          ]
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 480,
-          "to": [
-            "64",
-            "inputs",
-            "height"
-          ]
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 832,
-          "to": [
-            "72",
-            "inputs",
-            "width"
-          ]
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 480,
-          "to": [
-            "72",
-            "inputs",
-            "height"
-          ]
-        },
-        {
-          "from": "prompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "57",
-            "inputs",
-            "noise_seed"
-          ]
-        },
-        {
-          "from": "saveImageFilename",
-          "to": [
-            "63",
-            "inputs",
-            "filename_prefix"
-          ]
-        },
-        {
-          "from": "storagePath",
-          "to": [
-            "76",
-            "inputs",
-            "output_file_path"
-          ]
-        },
-        {
-          "from": "image_0_filename",
-          "to": [
-            "52",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "image_1_filename",
-          "to": [
-            "71",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "frames",
-          "to": [
-            "73",
-            "inputs",
-            "length"
-          ]
-        },
-        {
-          "from": "framerate",
-          "to": [
-            "63",
-            "inputs",
-            "frame_rate"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "process": "extractOutputMediaFromTextFile",
-          "parameters": {
-            "filename": "video-filename.txt"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Image to Video Loop (WAN5b)",
-      "options": {
-        "type": "video",
-        "autocomplete": false,
-        "inputImages": 1,
-        "optionalPrompt": true,
-        "nameRequired": true,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "frames",
-            "type": "number",
-            "label": "Length (frames)",
-            "default": 25
-          },
-          {
-            "id": "framerate",
-            "type": "number",
-            "label": "Frame Rate",
-            "default": 20
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "webp",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "prompt"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-          "to": "prompt"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_description"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "template": "{{image_0_description}}",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_summary"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "template": "{{image_0_summary}}",
-          "to": "summary"
-        }
-      ],
-      "base": "wan5b-image-to-video-loop.json",
-      "replace": [
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 832,
-          "to": [
-            "120",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 480,
-          "to": [
-            "121",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "prompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "63",
-            "inputs",
-            "noise_seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "109",
-            "inputs",
-            "noise_seed"
-          ]
-        },
-        {
-          "from": "saveImageFilename",
-          "to": [
-            "106",
-            "inputs",
-            "filename_prefix"
-          ]
-        },
-        {
-          "from": "storagePath",
-          "to": [
-            "119",
-            "inputs",
-            "output_file_path"
-          ]
-        },
-        {
-          "from": "image_0_filename",
-          "to": [
-            "56",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "frames",
-          "to": [
-            "122",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "framerate",
-          "to": [
-            "106",
-            "inputs",
-            "frame_rate"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "process": "extractOutputMediaFromTextFile",
-          "parameters": {
-            "filename": "video-filename.txt"
-          }
-        },
-        {
-          "process": "crossfadeVideoFrames",
-          "parameters": {
-            "blendFrames": 10
-          }
-        }
-      ]
-    },
-    {
       "name": "Image to Video (WAN5b)",
       "options": {
         "type": "video",
@@ -2709,25 +2297,14 @@
         {
           "template": "Prevent extreme camera movement, and always use smooth camera motion. {{prompt}}",
           "to": "enhancedPrompt"
-        }
-      ],
-      "base": "wan5b-image-to-video.json",
-      "replace": [
+        },
         {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "value": 832,
-          "to": [
-            "120",
-            "inputs",
-            "value"
-          ]
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
         },
         {
           "condition": {
@@ -2738,7 +2315,34 @@
               "value": "landscape"
             }
           },
-          "value": 480,
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "wan5b-image-to-video.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "120",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
           "to": [
             "121",
             "inputs",
@@ -2767,6 +2371,14 @@
             "119",
             "inputs",
             "output_file_path"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "106",
+            "inputs",
+            "filename_prefix"
           ]
         },
         {
@@ -2807,6 +2419,631 @@
           "process": "extractOutputMediaFromTextFile",
           "parameters": {
             "filename": "video-filename.txt"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image to Video Loop (WAN5b)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "wan5b-image-to-video-loop.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "120",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "121",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "63",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "109",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "106",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "119",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "56",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "122",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "106",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        },
+        {
+          "process": "crossfadeVideoFrames",
+          "parameters": {
+            "blendFrames": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image to Video (WAN22)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 2,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "image_0_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              },
+              {
+                "where": {
+                  "data": "image_1_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "In the beginning:\n{{image_0_description}}\n\nIn the end:\n{{image_1_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "image_0_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              },
+              {
+                "where": {
+                  "data": "image_1_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "wan-image-to-video.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "64",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "64",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "width",
+          "to": [
+            "72",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "72",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "57",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "63",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "76",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "image_1_filename",
+          "to": [
+            "71",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "73",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "63",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image to Video Loop (WAN22)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "wan-image-to-video-loop.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "103",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "100",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "95",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "101",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "77",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "100",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        },
+        {
+          "process": "crossfadeVideoFrames",
+          "parameters": {
+            "blendFrames": 10
           }
         }
       ]
@@ -3875,87 +4112,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "Image to Video Loop (Wan)",
-      "hidden": true,
-      "options": {
-        "type": "video",
-        "autocomplete": false,
-        "inputImages": 1,
-        "inputAudios": 0,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "width",
-            "type": "number",
-            "label": "Width",
-            "default": 832,
-            "options": []
-          },
-          {
-            "id": "height",
-            "type": "number",
-            "label": "Height",
-            "default": 480,
-            "options": []
-          }
-        ]
-      },
-      "preGenerationTasks": [],
-      "postGenerationTasks": [
-        {
-          "process": "extractOutputMediaFromTextFile",
-          "parameters": {
-            "filename": "video-filename.txt"
-          }
-        }
-      ],
-      "replace": [
-        {
-          "from": "image_0_filename",
-          "to": [
-            "52",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "prompt",
-          "to": [
-            "102",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "103",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "width",
-          "to": [
-            "104",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "height",
-          "to": [
-            "105",
-            "inputs",
-            "value"
-          ]
-        }
-      ],
-      "base": "wan-image-to-video-loop.json"
     }
   ]
 }
