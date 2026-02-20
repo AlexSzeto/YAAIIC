@@ -8,10 +8,10 @@ import { ImageSelect } from '../../custom-ui/media/image-select.mjs';
 import { AudioSelect } from '../../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { createTagSelectionHandler } from '../tag-insertion-util.mjs';
-import { TagSelectorPanel } from '../tag-selector-panel.mjs';
+import { createTagSelectionHandler } from '../tags/tag-insertion-util.mjs';
+import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
-import { isTagDefinitionsLoaded } from '../tag-data.mjs';
+import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
 
 /**
  * Generation Form Component

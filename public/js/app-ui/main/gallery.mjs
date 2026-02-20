@@ -13,6 +13,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { HorizontalLayout } from '../../custom-ui/themed-base.mjs';
+import { backfillMissingProperties } from '../../util.mjs';
 
 // Styled Components
 const ModalOverlay = styled('div')`
@@ -75,7 +76,7 @@ Grid.className = 'grid';
 const ItemWrapper = styled('div')`
   aspect-ratio: 1;
   border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.primary};
-  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
   overflow: hidden;
   cursor: pointer;
   transition: transform ${() => currentTheme.value.transitions.fast},
@@ -102,7 +103,6 @@ const ItemWrapper = styled('div')`
     width: 100% !important;
     height: 100% !important;
     object-fit: cover;
-    border-radius: 3px;
   }
 `;
 ItemWrapper.className = 'item-wrapper';
@@ -336,7 +336,7 @@ export function Gallery({
         showSuccessFeedback: false
       });
 
-      setGalleryData(data || []);
+      setGalleryData(backfillMissingProperties(data) || []);
       // Pagination component will auto-update when dataList changes
     } catch (error) {
       console.error('Error fetching gallery data:', error);

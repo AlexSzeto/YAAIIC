@@ -25,11 +25,12 @@ import { showDialog } from './custom-ui/overlays/dialog.mjs';
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
-import { loadTags } from './app-ui/tags.mjs';
-import { loadTagDefinitions } from './app-ui/tag-data.mjs';
+import { loadTags } from './app-ui/tags/tags.mjs';
+import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
 import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
+import { backfillMissingProperties } from './util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -150,7 +151,7 @@ function App() {
         }
 
         // Load recent history
-        const recent = await fetchJson('/media-data?limit=10');
+        const recent = await backfillMissingProperties(fetchJson('/media-data?limit=10'));
         if (Array.isArray(recent)) {
           setHistory(recent);
           // Optionally set the first image as current
@@ -857,7 +858,7 @@ function App() {
         setCurrentFolder(selectedFolder);
         
         // Refresh gallery to show images from the new folder
-        const recent = await fetchJson(`/media-data?limit=10&folder=${selectedUid}`);
+        const recent = await backfillMissingProperties(fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
         if (Array.isArray(recent)) {
           setHistory(recent);
           if (recent.length > 0) {

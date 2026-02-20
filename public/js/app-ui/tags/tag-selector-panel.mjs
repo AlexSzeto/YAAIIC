@@ -8,14 +8,14 @@
 
 import { createRef } from 'preact';
 import { html, Component } from 'htm/preact';
-import { styled } from '../custom-ui/goober-setup.mjs';
-import { currentTheme } from '../custom-ui/theme.mjs';
-import { Button } from '../custom-ui/io/button.mjs';
-import { Input } from '../custom-ui/io/input.mjs';
-import { Modal } from '../custom-ui/overlays/modal.mjs';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Modal } from '../../custom-ui/overlays/modal.mjs';
 import { getCategoryTree, getTagDefinition, formatTagDisplayName, getAllTagNames, getMergedAutocompleteData } from './tag-data.mjs';
-import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
-import { H2, VerticalLayout } from '../custom-ui/themed-base.mjs';
+import { injectAutocompleteStyles } from '../autocomplete-styles.mjs';
+import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 
 // ============================================================================
 // Styled Components

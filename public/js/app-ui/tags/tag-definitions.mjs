@@ -1,7 +1,7 @@
 // Tag Definitions Module
 // Loads and provides access to Danbooru tag definitions
 
-import { fetchJson } from '../custom-ui/util.mjs';
+import { fetchJson } from '../../custom-ui/util.mjs';
 
 let definitions = {};
 let isLoaded = false;
