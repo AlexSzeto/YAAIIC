@@ -33,6 +33,10 @@ Consistency in implementation is key to maintainability. The codebase follows st
 - **Styling Integration**:
     - Always use `styled` from `goober-setup.mjs` (which configures `goober` with `h` from Preact) unless a specific feature cannot support it and there are no reasonable workarounds.	
     - Do **not** import `styled` directly from `goober`.
+- **DOM Refs and Goober Styled Components**:
+    - Attaching a `ref` to a `styled()` component (e.g., `<${StyledDiv} ref=${myRef}>`) yields the **Preact component instance**, not the underlying DOM node. Calling DOM methods like `getBoundingClientRect()`, `focus()`, or `select()` on such a ref will throw a runtime error. 
+    - **Avoid `createRef` and direct DOM measurement wherever possible** — prefer event-driven alternatives (e.g., `e.currentTarget.getBoundingClientRect()` in event handlers, native `<input>` elements that expose DOM APIs natively). 
+    - When a ref to a raw DOM node is absolutely necessary (e.g., for canvas or scroll APIs), attach the ref to a **plain HTML element** (`<div>`, `<canvas>`, `<input>`) rather than a styled wrapper, even if that means adding a minimal unstyled element whose sole purpose is to be the ref target.
 - **Props & API**:
     - Destructure props with default values in the function signature (functional) or `render()` method (class).
     - Forward DOM-compatible props using `...rest`.
