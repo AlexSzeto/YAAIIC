@@ -7,10 +7,13 @@ import { currentTheme } from '../theme.mjs';
 // Styled Components
 // =========================================================================
 
+const LABEL_WIDTH = 60; // px — fixed width for option labels
+const SLIDER_RADIUS = 9; // px — half of thumb width/height
+
 const Wrapper = styled('div')`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: ${props => props.width};
   font-family: ${props => props.fontFamily};
 `;
@@ -20,6 +23,7 @@ const RangeWrapper = styled('div')`
   height: 28px;
   display: flex;
   align-items: center;
+  margin: 0 ${(LABEL_WIDTH / 2) - SLIDER_RADIUS}px;
 `;
 RangeWrapper.className = 'discrete-slider-range-wrapper';
 
@@ -38,8 +42,8 @@ const StyledRange = styled('input')`
     -webkit-appearance: none;
     appearance: none;
     transform: translateY(-8px);
-    width: 18px;
-    height: 18px;
+    width: ${SLIDER_RADIUS * 2}px;
+    height: ${SLIDER_RADIUS * 2}px;
     border-radius: 50%;
     background-color: ${props => props.thumbFill};
     border: 2px solid ${props => props.thumbBorder};
@@ -49,8 +53,8 @@ const StyledRange = styled('input')`
 
   &::-moz-range-thumb {
     transform: translateY(-8px);
-    width: 18px;
-    height: 18px;
+    width: ${SLIDER_RADIUS * 2}px;
+    height: ${SLIDER_RADIUS * 2}px;
     border-radius: 50%;
     background-color: ${props => props.thumbFill};
     border: 2px solid ${props => props.thumbBorder};
@@ -107,10 +111,8 @@ const OptionLabel = styled('span')`
   user-select: none;
   transition: color ${props => props.transition};
   text-align: center;
-  flex: 1;
-
-  &:first-child { text-align: left; }
-  &:last-child  { text-align: right; }
+  width: ${LABEL_WIDTH}px;
+  flex-shrink: 0;
 `;
 OptionLabel.className = 'discrete-slider-option-label';
 

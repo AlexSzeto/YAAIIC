@@ -7,10 +7,13 @@ import { currentTheme } from '../theme.mjs';
 // Styled Components
 // =========================================================================
 
+const LABEL_WIDTH = 40; // px — fixed width for endpoint labels
+const SLIDER_RADIUS = 9; // px — half of thumb width/height
+
 const Wrapper = styled('div')`
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
   width: ${props => props.width};
   font-family: ${props => props.fontFamily};
 `;
@@ -35,6 +38,9 @@ ValueLabel.className = 'range-slider-value-label';
 const RangeLabel = styled('span')`
   font-size: ${props => props.fontSize};
   color: ${props => props.color};
+  width: ${LABEL_WIDTH}px;
+  text-align: center;
+  flex-shrink: 0;
 `;
 RangeLabel.className = 'range-slider-range-label';
 
@@ -43,6 +49,7 @@ const TrackContainer = styled('div')`
   height: 28px;
   display: flex;
   align-items: center;
+  margin: 0 ${(LABEL_WIDTH / 2) - SLIDER_RADIUS}px;
 
   /* Hide default track — we render our own filled track line via a pseudo-element */
   input[type="range"] {
@@ -63,8 +70,8 @@ const TrackContainer = styled('div')`
     -webkit-appearance: none;
     appearance: none;
     pointer-events: all;
-    width: 18px;
-    height: 18px;
+    width: ${SLIDER_RADIUS * 2}px;
+    height: ${SLIDER_RADIUS * 2}px;
     border-radius: 50%;
     background-color: ${props => props.thumbFill};
     border: 2px solid ${props => props.thumbBorder};
@@ -73,8 +80,8 @@ const TrackContainer = styled('div')`
   }
 
   input[type="range"]::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: ${SLIDER_RADIUS * 2}px;
+    height: ${SLIDER_RADIUS * 2}px;
     border-radius: 50%;
     background-color: ${props => props.thumbFill};
     border: 2px solid ${props => props.thumbBorder};
