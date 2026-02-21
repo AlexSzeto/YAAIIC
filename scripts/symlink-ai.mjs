@@ -9,7 +9,7 @@ const isWindows = platform() === 'win32';
 
 const links = [
   { src: '.github/prompts', dest: '.claude/commands' },
-  // { src: '.github/prompts', dest: '.agents/workflows' }, // disabled, Antigravity doesn't seem to work with externally created files
+  { src: '.github/prompts', dest: '.agents/workflows' },
   { src: '.github/rules.md', dest: '.claude/rules/rules.md' },
 ];
 
