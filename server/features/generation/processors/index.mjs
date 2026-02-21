@@ -12,6 +12,7 @@
  */
 import { extractOutputMediaFromTextFile } from './extract-output-media.mjs';
 import { crossfadeVideoFrames } from './crossfade.mjs';
+import { crossfadeAudioClip } from './crossfade-audio.mjs';
 import { extractOutputTexts } from './extract-output-texts.mjs';
 import { executeWorkflow } from './execute-workflow.mjs';
 
@@ -19,6 +20,7 @@ import { executeWorkflow } from './execute-workflow.mjs';
 export const PROCESS_HANDLERS = {
   extractOutputMediaFromTextFile,
   crossfadeVideoFrames,
+  crossfadeAudioClip,
   extractOutputTexts,
   executeWorkflow,
 };

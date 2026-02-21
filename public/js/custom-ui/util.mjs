@@ -414,3 +414,24 @@ export function setCookie(name, value, days = 365) {
   const expires = `expires=${date.toUTCString()}`;
   document.cookie = `${name}=${value};${expires};path=/`;
 }
+
+/**
+ * Returns CSS width/flex styles for a widthScale enum value.
+ * @param {'normal'|'compact'|'full'} widthScale
+ * @returns {{ width: string, flex?: string }}
+ */
+export function getWidthScaleStyle(widthScale) {
+  if (widthScale === 'full')    return { width: '100%', flex: '1 0 0' };
+  if (widthScale === 'compact') return { width: '100px' };
+  return { width: '200px' }; // 'normal' (default)
+}
+
+/**
+ * Returns CSS height style for a heightScale enum value.
+ * @param {'normal'|'compact'} heightScale
+ * @returns {{ height: string }}
+ */
+export function getHeightScaleStyle(heightScale) {
+  if (heightScale === 'compact') return { height: '34px', padding: '4px 6px' };
+  return { height: '44px', padding: '8px 12px' }; // 'normal' (default)
+}

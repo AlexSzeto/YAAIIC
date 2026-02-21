@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle, getHeightScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -10,7 +11,6 @@ import { currentTheme } from '../theme.mjs';
 const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;
@@ -25,7 +25,7 @@ const Label = styled('label')`
 Label.className = 'label';
 
 const StyledInput = styled('input')`
-  padding: 8px 12px;
+  padding: ${props => props.padding};
   border-radius: 6px;
   border: ${props => props.border};
   background-color: ${props => props.backgroundColor};
@@ -34,7 +34,7 @@ const StyledInput = styled('input')`
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
   width: 100%;
-  height: 44px;
+  height: ${props => props.height};
   
   &:focus {
     outline: none;
@@ -65,7 +65,8 @@ ErrorMessage.className = 'error-message';
  * @param {string} [props.label] - Label text displayed above the input
  * @param {string} [props.error] - Error message displayed below the input
  * @param {string} [props.id] - ID for the input element (also sets name attribute)
- * @param {boolean} [props.fullWidth=false] - Whether to span full container width
+ * @param {'normal'|'compact'|'full'} [props.widthScale='normal'] - Width: 200px | 50px | 100%+flex-grow
+ * @param {'normal'|'compact'} [props.heightScale='normal'] - Height: 44px | 34px
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.type='text'] - Input type (text, password, email, number, etc.)
@@ -82,8 +83,8 @@ ErrorMessage.className = 'error-message';
  * <Input label="Email" error="Invalid email format" />
  * 
  * @example
- * // Full width input
- * <Input label="Description" fullWidth={true} />
+ * // Full width compact-height input
+ * <Input label="Search" widthScale="full" heightScale="compact" />
  */
 export class Input extends Component {
   constructor(props) {
@@ -106,20 +107,23 @@ export class Input extends Component {
   }
 
   render() {
-    const { 
-      label, 
-      error, 
-      id, 
-      fullWidth = false, 
+    const {
+      label,
+      error,
+      id,
+      widthScale = 'normal',
+      heightScale = 'normal',
       disabled = false,
-      ...rest 
+      ...rest
     } = this.props;
     const { theme } = this.state;
+    const { width, flex } = getWidthScaleStyle(widthScale);
+    const { height, padding } = getHeightScaleStyle(heightScale);
 
     return html`
-      <${FormGroup} 
-        width=${fullWidth ? '100%' : '200px'}
-        flex=${fullWidth ? '1 0 0' : undefined}
+      <${FormGroup}
+        width=${width}
+        flex=${flex}
       >
         ${label ? html`
           <${Label} 
@@ -129,10 +133,12 @@ export class Input extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <${StyledInput} 
-          id=${id} 
+        <${StyledInput}
+          id=${id}
           name=${id}
           disabled=${disabled}
+          height=${height}
+          padding=${padding}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
           backgroundColor=${theme.colors.background.tertiary}
           color=${theme.colors.text.primary}

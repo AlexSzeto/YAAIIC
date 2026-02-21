@@ -64,7 +64,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         });
         
         setWorkflows(data);
-        console.log('Workflows loaded:', data);
       } catch (err) {
         console.error('Error loading workflows:', err);
         setError('Failed to load workflows');
@@ -139,7 +138,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
           value=${selectedType || ''}
           onChange=${handleTypeChange}
           disabled=${loading || disabled}
-          fullWidth=${false}
         />
       `}
       <${Select}
@@ -149,7 +147,7 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         onChange=${handleChange}
         disabled=${loading || disabled}
         error=${error}
-        fullWidth=${true}
+        widthScale="full"
       />
     </${Container}>
   `;

@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -10,7 +11,6 @@ import { currentTheme } from '../theme.mjs';
 const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;
@@ -67,7 +67,7 @@ ErrorMessage.className = 'error-message';
  * @param {string} [props.label] - Label text displayed above the textarea
  * @param {string} [props.error] - Error message displayed below the textarea
  * @param {string} [props.id] - ID for the textarea element (also sets name attribute)
- * @param {boolean} [props.fullWidth=true] - Whether to span full container width (default true for textareas)
+ * @param {'normal'|'compact'|'full'} [props.widthScale='full'] - Width: 200px | 50px | 100%+flex-grow (default full)
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {string} [props.placeholder] - Placeholder text
  * @param {number} [props.rows=4] - Number of visible text lines
@@ -108,21 +108,22 @@ export class Textarea extends Component {
   }
 
   render() {
-    const { 
-      label, 
-      error, 
-      id, 
-      fullWidth = true, 
+    const {
+      label,
+      error,
+      id,
+      widthScale = 'full',
       disabled = false,
       rows = 4,
-      ...rest 
+      ...rest
     } = this.props;
     const { theme } = this.state;
+    const { width, flex } = getWidthScaleStyle(widthScale);
 
     return html`
-      <${FormGroup} 
-        width=${fullWidth ? '100%' : '200px'}
-        flex=${fullWidth ? '1 0 0' : undefined}
+      <${FormGroup}
+        width=${width}
+        flex=${flex}
       >
         ${label ? html`
           <${Label} 
