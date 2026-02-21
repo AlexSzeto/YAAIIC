@@ -1,0 +1,105 @@
+{
+  "5": {
+    "inputs": {
+      "text": [
+        "8",
+        0
+      ],
+      "seed": 302498477506640,
+      "language": "Auto",
+      "ref_text": [
+        "11",
+        0
+      ],
+      "max_new_tokens": 2048,
+      "ref_audio_max_seconds": 30,
+      "model": [
+        "6",
+        0
+      ],
+      "ref_audio": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Qwen3VoiceClone",
+    "_meta": {
+      "title": "Qwen3-TTS Voice Clone"
+    }
+  },
+  "6": {
+    "inputs": {
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "source": "HuggingFace",
+      "precision": "bf16",
+      "attention": "auto",
+      "local_model_path": ""
+    },
+    "class_type": "Qwen3Loader",
+    "_meta": {
+      "title": "Qwen3-TTS Loader"
+    }
+  },
+  "8": {
+    "inputs": {
+      "value": "Darling, you really shouldn't stare so intensely unless you're prepared for the consequences of your curiosity. I’ve spent the evening tracing the rim of this glass, wondering if your resolve is quite as fragile as it looks. There’s a certain thrill in the quiet before the storm, don’t you think—a delicious sort of tension that only we share? Do come closer, because I have a whisper meant for your ears alone, and I find I’m terribly tired of waiting."
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "10": {
+    "inputs": {
+      "audio": "voice_preview_daisy.mp3",
+      "audioUI": ""
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Load Audio"
+    }
+  },
+  "11": {
+    "inputs": {
+      "model": "base.en",
+      "language": "auto",
+      "prompt": "",
+      "audio": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Apply Whisper",
+    "_meta": {
+      "title": "Apply Whisper"
+    }
+  },
+  "16": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "17": {
+    "inputs": {
+      "start_index": 0,
+      "duration": 30,
+      "audio": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "TrimAudioDuration",
+    "_meta": {
+      "title": "Trim Audio Duration"
+    }
+  }
+}

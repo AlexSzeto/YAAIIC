@@ -34,6 +34,7 @@ const StyledInput = styled('input')`
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
   width: 100%;
+  height: 44px;
   
   &:focus {
     outline: none;

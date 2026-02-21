@@ -27,8 +27,8 @@ const ICON_MAP = {
 
   // Navigation and controls
   'check': 'check',
-  'chevron-down': 'chevron_down',
-  'chevron-up': 'chevron_up',
+  'chevron-down': 'keyboard_arrow_down',
+  'chevron-up': 'keyboard_arrow_up',
   'menu': 'menu',
   
   // Actions
@@ -75,6 +75,7 @@ const ICON_MAP = {
   'folder-plus': 'create_new_folder',
   'file': 'description',
   'file-blank': 'insert_drive_file',
+  'arrow-out-up-right-square': 'open_in_new',
   
   // Settings and configuration
   'cog': 'settings',
@@ -95,8 +96,14 @@ const ICON_MAP = {
   'group': 'group',
   
   // Miscellaneous
+  'home': 'home',
+  'brush': 'brush',
+  'image': 'image',
   'plus': 'add',
   'minus': 'remove',
+  'sun': 'sunny',
+  'moon': 'bedtime',
+  'cog': 'settings',
   'star': 'star',
   'heart': 'favorite',
   'link': 'link',
@@ -132,7 +139,12 @@ const ICON_MAP = {
   'folder': 'folder',
   'redo': 'redo',
   'broken-arrow-up': 'arrow_warm_up',
- 
+  'up-arrow': 'arrow_upward',
+  'down-arrow': 'arrow_downward',
+  'upload': 'upload',
+  'arrow-right-stroke': 'arrow_right_alt',
+  'eye-slash': 'visibility_off',
+
 };
 
 /**
@@ -200,8 +212,16 @@ export class Icon extends Component {
 
     if (iconSystem === 'material-symbols') {
       // Use Material Symbols
-      const materialName = ICON_MAP[name] || name;
-      
+      // Only render if the name is explicitly mapped; otherwise show an invisible
+      // placeholder of the correct dimensions to avoid rendering raw text.
+      const materialName = ICON_MAP[name];
+
+      if (!materialName) {
+        return html`<span
+          style=${{ display: 'inline-block', width: size, height: size, flexShrink: '0' }}
+        />`;
+      }
+
       // Build class list for Material Symbols
       const classes = ['material-symbols-outlined'];
       

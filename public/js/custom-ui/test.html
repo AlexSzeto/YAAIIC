@@ -52,6 +52,7 @@
     import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
     import { HoverPanelProvider, useHoverPanel } from './overlays/hover-panel.mjs';
     import { useRef } from 'preact/hooks';
+    import { Icon } from './layout/icon.mjs';
 
     
     // =========================================================================
@@ -669,6 +670,10 @@
               <//>
               
               <${Section}>
+                <${SectionTitle}>Icons</${SectionTitle}>
+                <${Icon} name="arrow-right-stroke" size="24px" />
+              </${Section}>
+              <${Section}>
                 <${SectionTitle}>Button Component</${SectionTitle}>
                 <p style="margin-bottom: 16px; opacity: 0.7;">All button variants with color themes</p>
                 
@@ -844,7 +849,7 @@
                 <//>
               </${Section}>
               
-              <${Section}>
+              <${Section}>              
                 <${SectionTitle}>Textarea Component</${SectionTitle}>
                 <${ComponentGrid}>
                   <${Textarea} label="Basic Textarea" name="basic" placeholder="Enter text here..." />
@@ -961,9 +966,9 @@
                     Folder Select
                   <//>
                   
-                  <${Button} 
-                    variant="medium-icon-text" 
-                    icon="cog" 
+                  <${Button}
+                    variant="medium-icon-text"
+                    icon="cog"
                     color="success"
                     onClick=${() => {
                       showListSelect({
@@ -971,18 +976,15 @@
                         items: [
                           { id: 'i1', label: 'Editable Item 1', icon: 'file' },
                           { id: 'i2', label: 'Editable Item 2', icon: 'file' },
-                          { id: 'i3', label: 'Protected Item', icon: 'lock-alt', disabled: true }
+                          { id: 'i3', label: 'Protected Item', icon: 'lock', disabled: true }
                         ],
-                        showActions: true,
+                        itemActions: [
+                          { icon: 'edit', title: 'Edit', onClick: (item) => console.log('Edit:', item) },
+                          { icon: 'trash', color: 'danger', title: 'Delete', onClick: (item) => console.log('Delete:', item) }
+                        ],
                         actionLabel: 'New Item',
                         onSelectItem: (item) => {
                           console.log('Selected:', item);
-                        },
-                        onEdit: (item) => {
-                          console.log('Edit:', item);
-                        },
-                        onDelete: (item) => {
-                          console.log('Delete:', item);
                         },
                         onAction: () => {
                           console.log('Create new item');
@@ -991,6 +993,32 @@
                     }}
                   >
                     With Actions
+                  <//>
+
+                  <${Button}
+                    variant="medium-icon-text"
+                    icon="list-ul"
+                    color="secondary"
+                    onClick=${() => {
+                      showListSelect({
+                        title: 'Narrow Variant',
+                        variant: 'narrow',
+                        items: [
+                          { id: 'n1', label: 'Workflow Alpha', icon: 'video' },
+                          { id: 'n2', label: 'Workflow Beta', icon: 'image' },
+                          { id: 'n3', label: 'Workflow Gamma', icon: 'music' }
+                        ],
+                        itemActions: [
+                          { icon: 'copy', title: 'Duplicate', onClick: (item) => console.log('Duplicate:', item), closeAfter: true },
+                          { icon: 'trash', color: 'danger', title: 'Delete', onClick: (item) => console.log('Delete:', item) }
+                        ],
+                        onSelectItem: (item) => {
+                          console.log('Selected:', item);
+                        }
+                      });
+                    }}
+                  >
+                    Narrow Variant
                   <//>
                   
                   <${Button} 

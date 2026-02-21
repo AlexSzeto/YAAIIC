@@ -12,19 +12,19 @@ import { createCrossFade } from '../../../image-utils.mjs';
  * @param {number} [parameters.blendFrames=10] - Number of frames to blend.
  * @param {Object} _generationData         - Unused (kept for uniform signature).
  * @param {Object} context                 - Execution context.
- * @param {string} context.savePath        - Path to the video file to process.
+ * @param {string} context.saveImagePath        - Path to the video file to process.
  */
 export async function crossfadeVideoFrames(parameters, _generationData, context) {
   const { blendFrames = 10 } = parameters;
 
   console.log(`[Process] Applying loop fade blending with ${blendFrames} frames...`);
 
-  const { savePath } = context;
+  const { saveImagePath } = context;
 
-  if (!fs.existsSync(savePath)) {
-    throw new Error(`Cannot apply crossfade: file not found at ${savePath}`);
+  if (!fs.existsSync(saveImagePath)) {
+    throw new Error(`Cannot apply crossfade: file not found at ${saveImagePath}`);
   }
 
-  await createCrossFade(savePath, blendFrames);
+  await createCrossFade(saveImagePath, blendFrames);
   console.log(`[Process] Successfully applied crossfade blending`);
 }

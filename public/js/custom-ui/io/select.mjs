@@ -25,7 +25,7 @@ const Label = styled('label')`
 Label.className = 'label';
 
 const StyledSelect = styled('select')`
-  padding: 8px 12px;
+  padding: 8px;
   border-radius: 6px;
   cursor: pointer;
   border: ${props => props.border};
@@ -34,6 +34,10 @@ const StyledSelect = styled('select')`
   font-size: ${props => props.fontSize};
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
+  width: 100%;
+  height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   
   &:focus {
     outline: none;

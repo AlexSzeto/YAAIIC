@@ -24,7 +24,8 @@ import {
   resetProgressLog
 } from '../../core/sse.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
-import { RESOURCE_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
+import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
+import { loadWorkflows } from './workflow-validator.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -32,9 +33,6 @@ import { RESOURCE_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
 
 /** ComfyUI HTTP API base URL (set via {@link initializeOrchestrator}). */
 let comfyUIAPIPath = null;
-
-/** Parsed comfyui-workflows.json (set via {@link setWorkflowsData}). */
-let workflowsData = null;
 
 /** Track the last used workflow to manage VRAM. */
 let lastUsedWorkflow = null;
@@ -86,15 +84,6 @@ export function initializeOrchestrator(apiPath) {
  */
 export function setAddMediaDataEntry(func) {
   addMediaDataEntry = func;
-}
-
-/**
- * Store the parsed workflows configuration.
- * @param {Object} workflows - The output of `loadWorkflows()`.
- */
-export function setWorkflowsData(workflows) {
-  workflowsData = workflows;
-  console.log('Workflows data set in orchestrator module');
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +281,9 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
   try {
     const { base: workflowBasePath, replace: modifications, postGenerationTasks, preGenerationTasks, options } = workflowConfig;
     const { type } = options || {};
+
+    // Load fresh from disk so any edits made via the workflow editor are reflected.
+    const workflowsData = loadWorkflows();
     const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
 
@@ -348,7 +340,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     lastUsedWorkflow = workflowBasePath;
 
     // Load the ComfyUI workflow
-    const workflowPath = path.join(RESOURCE_DIR, workflowBasePath);
+    const workflowPath = path.join(COMFYUI_WORKFLOWS_DIR, workflowBasePath);
     let workflowData = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
     // storagePath: absolute path to /storage folder
@@ -426,8 +418,8 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
               throw new Error(`Unknown process handler: ${taskConfig.process}`);
             }
 
-            const savePath = generationData.saveImagePath || '';
-            const context = { storagePath, savePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
+            const saveImagePath = generationData.saveImagePath || '';
+            const context = { storagePath, saveImagePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
 
             await handler(taskConfig.parameters || {}, generationData, context);
 
@@ -470,7 +462,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     const imageFormat = generationData.imageFormat;
     const audioFormat = generationData.audioFormat;
 
-    if (!imageFormat) {
+    if (!isAudio && !imageFormat) {
       throw new Error('imageFormat is required but not found in generation data. Check workflow configuration and extra inputs.');
     }
 
@@ -499,10 +491,10 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       console.log('Created audioUrl:', generationData.audioUrl);
     }
 
-    const savePath = generationData.saveImagePath;
+    const saveImagePath = generationData.saveImagePath;
 
     // Set initial imageUrl
-    const filename = path.basename(savePath);
+    const filename = path.basename(saveImagePath);
     generationData.imageUrl = `/media/${filename}`;
 
     // -----------------------------------------------------------------------
@@ -638,7 +630,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
               throw new Error(`Unknown process handler: ${taskConfig.process}`);
             }
 
-            const context = { storagePath, savePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
+            const context = { storagePath, saveImagePath, workflowsData, serverConfig, uploadFileToComfyUI, generateTaskId, createTask, getTask, processGenerationTask };
 
             await handler(taskConfig.parameters || {}, generationData, context);
 
@@ -648,7 +640,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
           } else if (hasPrompt) {
             const percentage = Math.round((currentStep / totalSteps) * 100);
             const stepName = taskConfig.name || (taskConfig.to === 'description'
-              ? `Analyzing image`
+              ? `Analyzing Image`
               : `Generating ${taskConfig.to}`);
 
             emitProgressUpdate(taskId, { percentage, value: currentStep, max: totalSteps }, stepName + '...');
@@ -685,17 +677,22 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     // -----------------------------------------------------------------------
     // FINALISATION
     // -----------------------------------------------------------------------
-    if (!fs.existsSync(savePath)) {
-      throw new Error(`Generated image file not found at: ${savePath}`);
-    }
-
-    console.log(`Image generated successfully`);
 
     if (isAudio && generationData.saveAudioPath) {
       if (!fs.existsSync(generationData.saveAudioPath)) {
         throw new Error(`Generated audio file not found at: ${generationData.saveAudioPath}`);
       }
+      if (!fs.existsSync(generationData.saveImagePath)) {
+        delete generationData.saveImagePath;
+        delete generationData.imageUrl;
+        delete generationData.saveImageFilename;
+      }
       console.log(`Audio file generated successfully at: ${generationData.saveAudioPath}`);
+    } else {
+      if (!fs.existsSync(generationData.saveImagePath)) {
+        throw new Error(`Generated image file not found at: ${generationData.saveImagePath}`);
+      }
+      console.log(`Image generated successfully`);
     }
 
     // Calculate time taken
@@ -716,7 +713,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     // Save to database (skip if silent mode / nested workflow)
     if (!silent && addMediaDataEntry) {
       addMediaDataEntry(generationData);
-      console.log('Image data entry saved to database with UID:', generationData.uid);
+      console.log('Media entry saved to database with UID:', generationData.uid);
     } else if (silent) {
       console.log('Silent mode: Skipping database entry for nested workflow');
     }

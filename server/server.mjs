@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
-import { initializeOrchestrator, setAddMediaDataEntry, setWorkflowsData } from './features/generation/orchestrator.mjs';
-import { loadWorkflows, validateNoNestedExecuteWorkflow } from './features/generation/workflow-validator.mjs';
+import { initializeOrchestrator, setAddMediaDataEntry } from './features/generation/orchestrator.mjs';
+import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
@@ -21,6 +21,8 @@ import mediaRouter from './features/media/router.mjs';
 import uploadRouter from './features/upload/router.mjs';
 import generationRouter from './features/generation/router.mjs';
 import exportRouter from './features/export/router.mjs';
+import workflowsRouter from './features/workflows/router.mjs';
+import llmRouter from './features/llm/router.mjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,13 +31,9 @@ const PORT = process.env.PORT || 3000;
 // Bootstrap: load config, workflows, and initialize sub-modules
 // ---------------------------------------------------------------------------
 let config;
-let comfyuiWorkflows;
 try {
   config = loadConfig();
   console.log('Configuration loaded:', config);
-
-  // Load ComfyUI workflows via the workflow-validator module
-  comfyuiWorkflows = loadWorkflows();
 
   // Initialize services module with config
   initializeServices(config);
@@ -43,9 +41,6 @@ try {
   // Set up the image data entry function for orchestrator and upload modules
   setAddMediaDataEntry(addMediaDataEntry);
   setUploadAddMediaDataEntry(addMediaDataEntry);
-
-  // Set workflows data in orchestrator module
-  setWorkflowsData(comfyuiWorkflows);
 
   // Set up emit functions for WebSocket handlers
   setEmitFunctions({ emitProgressUpdate, emitTaskCompletion, emitTaskError, logProgressEvent });
@@ -71,7 +66,6 @@ app.use(express.json());
 
 // Expose shared dependencies to feature routers via app.locals
 app.locals.config = config;
-app.locals.comfyuiWorkflows = comfyuiWorkflows;
 app.locals.uploadFileToComfyUI = uploadFileToComfyUI;
 
 // ---------------------------------------------------------------------------
@@ -81,6 +75,8 @@ app.use(mediaRouter);
 app.use(uploadRouter);
 app.use(generationRouter);
 app.use(exportRouter);
+app.use(workflowsRouter);
+app.use(llmRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)
@@ -101,10 +97,12 @@ app.get('/progress/:taskId', handleSSEConnection);
 // Serve images from storage folder
 app.use('/media', express.static(STORAGE_DIR));
 
-// GET endpoint for workflow list
+// GET /workflows – public list (non-hidden only, for the generator UI)
+// Reads from disk each call so it always reflects the latest saved state.
 app.get('/workflows', (req, res) => {
   try {
-    const workflows = comfyuiWorkflows.workflows
+    const data = loadWorkflows();
+    const workflows = data.workflows
       .filter(workflow => !workflow.hidden)
       .map(workflow => ({
         name: workflow.name,

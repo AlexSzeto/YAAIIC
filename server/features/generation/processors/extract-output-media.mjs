@@ -17,7 +17,7 @@ import { readOutputPathFromTextFile } from '../../../util.mjs';
  *   `imageFormat`).
  * @param {Object} context         - Execution context.
  * @param {string} context.storagePath - Path to the ComfyUI storage folder.
- * @param {string} context.savePath    - Destination path for the final file.
+ * @param {string} context.saveImagePath    - Destination path for the final file.
  */
 export async function extractOutputMediaFromTextFile(parameters, generationData, context) {
   const { filename } = parameters;
@@ -27,7 +27,7 @@ export async function extractOutputMediaFromTextFile(parameters, generationData,
 
   console.log(`[Process] Extracting output path from text file: ${filename}`);
 
-  const { storagePath, savePath } = context;
+  const { storagePath, saveImagePath } = context;
 
   // Read the output path from the text file
   let actualOutputPath = readOutputPathFromTextFile(filename, storagePath);
@@ -44,10 +44,10 @@ export async function extractOutputMediaFromTextFile(parameters, generationData,
     throw new Error('imageFormat is required to determine output file extension');
   }
 
-  // Copy the file from the extracted path to savePath
+  // Copy the file from the extracted path to saveImagePath
   if (fs.existsSync(actualOutputPath)) {
-    fs.copyFileSync(actualOutputPath, savePath);
-    console.log(`[Process] Successfully copied file from ${actualOutputPath} to ${savePath}`);
+    fs.copyFileSync(actualOutputPath, saveImagePath);
+    console.log(`[Process] Successfully copied file from ${actualOutputPath} to ${saveImagePath}`);
   } else {
     throw new Error(`Output file not found at extracted path: ${actualOutputPath}`);
   }

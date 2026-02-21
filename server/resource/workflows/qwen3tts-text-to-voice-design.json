@@ -1,0 +1,69 @@
+{
+  "1": {
+    "inputs": {
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "source": "HuggingFace",
+      "precision": "bf16",
+      "attention": "auto",
+      "local_model_path": ""
+    },
+    "class_type": "Qwen3Loader",
+    "_meta": {
+      "title": "Qwen3-TTS Loader"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": [
+        "16",
+        0
+      ],
+      "instruct": [
+        "20",
+        0
+      ],
+      "language": "Auto",
+      "seed": 834490249461965,
+      "model": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "Qwen3VoiceDesign",
+    "_meta": {
+      "title": "Qwen3-TTS Voice Design"
+    }
+  },
+  "16": {
+    "inputs": {
+      "value": "You've got some guts coming here unprepared, Sonny, I'll give you that. It doesn't mean I've forgotten or forgiven what you've done, but I'll say... truce... for now."
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Dialog"
+    }
+  },
+  "20": {
+    "inputs": {
+      "value": "A sultry, femme fatale female with an old timey mid atlantic accent."
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "36": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  }
+}

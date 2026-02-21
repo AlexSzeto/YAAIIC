@@ -1,5 +1,5 @@
 // Autocomplete Setup Module
-import { loadTags, getTags, isTagsLoaded } from './tags.mjs';
+import { loadTags, getTags, isTagsLoaded } from './tags/tags.mjs';
 import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
 
 let autoCompleteJS = null;

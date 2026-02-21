@@ -1,0 +1,124 @@
+{
+  "1": {
+    "inputs": {
+      "language": "English",
+      "device": "auto",
+      "exaggeration": 0.5,
+      "temperature": 0.25,
+      "cfg_weight": 1,
+      "crash_protection_template": "hmm ,, {seg} hmm ,,"
+    },
+    "class_type": "ChatterBoxEngineNode",
+    "_meta": {
+      "title": "ChatterBox TTS Engine"
+    }
+  },
+  "2": {
+    "inputs": {
+      "voice_name": "none",
+      "reference_text": [
+        "23",
+        0
+      ],
+      "opt_audio_input": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "CharacterVoicesNode",
+    "_meta": {
+      "title": "Character Voices"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "Hello! This is unified TTS with character switching support.",
+      "narrator_voice": "none",
+      "seed": 947272435,
+      "enable_chunking": true,
+      "max_chars_per_chunk": 400,
+      "chunk_combination_method": "crossfade",
+      "silence_between_chunks_ms": 100,
+      "enable_audio_cache": true,
+      "batch_size": 0,
+      "TTS_engine": [
+        "1",
+        0
+      ],
+      "opt_narrator": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "UnifiedTTSTextNode",
+    "_meta": {
+      "title": "TTS Text"
+    }
+  },
+  "5": {
+    "inputs": {
+      "audio": "voice_preview_hope - soothing narrator.mp3",
+      "audioUI": ""
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Load Audio"
+    }
+  },
+  "17": {
+    "inputs": {
+      "url": "http://127.0.0.1:11434",
+      "model": "tinyllama:latest",
+      "keep_alive": 5,
+      "keep_alive_unit": "minutes",
+      "🔄 Reconnect": null
+    },
+    "class_type": "OllamaConnectivityV2",
+    "_meta": {
+      "title": "Ollama Connectivity"
+    }
+  },
+  "20": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "22": {
+    "inputs": {
+      "start_index": 0,
+      "duration": 30,
+      "audio": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "TrimAudioDuration",
+    "_meta": {
+      "title": "Trim Audio Duration"
+    }
+  },
+  "23": {
+    "inputs": {
+      "model": "base.en",
+      "language": "auto",
+      "prompt": "",
+      "audio": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "Apply Whisper",
+    "_meta": {
+      "title": "Apply Whisper"
+    }
+  }
+}

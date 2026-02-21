@@ -11,12 +11,12 @@ import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
-import { getThemeValue, toggleTheme, currentTheme } from './custom-ui/theme.mjs';
+import { currentTheme } from './custom-ui/theme.mjs';
 
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
-import { GenerationForm } from './app-ui/generation-form.mjs';
-import { GeneratedResult } from './app-ui/generated-result.mjs';
-import { Gallery } from './app-ui/gallery.mjs';
+import { GenerationForm } from './app-ui/main/generation-form.mjs';
+import { GeneratedResult } from './app-ui/main/generated-result.mjs';
+import { Gallery } from './app-ui/main/gallery.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
@@ -25,10 +25,12 @@ import { showDialog } from './custom-ui/overlays/dialog.mjs';
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
-import { loadTags } from './app-ui/tags.mjs';
-import { loadTagDefinitions } from './app-ui/tag-data.mjs';
+import { loadTags } from './app-ui/tags/tags.mjs';
+import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
-import { createGalleryPreview } from './app-ui/gallery-preview.mjs';
+import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
+import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
+import { backfillMissingProperties } from './util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -66,10 +68,10 @@ function App() {
   const toast = useToast();
   const hoverPanel = useHoverPanel();
   
-  // Theme state
-  const [themeName, setThemeName] = useState(currentTheme.value.name);
-  
-  // State management
+  // Theme state - triggers re-render on theme change so goober styled components update
+  const [, setTheme] = useState(currentTheme.value);
+  useEffect(() => currentTheme.subscribe(setTheme), []);
+
   const [workflow, setWorkflow] = useState(null);
   const [formState, setFormState] = useState({
     name: '',
@@ -105,20 +107,6 @@ function App() {
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
 
-  // Theme toggle handler
-  const handleToggleTheme = () => {
-    toggleTheme();
-    setThemeName(currentTheme.value.name);
-  };
-
-  // Subscribe to theme changes
-  useEffect(() => {
-    const unsubscribe = currentTheme.subscribe((theme) => {
-      setThemeName(theme.name);
-    });
-    return unsubscribe;
-  }, []);
-  
   // Favicon spinning effect for active tasks
   useEffect(() => {
     if (!window.favloader) return;
@@ -165,7 +153,7 @@ function App() {
         }
 
         // Load recent history
-        const recent = await fetchJson('/media-data?limit=10');
+        const recent = backfillMissingProperties(await fetchJson('/media-data?limit=10'));
         if (Array.isArray(recent)) {
           setHistory(recent);
           // Optionally set the first image as current
@@ -570,13 +558,13 @@ function App() {
     
     if (data.result && data.result.uid) {
       try {
-        const img = await fetchJson(`/media-data/${data.result.uid}`);
-        setGeneratedImage(img);
+        const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
+        setGeneratedImage(media);
         
         // Add to history
-        setHistory(prev => [img, ...prev]);
+        setHistory(prev => [media, ...prev]);
         
-        toast.success(`Generated: ${img.name || 'Image'}`);
+        toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
         toast.error('Failed to load generated image');
@@ -872,7 +860,7 @@ function App() {
         setCurrentFolder(selectedFolder);
         
         // Refresh gallery to show images from the new folder
-        const recent = await fetchJson(`/media-data?limit=10&folder=${selectedUid}`);
+        const recent = backfillMissingProperties(await fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
         if (Array.isArray(recent)) {
           setHistory(recent);
           if (recent.length > 0) {
@@ -1039,22 +1027,7 @@ function App() {
       <${AppHeader}>
         <${H1}>YAAIIG <small>V3</small></${H1}>
         <${HorizontalLayout} gap="small">
-          <${Button} 
-            id="theme-toggle-btn"
-            onClick=${handleToggleTheme}
-            variant="large-icon"
-            icon=${themeName === 'dark' ? 'sun' : 'moon'}
-            title=${`Switch to ${themeName === 'dark' ? 'light' : 'dark'} mode`}
-          />
-          <${Button} 
-            id="folder-btn"
-            onClick=${handleOpenFolderSelect}
-            variant="medium-icon-text"
-            icon="folder"
-          >
-            ${currentFolder.label}
-          </${Button}>
-          <${Button} 
+          <${Button}
             id="gallery-btn"
             onClick=${() => setIsGalleryOpen(true)}
             variant="medium-icon-text"
@@ -1062,6 +1035,15 @@ function App() {
           >
             Gallery
           </${Button}>
+          <${Button}
+            id="folder-btn"
+            onClick=${handleOpenFolderSelect}
+            variant="medium-icon-text"
+            icon="folder"
+          >
+            ${currentFolder.label}
+          </${Button}>
+          <${HamburgerMenu} />
         </${HorizontalLayout}>
       </${AppHeader}>
       

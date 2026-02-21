@@ -1,0 +1,60 @@
+{
+  "7": {
+    "inputs": {
+      "lyrics": [
+        "15",
+        0
+      ],
+      "tags": [
+        "16",
+        0
+      ],
+      "version": "RL-oss-3B-20260123",
+      "codec_version": "oss-20260123",
+      "seed": 647848627326126,
+      "max_audio_length_seconds": 60,
+      "topk": 50,
+      "temperature": 1,
+      "cfg_scale": 1.5,
+      "keep_model_loaded": true,
+      "offload_mode": "auto",
+      "quantize_4bit": false
+    },
+    "class_type": "HeartMuLa_Generate",
+    "_meta": {
+      "title": "HeartMuLa Music Generator"
+    }
+  },
+  "15": {
+    "inputs": {
+      "value": "[Intro] [Instrumental] The thought of you reflecting Though dreams they don't come true In a mirror world reflected And my happiness's been through  [Bridge] Trying to find a way, too far, they're all gone now  [Chorus] Memories across the mirrored surface The water do reflect The water do reflect Memories across the mirrored surface The other side is where I'd go"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Lyrics"
+    }
+  },
+  "16": {
+    "inputs": {
+      "value": "slow, comforting, lofi, hiphop"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "23": {
+    "inputs": {
+      "path": "./audio.mp3",
+      "overwrite": true,
+      "audio": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  }
+}

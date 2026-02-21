@@ -14,8 +14,12 @@
     },
     {
       "condition": {
-        "where": { "data": "name" },
-        "equals": { "value": "" }
+        "where": {
+          "data": "name"
+        },
+        "equals": {
+          "value": ""
+        }
       },
       "model": "user-v4/joycaption-beta:latest",
       "imagePath": "saveImagePath",
@@ -29,62 +33,59 @@
       "to": "tags"
     }
   ],
-  "defaultAudioGenerationWorkflow": "Text to Image (Album Cover)",
+  "defaultAudioGenerationWorkflow": "Text to Image (Album)",
   "workflows": [
     {
-      "name": "Text to Image (Album Cover)",
+      "name": "Text to Image (Album)",
       "hidden": true,
       "options": {
         "type": "image",
         "autocomplete": false,
         "inputImages": 0,
+        "inputAudios": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "extraInputs": []
       },
       "preGenerationTasks": [
         {
           "template": "jpg",
           "to": "imageFormat"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "template": "(prompt unavailable for uploaded audio)",
-          "to": "prompt"
-        },
-        {
-          "template": "(description unavailable for uploaded audio)",
-          "to": "description"
-        },
-        {
-          "template": "(summary unavailable for uploaded audio)",
-          "to": "summary"
-        },
-        {
-          "template": "(tags unavailable for uploaded audio)",
-          "to": "tags"
-        }
-      ],
-      "base": "text-to-image-album.json",
-      "replace": [
-        {
-          "from": "ollamaAPIPath",
-          "to": ["20", "inputs", "url"]
         },
         {
           "from": "name",
-          "to": ["22", "inputs", "value"]
+          "to": "prompt"
+        }
+      ],
+      "postGenerationTasks": [],
+      "replace": [
+        {
+          "from": "saveImagePath",
+          "to": [
+            "18",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "22",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["18", "inputs", "path"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         }
-      ]
+      ],
+      "base": "album-text-to-image.json"
     },
     {
       "name": "Text to Image (Illustrious Characters)",
@@ -102,8 +103,14 @@
             "label": "Image Format",
             "default": "png",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -117,6 +124,13 @@
             "type": "checkbox",
             "label": "Remove Background",
             "default": false
+          },
+          {
+            "id": "being_dumb",
+            "type": "text",
+            "label": "Being Dumb!",
+            "default": "",
+            "options": []
           }
         ]
       },
@@ -129,8 +143,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -141,12 +159,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -158,12 +184,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -172,8 +206,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -183,8 +221,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -202,15 +244,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["10", "inputs", "path"]
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -246,8 +300,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -258,12 +316,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -275,12 +341,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -289,8 +363,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -301,15 +379,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["14", "inputs", "path"]
+          "to": [
+            "14",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -329,8 +419,14 @@
             "label": "Image Format",
             "default": "jpg",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -358,8 +454,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -370,12 +470,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -387,12 +495,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -401,8 +517,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -413,26 +533,46 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "width",
-          "to": ["5", "inputs", "width"]
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
         },
         {
           "from": "height",
-          "to": ["5", "inputs", "height"]
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["10", "inputs", "path"]
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
         }
       ]
-    },    
+    },
     {
       "name": "Image Style Transfer (Illustrious)",
       "hidden": true,
@@ -450,8 +590,14 @@
             "label": "Image Format",
             "default": "png",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -471,8 +617,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -483,12 +633,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -500,12 +658,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -514,8 +680,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -523,27 +693,38 @@
         }
       ],
       "base": "illustrious-image-style.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["11", "inputs", "path"]
+          "to": [
+            "11",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["13", "inputs", "image"]
+          "to": [
+            "13",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
@@ -564,8 +745,14 @@
             "label": "Image Format",
             "default": "jpg",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -585,8 +772,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -595,8 +786,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -607,12 +802,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -624,12 +827,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -638,8 +849,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -650,15 +865,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["31", "inputs", "seed"]
+          "to": [
+            "31",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["9", "inputs", "path"]
+          "to": [
+            "9",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -679,8 +906,14 @@
             "label": "Image Format",
             "default": "jpg",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -706,8 +939,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -716,8 +953,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -728,12 +969,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -745,12 +994,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -759,8 +1016,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -770,8 +1031,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -789,15 +1054,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["31", "inputs", "seed"]
+          "to": [
+            "31",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["44", "inputs", "path"]
+          "to": [
+            "44",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -817,8 +1094,14 @@
             "label": "Image Format",
             "default": "jpg",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -838,8 +1121,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -848,8 +1135,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -860,12 +1151,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -877,12 +1176,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -891,8 +1198,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -903,15 +1214,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["39", "inputs", "seed"]
+          "to": [
+            "39",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["43", "inputs", "path"]
+          "to": [
+            "43",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -931,8 +1254,14 @@
             "label": "Image Format",
             "default": "jpg",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -958,8 +1287,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -968,8 +1301,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "imagePath": "saveImagePath",
@@ -980,12 +1317,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -997,12 +1342,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1011,8 +1364,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -1022,8 +1379,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -1041,15 +1402,27 @@
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["39", "inputs", "seed"]
+          "to": [
+            "39",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["43", "inputs", "path"]
+          "to": [
+            "43",
+            "inputs",
+            "path"
+          ]
         }
       ]
     },
@@ -1074,34 +1447,46 @@
         }
       ],
       "base": "realvis-fantasy-inpaint.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "mask"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["9", "inputs", "path"]
+          "to": [
+            "9",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["20", "inputs", "image"]
+          "to": [
+            "20",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "mask_filename",
-          "to": ["36", "inputs", "image"]
+          "to": [
+            "36",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
@@ -1126,34 +1511,46 @@
         }
       ],
       "base": "waifu-anime-inpaint.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "mask"
-        }
-      ],
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["9", "inputs", "path"]
+          "to": [
+            "9",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["20", "inputs", "image"]
+          "to": [
+            "20",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "mask_filename",
-          "to": ["36", "inputs", "image"]
+          "to": [
+            "36",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
@@ -1173,8 +1570,14 @@
             "label": "Image Format",
             "default": "png",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -1194,8 +1597,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1204,8 +1611,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1216,12 +1627,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1233,12 +1652,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1247,8 +1674,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -1258,8 +1689,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -1274,27 +1709,38 @@
         }
       ],
       "base": "qwen-image-to-image.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
-          "to": ["232", "inputs", "prompt"]
+          "to": [
+            "232",
+            "inputs",
+            "prompt"
+          ]
         },
         {
           "from": "seed",
-          "to": ["228", "inputs", "seed"]
+          "to": [
+            "228",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["229", "inputs", "path"]
+          "to": [
+            "229",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["377", "inputs", "image"]
+          "to": [
+            "377",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
@@ -1314,8 +1760,14 @@
             "label": "Image Format",
             "default": "png",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -1335,8 +1787,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1345,8 +1801,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1357,12 +1817,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1374,12 +1842,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1388,8 +1864,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -1399,8 +1879,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -1415,27 +1899,38 @@
         }
       ],
       "base": "flux-klein-image-edit.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
-          "to": ["75:74", "inputs", "text"]
+          "to": [
+            "75:74",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["75:73", "inputs", "noise_seed"]
+          "to": [
+            "75:73",
+            "inputs",
+            "noise_seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["100", "inputs", "path"]
+          "to": [
+            "100",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["76", "inputs", "image"]
+          "to": [
+            "76",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
@@ -1455,8 +1950,14 @@
             "label": "Image Format",
             "default": "png",
             "options": [
-              { "label": "PNG", "value": "png" },
-              { "label": "JPG", "value": "jpg" }
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
             ]
           },
           {
@@ -1476,8 +1977,12 @@
       "postGenerationTasks": [
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1486,8 +1991,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "imagePath": "saveImagePath",
@@ -1498,12 +2007,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": true }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1515,12 +2032,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "usePostPrompts" },
-                "equals": { "value": false }
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
               },
               {
-                "where": { "data": "name" },
-                "equals": { "value": "" }
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1529,8 +2054,12 @@
         },
         {
           "condition": {
-            "where": { "data": "usePostPrompts" },
-            "equals": { "value": true }
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
@@ -1540,8 +2069,12 @@
           "process": "executeWorkflow",
           "name": "Removing background",
           "condition": {
-            "where": { "data": "removeBackground" },
-            "equals": { "value": true }
+            "where": {
+              "data": "removeBackground"
+            },
+            "equals": {
+              "value": true
+            }
           },
           "parameters": {
             "workflow": "Remove Background (RMBG)",
@@ -1556,39 +2089,123 @@
         }
       ],
       "base": "flux-klein-image-edit-multisource.json",
-      "upload": [
-        {
-          "from": "image_0"
-        },
-        {
-          "from": "image_1"
-        }
-      ],
       "replace": [
         {
           "from": "prompt",
-          "to": ["92:74", "inputs", "text"]
+          "to": [
+            "92:74",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["92:73", "inputs", "noise_seed"]
+          "to": [
+            "92:73",
+            "inputs",
+            "noise_seed"
+          ]
         },
         {
           "from": "saveImagePath",
-          "to": ["100", "inputs", "path"]
+          "to": [
+            "100",
+            "inputs",
+            "path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["76", "inputs", "image"]
+          "to": [
+            "76",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "image_1_filename",
-          "to": ["81", "inputs", "image"]
+          "to": [
+            "81",
+            "inputs",
+            "image"
+          ]
         }
       ]
     },
     {
-      "name": "Image to Video (WAN22)",
+      "name": "Remove Background (RMBG)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
+        {
+          "template": "png",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_tags"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_tags",
+          "to": "tags"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_summary",
+          "to": "summary"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "from": "image_0_description",
+          "to": "description"
+        }
+      ],
+      "base": "rmbg-remove-background.json",
+      "replace": [
+        {
+          "from": "image_0_filename",
+          "to": [
+            "2",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "4",
+            "inputs",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Image to Video (WAN5b)",
       "options": {
         "type": "video",
         "autocomplete": false,
@@ -1618,23 +2235,35 @@
         },
         {
           "condition": {
-            "where": { "data": "prompt" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
           "to": "prompt"
         },
         {
           "condition": {
             "and": [
               {
-                "where": { "data": "image_0_description" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_0_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
               },
               {
-                "where": { "data": "image_1_description" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_1_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1645,92 +2274,144 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "image_0_summary" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_0_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
               },
               {
-                "where": { "data": "image_1_summary" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_1_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
               }
             ]
           },
           "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
           "to": "summary"
-        }
-      ],
-      "base": "wan-image-to-video.json",
-      "upload": [
-        {
-          "from": "image_0"
         },
         {
-          "from": "image_1"
+          "template": "Prevent extreme camera movement, and always use smooth camera motion. {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
         }
       ],
+      "base": "wan5b-image-to-video.json",
       "replace": [
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 832,
-          "to": ["64", "inputs", "width"]
+          "from": "width",
+          "to": [
+            "120",
+            "inputs",
+            "value"
+          ]
         },
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 480,
-          "to": ["64", "inputs", "height"]
+          "from": "height",
+          "to": [
+            "121",
+            "inputs",
+            "value"
+          ]
         },
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 832,
-          "to": ["72", "inputs", "width"]
-        },
-        {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 480,
-          "to": ["72", "inputs", "height"]
-        },
-        {
-          "from": "prompt",
-          "to": ["6", "inputs", "text"]
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["57", "inputs", "noise_seed"]
-        },
-        {
-          "from": "saveImageFilename",
-          "to": ["63", "inputs", "filename_prefix"]
+          "to": [
+            "109",
+            "inputs",
+            "noise_seed"
+          ]
         },
         {
           "from": "storagePath",
-          "to": ["76", "inputs", "output_file_path"]
+          "to": [
+            "119",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "106",
+            "inputs",
+            "filename_prefix"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["52", "inputs", "image"]
+          "to": [
+            "56",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "image_1_filename",
-          "to": ["71", "inputs", "image"]
+          "to": [
+            "123",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "frames",
-          "to": ["73", "inputs", "length"]
+          "to": [
+            "122",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "framerate",
-          "to": ["63", "inputs", "frame_rate"]
+          "to": [
+            "106",
+            "inputs",
+            "frame_rate"
+          ]
         }
       ],
       "postGenerationTasks": [
@@ -1773,8 +2454,12 @@
         },
         {
           "condition": {
-            "where": { "data": "prompt" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
           "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
@@ -1782,75 +2467,142 @@
         },
         {
           "condition": {
-            "where": { "data": "image_0_description" },
-            "isNot": { "value": "" }
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
           },
           "template": "{{image_0_description}}",
           "to": "description"
         },
         {
           "condition": {
-            "where": { "data": "image_0_summary" },
-            "isNot": { "value": "" }
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
           },
           "template": "{{image_0_summary}}",
           "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
         }
       ],
       "base": "wan5b-image-to-video-loop.json",
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
       "replace": [
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 832,
-          "to": ["120", "inputs", "value"]
+          "from": "width",
+          "to": [
+            "120",
+            "inputs",
+            "value"
+          ]
         },
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 480,
-          "to": ["121", "inputs", "value"]
+          "from": "height",
+          "to": [
+            "121",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "prompt",
-          "to": ["6", "inputs", "text"]
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["63", "inputs", "noise_seed"]
+          "to": [
+            "63",
+            "inputs",
+            "noise_seed"
+          ]
         },
         {
           "from": "seed",
-          "to": ["109", "inputs", "noise_seed"]
+          "to": [
+            "109",
+            "inputs",
+            "noise_seed"
+          ]
         },
         {
           "from": "saveImageFilename",
-          "to": ["106", "inputs", "filename_prefix"]
+          "to": [
+            "106",
+            "inputs",
+            "filename_prefix"
+          ]
         },
         {
           "from": "storagePath",
-          "to": ["119", "inputs", "output_file_path"]
+          "to": [
+            "119",
+            "inputs",
+            "output_file_path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["56", "inputs", "image"]
+          "to": [
+            "56",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "frames",
-          "to": ["122", "inputs", "value"]
+          "to": [
+            "122",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "framerate",
-          "to": ["106", "inputs", "frame_rate"]
+          "to": [
+            "106",
+            "inputs",
+            "frame_rate"
+          ]
         }
       ],
       "postGenerationTasks": [
@@ -1869,7 +2621,7 @@
       ]
     },
     {
-      "name": "Image to Video (WAN5b)",
+      "name": "Image to Video (WAN22)",
       "options": {
         "type": "video",
         "autocomplete": false,
@@ -1899,23 +2651,35 @@
         },
         {
           "condition": {
-            "where": { "data": "prompt" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but take note of any physical attribute change (clothings added or removed, prop present or absent, color transformations, etc). If living things are present, consider adding actions they take to make those changes happen (clothings put on or taken off, props picked up or dropped, tree leaves change color, etc). If there's not much in common between the two frames, describe the transition using zooms and pans to quickly transition between the start and the end. Do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
           "to": "prompt"
         },
         {
           "condition": {
             "and": [
               {
-                "where": { "data": "image_0_description" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_0_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
               },
               {
-                "where": { "data": "image_1_description" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_1_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1926,12 +2690,20 @@
           "condition": {
             "and": [
               {
-                "where": { "data": "image_0_summary" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_0_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
               },
               {
-                "where": { "data": "image_1_summary" },
-                "isNot": { "value": "" }
+                "where": {
+                  "data": "image_1_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
               }
             ]
           },
@@ -1939,63 +2711,135 @@
           "to": "summary"
         },
         {
-          "template": "Prevent extreme camera movement, and always use smooth camera motion. {{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "base": "wan5b-image-to-video.json",
-      "upload": [
-        {
-          "from": "image_0"
+          "template": "640",
+          "to": "width"
         },
         {
-          "from": "image_1"
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
         }
       ],
+      "base": "wan-image-to-video.json",
       "replace": [
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 832,
-          "to": ["120", "inputs", "value"]
+          "from": "width",
+          "to": [
+            "64",
+            "inputs",
+            "width"
+          ]
         },
         {
-          "condition": {
-            "where": { "data": "orientation" },
-            "equals": { "value": "landscape" }
-          },
-          "value": 480,
-          "to": ["121", "inputs", "value"]
+          "from": "height",
+          "to": [
+            "64",
+            "inputs",
+            "height"
+          ]
         },
         {
-          "from": "enhancedPrompt",
-          "to": ["6", "inputs", "text"]
+          "from": "width",
+          "to": [
+            "72",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "72",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
         },
         {
           "from": "seed",
-          "to": ["109", "inputs", "noise_seed"]
+          "to": [
+            "57",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "63",
+            "inputs",
+            "filename_prefix"
+          ]
         },
         {
           "from": "storagePath",
-          "to": ["119", "inputs", "output_file_path"]
+          "to": [
+            "76",
+            "inputs",
+            "output_file_path"
+          ]
         },
         {
           "from": "image_0_filename",
-          "to": ["56", "inputs", "image"]
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "image_1_filename",
-          "to": ["123", "inputs", "image"]
+          "to": [
+            "71",
+            "inputs",
+            "image"
+          ]
         },
         {
           "from": "frames",
-          "to": ["122", "inputs", "value"]
+          "to": [
+            "73",
+            "inputs",
+            "length"
+          ]
         },
         {
           "from": "framerate",
-          "to": ["106", "inputs", "frame_rate"]
+          "to": [
+            "63",
+            "inputs",
+            "frame_rate"
+          ]
         }
       ],
       "postGenerationTasks": [
@@ -2008,8 +2852,205 @@
       ]
     },
     {
+      "name": "Image to Video Loop (WAN22)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 25
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 20
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "wan-image-to-video-loop.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "103",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "100",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "95",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "101",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "77",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "100",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        },
+        {
+          "process": "crossfadeVideoFrames",
+          "parameters": {
+            "blendFrames": 10
+          }
+        }
+      ]
+    },
+    {
       "name": "Text to Music (ACE-Step 1.3)",
-      "hidden": true,
+      "hidden": false,
       "options": {
         "type": "audio",
         "inputImages": 0,
@@ -2034,24 +3075,43 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
+          },
+          {
+            "id": "test",
+            "type": "text",
+            "label": "Test",
+            "default": "",
+            "options": []
           }
         ]
       },
       "base": "acestep-text-to-music.json",
       "preGenerationTasks": [
         {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
           "condition": {
-            "where": { "data": "lyrics" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "lyrics"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "template": "[inst]",
           "to": "lyrics"
@@ -2060,41 +3120,76 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["75", "inputs", "value"]
+          "to": [
+            "75",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "lyrics",
-          "to": ["87", "inputs", "value"]
+          "to": [
+            "87",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["52", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["77", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["89", "inputs", "seed"]
+          "to": [
+            "52",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "length",
-          "to": ["17", "inputs", "seconds"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["90", "inputs", "path"]
+          "to": [
+            "17",
+            "inputs",
+            "seconds"
+          ]
         },
         {
           "from": "saveAudioPath",
-          "to": ["88", "inputs", "path"]
+          "to": [
+            "88",
+            "inputs",
+            "path"
+          ]
         }
       ],
       "postGenerationTasks": [
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -2129,10 +3224,22 @@
             "type": "select",
             "label": "Time Signature",
             "options": [
-              { "label": "4/4", "value": "4" },
-              { "label": "3/4", "value": "3" },
-              { "label": "2/4", "value": "2" },
-              { "label": "6/8", "value": "6" }
+              {
+                "label": "4/4",
+                "value": "4"
+              },
+              {
+                "label": "3/4",
+                "value": "3"
+              },
+              {
+                "label": "2/4",
+                "value": "2"
+              },
+              {
+                "label": "6/8",
+                "value": "6"
+              }
             ],
             "default": "4"
           },
@@ -2141,38 +3248,134 @@
             "type": "select",
             "label": "Key",
             "options": [
-              { "label": "C Major", "value": "C major" },
-              { "label": "C# Major", "value": "C# major" },
-              { "label": "Db Major", "value": "Db major" },
-              { "label": "D Major", "value": "D major" },
-              { "label": "D# Major", "value": "D# major" },
-              { "label": "Eb Major", "value": "Eb major" },
-              { "label": "E Major", "value": "E major" },
-              { "label": "F Major", "value": "F major" },
-              { "label": "F# Major", "value": "F# major" },
-              { "label": "Gb Major", "value": "Gb major" },
-              { "label": "G Major", "value": "G major" },
-              { "label": "G# Major", "value": "G# major" },
-              { "label": "A Major", "value": "A major" },
-              { "label": "A# Major", "value": "A# major" },
-              { "label": "Bb Major", "value": "Bb major" },
-              { "label": "B Major", "value": "B major" },
-              { "label": "C Minor", "value": "C minor" },
-              { "label": "C# Minor", "value": "C# minor" },
-              { "label": "Db Minor", "value": "Db minor" },
-              { "label": "D Minor", "value": "D minor" },
-              { "label": "D# Minor", "value": "D# minor" },
-              { "label": "Eb Minor", "value": "Eb minor" },
-              { "label": "E Minor", "value": "E minor" },
-              { "label": "F Minor", "value": "F minor" },
-              { "label": "F# Minor", "value": "F# minor" },
-              { "label": "Gb Minor", "value": "Gb minor" },
-              { "label": "G Minor", "value": "G minor" },
-              { "label": "G# Minor", "value": "G# minor" },
-              { "label": "A Minor", "value": "A minor" },
-              { "label": "A# Minor", "value": "A# minor" },
-              { "label": "Bb Minor", "value": "Bb minor" },
-              { "label": "B Minor", "value": "B minor" }
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
             ],
             "default": "E minor"
           },
@@ -2182,10 +3385,22 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
           }
         ]
@@ -2193,13 +3408,13 @@
       "base": "acestep15-text-to-music.json",
       "preGenerationTasks": [
         {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
           "condition": {
-            "where": { "data": "lyrics" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "lyrics"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "template": "[instrumental]",
           "to": "lyrics"
@@ -2208,57 +3423,112 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["116", "inputs", "value"]
+          "to": [
+            "116",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "lyrics",
-          "to": ["115", "inputs", "value"]
+          "to": [
+            "115",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["3", "inputs", "seed"]
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "seed",
-          "to": ["94", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["120", "inputs", "seed"]
+          "to": [
+            "94",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "length",
-          "to": ["98", "inputs", "seconds"]
+          "to": [
+            "98",
+            "inputs",
+            "seconds"
+          ]
         },
         {
           "from": "length",
-          "to": ["94", "inputs", "duration"]
+          "to": [
+            "94",
+            "inputs",
+            "duration"
+          ]
         },
         {
           "from": "bpm",
-          "to": ["94", "inputs", "bpm"]
+          "to": [
+            "94",
+            "inputs",
+            "bpm"
+          ]
         },
         {
           "from": "timesignature",
-          "to": ["94", "inputs", "timesignature"]
+          "to": [
+            "94",
+            "inputs",
+            "timesignature"
+          ]
         },
         {
           "from": "keyscale",
-          "to": ["94", "inputs", "keyscale"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["118", "inputs", "path"]
+          "to": [
+            "94",
+            "inputs",
+            "keyscale"
+          ]
         },
         {
           "from": "saveAudioPath",
-          "to": ["108", "inputs", "path"]
+          "to": [
+            "108",
+            "inputs",
+            "path"
+          ]
         }
       ],
       "postGenerationTasks": [
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              }
+            ]
+          }
         }
       ]
     },
@@ -2288,10 +3558,22 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
           }
         ]
@@ -2306,37 +3588,76 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["16", "inputs", "value"]
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "lyrics",
-          "to": ["15", "inputs", "value"]
+          "to": [
+            "15",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["22:20", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["7", "inputs", "seed"]
+          "to": [
+            "7",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "length",
-          "to": ["7", "inputs", "max_audio_length_seconds"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["18", "inputs", "path"]
+          "to": [
+            "7",
+            "inputs",
+            "max_audio_length_seconds"
+          ]
         },
         {
           "from": "saveAudioPath",
-          "to": ["23", "inputs", "path"]
+          "to": [
+            "23",
+            "inputs",
+            "path"
+          ]
         }
       ],
       "postGenerationTasks": [
         {
           "from": "lyrics",
           "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -2361,10 +3682,22 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
           }
         ]
@@ -2379,85 +3712,64 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["21", "inputs", "value"]
+          "to": [
+            "21",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["24", "inputs", "value"]
+          "to": [
+            "24",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "length",
-          "to": ["22", "inputs", "value"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["30", "inputs", "path"]
+          "to": [
+            "22",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "saveAudioPath",
-          "to": ["20", "inputs", "path"]
+          "to": [
+            "20",
+            "inputs",
+            "path"
+          ]
         }
-      ]
-    },
-    {
-      "name": "Text to Speech (Chatterbox)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 1,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
             ]
           }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
-          "from": "prompt",
-          "to": "summary"
-        }        
-      ],
-      "base": "chatterbox-text-to-speech.json",
-      "upload": [
-        {
-          "from": "audio_0"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": ["15", "inputs", "value"]
-        },
-        {
-          "from": "seed",
-          "to": ["14", "inputs", "seed"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["21", "inputs", "path"]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": ["20", "inputs", "path"]
-        },
-        {
-          "from": "audio_0_filename",
-          "to": ["5", "inputs", "audio"]
         }
       ]
     },
@@ -2476,29 +3788,41 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
           },
           {
             "id": "dialog",
             "type": "textarea",
-            "label": "Dialog"            
+            "label": "Dialog"
           }
         ]
       },
       "base": "qwen3tts-text-to-voice-design.json",
       "preGenerationTasks": [
         {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
           "condition": {
-            "where": { "data": "dialog" },
-            "equals": { "value": "" }
+            "where": {
+              "data": "dialog"
+            },
+            "equals": {
+              "value": ""
+            }
           },
           "model": "gemma3:4b",
           "prompt": "Write a single paragraph of prose consist of exactly 3 sentences of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{prompt}}. Output the dialog ONLY.",
@@ -2512,27 +3836,174 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["20", "inputs", "value"]
+          "to": [
+            "20",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "dialog",
-          "to": ["16", "inputs", "value"]
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["34:29", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["4", "inputs", "seed"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["31", "inputs", "path"]
+          "to": [
+            "4",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "saveAudioPath",
-          "to": ["36", "inputs", "path"]
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": " Generating Portrait",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Text to Speech (Chatterbox)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        },
+        {
+          "from": "prompt",
+          "to": "summary"
+        }
+      ],
+      "base": "chatterbox-text-to-speech.json",
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "3",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "audio_0_filename",
+          "to": [
+            "5",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "20",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
     },
@@ -2551,25 +4022,28 @@
             "label": "Audio Format",
             "default": "mp3",
             "options": [
-              { "label": "MP3", "value": "mp3" },
-              { "label": "WAV", "value": "wav" },
-              { "label": "FLAC", "value": "flac" },
-              { "label": "OGG", "value": "ogg" }
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
             ]
           }
         ]
       },
       "base": "qwen3tts-text-to-audio.json",
-      "upload": [
-        {
-          "from": "audio_0"
-        }
-      ],
       "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
         {
           "from": "prompt",
           "to": "summary"
@@ -2578,86 +4052,66 @@
       "replace": [
         {
           "from": "prompt",
-          "to": ["8", "inputs", "value"]
+          "to": [
+            "8",
+            "inputs",
+            "value"
+          ]
         },
         {
           "from": "seed",
-          "to": ["13:29", "inputs", "seed"]
-        },
-        {
-          "from": "seed",
-          "to": ["5", "inputs", "seed"]
-        },
-        {
-          "from": "saveImagePath",
-          "to": ["15", "inputs", "path"]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": ["16", "inputs", "path"]
+          "to": [
+            "5",
+            "inputs",
+            "seed"
+          ]
         },
         {
           "from": "audio_0_filename",
-          "to": ["10", "inputs", "audio"]
+          "to": [
+            "10",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "16",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
         }
       ]
-    },
-    {
-      "name": "Remove Background (RMBG)",
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 1,
-        "optionalPrompt": true,
-        "nameRequired": true,
-        "orientation": "detect"
-      },
-      "preGenerationTasks": [
-        {
-          "template": "png",
-          "to": "imageFormat"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_tags" },
-            "isNot": { "value": "" }
-          },
-          "from": "image_0_tags",
-          "to": "tags"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_summary" },
-            "isNot": { "value": "" }
-          },          
-          "from": "image_0_summary",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "where": { "data": "image_0_description" },
-            "isNot": { "value": "" }
-          },
-          "from": "image_0_description",
-          "to": "description"
-         }
-      ],
-      "upload": [
-        {
-          "from": "image_0"
-        }
-      ],
-      "base": "rmbg-remove-background.json",
-      "replace": [
-         {
-            "from": "image_0_filename",
-            "to": ["2", "inputs", "image"]
-         },
-         {
-           "from": "saveImagePath",
-           "to": ["4", "inputs", "path"]
-         }
-       ]
     }
   ]
 }
