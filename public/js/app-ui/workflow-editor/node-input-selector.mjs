@@ -116,14 +116,14 @@ export function NodeInputSelector({ workflowJson = {}, value = null, onChange })
         options=${nodeOptions}
         value=${activeNodeId}
         onChange=${handleNodeChange}
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Select}
         options=${inputOptions}
         value=${selectedInput}
         disabled=${!activeNodeId || inputKeys.length === 0}
         onChange=${handleInputChange}
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${SelectorRow}>
   `;

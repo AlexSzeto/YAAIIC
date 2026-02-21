@@ -671,7 +671,7 @@ export function Gallery({
                 placeholder=${searchMode === 'tag' ? 'Tag search (comma-separated)' : 'Search images...'}
                 value=${searchQuery}
                 onInput=${handleSearchInput}
-                fullWidth=${true}
+                widthScale="full"
               />
             </${HorizontalLayout}>
           </${SearchContainer}>

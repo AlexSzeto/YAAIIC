@@ -600,7 +600,7 @@ export class TagSelectorPanel extends Component {
           placeholder="Search tags..."
           value=${searchValue}
           onChange=${(e) => this.setState({ searchValue: e.target.value })}
-          fullWidth=${true}
+          widthScale="full"
         />
       </${SearchSection}>
     `;

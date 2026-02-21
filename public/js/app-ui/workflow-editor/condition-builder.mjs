@@ -106,22 +106,25 @@ function ConditionItem({ condition, index, onChange, onDelete }) {
   return html`
     <${ConditionRow} theme=${theme}>
       <${Input}
+        heightScale="compact"
         placeholder="field name"
         value=${fieldName}
         onInput=${(e) => updateCondition({ where: { data: e.target.value } })}
       />
       <${Select}
+        heightScale="compact"
         options=${CHECK_TYPE_OPTIONS}
         value=${checkType}
         onChange=${handleCheckTypeChange}
       />
       <${Input}
+        heightScale="compact"
         placeholder="value"
         value=${valueToString(rawValue)}
         onInput=${(e) => updateCondition({ [checkType]: { value: coerceValue(e.target.value) } })}
       />
       <${Button}
-        variant="medium-icon"
+        variant="small-icon"
         icon="trash"
         color="danger"
         onClick=${() => onDelete(index)}

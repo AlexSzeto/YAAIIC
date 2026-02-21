@@ -138,7 +138,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
           value=${selectedType || ''}
           onChange=${handleTypeChange}
           disabled=${loading || disabled}
-          fullWidth=${false}
         />
       `}
       <${Select}
@@ -148,7 +147,7 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         onChange=${handleChange}
         disabled=${loading || disabled}
         error=${error}
-        fullWidth=${true}
+        widthScale="full"
       />
     </${Container}>
   `;

@@ -124,13 +124,6 @@
             "type": "checkbox",
             "label": "Remove Background",
             "default": false
-          },
-          {
-            "id": "being_dumb",
-            "type": "text",
-            "label": "Being Dumb!",
-            "default": "",
-            "options": []
           }
         ]
       },
@@ -2472,7 +2465,19 @@
         },
         {
           "from": "frames",
-          "to": "frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": 0,
+              "scale": 0.5,
+              "bias": 10,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": "generate_frames",
           "math": [
             {
               "offset": -1,
@@ -2625,7 +2630,7 @@
           ]
         },
         {
-          "from": "frames",
+          "from": "generate_frames",
           "to": [
             "122",
             "inputs",
@@ -2936,7 +2941,19 @@
         },
         {
           "from": "frames",
-          "to": "frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": 0,
+              "scale": 0.5,
+              "bias": 10,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": "generate_frames",
           "math": [
             {
               "offset": -1,
@@ -3081,7 +3098,7 @@
           ]
         },
         {
-          "from": "frames",
+          "from": "generate_frames",
           "to": [
             "101",
             "inputs",
@@ -3089,7 +3106,7 @@
           ]
         },
         {
-          "from": "frames",
+          "from": "generate_frames",
           "to": [
             "77",
             "inputs",

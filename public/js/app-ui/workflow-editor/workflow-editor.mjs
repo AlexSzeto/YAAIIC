@@ -25,6 +25,7 @@ import { ConditionBuilder } from './condition-builder.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import ListSelectModal from '../../custom-ui/overlays/list-select.mjs';
+import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AppHeader } from '../themed-base.mjs';
 
 // ============================================================================
@@ -150,7 +151,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
       <${FormRow} theme=${theme}>
         <${Input}
           label="Name"
-          fullWidth
+          widthScale="full"
           value=${workflow.name || ''}
           onInput=${(e) => onChange({ ...workflow, name: e.target.value })}
           placeholder="Workflow display name"
@@ -159,7 +160,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
       <${FormRow} theme=${theme}>
         <${Select}
           label="Base ComfyUI Workflow File"
-          fullWidth="true"
+          widthScale="full"
           options=${baseFileOptions}
           value=${workflow.base || ''}
           onChange=${(e) => {
@@ -176,28 +177,28 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
           options=${typeOptions}
           value=${opts.type || 'image'}
           onChange=${(e) => updateOpts({ type: e.target.value })}
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Select}
           label="Orientation"
           options=${orientationOptions}
           value=${opts.orientation || 'portrait'}
           onChange=${(e) => updateOpts({ orientation: e.target.value })}
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Input}
           label="Input Images"
           type="number"
           value=${opts.inputImages ?? 0}
           onInput=${(e) => updateOpts({ inputImages: parseInt(e.target.value, 10) || 0 })}
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Input}
           label="Input Audios"
           type="number"
           value=${opts.inputAudios ?? 0}
           onInput=${(e) => updateOpts({ inputAudios: parseInt(e.target.value, 10) || 0 })}
-          style=${{ maxWidth: '200px' }}
+          
         />
       </${FormRow}>
 
@@ -241,14 +242,14 @@ function OptionItemForm({ item, onChange }) {
         value=${item.label || ''}
         onInput=${(e) => onChange({ ...item, label: e.target.value })}
         placeholder="Display label"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Value"
         value=${item.value || ''}
         onInput=${(e) => onChange({ ...item, value: e.target.value })}
         placeholder="Stored value"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
   `;
@@ -277,28 +278,28 @@ function ExtraInputForm({ item, onChange }) {
           value=${item.id || ''}
           onInput=${(e) => onChange({ ...item, id: e.target.value })}
           placeholder="snake_case_id"
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Input}
           label="Label"
           value=${item.label || ''}
           onInput=${(e) => onChange({ ...item, label: e.target.value })}
           placeholder="Display label"
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Select}
           label="Type"
           options=${typeOptions}
           value=${item.type || 'text'}
           onChange=${(e) => onChange({ ...item, type: e.target.value, options: [] })}
-          style=${{ maxWidth: '200px' }}
+          
         />
         <${Input}
           label="Default Value"
           value=${item.default !== undefined ? String(item.default) : ''}
           onInput=${(e) => onChange({ ...item, default: e.target.value })}
           placeholder="Default"
-          style=${{ maxWidth: '200px' }}
+          
         />
       </${HorizontalLayout}>
       ${hasOptions && html`
@@ -352,7 +353,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
         value=${item.from || ''}
         onInput=${(e) => onChange({ ...item, from: e.target.value })}
         placeholder="e.g. seed, prompt, saveImagePath"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <div>
         <div style="font-family:${theme.typography.fontFamily};font-size:${theme.typography.fontSize.small};font-weight:${theme.typography.fontWeight.medium};color:${theme.colors.text.secondary};margin-bottom:5px;">
@@ -368,7 +369,7 @@ function ReplaceMappingForm({ item, index, workflowJson, onChange, theme }) {
           `
           : html`
             <${Input}
-              fullWidth
+              widthScale="full"
               value=${toDisplay}
               onInput=${(e) => {
                 try {
@@ -591,7 +592,8 @@ export function WorkflowEditor() {
 
   async function handleDelete(name) {
     if (!name) return;
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const result = await showDialog(`Delete "${name}"? This cannot be undone.`, 'Confirm Delete', ['Delete', 'Cancel']);
+    if (result !== 'Delete') return;
 
     setIsDeleting(true);
     try {

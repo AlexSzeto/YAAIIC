@@ -38,6 +38,11 @@ const FormRoot = styled('div')`
 `;
 FormRoot.className = 'task-form-root';
 
+const MathSpan = styled('span')`
+  font-size: ${props => props.theme.typography.fontSize.large};
+`;
+MathSpan.className = 'math-span';
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -144,11 +149,11 @@ function TemplateTaskForm({ task, onChange }) {
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. imageFormat"
-      style=${{ maxWidth: '200px' }}
+      
     />
     <${Textarea}
       label="Template (use {{variable}} for substitutions)"
-      fullWidth
+      widthScale="full"
       value=${task.template || ''}
       onInput=${(e) => onChange({ ...task, template: e.target.value })}
       placeholder="e.g. jpg or {{prompt}}-output"
@@ -168,14 +173,14 @@ function FromTaskForm({ task, onChange }) {
         value=${task.from || ''}
         onInput=${(e) => onChange({ ...task, from: e.target.value })}
         placeholder="e.g. prompt"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
   `;
@@ -192,42 +197,45 @@ const ROUND_OPTIONS = [
 ];
 
 function MathStepForm({ step, onChange }) {
+  const theme = currentTheme.value;
   return html`
-    <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-      <span>( value +</span>
+    <${HorizontalLayout} gap="small">
+      <${MathSpan} theme=${theme}>( value +</${MathSpan}>
       <${Input}
         type="number"
+        step="0.01"
         label="Offset"
         value=${step.offset ?? 0}
         onInput=${(e) => onChange({ ...step, offset: parseFloat(e.target.value) || 0 })}
-        fullWidth="true"
-        style=${{ maxWidth: '100px' }}
+        widthScale="compact"
+        heightScale="compact"
       />
-      <span>) ×</span>
+      <${MathSpan} theme=${theme}>) ×</${MathSpan}>
       <${Input}
         type="number"
+        step="0.01"
         label="Scale"
         value=${step.scale ?? 1}
         onInput=${(e) => onChange({ ...step, scale: parseFloat(e.target.value) || 0 })}
-        fullWidth="true"
-        style=${{ maxWidth: '100px' }}
+        widthScale="compact"
+        heightScale="compact"
       />
-      <span>+</span>
+      <${MathSpan} theme=${theme}>+</${MathSpan}>
       <${Input}
         type="number"
+        step="0.01"
         label="Bias"
         value=${step.bias ?? 0}
         onInput=${(e) => onChange({ ...step, bias: parseFloat(e.target.value) || 0 })}
-        fullWidth="true"
-        style=${{ maxWidth: '100px' }}
+        widthScale="compact"
+        heightScale="compact"
       />
       <${Select}
         label="Round"
         options=${ROUND_OPTIONS}
         value=${step.round || 'none'}
         onChange=${(e) => onChange({ ...step, round: e.target.value })}
-        fullWidth="true"
-        style=${{ maxWidth: '140px' }}
+        heightScale="compact"
       />
     </${HorizontalLayout}>
   `;
@@ -243,14 +251,14 @@ function MathTaskForm({ task, onChange }) {
         value=${task.from || ''}
         onInput=${(e) => onChange({ ...task, from: e.target.value })}
         placeholder="e.g. frames"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. frames"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
     <${DynamicList}
@@ -304,19 +312,19 @@ function ModelTaskForm({ task, onChange }) {
         value=${task.imagePath || ''}
         onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
         placeholder="e.g. saveImagePath"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
     <${Textarea}
       label="Prompt"
-      fullWidth
+      widthScale="full"
       value=${task.prompt || ''}
       onInput=${(e) => onChange({ ...task, prompt: e.target.value })}
       placeholder="LLM system prompt…"
@@ -347,7 +355,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
       options=${ADDITIONAL_PROCESSORS}
       value=${process}
       onChange=${handleProcessChange}
-      style=${{ maxWidth: '200px' }}
+      
     />
 
     ${process === 'extractOutputMediaFromTextFile' && html`
@@ -356,7 +364,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         value=${params.filename || ''}
         onInput=${(e) => updateParam('filename', e.target.value)}
         placeholder="output text file name"
-        style=${{ maxWidth: '200px' }}
+        
       />
     `}
 
@@ -366,7 +374,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         type="number"
         value=${params.blendFrames ?? 10}
         onInput=${(e) => updateParam('blendFrames', parseInt(e.target.value, 10) || 0)}
-        style=${{ maxWidth: '200px' }}
+        
       />
     `}
 
@@ -376,7 +384,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         type="number"
         value=${params.blendDuration ?? 3}
         onInput=${(e) => updateParam('blendDuration', parseFloat(e.target.value) || 0)}
-        style=${{ maxWidth: '200px' }}
+        
       />
     `}
 
@@ -387,7 +395,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         items=${params.properties || []}
         renderItem=${(item, i) => html`
           <${Input}
-            fullWidth
+            heightScale="compact"
             value=${item}
             onInput=${(e) => {
               const next = [...(params.properties || [])];
@@ -416,14 +424,14 @@ function MappingForm({ mapping, onChange }) {
         value=${mapping.from || ''}
         onInput=${(e) => onChange({ ...mapping, from: e.target.value })}
         placeholder="source field"
-        style=${{ maxWidth: '200px' }}
+        heightScale="compact"
       />
       <${Input}
         label="To"
         value=${mapping.to || ''}
         onInput=${(e) => onChange({ ...mapping, to: e.target.value })}
         placeholder="target field"
-        style=${{ maxWidth: '200px' }}
+        heightScale="compact"
       />
     </${HorizontalLayout}>
   `;
@@ -452,14 +460,14 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
       value=${task.name || ''}
       onInput=${(e) => onChange({ ...task, name: e.target.value })}
       placeholder="optional display name"
-      style=${{ maxWidth: '200px' }}
+      
     />
     <${Select}
       label="Workflow"
       options=${workflowOptions}
       value=${params.workflow || ''}
       onChange=${(e) => updateParams('workflow', e.target.value)}
-      style=${{ maxWidth: '200px' }}
+      
     />
 
     <${DynamicList}
@@ -543,7 +551,7 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
           options=${typeOptions}
           value=${taskType}
           onChange=${handleTypeChange}
-          style=${{ maxWidth: '200px' }}
+          
         />
 
         ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}

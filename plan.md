@@ -1,17 +1,15 @@
 # Bugs
-- [ ] Fix select component text overflow
-- [ ] Dynamic list item title add css (display: flex; gap: 4px; align-items: center;)
+- Looping videos workflows go above 100% progress
 
 ## Implementation Details
 
 # Future Features
+- Purge (delete storge items not linked to a database item)
 - Higher Quality Flux Klein (add a field to use 9b param model for generation)
 - Cancel generation (replace generation button)
 - Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)
-- Add math ops for pre/post generation tasks. Convert the Wan5b video length math calculation into a process. Add 5 frames to Wan5b video length, and then convert the video length in pre-gen.
 - Allow processes to report progress. For workflows, report this using workflow completion percentage; For frame blend, use the current frame being blended to calculate the completion percentage.
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
-- Wan22 video loop (add workflow)
 - Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
 - Add watch mode for config files (config.json, comfyui-workflows.json). If any of these files change, reload the config and workflows.
 - Auto download models from Hugging Face

@@ -249,7 +249,7 @@ class TextPromptDialog extends Component {
                 value=${inputValue}
                 placeholder=${placeholder || ''}
                 onInput=${this.handleInputChange}
-                fullWidth=${true}
+                widthScale="full"
               />
             </${BaseContent}>
             <${BaseFooter}
@@ -352,7 +352,6 @@ class TextPromptDialog extends Component {
  * }
  */
 export function showDialog(text, title = 'Dialog', options = null) {
-  console.log('showDialog called with:', { text, title, options });
 
   // Create container element
   const container = document.createElement('div');

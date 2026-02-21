@@ -25,7 +25,6 @@ import workflowsRouter from './features/workflows/router.mjs';
 import llmRouter from './features/llm/router.mjs';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // ---------------------------------------------------------------------------
 // Bootstrap: load config, workflows, and initialize sub-modules
@@ -125,8 +124,9 @@ async function startServer() {
   
   await checkAndStartServices();
   
-  app.listen(PORT, () => {
-    console.log(`🌐 Server running at http://localhost:${PORT}`);
+  const port = config.serverPort || 3000;
+  app.listen(port, () => {
+    console.log(`🌐 Server running at http://localhost:${port}`);
   });
 }
 

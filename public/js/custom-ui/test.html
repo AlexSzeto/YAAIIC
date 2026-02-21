@@ -801,64 +801,112 @@
               
               <${Section}>
                 <${SectionTitle}>Input Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">widthScale: normal (200px) | compact (50px) | full (100%). heightScale: normal (44px) | compact (34px).</p>
+
+                <h4 style="margin: 16px 0 8px;">States (widthScale="normal", heightScale="normal")</h4>
                 <${ComponentGrid}>
-                  <${Input} label="Basic Input" name="basic" placeholder="Enter text..." />
-                  <${Input} label="With Value" name="withValue" value="Hello World" />
-                  <${Input} label="Disabled" name="disabled" disabled=${true} value="Cannot edit" />
-                  <${Input} label="With Error" name="error" error="This field is required" />
+                  <${Input} label="Basic Input" placeholder="Enter text..." />
+                  <${Input} label="With Value" value="Hello World" />
+                  <${Input} label="Disabled" disabled=${true} value="Cannot edit" />
+                  <${Input} label="With Error" error="This field is required" />
                 <//>
-                <div style="margin-top: 16px;">
-                  <${Input} label="Full Width Input" name="fullWidth" fullWidth=${true} placeholder="This spans the full width..." />
+
+                <h4 style="margin: 16px 0 8px;">widthScale variants</h4>
+                <${ComponentGrid}>
+                  <${Input} label="normal (200px)" widthScale="normal" placeholder="200px wide" />
+                  <${Input} label="compact (50px)" widthScale="compact" />
+                <//>
+                <div style="margin-top: 16px; display: flex;">
+                  <${Input} label="full (100% + flex-grow)" widthScale="full" placeholder="Spans full width..." />
+                </div>
+
+                <h4 style="margin: 16px 0 8px;">heightScale variants</h4>
+                <${ComponentGrid}>
+                  <${Input} label="normal (44px)" heightScale="normal" placeholder="Standard height" />
+                  <${Input} label="compact (34px)" heightScale="compact" placeholder="Compact height" />
+                <//>
+
+                <h4 style="margin: 16px 0 8px;">Combined: widthScale="full" + heightScale="compact"</h4>
+                <div style="display: flex;">
+                  <${Input} label="Full-width compact" widthScale="full" heightScale="compact" placeholder="Full width, compact height..." />
                 </div>
               </${Section}>
-              
+
               <${Section}>
                 <${SectionTitle}>Select Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">widthScale: normal (200px) | compact (50px) | full (100%). heightScale: normal (44px) | compact (34px).</p>
+
+                <h4 style="margin: 16px 0 8px;">States (widthScale="normal", heightScale="normal")</h4>
                 <${ComponentGrid}>
-                  <${Select} 
-                    label="Basic Select" 
-                    name="basic"
+                  <${Select}
+                    label="Basic Select"
                     options=${[
                       { label: 'Option 1', value: '1' },
                       { label: 'Option 2', value: '2' },
                       { label: 'Option 3', value: '3' }
-                    ]} 
+                    ]}
                   />
-                  <${Select} 
-                    label="With Selection" 
-                    name="selected"
+                  <${Select}
+                    label="With Selection"
                     value="2"
                     options=${[
                       { label: 'First', value: '1' },
                       { label: 'Second', value: '2' },
                       { label: 'Third', value: '3' }
-                    ]} 
+                    ]}
                   />
-                  <${Select} 
-                    label="Disabled" 
-                    name="disabled"
+                  <${Select}
+                    label="Disabled"
                     disabled=${true}
-                    options=${[{ label: 'Cannot change', value: '1' }]} 
+                    options=${[{ label: 'Cannot change', value: '1' }]}
                   />
-                  <${Select} 
-                    label="With Error" 
-                    name="error"
+                  <${Select}
+                    label="With Error"
                     error="Please select an option"
-                    options=${[{ label: 'Choose...', value: '' }]} 
+                    options=${[{ label: 'Choose...', value: '' }]}
                   />
                 <//>
-              </${Section}>
-              
-              <${Section}>              
-                <${SectionTitle}>Textarea Component</${SectionTitle}>
+
+                <h4 style="margin: 16px 0 8px;">widthScale variants</h4>
                 <${ComponentGrid}>
-                  <${Textarea} label="Basic Textarea" name="basic" placeholder="Enter text here..." />
-                  <${Textarea} label="With Value" name="withValue" value="Some existing content that spans multiple lines for demonstration purposes." />
-                  <${Textarea} label="Disabled" name="disabled" disabled=${true} value="Cannot edit this content" />
-                  <${Textarea} label="With Error" name="error" error="This field is required" />
+                  <${Select} label="normal (200px)" widthScale="normal" options=${[{ label: 'Option', value: '1' }]} />
+                  <${Select} label="compact (50px)" widthScale="compact" options=${[{ label: 'A', value: 'a' }, { label: 'B', value: 'b' }]} />
+                <//>
+                <div style="margin-top: 16px; display: flex;">
+                  <${Select} label="full (100% + flex-grow)" widthScale="full" options=${[{ label: 'Option 1', value: '1' }, { label: 'Option 2', value: '2' }]} />
+                </div>
+
+                <h4 style="margin: 16px 0 8px;">heightScale variants</h4>
+                <${ComponentGrid}>
+                  <${Select} label="normal (44px)" heightScale="normal" options=${[{ label: 'Standard', value: '1' }]} />
+                  <${Select} label="compact (34px)" heightScale="compact" options=${[{ label: 'Compact', value: '1' }]} />
+                <//>
+
+                <h4 style="margin: 16px 0 8px;">Combined: widthScale="full" + heightScale="compact"</h4>
+                <div style="display: flex;">
+                  <${Select} label="Full-width compact" widthScale="full" heightScale="compact" options=${[{ label: 'Option 1', value: '1' }, { label: 'Option 2', value: '2' }]} />
+                </div>
+              </${Section}>
+
+              <${Section}>
+                <${SectionTitle}>Textarea Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">widthScale: normal (200px) | compact (50px) | full (100%, default). No heightScale — uses min-height + vertical resize.</p>
+
+                <h4 style="margin: 16px 0 8px;">States (widthScale="normal")</h4>
+                <${ComponentGrid}>
+                  <${Textarea} label="Basic Textarea" widthScale="normal" placeholder="Enter text here..." />
+                  <${Textarea} label="With Value" widthScale="normal" value="Some existing content." />
+                  <${Textarea} label="Disabled" widthScale="normal" disabled=${true} value="Cannot edit" />
+                  <${Textarea} label="With Error" widthScale="normal" error="This field is required" />
                 </${ComponentGrid}>
-                <div style="margin-top: 16px;">
-                  <${Textarea} label="Full Width Textarea (default)" name="fullWidth" placeholder="This spans the full width by default..." rows=${6} />
+
+                <h4 style="margin: 16px 0 8px;">widthScale variants</h4>
+                <${ComponentGrid}>
+                  <${Textarea} label="normal (200px)" widthScale="normal" placeholder="200px wide" />
+                  <${Textarea} label="compact (50px)" widthScale="compact" />
+                <//>
+                <div style="margin-top: 16px; display: flex;">
+                  <${Textarea} label="full (100% + flex-grow, default)" widthScale="full" placeholder="Spans full width by default..." rows=${3} />
                 </div>
               </${Section}>
               
