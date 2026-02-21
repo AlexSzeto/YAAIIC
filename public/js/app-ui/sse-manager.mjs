@@ -69,7 +69,6 @@ class SSEManager {
     // Start timeout timer
     this._startTimeout(taskId);
 
-    console.log(`Subscribed to task ${taskId}`);
     return true;
   }
 
@@ -89,8 +88,6 @@ class SSEManager {
     
     // Remove from active connections
     this._cleanup(taskId);
-    
-    console.log(`Unsubscribed from task ${taskId}`);
   }
 
   /**

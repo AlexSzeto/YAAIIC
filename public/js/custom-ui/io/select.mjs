@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle, getHeightScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -10,7 +11,6 @@ import { currentTheme } from '../theme.mjs';
 const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;
@@ -25,7 +25,7 @@ const Label = styled('label')`
 Label.className = 'label';
 
 const StyledSelect = styled('select')`
-  padding: 8px;
+  padding: ${props => props.padding};
   border-radius: 6px;
   cursor: pointer;
   border: ${props => props.border};
@@ -35,7 +35,7 @@ const StyledSelect = styled('select')`
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
   width: 100%;
-  height: 44px;
+  height: ${props => props.height};
   overflow: hidden;
   text-overflow: ellipsis;
   
@@ -69,7 +69,8 @@ ErrorMessage.className = 'error-message';
  * @param {Array<{label: string, value: any}>} [props.options=[]] - Array of option objects
  * @param {string} [props.error] - Error message displayed below the select
  * @param {string} [props.id] - ID for the select element (also sets name attribute)
- * @param {boolean} [props.fullWidth=false] - Whether to span full container width
+ * @param {'normal'|'compact'|'full'} [props.widthScale='normal'] - Width: 200px | 50px | 100%+flex-grow
+ * @param {'normal'|'compact'} [props.heightScale='normal'] - Height: 44px | 34px
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {*} [props.value] - Currently selected value
  * @param {Function} [props.onChange] - Change handler
@@ -90,8 +91,8 @@ ErrorMessage.className = 'error-message';
  * <Select label="Category" options={[...]} error="Please select a category" />
  * 
  * @example
- * // Full width select
- * <Select label="Type" options={[...]} fullWidth={true} />
+ * // Full width compact-height select
+ * <Select label="Type" options={[...]} widthScale="full" heightScale="compact" />
  */
 export class Select extends Component {
   constructor(props) {
@@ -114,22 +115,25 @@ export class Select extends Component {
   }
 
   render() {
-    const { 
-      label, 
+    const {
+      label,
       options = [],
-      error, 
-      id, 
-      fullWidth = false, 
+      error,
+      id,
+      widthScale = 'normal',
+      heightScale = 'normal',
       disabled = false,
       value,
-      ...rest 
+      ...rest
     } = this.props;
     const { theme } = this.state;
+    const { width, flex } = getWidthScaleStyle(widthScale);
+    const { height, padding } = getHeightScaleStyle(heightScale);
 
     return html`
-      <${FormGroup} 
-        width=${fullWidth ? '100%' : '200px'}
-        flex=${fullWidth ? '1 0 0' : undefined}
+      <${FormGroup}
+        width=${width}
+        flex=${flex}
       >
         ${label ? html`
           <${Label} 
@@ -139,10 +143,12 @@ export class Select extends Component {
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
         ` : ''}
-        <${StyledSelect} 
-          id=${id} 
+        <${StyledSelect}
+          id=${id}
           name=${id}
           disabled=${disabled}
+          height=${height}
+          padding=${padding}
           border=${`2px ${theme.border.style} ${error ? theme.colors.danger.border : theme.colors.border.primary}`}
           backgroundColor=${theme.colors.background.tertiary}
           color=${theme.colors.text.primary}

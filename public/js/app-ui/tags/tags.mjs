@@ -30,7 +30,6 @@ export async function loadTags() {
     .then(data => {
       tags = data.tags || [];
       isLoaded = true;
-      console.log('Tags loaded successfully:', tags.length, 'tags');
       return tags;
     })
     .catch(error => {
@@ -68,7 +67,6 @@ export function getTagsCount() {
 
 // Auto-load tags when the module is imported and DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Tags module: Auto-loading tags on page load');
   loadTags().catch(error => {
     console.warn('Tags module: Failed to auto-load tags:', error);
   });

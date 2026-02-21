@@ -87,6 +87,29 @@
       ],
       "additionalProperties": false
     },
+    "mathFormulaStep": {
+      "type": "object",
+      "description": "A single arithmetic step: result = (value + offset) * scale + bias, with optional rounding",
+      "properties": {
+        "offset": { "type": "number", "default": 0, "description": "Added to value before multiplication" },
+        "scale":  { "type": "number", "default": 1, "description": "Multiplied after offset" },
+        "bias":   { "type": "number", "default": 0, "description": "Added after multiplication" },
+        "round":  { "type": "string", "enum": ["none", "floor", "ceil"], "default": "none" }
+      },
+      "additionalProperties": false
+    },
+    "mathTask": {
+      "type": "object",
+      "description": "A math task that chains arithmetic formula steps on a named data field",
+      "properties": {
+        "from":      { "type": "string", "description": "Source field in generationData" },
+        "to":        { "type": "string", "description": "Target field in generationData" },
+        "math":      { "type": "array", "items": { "$ref": "#/definitions/mathFormulaStep" }, "minItems": 1 },
+        "condition": { "$ref": "#/definitions/condition" }
+      },
+      "required": ["from", "to", "math"],
+      "additionalProperties": false
+    },
     "workflow": {
       "type": "object",
       "description": "A workflow definition object",
@@ -124,16 +147,22 @@
         },
         "preGenerationTasks": {
           "type": "array",
-          "description": "LLM tasks or template tasks to run before generation starts",
+          "description": "LLM tasks, template tasks, or math tasks to run before generation starts",
           "items": {
-            "$ref": "#/definitions/llmTask"
+            "oneOf": [
+              { "$ref": "#/definitions/llmTask" },
+              { "$ref": "#/definitions/mathTask" }
+            ]
           }
         },
         "postGenerationTasks": {
           "type": "array",
-          "description": "LLM tasks or template tasks to run after generation completes (overrides defaultImageGenerationTasks)",
+          "description": "LLM tasks, template tasks, or math tasks to run after generation completes (overrides defaultImageGenerationTasks)",
           "items": {
-            "$ref": "#/definitions/llmTask"
+            "oneOf": [
+              { "$ref": "#/definitions/llmTask" },
+              { "$ref": "#/definitions/mathTask" }
+            ]
           }
         },
         "extractOutputPathFromTextFile": {

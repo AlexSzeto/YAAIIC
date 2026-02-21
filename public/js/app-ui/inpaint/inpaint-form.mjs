@@ -128,7 +128,7 @@ export function InpaintForm({
           <${Input}
             label="Name"
             type="text"
-            fullWidth=${true}
+            widthScale="full"
             placeholder="Enter name"
             value=${formState.name || ''}
             onChange=${handleChange('name')}

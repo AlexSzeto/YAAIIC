@@ -18,9 +18,17 @@ import { checkExecutionCondition } from '../../util.mjs';
  * @returns {string|null} Absolute path to the media file, or null if not found
  */
 export function resolveMediaPath(mediaData, storageFolder) {
-  // Try imageUrl first, then audioUrl
-  const mediaUrl = mediaData.imageUrl || mediaData.audioUrl;
-  
+  let mediaUrl = null;
+  switch (mediaData.type) {
+    case 'audio':
+      mediaUrl = mediaData.audioUrl;
+      break;
+    case 'image':
+    default:
+      mediaUrl = mediaData.imageUrl;
+      break;
+  }
+
   if (!mediaUrl) {
     return null;
   }
@@ -37,23 +45,28 @@ export function resolveMediaPath(mediaData, storageFolder) {
  * @returns {string} File extension (with leading dot)
  */
 function getMediaExtension(mediaData) {
-  // Check for explicit format properties
-  if (mediaData.imageFormat) {
-    return '.' + mediaData.imageFormat;
+
+  switch (mediaData.type) {
+    case 'audio':
+      if (mediaData.audioFormat) {
+        return '.' + mediaData.audioFormat;
+      }
+      if (mediaData.audioUrl) {
+        const audioExt = path.extname(mediaData.audioUrl);
+        if (audioExt) return audioExt;
+      }
+      return '.mp3'; // Default audio extension
+    case 'image':
+    default:
+      if (mediaData.imageFormat) {
+        return '.' + mediaData.imageFormat;
+      }
+      if (mediaData.imageUrl) {
+        const imageExt = path.extname(mediaData.imageUrl);
+        if (imageExt) return imageExt;
+      }
+      return '.png'; // Default image extension
   }
-  if (mediaData.audioFormat) {
-    return '.' + mediaData.audioFormat;
-  }
-  
-  // Fall back to extracting from URL
-  const mediaUrl = mediaData.imageUrl || mediaData.audioUrl;
-  if (mediaUrl) {
-    const ext = path.extname(mediaUrl);
-    if (ext) return ext;
-  }
-  
-  // Default to png for images
-  return '.png';
 }
 
 /**

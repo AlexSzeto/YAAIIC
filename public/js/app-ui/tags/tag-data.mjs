@@ -36,11 +36,6 @@ export async function loadTagDefinitions() {
       categoryTree = data.categoryTree || {};
       tags = data.tags || [];
       isLoaded = true;
-      console.log('Tag data loaded successfully:', {
-        definitions: Object.keys(definitions).length,
-        categoryTreeEntries: Object.keys(categoryTree).length,
-        tags: tags.length
-      });
       return { definitions, categoryTree, tags };
     })
     .catch(error => {

@@ -1,4 +1,5 @@
 {
+  "serverPort": 3000,
   "ollamaAPIPath": "http://localhost:11434",
   "ollamaLaunchPath": "H:\\start_ollama.bat",
   "ollamaUseCPU": false,

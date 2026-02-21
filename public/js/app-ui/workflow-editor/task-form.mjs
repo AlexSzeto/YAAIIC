@@ -38,6 +38,11 @@ const FormRoot = styled('div')`
 `;
 FormRoot.className = 'task-form-root';
 
+const MathSpan = styled('span')`
+  font-size: ${props => props.theme.typography.fontSize.large};
+`;
+MathSpan.className = 'math-span';
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -45,23 +50,55 @@ FormRoot.className = 'task-form-root';
 const ADDITIONAL_PROCESSORS = [
   { value: 'extractOutputMediaFromTextFile', label: 'Extract output media from text file' },
   { value: 'crossfadeVideoFrames',           label: 'Crossfade video frames' },
+  { value: 'crossfadeAudioClip',             label: 'Crossfade audio clip' },
   { value: 'extractOutputTexts',             label: 'Extract output texts' },
 ];
 
 const ADDITIONAL_PROCESSOR_DEFAULTS = {
   extractOutputMediaFromTextFile: { filename: '' },
   crossfadeVideoFrames:           { blendFrames: 10 },
+  crossfadeAudioClip:             { blendDuration: 3 },
   extractOutputTexts:             { properties: [] },
 };
 
 /**
+ * Build a compact formula string for a math task, e.g. `ceil((frames-1)*0.25)*4+1`.
+ * Ignores ×1 and ±0 sub-expressions.
+ * @param {Object} item - Math task object with `from`, `to`, and `math` array.
+ * @returns {string}
+ */
+export function buildMathFormula(item) {
+  const steps = item.math || [];
+  let expr = item.from || '?';
+  for (const step of steps) {
+    const { offset = 0, scale = 1, bias = 0, round = 'none' } = step;
+    if (offset !== 0) {
+      const sign = offset > 0 ? '+' : '';
+      expr = `(${expr}${sign}${offset})`;
+    }
+    if (scale !== 1) {
+      expr = `${expr}*${scale}`;
+    }
+    if (round !== 'none') {
+      expr = `${round}(${expr})`;
+    }
+    if (bias !== 0) {
+      const sign = bias > 0 ? '+' : '';
+      expr = `${expr}${sign}${bias}`;
+    }
+  }
+  return expr;
+}
+
+/**
  * Detect task type from its fields.
  * @param {Object} task
- * @returns {'template'|'from'|'model'|'additionalProcessing'|'executeWorkflow'}
+ * @returns {'template'|'from'|'math'|'model'|'additionalProcessing'|'executeWorkflow'}
  */
 export function getTaskType(task) {
   if (task.process === 'executeWorkflow')                              return 'executeWorkflow';
   if (ADDITIONAL_PROCESSORS.some(p => p.value === task.process))     return 'additionalProcessing';
+  if (task.math     !== undefined)                                     return 'math';
   if (task.template !== undefined)                                     return 'template';
   if (task.from     !== undefined)                                     return 'from';
   if (task.model    !== undefined)                                     return 'model';
@@ -72,6 +109,7 @@ export function getTaskType(task) {
 const BLANK_TASKS = {
   template:             { template: '', to: '' },
   from:                 { from: '', to: '' },
+  math:                 { from: '', to: '', math: [{ offset: 0, scale: 1, bias: 0, round: 'none' }] },
   model:                { model: '', imagePath: 'saveImagePath', prompt: '', to: '' },
   additionalProcessing: { process: 'extractOutputMediaFromTextFile', parameters: { filename: '' } },
   executeWorkflow:      { process: 'executeWorkflow', name: '', parameters: { workflow: '', inputMapping: [], outputMapping: [] } },
@@ -90,6 +128,7 @@ function convertTaskType(task, newType) {
 const TASK_TYPE_OPTIONS = [
   { value: 'template',             label: 'Template Replace' },
   { value: 'from',                 label: 'Copy Value' },
+  { value: 'math',                 label: 'Math Operations' },
   { value: 'model',                label: 'Generate Text' },
   { value: 'additionalProcessing', label: 'Additional Process' },
 ];
@@ -110,11 +149,11 @@ function TemplateTaskForm({ task, onChange }) {
       value=${task.to || ''}
       onInput=${(e) => onChange({ ...task, to: e.target.value })}
       placeholder="e.g. imageFormat"
-      style=${{ maxWidth: '200px' }}
+      
     />
     <${Textarea}
       label="Template (use {{variable}} for substitutions)"
-      fullWidth
+      widthScale="full"
       value=${task.template || ''}
       onInput=${(e) => onChange({ ...task, template: e.target.value })}
       placeholder="e.g. jpg or {{prompt}}-output"
@@ -134,16 +173,112 @@ function FromTaskForm({ task, onChange }) {
         value=${task.from || ''}
         onInput=${(e) => onChange({ ...task, from: e.target.value })}
         placeholder="e.g. prompt"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
+  `;
+}
+
+// ============================================================================
+// Sub-form: Math operations task
+// ============================================================================
+
+const ROUND_OPTIONS = [
+  { value: 'none',  label: 'No Rounding' },
+  { value: 'floor', label: 'Round Down'  },
+  { value: 'ceil',  label: 'Round Up'    },
+];
+
+function MathStepForm({ step, onChange }) {
+  const theme = currentTheme.value;
+  return html`
+    <${HorizontalLayout} gap="small">
+      <${MathSpan} theme=${theme}>( value +</${MathSpan}>
+      <${Input}
+        type="number"
+        step="0.01"
+        label="Offset"
+        value=${step.offset ?? 0}
+        onInput=${(e) => onChange({ ...step, offset: parseFloat(e.target.value) || 0 })}
+        widthScale="compact"
+        heightScale="compact"
+      />
+      <${MathSpan} theme=${theme}>) ×</${MathSpan}>
+      <${Input}
+        type="number"
+        step="0.01"
+        label="Scale"
+        value=${step.scale ?? 1}
+        onInput=${(e) => onChange({ ...step, scale: parseFloat(e.target.value) || 0 })}
+        widthScale="compact"
+        heightScale="compact"
+      />
+      <${MathSpan} theme=${theme}>+</${MathSpan}>
+      <${Input}
+        type="number"
+        step="0.01"
+        label="Bias"
+        value=${step.bias ?? 0}
+        onInput=${(e) => onChange({ ...step, bias: parseFloat(e.target.value) || 0 })}
+        widthScale="compact"
+        heightScale="compact"
+      />
+      <${Select}
+        label="Round"
+        options=${ROUND_OPTIONS}
+        value=${step.round || 'none'}
+        onChange=${(e) => onChange({ ...step, round: e.target.value })}
+        heightScale="compact"
+      />
+    </${HorizontalLayout}>
+  `;
+}
+
+function MathTaskForm({ task, onChange }) {
+  const steps = task.math || [];
+
+  return html`
+    <${HorizontalLayout} gap="medium">
+      <${Input}
+        label="Source Field"
+        value=${task.from || ''}
+        onInput=${(e) => onChange({ ...task, from: e.target.value })}
+        placeholder="e.g. frames"
+        
+      />
+      <${Input}
+        label="Target Field"
+        value=${task.to || ''}
+        onInput=${(e) => onChange({ ...task, to: e.target.value })}
+        placeholder="e.g. frames"
+        
+      />
+    </${HorizontalLayout}>
+    <${DynamicList}
+      title="Formula Steps"
+      condensed
+      items=${steps}
+      renderItem=${(step, i) => html`
+        <${MathStepForm}
+          step=${step}
+          onChange=${(updated) => {
+            const next = [...steps];
+            next[i] = updated;
+            onChange({ ...task, math: next });
+          }}
+        />
+      `}
+      createItem=${() => ({ offset: 0, scale: 1, bias: 0, round: 'none' })}
+      onChange=${(items) => onChange({ ...task, math: items })}
+      addLabel="Add Step"
+    />
   `;
 }
 
@@ -177,19 +312,19 @@ function ModelTaskForm({ task, onChange }) {
         value=${task.imagePath || ''}
         onInput=${(e) => onChange({ ...task, imagePath: e.target.value })}
         placeholder="e.g. saveImagePath"
-        style=${{ maxWidth: '200px' }}
+        
       />
       <${Input}
         label="Target Field"
         value=${task.to || ''}
         onInput=${(e) => onChange({ ...task, to: e.target.value })}
         placeholder="e.g. description"
-        style=${{ maxWidth: '200px' }}
+        
       />
     </${HorizontalLayout}>
     <${Textarea}
       label="Prompt"
-      fullWidth
+      widthScale="full"
       value=${task.prompt || ''}
       onInput=${(e) => onChange({ ...task, prompt: e.target.value })}
       placeholder="LLM system prompt…"
@@ -220,7 +355,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
       options=${ADDITIONAL_PROCESSORS}
       value=${process}
       onChange=${handleProcessChange}
-      style=${{ maxWidth: '200px' }}
+      
     />
 
     ${process === 'extractOutputMediaFromTextFile' && html`
@@ -229,7 +364,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         value=${params.filename || ''}
         onInput=${(e) => updateParam('filename', e.target.value)}
         placeholder="output text file name"
-        style=${{ maxWidth: '200px' }}
+        
       />
     `}
 
@@ -239,7 +374,17 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         type="number"
         value=${params.blendFrames ?? 10}
         onInput=${(e) => updateParam('blendFrames', parseInt(e.target.value, 10) || 0)}
-        style=${{ maxWidth: '200px' }}
+        
+      />
+    `}
+
+    ${process === 'crossfadeAudioClip' && html`
+      <${Input}
+        label="Blend duration (seconds)"
+        type="number"
+        value=${params.blendDuration ?? 3}
+        onInput=${(e) => updateParam('blendDuration', parseFloat(e.target.value) || 0)}
+        
       />
     `}
 
@@ -250,7 +395,7 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         items=${params.properties || []}
         renderItem=${(item, i) => html`
           <${Input}
-            fullWidth
+            heightScale="compact"
             value=${item}
             onInput=${(e) => {
               const next = [...(params.properties || [])];
@@ -279,14 +424,14 @@ function MappingForm({ mapping, onChange }) {
         value=${mapping.from || ''}
         onInput=${(e) => onChange({ ...mapping, from: e.target.value })}
         placeholder="source field"
-        style=${{ maxWidth: '200px' }}
+        heightScale="compact"
       />
       <${Input}
         label="To"
         value=${mapping.to || ''}
         onInput=${(e) => onChange({ ...mapping, to: e.target.value })}
         placeholder="target field"
-        style=${{ maxWidth: '200px' }}
+        heightScale="compact"
       />
     </${HorizontalLayout}>
   `;
@@ -315,14 +460,14 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
       value=${task.name || ''}
       onInput=${(e) => onChange({ ...task, name: e.target.value })}
       placeholder="optional display name"
-      style=${{ maxWidth: '200px' }}
+      
     />
     <${Select}
       label="Workflow"
       options=${workflowOptions}
       value=${params.workflow || ''}
       onChange=${(e) => updateParams('workflow', e.target.value)}
-      style=${{ maxWidth: '200px' }}
+      
     />
 
     <${DynamicList}
@@ -406,11 +551,12 @@ export function TaskForm({ task, onChange, allowExecuteWorkflow = false }) {
           options=${typeOptions}
           value=${taskType}
           onChange=${handleTypeChange}
-          style=${{ maxWidth: '200px' }}
+          
         />
 
         ${taskType === 'template'             && html`<${TemplateTaskForm}             task=${task} onChange=${onChange} />`}
         ${taskType === 'from'                 && html`<${FromTaskForm}                 task=${task} onChange=${onChange} />`}
+        ${taskType === 'math'                 && html`<${MathTaskForm}                 task=${task} onChange=${onChange} />`}
         ${taskType === 'model'                && html`<${ModelTaskForm}                task=${task} onChange=${onChange} />`}
         ${taskType === 'additionalProcessing' && html`<${AdditionalProcessingTaskForm} task=${task} onChange=${onChange} />`}
         ${taskType === 'executeWorkflow'      && html`<${ExecuteWorkflowTaskForm}      task=${task} onChange=${onChange} />`}
