@@ -49,19 +49,6 @@ function generateRandomSeed() {
 }
 
 /**
- * Normalize frame count to (n * 4) + 1 sequence
- * @param {number|string} inputValue - The input frame count
- * @returns {number} Normalized frame count following (n * 4) + 1 pattern
- */
-function normalizeFrameCount(inputValue) {
-  const num = parseInt(inputValue, 10);
-  if (isNaN(num) || num < 1) return 1;
-  // Calculate n where (n * 4) + 1 >= num
-  const n = Math.ceil((num - 1) / 4);
-  return (n * 4) + 1;
-}
-
-/**
  * Main App Component
  */
 function App() {

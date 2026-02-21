@@ -2234,6 +2234,24 @@
           "to": "imageFormat"
         },
         {
+          "from": "frames",
+          "to": "frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
+        },
+        {
           "condition": {
             "where": {
               "data": "prompt"
@@ -2453,6 +2471,24 @@
           "to": "imageFormat"
         },
         {
+          "from": "frames",
+          "to": "frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
+        },
+        {
           "condition": {
             "where": {
               "data": "prompt"
@@ -2648,6 +2684,24 @@
         {
           "template": "webp",
           "to": "imageFormat"
+        },
+        {
+          "from": "frames",
+          "to": "frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
         },
         {
           "condition": {
@@ -2879,6 +2933,24 @@
         {
           "template": "webp",
           "to": "imageFormat"
+        },
+        {
+          "from": "frames",
+          "to": "frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
         },
         {
           "condition": {
@@ -3703,7 +3775,7 @@
           {
             "id": "loop_audio",
             "type": "checkbox",
-            "label": "Loop Audio",
+            "label": "Seamless Loop",
             "default": "true",
             "options": []
           }
@@ -3714,6 +3786,34 @@
         {
           "template": "jpg",
           "to": "imageFormat"
+        },
+        {
+          "from": "length",
+          "to": "generate_length"
+        },
+        {
+          "from": "generate_length",
+          "to": "generate_length",
+          "math": [
+            {
+              "offset": 5,
+              "scale": 1,
+              "bias": 0,
+              "round": "none"
+            }
+          ],
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "loop_audio"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
+            ]
+          }
         }
       ],
       "replace": [
@@ -3734,7 +3834,7 @@
           ]
         },
         {
-          "from": "length",
+          "from": "generate_length",
           "to": [
             "22",
             "inputs",

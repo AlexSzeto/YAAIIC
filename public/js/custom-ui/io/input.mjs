@@ -10,7 +10,6 @@ import { currentTheme } from '../theme.mjs';
 const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
   width: ${props => props.width};
   flex: ${props => props.flex};
 `;

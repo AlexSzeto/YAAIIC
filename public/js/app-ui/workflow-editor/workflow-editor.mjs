@@ -20,7 +20,7 @@ import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H1, VerticalLayout, HorizontalLayout, H3 } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { NodeInputSelector } from './node-input-selector.mjs';
-import { TaskForm, getTaskType } from './task-form.mjs';
+import { TaskForm, getTaskType, buildMathFormula } from './task-form.mjs';
 import { ConditionBuilder } from './condition-builder.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
@@ -728,6 +728,7 @@ export function WorkflowEditor() {
                 const t = getTaskType(item);
                 if (t === 'template')             return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'from')                 return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'math')                 return html`${buildMathFormula(item)} ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'model')                return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'additionalProcessing') return item.name || item.process || 'Process';
                 return 'Task';
@@ -792,6 +793,7 @@ export function WorkflowEditor() {
                 const t = getTaskType(item);
                 if (t === 'template')             return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'from')                 return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'math')                 return html`${buildMathFormula(item)} ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'model')                return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
                 if (t === 'additionalProcessing') return item.name || item.process || 'Process';
                 if (t === 'executeWorkflow')       return `Execute: ${item.parameters?.name || item.parameters?.workflow || '?'}`;

@@ -437,6 +437,16 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
             currentStep++;
             const completionPercentage = Math.round((currentStep / totalSteps) * 100);
             emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          } else if (Array.isArray(taskConfig.math)) {
+            // Math operations task – not counted for progress tracking
+            let value = Number(generationData[taskConfig.from]);
+            for (const step of taskConfig.math) {
+              const { offset = 0, scale = 1, bias = 0, round = 'none' } = step;
+              value = (value + offset) * scale + bias;
+              if (round === 'floor') value = Math.floor(value);
+              else if (round === 'ceil')  value = Math.ceil(value);
+            }
+            generationData[taskConfig.to] = value;
           } else {
             await modifyGenerationDataWithPrompt(taskConfig, generationData);
           }
@@ -650,6 +660,16 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
             currentStep++;
             const completionPercentage = Math.round((currentStep / totalSteps) * 100);
             emitProgressUpdate(taskId, { percentage: completionPercentage, value: currentStep, max: totalSteps }, stepName + ' complete');
+          } else if (Array.isArray(taskConfig.math)) {
+            // Math operations task – not counted for progress tracking
+            let value = Number(generationData[taskConfig.from]);
+            for (const step of taskConfig.math) {
+              const { offset = 0, scale = 1, bias = 0, round = 'none' } = step;
+              value = (value + offset) * scale + bias;
+              if (round === 'floor') value = Math.floor(value);
+              else if (round === 'ceil')  value = Math.ceil(value);
+            }
+            generationData[taskConfig.to] = value;
           } else {
             await modifyGenerationDataWithPrompt(taskConfig, generationData);
           }
