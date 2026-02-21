@@ -226,11 +226,13 @@ export class AudioPlayer extends Component {
     });
     // Sync play/pause and duration with the global audio player
     this.unsubscribeAudio = globalAudioPlayer.subscribe(this.handleAudioStateChange);
+    this._loadMetadata(this.props.audioUrl);
   }
 
   componentWillUnmount() {
     if (this.unsubscribeTheme) this.unsubscribeTheme();
     if (this.unsubscribeAudio) this.unsubscribeAudio();
+    this._cancelMetadataLoad();
 
     // Stop audio if this component's URL is currently playing
     const { audioUrl } = this.props;
@@ -246,6 +248,30 @@ export class AudioPlayer extends Component {
         globalAudioPlayer.stop();
       }
       this.setState({ isPlaying: false, duration: 0 });
+      this._cancelMetadataLoad();
+      this._loadMetadata(this.props.audioUrl);
+    }
+  }
+
+  // Preload only audio metadata so duration is available before the user clicks play.
+  _loadMetadata(audioUrl) {
+    if (!audioUrl) return;
+    const audio = new Audio();
+    audio.preload = 'metadata';
+    this._metadataAudio = audio;
+    audio.addEventListener('loadedmetadata', () => {
+      if (this._metadataAudio === audio && isFinite(audio.duration)) {
+        this.setState({ duration: audio.duration });
+        this._metadataAudio = null;
+      }
+    });
+    audio.src = audioUrl;
+  }
+
+  _cancelMetadataLoad() {
+    if (this._metadataAudio) {
+      this._metadataAudio.src = '';
+      this._metadataAudio = null;
     }
   }
 
