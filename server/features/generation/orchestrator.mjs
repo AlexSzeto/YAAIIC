@@ -354,8 +354,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     let totalSteps = 1;
 
     // Calculate total steps using the dynamic calculation
-    const postGenTasksForCounting = (postGenerationTasks && type !== 'video') ? postGenerationTasks : [];
-    const stepCalc = calculateTotalSteps(preGenerationTasks, workflowData, postGenTasksForCounting);
+    const stepCalc = calculateTotalSteps(preGenerationTasks, workflowData, postGenerationTasks);
     totalSteps = stepCalc.totalSteps;
     const preGenCount = stepCalc.preGenCount;
     const importantNodeCount = stepCalc.importantNodeCount;
