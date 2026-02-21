@@ -45,12 +45,14 @@ FormRoot.className = 'task-form-root';
 const ADDITIONAL_PROCESSORS = [
   { value: 'extractOutputMediaFromTextFile', label: 'Extract output media from text file' },
   { value: 'crossfadeVideoFrames',           label: 'Crossfade video frames' },
+  { value: 'crossfadeAudioClip',             label: 'Crossfade audio clip' },
   { value: 'extractOutputTexts',             label: 'Extract output texts' },
 ];
 
 const ADDITIONAL_PROCESSOR_DEFAULTS = {
   extractOutputMediaFromTextFile: { filename: '' },
   crossfadeVideoFrames:           { blendFrames: 10 },
+  crossfadeAudioClip:             { blendDuration: 3 },
   extractOutputTexts:             { properties: [] },
 };
 
@@ -239,6 +241,16 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
         type="number"
         value=${params.blendFrames ?? 10}
         onInput=${(e) => updateParam('blendFrames', parseInt(e.target.value, 10) || 0)}
+        style=${{ maxWidth: '200px' }}
+      />
+    `}
+
+    ${process === 'crossfadeAudioClip' && html`
+      <${Input}
+        label="Blend duration (seconds)"
+        type="number"
+        value=${params.blendDuration ?? 3}
+        onInput=${(e) => updateParam('blendDuration', parseFloat(e.target.value) || 0)}
         style=${{ maxWidth: '200px' }}
       />
     `}

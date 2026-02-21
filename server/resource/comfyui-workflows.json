@@ -3699,6 +3699,13 @@
                 "value": "ogg"
               }
             ]
+          },
+          {
+            "id": "loop_audio",
+            "type": "checkbox",
+            "label": "Loop Audio",
+            "default": "true",
+            "options": []
           }
         ]
       },
@@ -3767,6 +3774,24 @@
               {
                 "from": "imageFormat",
                 "to": "imageFormat"
+              }
+            ]
+          }
+        },
+        {
+          "process": "crossfadeAudioClip",
+          "parameters": {
+            "blendDuration": 5
+          },
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "loop_audio"
+                },
+                "equals": {
+                  "value": true
+                }
               }
             ]
           }

@@ -726,9 +726,10 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template') return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'from')     return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'model')    return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'template')             return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'from')                 return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'model')                return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'additionalProcessing') return item.name || item.process || 'Process';
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}
@@ -789,10 +790,11 @@ export function WorkflowEditor() {
               `}
               getTitle=${(item) => {
                 const t = getTaskType(item);
-                if (t === 'template')        return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'from')             return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'model')            return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
-                if (t === 'executeWorkflow')  return `Execute: ${item.parameters?.name || item.parameters?.workflow || '?'}`;
+                if (t === 'template')             return html`Template ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'from')                 return html`Copy ${item.from || '?'} ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'model')                return html`LLM ${InlineArrowIcon} ${item.to || '?'}`;
+                if (t === 'additionalProcessing') return item.name || item.process || 'Process';
+                if (t === 'executeWorkflow')       return `Execute: ${item.parameters?.name || item.parameters?.workflow || '?'}`;
                 return 'Task';
               }}
               createItem=${() => ({ template: '', to: '' })}

@@ -113,7 +113,6 @@ function App() {
     
     // Initialize favloader once
     if (!window.favloaderInitialized) {
-      console.log('Initializing');
       window.favloader.init({
         size: 16,
         radius: 6,
@@ -125,11 +124,9 @@ function App() {
     }
     
     if (taskId || regenerateTaskId) {
-      console.log('Starting load icon');
       window.favloader.start();
     } else {
       window.favloader.stop();
-      console.log('Stopping load icon');
     }
   }, [taskId, regenerateTaskId]);
 
@@ -554,7 +551,6 @@ function App() {
   const handleGenerationComplete = async (data) => {
     setIsGenerating(false);
     setTaskId(null);
-    console.log('Generation complete:', data);
     
     if (data.result && data.result.uid) {
       try {
@@ -1214,11 +1210,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Load tags first, then initialize autocomplete
       loadTags().then(() => {
         initAutoComplete();
-        console.log('Autocomplete initialized in App V3');
         
         // Load tag definitions and configure hover panel
         loadTagDefinitions().then(() => {
-          console.log('Tag definitions loaded');
+
         }).catch(err => {
           console.warn('Failed to load tag definitions:', err);
         });

@@ -64,7 +64,6 @@ export function WorkflowSelector({ value, onChange, disabled = false, filterType
         });
         
         setWorkflows(data);
-        console.log('Workflows loaded:', data);
       } catch (err) {
         console.error('Error loading workflows:', err);
         setError('Failed to load workflows');
