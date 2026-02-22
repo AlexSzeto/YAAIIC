@@ -10,7 +10,7 @@ Build a full-featured editor UI for ambient brew recipe JSON files, allowing use
 - [ ] Create the entry-point `public/js/brew-editor.mjs` following the pattern of `workflow-editor.mjs` (imports `Page`, `ToastProvider`, `HoverPanelProvider`, renders the main `BrewEditor` component)
 - [ ] Create the main editor component `public/js/app-ui/brew-editor/brew-editor.mjs`
   - [ ] Page-level state: current brew recipe object, list of saved brews, loading/saving flags
-  - [ ] Header with title, "Open" button (launches `ListSelectModal`), and "New" button
+  - [ ] Header with title, "Open" button (launches `ListSelectModal`), "New" button, "Import" button (file input → parse → load), and "Export" button (serialize current brew → download as `.json`)
   - [ ] Empty state when no brew is loaded
   - [ ] Top-level brew settings form: `label` (Input) and `mediaUrl` (Input)
   - [ ] Sound Sources section using `DynamicList` with `SoundSourceForm` items
@@ -18,14 +18,14 @@ Build a full-featured editor UI for ambient brew recipe JSON files, allowing use
   - [ ] Save / Delete action bar with validation
 - [ ] Create the sound source sub-form `public/js/app-ui/brew-editor/sound-source-form.mjs`
   - [ ] `label` — `Input` component
-  - [ ] `clips` — `DynamicList` of clip entries (each a text `Input` for the file path string)
+  - [ ] `clips` — `DynamicList` of clip entries; each entry is a row with a gallery-picker `Button` that opens the Gallery modal (`fileTypeFilter="audio"`, `selectionMode=true`) to select a clip from the media database
   - [ ] `repeatCount` — `RangeSlider` (min/max)
   - [ ] `repeatDelay` — `RangeSlider` (min/max)
   - [ ] `attack` — `RangeSlider` (min/max)
   - [ ] `decay` — `RangeSlider` (min/max)
 - [ ] Create the channel sub-form `public/js/app-ui/brew-editor/channel-form.mjs`
   - [ ] `label` — `Input` component
-  - [ ] `distance` — `DiscreteSlider` with options: `very-far`, `far`, `medium`, `close`
+  - [ ] `distance` — `Select` with options: `very-far`, `far`, `medium`, `close`
   - [ ] `muffled` — `ToggleSwitch`
   - [ ] `reverb` — `ToggleSwitch`
   - [ ] `tracks` — `DynamicList` of `TrackForm` items
@@ -45,7 +45,9 @@ Build a full-featured editor UI for ambient brew recipe JSON files, allowing use
   - [ ] `service.mjs` — business logic for reading/writing brew JSON files from a `server/database/brews/` directory
 - [ ] Mount the brew router in `server/server.mjs`
 - [ ] Wire up front-end API calls in `brew-editor.mjs` to the server endpoints (load list, load brew, save, delete)
-- [ ] Add audio preview capability: a "Preview" button that loads the current recipe into an `AmbientCoffee` instance and plays it, with a "Stop" button to disconnect
+- [ ] Add audio file upload capability within the editor: an "Upload Audio" button that opens a file picker and POSTs to the existing `/upload/audio` endpoint, with toast progress feedback
+- [ ] Add audio preview capability: a "Preview" button that loads the current recipe into an `AmbientBrew` instance and plays it via a live `AudioContext`, with a "Stop" button to disconnect
+- [ ] Add audio generation/export: Add a `Record Audio` `CheckBox` that, when toggled on, every audio preview of the brew is recorded `MediaRecorder` on the live `AudioContext` destination. An upload button is then available to uploads the resulting audio blob to `/upload/audio` so it enters the media database as generated data, with a cross fade applied so the audio would loop seamlessly.
 
 ## Implementation Details
 
@@ -135,7 +137,42 @@ All of these live in `public/js/custom-ui/` and should be imported rather than r
 | `H1`, `VerticalLayout`, `HorizontalLayout` | `themed-base.mjs` | Layout primitives |
 | `ToastProvider` / `useToast` | `msg/toast.mjs` | Notifications |
 | `ListSelectModal` | `overlays/list-select.mjs` | Brew selector modal |
-| `showDialog` | `overlays/dialog.mjs` | Confirmation dialogs |
+| `showDialog` / `showTextPrompt` | `overlays/dialog.mjs` | Confirmation dialogs and text prompts |
+
+App-level components to reuse (not in `custom-ui/`):
+
+| Component | Path | Use |
+|---|---|---|
+| `Gallery` (default export) | `app-ui/main/gallery.mjs` | Audio file picker (`fileTypeFilter="audio"`, `selectionMode=true`) |
+
+### Clip Gallery Selection
+
+When a user clicks the gallery-picker button beside a clip `Input`, open the `Gallery` modal with:
+- `fileTypeFilter="audio"` — hides non-audio entries
+- `selectionMode=true` — enables single-select mode
+- `onSelect(entry)` — receives the selected media entry; write `entry.audioUrl` (the full server path, e.g. `/media/drip01.mp3`) directly into the clip text input
+
+The ambient-coffee.js library constructs the final audio URL as `mediaUrl + clipPath`. Gallery-selected clips store the full server path (e.g. `/media/drip01.mp3`). For these to resolve correctly, the brew's `mediaUrl` should be empty (`""`). Manually entered relative clip paths can use a non-empty `mediaUrl` as a prefix.
+
+### JSON Import / Export
+
+- **Import**: A hidden `<input type="file" accept=".json">` triggered by an "Import" `Button`. On `change`, use `FileReader.readAsText`, then `JSON.parse`, and load the result into the editor state (same code path as loading from the server). No server call needed.
+- **Export**: Call `JSON.stringify(brew, null, 2)`, create a `Blob` (`type: 'application/json'`), create a temporary `<a>` with `href=URL.createObjectURL(blob)` and `download="label.json"`, click it programmatically, then call `URL.revokeObjectURL`.
+
+### Audio Upload Within the Editor
+
+Reuse the existing `POST /upload/audio` endpoint (`server/features/upload/router.mjs`). A hidden `<input type="file" accept="audio/*">` is triggered by an "Upload Audio" `Button`. On change, build a `FormData` with the file and `fetch` to `/upload/audio`. Show toast notifications for success and error.
+
+### Audio Generation / Export (Generate Loop)
+
+1. Prompt the user for a duration in seconds via `showTextPrompt`.
+2. Create a new `AudioContext` and a `MediaStreamDestinationNode` from it.
+3. Load and start an `AmbientBrew` playing into the `MediaStreamDestinationNode`.
+4. Start a `MediaRecorder` on the destination's `stream`, collecting chunks via `ondataavailable`.
+5. After the specified duration (via `setTimeout`), stop the `MediaRecorder` and `disconnect` the brew.
+6. In `MediaRecorder.onstop`, assemble chunks into a `Blob` (e.g. `audio/webm`).
+7. POST the blob to `POST /upload/audio` as a named file (e.g. `brew-loop-{label}.webm`) via `FormData`.
+8. Show a toast on completion indicating the loop was added to the media database.
 
 ### File Structure
 
