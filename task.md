@@ -6,48 +6,48 @@ Build a full-featured editor UI for ambient brew recipe JSON files, allowing use
 
 ## Tasks
 
-- [ ] Create the HTML page `public/brew-editor.html` with the same structure as `workflow-editor.html` (an `#app` root div, module script pointing to the entry-point)
-- [ ] Create the entry-point `public/js/brew-editor.mjs` following the pattern of `workflow-editor.mjs` (imports `Page`, `ToastProvider`, `HoverPanelProvider`, renders the main `BrewEditor` component)
-- [ ] Create the main editor component `public/js/app-ui/brew-editor/brew-editor.mjs`
-  - [ ] Page-level state: current brew recipe object, list of saved brews, loading/saving flags
-  - [ ] Header with title, "Open" button (launches `ListSelectModal`), "New" button, "Import" button (file input → parse → load), and "Export" button (serialize current brew → download as `.json`)
-  - [ ] Empty state when no brew is loaded
-  - [ ] Top-level brew settings form: `label` (Input) and `mediaUrl` (Input)
-  - [ ] Sound Sources section using `DynamicList` with `SoundSourceForm` items
-  - [ ] Channels section using `DynamicList` with `ChannelForm` items
-  - [ ] Save / Delete action bar with validation
-- [ ] Create the sound source sub-form `public/js/app-ui/brew-editor/sound-source-form.mjs`
-  - [ ] `label` — `Input` component
-  - [ ] `clips` — `DynamicList` of clip entries; each entry is a row with a gallery-picker `Button` that opens the Gallery modal (`fileTypeFilter="audio"`, `selectionMode=true`) to select a clip from the media database
-  - [ ] `repeatCount` — `RangeSlider` (min/max)
-  - [ ] `repeatDelay` — `RangeSlider` (min/max)
-  - [ ] `attack` — `RangeSlider` (min/max)
-  - [ ] `decay` — `RangeSlider` (min/max)
-- [ ] Create the channel sub-form `public/js/app-ui/brew-editor/channel-form.mjs`
-  - [ ] `label` — `Input` component
-  - [ ] `distance` — `Select` with options: `very-far`, `far`, `medium`, `close`
-  - [ ] `muffled` — `ToggleSwitch`
-  - [ ] `reverb` — `ToggleSwitch`
-  - [ ] `tracks` — `DynamicList` of `TrackForm` items
-- [ ] Create the track sub-form `public/js/app-ui/brew-editor/track-form.mjs`
-  - [ ] `label` — `Input` component
-  - [ ] `type` — `Select` with options: `event`, `loop`
-  - [ ] `clones` — `Input` (type number)
-  - [ ] Conditional fields for `event` type:
-    - [ ] `sources` — multi-value `Input` or tag-style selector listing source labels from the current brew
-    - [ ] `delay` — `RangeSlider` (min/max)
-    - [ ] `delayAfterPrev` — `ToggleSwitch`
-  - [ ] Conditional fields for `loop` type:
-    - [ ] `source` — `Select` populated from current brew's source labels
-    - [ ] `duration` — `RangeSlider` (min/max)
-- [ ] Create a server-side brew feature domain `server/features/brew/`
-  - [ ] `router.mjs` — REST endpoints: `GET /api/brews` (list), `GET /api/brews/:name` (load), `POST /api/brews` (save/create), `DELETE /api/brews/:name` (delete)
-  - [ ] `service.mjs` — business logic for reading/writing brew JSON files from a `server/database/brews/` directory
-- [ ] Mount the brew router in `server/server.mjs`
-- [ ] Wire up front-end API calls in `brew-editor.mjs` to the server endpoints (load list, load brew, save, delete)
-- [ ] Add audio file upload capability within the editor: an "Upload Audio" button that opens a file picker and POSTs to the existing `/upload/audio` endpoint, with toast progress feedback
-- [ ] Add audio preview capability: a "Preview" button that loads the current recipe into an `AmbientBrew` instance and plays it via a live `AudioContext`, with a "Stop" button to disconnect
-- [ ] Add audio generation/export: Add a `Record Audio` `CheckBox` that, when toggled on, every audio preview of the brew is recorded `MediaRecorder` on the live `AudioContext` destination. An upload button is then available to uploads the resulting audio blob to `/upload/audio` so it enters the media database as generated data, with a cross fade applied so the audio would loop seamlessly.
+- [x] Create the HTML page `public/brew-editor.html` with the same structure as `workflow-editor.html` (an `#app` root div, module script pointing to the entry-point)
+- [x] Create the entry-point `public/js/brew-editor.mjs` following the pattern of `workflow-editor.mjs` (imports `Page`, `ToastProvider`, `HoverPanelProvider`, renders the main `BrewEditor` component)
+- [x] Create the main editor component `public/js/app-ui/brew-editor/brew-editor.mjs`
+  - [x] Page-level state: current brew recipe object, list of saved brews, loading/saving flags
+  - [x] Header with title, "Open" button (launches `ListSelectModal`), "New" button, "Import" button (file input → parse → load), and "Export" button (serialize current brew → download as `.json`)
+  - [x] Empty state when no brew is loaded
+  - [x] Top-level brew settings form: `label` (Input) and `mediaUrl` (Input)
+  - [x] Sound Sources section using `DynamicList` with `SoundSourceForm` items
+  - [x] Channels section using `DynamicList` with `ChannelForm` items
+  - [x] Save / Delete action bar with validation
+- [x] Create the sound source sub-form `public/js/app-ui/brew-editor/sound-source-form.mjs`
+  - [x] `label` — `Input` component
+  - [x] `clips` — `DynamicList` of clip entries; each entry is a row with a gallery-picker `Button` that opens the Gallery modal (`fileTypeFilter="audio"`, `selectionMode=true`) to select a clip from the media database
+  - [x] `repeatCount` — `RangeSlider` (min/max)
+  - [x] `repeatDelay` — `RangeSlider` (min/max)
+  - [x] `attack` — `RangeSlider` (min/max)
+  - [x] `decay` — `RangeSlider` (min/max)
+- [x] Create the channel sub-form `public/js/app-ui/brew-editor/channel-form.mjs`
+  - [x] `label` — `Input` component
+  - [x] `distance` — `Select` with options: `very-far`, `far`, `medium`, `close`
+  - [x] `muffled` — `ToggleSwitch`
+  - [x] `reverb` — `ToggleSwitch`
+  - [x] `tracks` — `DynamicList` of `TrackForm` items
+- [x] Create the track sub-form `public/js/app-ui/brew-editor/track-form.mjs`
+  - [x] `label` — `Input` component
+  - [x] `type` — `Select` with options: `event`, `loop`
+  - [x] `clones` — `Input` (type number)
+  - [x] Conditional fields for `event` type:
+    - [x] `sources` — multi-value `Input` or tag-style selector listing source labels from the current brew
+    - [x] `delay` — `RangeSlider` (min/max)
+    - [x] `delayAfterPrev` — `ToggleSwitch`
+  - [x] Conditional fields for `loop` type:
+    - [x] `source` — `Select` populated from current brew's source labels
+    - [x] `duration` — `RangeSlider` (min/max)
+- [x] Create a server-side brew feature domain `server/features/brew/`
+  - [x] `router.mjs` — REST endpoints: `GET /api/brews` (list), `GET /api/brews/:name` (load), `POST /api/brews` (save/create), `DELETE /api/brews/:name` (delete)
+  - [x] `service.mjs` — business logic for reading/writing brew JSON files from a `server/database/brews/` directory
+- [x] Mount the brew router in `server/server.mjs`
+- [x] Wire up front-end API calls in `brew-editor.mjs` to the server endpoints (load list, load brew, save, delete)
+- [x] Add audio file upload capability within the editor: an "Upload Audio" button that opens a file picker and POSTs to the existing `/upload/audio` endpoint, with toast progress feedback
+- [x] Add audio preview capability: a "Preview" button that loads the current recipe into an `AmbientBrew` instance and plays it via a live `AudioContext`, with a "Stop" button to disconnect
+- [x] Add audio generation/export: Add a `Record Audio` `CheckBox` that, when toggled on, every audio preview of the brew is recorded `MediaRecorder` on the live `AudioContext` destination. An upload button is then available to uploads the resulting audio blob to `/upload/audio` so it enters the media database as generated data, with a cross fade applied so the audio would loop seamlessly.
 
 ## Implementation Details
 
