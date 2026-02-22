@@ -10,11 +10,25 @@ import { currentTheme } from '../theme.mjs';
 const LABEL_WIDTH = 40; // px — fixed width for endpoint labels
 const SLIDER_RADIUS = 9; // px — half of thumb width/height
 
+const FormGroup = styled('div')`
+  display: flex;
+  flex-direction: column;
+  width: ${props => props.width};
+`;
+FormGroup.className = 'range-slider-form-group';
+
+const Label = styled('label')`
+  margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+`;
+Label.className = 'range-slider-label';
+
 const Wrapper = styled('div')`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: ${props => props.width};
   font-family: ${props => props.fontFamily};
 `;
 Wrapper.className = 'range-slider-wrapper';
@@ -222,6 +236,7 @@ export class RangeSlider extends Component {
       minAllowed = 0,
       maxAllowed = 100,
       snap = 1,
+      label,
       width = '100%',
       // consumed props — not forwarded
       min: _min,
@@ -236,11 +251,18 @@ export class RangeSlider extends Component {
     const maxPct = ((currentMax - minAllowed) / range) * 100;
 
     return html`
-      <${Wrapper}
-        width=${width}
-        fontFamily=${theme.typography.fontFamily}
-        ...${rest}
-      >
+      <${FormGroup} width=${width}>
+        ${label ? html`
+          <${Label}
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+          >${label}</${Label}>
+        ` : ''}
+        <${Wrapper}
+          fontFamily=${theme.typography.fontFamily}
+          ...${rest}
+        >
 
         <!-- Slider track + dual thumbs -->
         <${TrackContainer}
@@ -288,6 +310,7 @@ export class RangeSlider extends Component {
           >${this.formatValue(currentMax)}</${RangeLabel}>
         </${BoundsRow}>
       </${Wrapper}>
+      </${FormGroup}>
     `;
   }
 }

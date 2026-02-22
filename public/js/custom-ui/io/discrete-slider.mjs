@@ -10,11 +10,25 @@ import { currentTheme } from '../theme.mjs';
 const LABEL_WIDTH = 60; // px — fixed width for option labels
 const SLIDER_RADIUS = 9; // px — half of thumb width/height
 
+const FormGroup = styled('div')`
+  display: flex;
+  flex-direction: column;
+  width: ${props => props.width};
+`;
+FormGroup.className = 'discrete-slider-form-group';
+
+const Label = styled('label')`
+  margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+`;
+Label.className = 'discrete-slider-label';
+
 const Wrapper = styled('div')`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: ${props => props.width};
   font-family: ${props => props.fontFamily};
 `;
 Wrapper.className = 'discrete-slider-wrapper';
@@ -184,6 +198,7 @@ export class DiscreteSlider extends Component {
   render() {
     const {
       options = [],
+      label,
       width = '100%',
       // consumed — not forwarded
       value: _value,
@@ -197,11 +212,18 @@ export class DiscreteSlider extends Component {
     const fillPct = maxIdx > 0 ? (index / maxIdx) * 100 : 0;
 
     return html`
-      <${Wrapper}
-        width=${width}
-        fontFamily=${theme.typography.fontFamily}
-        ...${rest}
-      >
+      <${FormGroup} width=${width}>
+        ${label ? html`
+          <${Label}
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.medium}
+            fontWeight=${theme.typography.fontWeight.medium}
+          >${label}</${Label}>
+        ` : ''}
+        <${Wrapper}
+          fontFamily=${theme.typography.fontFamily}
+          ...${rest}
+        >
         <${RangeWrapper}>
           <${StyledRange}
             type="range"
@@ -232,6 +254,7 @@ export class DiscreteSlider extends Component {
           `)}
         </${LabelsRow}>
       </${Wrapper}>
+      </${FormGroup}>
     `;
   }
 }
