@@ -9,6 +9,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { processMediaUpload } from './service.mjs';
+import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.post('/upload/image', upload.single('image'), async (req, res) => {
     console.log('Received image upload:', req.file.originalname);
     const extractedName = req.body.name || null;
 
-    const taskId = await processMediaUpload(req.file, req.app.locals.comfyuiWorkflows, extractedName);
+    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName);
 
     res.json({ success: true, taskId, message: 'Upload task created' });
   } catch (error) {
@@ -73,7 +74,7 @@ router.post('/upload/audio', upload.single('audio'), async (req, res) => {
     console.log('Received audio upload:', req.file.originalname);
     const extractedName = req.body.name || null;
 
-    const taskId = await processMediaUpload(req.file, req.app.locals.comfyuiWorkflows, extractedName);
+    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName);
 
     res.json({ success: true, taskId, message: 'Upload task created' });
   } catch (error) {

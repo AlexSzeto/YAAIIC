@@ -25,6 +25,7 @@ Consistency in implementation is key to maintainability. The codebase follows st
     - **Reusable Components**: Place generic, reusable UI components in `public/js/custom-ui/` (e.g., `io/`, `layout/`, `msg/`).
     - **App-Specific Logic**: Place application-specific components and logic in `public/js/app-ui/`.
     - **Utility Functions**: Generic utilities go in `public/js/custom-ui/util.mjs`.
+- **Navigation Registration**: Every new page must be registered in `public/js/app-ui/hamburger-menu.mjs` as part of the same task that creates it. Do not ship a page without a navigation entry.
 
 ## 2. Component Implementation Standards
 - **State Management**:
@@ -94,7 +95,7 @@ The backend is organized into **Feature Domains** to avoid monolithic files. Eac
 - **Persistence**:
     - Primary data storage is **JSON files** in `server/database/`.
     - **Do not use a SQL database** unless explicitly requested.
-    - `media-data.json` stores metadata for generated content.
+    - **Flat-file per domain**: All domain data must be stored as a single JSON file in `server/database/` (e.g., `brew-data.json`), not as a directory of per-record files. Mimic the flat array structure of an existing database JSON file, if available.
 - **Configuration**:
     - System configuration lives in `config.json`.
     - Defaults are in `config.default.json`.
