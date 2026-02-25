@@ -270,6 +270,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
           audioUrl: `/media/${filename}`,
           audioFormat: ext.substring(1), // Remove leading dot
           workflow: 'Uploaded Audio',
+          type: 'audio',
         };
 
         // Emit progress: Saving to database
@@ -365,6 +366,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
     // Add all fields to generationData before saving
     generationData.imageUrl = `/media/${filename}`;
     generationData.workflow = 'Uploaded Image';
+    generationData.type = 'image';
     generationData.inpaint = false;
     generationData.inpaintArea = null;
     generationData.timeTaken = timeTaken;

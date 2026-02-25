@@ -48,6 +48,12 @@ export function HamburgerMenu() {
       active: currentPath === '/workflow-editor.html',
     },
     {
+      label: 'Brew Editor',
+      href:  '/brew-editor.html',
+      icon:  'music',
+      active: currentPath === '/brew-editor.html',
+    },
+    {
       label: 'Change Theme',
       // icon reflects the theme that WILL be applied after clicking
       icon:  themeName === 'dark' ? 'sun' : 'moon',

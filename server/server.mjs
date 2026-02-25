@@ -24,6 +24,7 @@ import exportRouter from './features/export/router.mjs';
 import workflowsRouter from './features/workflows/router.mjs';
 import llmRouter from './features/llm/router.mjs';
 import brewRouter from './features/brew/router.mjs';
+import soundSourcesRouter from './features/sound-sources/router.mjs';
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use(exportRouter);
 app.use(workflowsRouter);
 app.use(llmRouter);
 app.use(brewRouter);
+app.use(soundSourcesRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)

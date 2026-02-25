@@ -14,6 +14,8 @@ const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
   width: ${props => props.width};
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
 `;
 FormGroup.className = 'range-slider-form-group';
 
@@ -158,6 +160,7 @@ BoundsRow.className = 'range-slider-bounds-row';
  * @param {number} [props.max]                - Initial max handle value (defaults to maxAllowed)
  * @param {number} [props.snap=1]             - Step/snap increment
  * @param {string} [props.width='100%']       - CSS width of the component
+ * @param {boolean} [props.disabled=false]    - When true, disables interaction and dims the slider
  * @param {Function} [props.onChange]         - Called with { min, max } on every value change
  * @returns {preact.VNode}
  *
@@ -170,8 +173,8 @@ BoundsRow.className = 'range-slider-bounds-row';
  * <RangeSlider minAllowed={0} maxAllowed={10} snap={0.5} min={2} max={7} />
  *
  * @example
- * // Narrow allowed range
- * <RangeSlider minAllowed={20} maxAllowed={60} />
+ * // Disabled state
+ * <RangeSlider disabled={true} minAllowed={0} maxAllowed={10} />
  */
 export class RangeSlider extends Component {
   constructor(props) {
@@ -238,6 +241,7 @@ export class RangeSlider extends Component {
       snap = 1,
       label,
       width = '100%',
+      disabled = false,
       // consumed props — not forwarded
       min: _min,
       max: _max,
@@ -250,11 +254,17 @@ export class RangeSlider extends Component {
     const minPct = ((currentMin - minAllowed) / range) * 100;
     const maxPct = ((currentMax - minAllowed) / range) * 100;
 
+    // Use muted colours when disabled
+    const thumbFill = disabled ? theme.colors.text.disabled : theme.colors.primary.background;
+    const thumbBorder = thumbFill;
+    const activeBg = disabled ? theme.colors.text.disabled : theme.colors.primary.background;
+    const trackBg = disabled ? theme.colors.background.disabled : theme.colors.border.primary;
+
     return html`
-      <${FormGroup} width=${width}>
+      <${FormGroup} width=${width} disabled=${disabled}>
         ${label ? html`
           <${Label}
-            color=${theme.colors.text.secondary}
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.secondary}
             fontSize=${theme.typography.fontSize.medium}
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
@@ -266,13 +276,13 @@ export class RangeSlider extends Component {
 
         <!-- Slider track + dual thumbs -->
         <${TrackContainer}
-          thumbFill=${theme.colors.primary.background}
-          thumbBorder=${theme.colors.primary.background}
+          thumbFill=${thumbFill}
+          thumbBorder=${thumbBorder}
           transition=${theme.transitions.fast}
         >
           <${TrackFill}
-            trackBg=${theme.colors.border.primary}
-            activeBg=${theme.colors.primary.background}
+            trackBg=${trackBg}
+            activeBg=${activeBg}
             minPct=${minPct}
             maxPct=${maxPct}
           />
@@ -283,6 +293,7 @@ export class RangeSlider extends Component {
             max=${maxAllowed}
             step=${snap}
             value=${currentMin}
+            disabled=${disabled}
             onChange=${(e) => this.handleMinChange(e)}
             style="z-index: ${currentMin === currentMax ? 1 : 2}"
           />
@@ -293,6 +304,7 @@ export class RangeSlider extends Component {
             max=${maxAllowed}
             step=${snap}
             value=${currentMax}
+            disabled=${disabled}
             onChange=${(e) => this.handleMaxChange(e)}
             style="z-index: ${currentMin === currentMax ? 2 : 1}"
           />
@@ -302,11 +314,11 @@ export class RangeSlider extends Component {
         <${BoundsRow}>
           <${RangeLabel}
             fontSize=${theme.typography.fontSize.medium}
-            color=${theme.colors.text.muted}
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.muted}
           >${this.formatValue(currentMin)}</${RangeLabel}>
           <${RangeLabel}
             fontSize=${theme.typography.fontSize.medium}
-            color=${theme.colors.text.muted}
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.muted}
           >${this.formatValue(currentMax)}</${RangeLabel}>
         </${BoundsRow}>
       </${Wrapper}>

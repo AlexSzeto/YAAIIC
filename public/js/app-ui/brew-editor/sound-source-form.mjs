@@ -1,11 +1,14 @@
 /**
  * sound-source-form.mjs – Sub-form for editing a single ambient sound source.
  *
- * Props: { item, onChange }
+ * Props: { item, onChange, onSourceLengthsChange }
  * Calls onChange(updatedItem) on every field edit.
+ * Calls onSourceLengthsChange({ [label]: effectiveLength }) when lengths are recalculated.
+ *
+ * Clips are stored as { url: string, label: string } objects.
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useRef } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
@@ -15,15 +18,103 @@ import { Gallery } from '../main/gallery.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
 /**
+ * Load the duration (in seconds) of an audio URL. Resolves with the duration
+ * rounded to the nearest second, or null if loading fails.
+ * @param {string} url
+ * @returns {Promise<number|null>}
+ */
+function loadAudioDuration(url) {
+  return new Promise((resolve) => {
+    if (!url) { resolve(null); return; }
+    const audio = new Audio();
+    const cleanup = () => {
+      audio.onloadedmetadata = null;
+      audio.onerror = null;
+    };
+    audio.onloadedmetadata = () => {
+      cleanup();
+      const dur = audio.duration;
+      resolve(isFinite(dur) ? Math.round(dur) : null);
+    };
+    audio.onerror = () => { cleanup(); resolve(null); };
+    audio.src = url;
+  });
+}
+
+/**
+ * Calculate the effective playback length of a source.
+ * Formula: longestClipDuration + maxRepeatCount × maxRepeatDelay
+ * Returns null if no clips have loaded durations.
+ *
+ * @param {number[]} clipDurations - array of per-clip durations (nulls omitted by caller)
+ * @param {{ min: number, max: number }} repeatCount
+ * @param {{ min: number, max: number }} repeatDelay
+ * @returns {number|null}
+ */
+function calcSourceLength(clipDurations, repeatCount, repeatDelay) {
+  const validDurations = clipDurations.filter(d => d != null);
+  if (validDurations.length === 0) return null;
+  const longest = Math.max(...validDurations);
+  const maxCount = (repeatCount && repeatCount.max != null) ? repeatCount.max : 1;
+  const maxDelay = (repeatDelay && repeatDelay.max != null) ? repeatDelay.max : 0;
+  return Math.ceil(longest + maxCount * maxDelay);
+}
+
+/**
  * SoundSourceForm – Fields for a single sound source entry.
  *
- * @param {Object} props
- * @param {Object} props.item - The sound source object
- * @param {Function} props.onChange - Called with updated source object
+ * @param {Object}   props
+ * @param {Object}   props.item                    - The sound source object
+ * @param {Function} props.onChange                - Called with updated source object
+ * @param {Function} [props.onSourceLengthsChange] - Called with { [label]: length } on recalc
  */
-export function SoundSourceForm({ item, onChange }) {
+export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
   // Track which clip index has the gallery open
   const [galleryClipIndex, setGalleryClipIndex] = useState(null);
+  // Track which clip is being played inline (null = none)
+  const [playingClipIndex, setPlayingClipIndex] = useState(null);
+  // Per-clip durations in seconds (null = not yet loaded / failed)
+  const [clipDurations, setClipDurations] = useState([]);
+  // Single shared Audio element for inline clip preview
+  const audioRef = useRef(new Audio());
+
+  const clips = item.clips || [];
+  const repeatCount = item.repeatCount || { min: 1, max: 1 };
+  const repeatDelay = item.repeatDelay || { min: 0, max: 0 };
+  const attack = item.attack || { min: 0, max: 0.5 };
+  const decay = item.decay || { min: 0, max: 0.5 };
+
+  // ── Load clip durations whenever the clips list changes ───────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDurations() {
+      const durations = await Promise.all(
+        clips.map(clip => {
+          const url = typeof clip === 'object' ? clip.url : (clip || '');
+          return loadAudioDuration(url);
+        })
+      );
+      if (!cancelled) setClipDurations(durations);
+    }
+    loadDurations();
+    return () => { cancelled = true; };
+  }, [clips.map(c => (typeof c === 'object' ? c.url : c)).join(',')]);
+
+  // ── Recalculate effective source length when durations or envelope changes ─
+  useEffect(() => {
+    if (!onSourceLengthsChange || !item.label) return;
+    const len = calcSourceLength(clipDurations, repeatCount, repeatDelay);
+    onSourceLengthsChange({ [item.label]: len });
+  }, [clipDurations, repeatCount.max, repeatDelay.max, item.label]);
+
+  // ── Derived slider maxima ─────────────────────────────────────────────────
+  const validDurations = clipDurations.filter(d => d != null);
+  const longestClip = validDurations.length > 0 ? Math.max(...validDurations) : null;
+  const repeatDelayMax = longestClip != null ? Math.ceil(longestClip * 10) : 60;
+  const attackDecayMax = longestClip != null ? Math.ceil(longestClip) : 10;
+  const hasNoClips = clips.length === 0;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleLabelChange = useCallback((e) => {
     onChange({ ...item, label: e.target.value });
@@ -33,33 +124,58 @@ export function SoundSourceForm({ item, onChange }) {
     onChange({ ...item, clips });
   }, [item, onChange]);
 
-  const handleClipTextChange = useCallback((index, value) => {
-    const nextClips = [...(item.clips || [])];
-    nextClips[index] = value;
-    onChange({ ...item, clips: nextClips });
-  }, [item, onChange]);
-
   const handleGallerySelect = useCallback((entry) => {
     if (galleryClipIndex === null) return;
     const nextClips = [...(item.clips || [])];
-    nextClips[galleryClipIndex] = entry.audioUrl || entry.url || '';
+    nextClips[galleryClipIndex] = {
+      url: entry.audioUrl || entry.url || '',
+      label: entry.name || '',
+    };
     onChange({ ...item, clips: nextClips });
     setGalleryClipIndex(null);
   }, [item, onChange, galleryClipIndex]);
 
+  const handleClipPlay = useCallback((clip, index) => {
+    const audio = audioRef.current;
+    if (playingClipIndex === index) {
+      audio.pause();
+      audio.currentTime = 0;
+      setPlayingClipIndex(null);
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = clip.url || '';
+      audio.play().catch(() => {});
+      audio.onended = () => setPlayingClipIndex(null);
+      setPlayingClipIndex(index);
+    }
+  }, [playingClipIndex]);
+
   const renderClipItem = useCallback((clip, index) => {
+    const clipLabel = typeof clip === 'object' ? (clip.label || clip.url || '') : (clip || '');
+    const clipUrl = typeof clip === 'object' ? (clip.url || '') : (clip || '');
+    const isThisPlaying = playingClipIndex === index;
+    const dur = clipDurations[index];
+    const durLabel = dur != null ? ` (${dur}s)` : '';
     return html`
       <${HorizontalLayout} gap="small" style=${{ alignItems: 'center', flex: 1 }}>
         <${Input}
-          value=${clip}
-          widthScale="full"
+          value=${clipLabel}
           heightScale="compact"
-          onInput=${(e) => handleClipTextChange(index, e.target.value)}
-          placeholder="Audio path or URL"
+          disabled=${true}
+          placeholder="No clip selected"
         />
         <${Button}
+          variant="small-icon"
+          icon=${isThisPlaying ? 'stop' : 'play'}
+          onClick=${() => handleClipPlay({ url: clipUrl, label: clipLabel }, index)}
+          title=${isThisPlaying ? 'Stop' : `Play clip${durLabel}`}
+          disabled=${!clipUrl}
+        />
+        ${dur != null ? html`<span style="font-size:0.8em;white-space:nowrap;color:#888">(${dur}s)</span>` : null}
+        <${Button}
           variant="small-icon-text"
-          icon="image"
+          icon="music"
           onClick=${() => setGalleryClipIndex(index)}
           title="Browse media gallery"
         >
@@ -67,78 +183,80 @@ export function SoundSourceForm({ item, onChange }) {
         </${Button}>
       </${HorizontalLayout}>
     `;
-  }, [handleClipTextChange]);
-
-  const clips = item.clips || [];
-  const repeatCount = item.repeatCount || { min: 1, max: 1 };
-  const repeatDelay = item.repeatDelay || { min: 0, max: 0 };
-  const attack = item.attack || { min: 0, max: 0.5 };
-  const decay = item.decay || { min: 0, max: 0.5 };
+  }, [handleClipPlay, playingClipIndex, clipDurations]);
 
   return html`
     <${VerticalLayout} gap="medium">
-      <${Input}
-        label="Label"
-        value=${item.label || ''}
-        widthScale="full"
-        onInput=${handleLabelChange}
-        placeholder="Source name"
-      />
+
+      <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
+        <${Input}
+          label="Label"
+          value=${item.label || ''}
+          onInput=${handleLabelChange}
+          placeholder="Source name"
+        />
+      </${HorizontalLayout}>
 
       <${DynamicList}
         title="Clips"
         items=${clips}
         renderItem=${renderClipItem}
-        getTitle=${(clip) => clip || 'Clip'}
-        createItem=${() => ''}
+        getTitle=${(clip) => (typeof clip === 'object' ? clip.label || clip.url : clip) || 'Clip'}
+        createItem=${() => ({ url: '', label: '' })}
         onChange=${handleClipsChange}
         addLabel="Add Clip"
         condensed=${true}
       />
 
-      <${RangeSlider}
-        label="Repeat Count"
-        minAllowed=${0}
-        maxAllowed=${20}
-        snap=${1}
-        min=${repeatCount.min}
-        max=${repeatCount.max}
-        width="100%"
-        onChange=${({ min, max }) => onChange({ ...item, repeatCount: { min, max } })}
-      />
+      <${HorizontalLayout} gap="small">
+        <${RangeSlider}
+          label="Repeat Count"
+          minAllowed=${0}
+          maxAllowed=${20}
+          snap=${1}
+          min=${repeatCount.min}
+          max=${repeatCount.max}
+          width="100%"
+          disabled=${hasNoClips}
+          onChange=${({ min, max }) => onChange({ ...item, repeatCount: { min, max } })}
+        />
+        <${RangeSlider}
+          label="Repeat Delay (s)"
+          minAllowed=${0}
+          maxAllowed=${repeatDelayMax}
+          snap=${0.1}
+          min=${repeatDelay.min}
+          max=${repeatDelay.max}
+          width="100%"
+          disabled=${hasNoClips}
+          onChange=${({ min, max }) => onChange({ ...item, repeatDelay: { min, max } })}
+        />
+      </${HorizontalLayout}>
 
-      <${RangeSlider}
-        label="Repeat Delay (s)"
-        minAllowed=${0}
-        maxAllowed=${60}
-        snap=${0.1}
-        min=${repeatDelay.min}
-        max=${repeatDelay.max}
-        width="100%"
-        onChange=${({ min, max }) => onChange({ ...item, repeatDelay: { min, max } })}
-      />
-
-      <${RangeSlider}
-        label="Attack (s)"
-        minAllowed=${0}
-        maxAllowed=${10}
-        snap=${0.1}
-        min=${attack.min}
-        max=${attack.max}
-        width="100%"
-        onChange=${({ min, max }) => onChange({ ...item, attack: { min, max } })}
-      />
-
-      <${RangeSlider}
-        label="Decay (s)"
-        minAllowed=${0}
-        maxAllowed=${10}
-        snap=${0.1}
-        min=${decay.min}
-        max=${decay.max}
-        width="100%"
-        onChange=${({ min, max }) => onChange({ ...item, decay: { min, max } })}
-      />
+      <${HorizontalLayout} gap="small">
+        <${RangeSlider}
+          label="Attack (s)"
+          minAllowed=${0}
+          maxAllowed=${attackDecayMax}
+          snap=${0.1}
+          min=${attack.min}
+          max=${attack.max}
+          width="100%"
+          disabled=${hasNoClips}
+          onChange=${({ min, max }) => onChange({ ...item, attack: { min, max } })}
+        />
+        <${RangeSlider}
+          label="Decay (s)"
+          minAllowed=${0}
+          maxAllowed=${attackDecayMax}
+          snap=${0.1}
+          min=${decay.min}
+          max=${decay.max}
+          width="100%"
+          disabled=${hasNoClips}
+          onChange=${({ min, max }) => onChange({ ...item, decay: { min, max } })}
+        />
+      </${HorizontalLayout}>
 
       <${Gallery}
         isOpen=${galleryClipIndex !== null}

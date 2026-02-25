@@ -19,8 +19,9 @@ import { GeneratedResult } from './app-ui/main/generated-result.mjs';
 import { Gallery } from './app-ui/main/gallery.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
-import { showFolderSelect } from './app-ui/folder-select.mjs';
+
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
+import { openFolderSelect } from './app-ui/use-folder-select.mjs';
 
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
@@ -823,42 +824,23 @@ function App() {
 
   // Folder handlers
   const handleOpenFolderSelect = () => {
-    showFolderSelect(async (selectedUid) => {
-      try {
-        // Call POST /folder to select the folder on the server
-        const response = await fetch('/folder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: selectedUid })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to select folder');
-        }
-        
-        const folderData = await response.json();
-        const selectedFolder = folderData.list.find(f => f.uid === selectedUid) || { uid: '', label: 'Unsorted' };
-        
+    openFolderSelect({
+      currentFolder,
+      toast,
+      onFolderChanged: async (selectedFolder) => {
         // Update current folder state
         setCurrentFolder(selectedFolder);
-        
-        // Refresh gallery to show images from the new folder
-        const recent = backfillMissingProperties(await fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
+
+        // Refresh gallery to show items from the new folder
+        const recent = backfillMissingProperties(
+          await fetchJson(`/media-data?limit=10&folder=${selectedFolder.uid}`)
+        );
         if (Array.isArray(recent)) {
           setHistory(recent);
-          if (recent.length > 0) {
-            setGeneratedImage(recent[0]);
-          } else {
-            setGeneratedImage(null);
-          }
+          setGeneratedImage(recent.length > 0 ? recent[0] : null);
         }
-        
-        toast.success(`Switched to folder: ${selectedFolder.label}`);
-      } catch (err) {
-        console.error('Failed to switch folder:', err);
-        toast.error('Failed to switch folder');
-      }
-    }, null, null, null, currentFolder.uid);
+      },
+    });
   };
 
   // Gallery handlers

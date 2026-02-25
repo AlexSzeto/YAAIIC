@@ -617,6 +617,8 @@ class AmbientBrew {
                 )
               }
               return unpack
+            } else if (typeof data === 'object' && data.url) {
+              return [data.url]
             } else if (typeof data === 'string') {
               return [data]
             }
@@ -807,5 +809,25 @@ export class AmbientCoffee {
 
   connect(destination) {
     this.#master.connect(destination)
+  }
+
+  /**
+   * Immediately silences any currently playing brew (zeroes master gain) and
+   * begins playing the supplied recipe at full volume — a hard cut with no
+   * crossfade.  Use this when starting a timed recording so the recorder
+   * captures audio from the very first moment.
+   *
+   * @param {Object} recipe An ambient brew definition (same format as loadBrew)
+   * @returns {Promise} Resolves when the recipe has been loaded and playback started
+   */
+  async cutInto(recipe) {
+    // Silence the current output immediately
+    this.#master.gain.value = 0
+
+    await this.loadBrew(recipe)
+    this.playBrew(recipe.label)
+
+    // Restore full volume immediately (no fade)
+    this.#master.gain.value = 1
   }
 }

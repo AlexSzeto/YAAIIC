@@ -14,6 +14,8 @@ const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
   width: ${props => props.width};
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
 `;
 FormGroup.className = 'discrete-slider-form-group';
 
@@ -49,7 +51,7 @@ const StyledRange = styled('input')`
   border-radius: 2px;
   background: ${props => props.trackBg};
   outline: none;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   transition: background ${props => props.transition};
 
   &::-webkit-slider-thumb {
@@ -121,7 +123,7 @@ const OptionLabel = styled('span')`
   font-size: ${props => props.fontSize};
   font-weight: ${props => props.fontWeight};
   color: ${props => props.color};
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   user-select: none;
   transition: color ${props => props.transition};
   text-align: center;
@@ -147,6 +149,7 @@ OptionLabel.className = 'discrete-slider-option-label';
  * @param {*}        [props.value]          - Currently selected value (must be in options)
  * @param {Function} [props.onChange]       - Called with the selected value on change
  * @param {string}   [props.width='100%']   - CSS width of the component
+ * @param {boolean}  [props.disabled=false] - When true, disables interaction and dims the slider
  * @returns {preact.VNode}
  *
  * @example
@@ -160,6 +163,10 @@ OptionLabel.className = 'discrete-slider-option-label';
  * @example
  * // Numeric options
  * <DiscreteSlider options={[0.25, 0.5, 1, 2, 4]} value={1} />
+ *
+ * @example
+ * // Disabled state
+ * <DiscreteSlider options={['a', 'b', 'c']} value="a" disabled={true} />
  */
 export class DiscreteSlider extends Component {
   constructor(props) {
@@ -183,14 +190,16 @@ export class DiscreteSlider extends Component {
   }
 
   handleRangeChange(e) {
-    const { options = [], onChange } = this.props;
+    const { options = [], onChange, disabled } = this.props;
+    if (disabled) return;
     const idx = parseInt(e.target.value, 10);
     this.setState({ index: idx });
     if (onChange) onChange(options[idx]);
   }
 
   handleLabelClick(idx) {
-    const { options = [], onChange } = this.props;
+    const { options = [], onChange, disabled } = this.props;
+    if (disabled) return;
     this.setState({ index: idx });
     if (onChange) onChange(options[idx]);
   }
@@ -200,6 +209,7 @@ export class DiscreteSlider extends Component {
       options = [],
       label,
       width = '100%',
+      disabled = false,
       // consumed — not forwarded
       value: _value,
       onChange: _onChange,
@@ -211,11 +221,17 @@ export class DiscreteSlider extends Component {
     // Fill percentage for the webkit runnable track gradient
     const fillPct = maxIdx > 0 ? (index / maxIdx) * 100 : 0;
 
+    // Use muted colours when disabled
+    const thumbFill = disabled ? theme.colors.text.disabled : theme.colors.primary.background;
+    const thumbBorder = thumbFill;
+    const activeBg = disabled ? theme.colors.text.disabled : theme.colors.primary.background;
+    const trackBg = disabled ? theme.colors.background.disabled : theme.colors.border.primary;
+
     return html`
-      <${FormGroup} width=${width}>
+      <${FormGroup} width=${width} disabled=${disabled}>
         ${label ? html`
           <${Label}
-            color=${theme.colors.text.secondary}
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.secondary}
             fontSize=${theme.typography.fontSize.medium}
             fontWeight=${theme.typography.fontWeight.medium}
           >${label}</${Label}>
@@ -231,11 +247,12 @@ export class DiscreteSlider extends Component {
             max=${maxIdx}
             step="1"
             value=${index}
+            disabled=${disabled}
             onChange=${(e) => this.handleRangeChange(e)}
-            trackBg=${theme.colors.border.primary}
-            activeBg=${theme.colors.primary.background}
-            thumbFill=${theme.colors.primary.background}
-            thumbBorder=${theme.colors.primary.background}
+            trackBg=${trackBg}
+            activeBg=${activeBg}
+            thumbFill=${thumbFill}
+            thumbBorder=${thumbBorder}
             thumbShadow=${theme.shadow.elevated}
             transition=${theme.transitions.fast}
             fillPct=${fillPct}
@@ -247,7 +264,11 @@ export class DiscreteSlider extends Component {
               key=${i}
               fontSize=${theme.typography.fontSize.medium}
               fontWeight=${i === index ? theme.typography.fontWeight.bold : theme.typography.fontWeight.normal}
-              color=${i === index ? theme.colors.primary.background : theme.colors.text.muted}
+              color=${disabled
+                ? theme.colors.text.disabled
+                : (i === index ? theme.colors.primary.background : theme.colors.text.muted)
+              }
+              disabled=${disabled}
               transition=${theme.transitions.fast}
               onClick=${() => this.handleLabelClick(i)}
             >${opt}</${OptionLabel}>

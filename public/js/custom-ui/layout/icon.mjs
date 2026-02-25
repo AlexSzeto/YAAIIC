@@ -41,6 +41,7 @@ const ICON_MAP = {
   'upload': 'upload',
   'refresh': 'refresh',
   'sync': 'sync',
+  'circle': 'circle',
   
   // Media
   'images': 'image',
@@ -50,6 +51,9 @@ const ICON_MAP = {
   'music': 'music_note',
   'volume': 'volume_up',
   'volume-mute': 'volume_off',
+  'microphone': 'mic',
+  'microphone-slash': 'mic_off',
+  'disc': 'album',
   
   // Communication
   'search': 'search',

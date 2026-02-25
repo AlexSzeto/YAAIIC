@@ -1,7 +1,7 @@
 /**
  * track-form.mjs – Sub-form for editing a single ambient track within a channel.
  *
- * Props: { item, onChange, sourceLabels }
+ * Props: { item, onChange, sourceLabels, sourceLengths }
  * Calls onChange(updatedItem) on every field edit.
  */
 import { html } from 'htm/preact';
@@ -11,23 +11,32 @@ import { Select } from '../../custom-ui/io/select.mjs';
 import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 
 const TYPE_OPTIONS = [
   { label: 'Event', value: 'event' },
   { label: 'Loop', value: 'loop' },
 ];
 
+/** Static fallback maxima when no source length data is available. */
+const DEFAULT_DELAY_MAX = 120;
+const DEFAULT_DURATION_MAX = 120;
+
 /**
  * TrackForm – Fields for a single track entry within a channel.
  *
  * @param {Object}   props
- * @param {Object}   props.item         - The track object
- * @param {Function} props.onChange     - Called with updated track object
- * @param {string[]} props.sourceLabels - Source labels available in the current brew
+ * @param {Object}   props.item           - The track object
+ * @param {Function} props.onChange       - Called with updated track object
+ * @param {string[]} props.sourceLabels   - Source labels available in the current brew
+ * @param {Object}   [props.sourceLengths] - Map of source label → effective length (s)
  */
-export function TrackForm({ item, onChange, sourceLabels = [] }) {
-  const sourceOptions = sourceLabels.map(l => ({ label: l, value: l }));
+export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {} }) {
+  // Build options with effective length annotation when available
+  const sourceOptions = sourceLabels.map(l => ({
+    label: sourceLengths[l] != null ? `${l} (${sourceLengths[l]}s)` : l,
+    value: l,
+  }));
 
   const handleLabelChange = useCallback((e) => {
     onChange({ ...item, label: e.target.value });
@@ -35,15 +44,13 @@ export function TrackForm({ item, onChange, sourceLabels = [] }) {
 
   const handleTypeChange = useCallback((e) => {
     const type = e.target.value;
-    // Provide sensible defaults when switching type
     if (type === 'event') {
       onChange({
         ...item,
         type,
         sources: item.sources || [],
-        delay: item.delay || { min: 0, max: 5 },
+        delay: item.delay || { min: 0.1, max: 5 },
         delayAfterPrev: item.delayAfterPrev ?? false,
-        // Remove loop-only fields
         source: undefined,
         duration: undefined,
       });
@@ -53,7 +60,6 @@ export function TrackForm({ item, onChange, sourceLabels = [] }) {
         type,
         source: item.source || (sourceLabels[0] ?? ''),
         duration: item.duration || { min: 0, max: 30 },
-        // Remove event-only fields
         sources: undefined,
         delay: undefined,
         delayAfterPrev: undefined,
@@ -77,52 +83,82 @@ export function TrackForm({ item, onChange, sourceLabels = [] }) {
       <${Select}
         value=${sourceValue}
         options=${sourceOptions.length ? sourceOptions : [{ label: '(no sources)', value: '' }]}
-        widthScale="full"
         heightScale="compact"
         onChange=${(e) => {
+          const newVal = e.target.value;
           const next = [...(item.sources || [])];
-          next[index] = e.target.value;
-          onChange({ ...item, sources: next });
+          next[index] = newVal;
+          // Auto-update track label when a source is set and label is still the default
+          const updated = { ...item, sources: next };
+          if (newVal && (item.label === 'Track' || !item.label)) {
+            updated.label = newVal;
+          }
+          onChange(updated);
         }}
       />
     `;
   }, [item, onChange, sourceOptions]);
 
-  // --- Loop-type handlers ---
+  // --- Loop-type handler ---
 
   const handleSourceChange = useCallback((e) => {
-    onChange({ ...item, source: e.target.value });
+    const newSource = e.target.value;
+    // Auto-update track label when source changes and label is still the default
+    const updated = { ...item, source: newSource };
+    if (newSource && (item.label === 'Track' || !item.label)) {
+      updated.label = newSource;
+    }
+    onChange(updated);
   }, [item, onChange]);
 
-  const delay = item.delay || { min: 0, max: 5 };
+  const delay = item.delay || { min: 0.1, max: 5 };
   const duration = item.duration || { min: 0, max: 30 };
+
+  // ── Dynamic slider limits ─────────────────────────────────────────────────
+
+  // For event tracks: longest source length among all assigned sources
+  const eventSources = item.sources || [];
+  const assignedEventLengths = eventSources
+    .map(s => sourceLengths[s])
+    .filter(l => l != null && l > 0);
+  const longestEventSource = assignedEventLengths.length > 0 ? Math.max(...assignedEventLengths) : null;
+  const eventDelayMax = longestEventSource != null ? longestEventSource * 10 : DEFAULT_DELAY_MAX;
+  const eventHasNoSource = eventSources.length === 0 || eventSources.every(s => !s);
+
+  // For loop tracks: the assigned source's effective length
+  const loopSourceLabel = item.source || '';
+  const loopSourceLength = (loopSourceLabel && sourceLengths[loopSourceLabel] != null)
+    ? sourceLengths[loopSourceLabel]
+    : null;
+  const loopDurationMax = loopSourceLength != null ? loopSourceLength : DEFAULT_DURATION_MAX;
+  const loopHasNoSource = !loopSourceLabel;
 
   return html`
     <${VerticalLayout} gap="medium">
-      <${Input}
-        label="Label"
-        value=${item.label || ''}
-        widthScale="full"
-        onInput=${handleLabelChange}
-        placeholder="Track name"
-      />
 
-      <${Select}
-        label="Type"
-        id="track-type"
-        value=${item.type || 'event'}
-        options=${TYPE_OPTIONS}
-        widthScale="full"
-        onChange=${handleTypeChange}
-      />
-
-      <${Input}
-        label="Clones"
-        type="number"
-        value=${item.clones ?? 1}
-        widthScale="normal"
-        onInput=${handleClonesChange}
-      />
+      <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
+        <${Input}
+          label="Label"
+          value=${item.label || ''}
+          onInput=${handleLabelChange}
+          onBlur=${handleLabelChange}
+          placeholder="Track name"
+        />
+        <${Select}
+          label="Type"
+          id="track-type"
+          value=${item.type || 'event'}
+          options=${TYPE_OPTIONS}
+          onChange=${handleTypeChange}
+        />
+        <${Input}
+          label="Clones"
+          type="number"
+          value=${item.clones ?? 1}
+          widthScale="narrow"
+          onInput=${handleClonesChange}
+        />
+      </${HorizontalLayout}>
 
       ${item.type === 'loop' ? html`
         <${Select}
@@ -130,18 +166,18 @@ export function TrackForm({ item, onChange, sourceLabels = [] }) {
           id="track-source"
           value=${item.source || ''}
           options=${sourceOptions.length ? sourceOptions : [{ label: '(no sources)', value: '' }]}
-          widthScale="full"
           onChange=${handleSourceChange}
         />
 
         <${RangeSlider}
-          label="Duration (s)"
-          minAllowed=${0}
-          maxAllowed=${120}
+          label="Duration per Loop (s)"
+          minAllowed=${1}
+          maxAllowed=${loopDurationMax}
           snap=${0.1}
           min=${duration.min}
           max=${duration.max}
           width="100%"
+          disabled=${loopHasNoSource}
           onChange=${({ min, max }) => onChange({ ...item, duration: { min, max } })}
         />
       ` : html`
@@ -158,12 +194,13 @@ export function TrackForm({ item, onChange, sourceLabels = [] }) {
 
         <${RangeSlider}
           label="Delay (s)"
-          minAllowed=${0}
-          maxAllowed=${120}
+          minAllowed=${0.1}
+          maxAllowed=${eventDelayMax}
           snap=${0.1}
           min=${delay.min}
           max=${delay.max}
           width="100%"
+          disabled=${eventHasNoSource}
           onChange=${({ min, max }) => onChange({ ...item, delay: { min, max } })}
         />
 
