@@ -58,7 +58,8 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
       onChange({
         ...item,
         type,
-        source: item.source || (sourceLabels[0] ?? ''),
+        // Default to '' (placeholder) so the slider/preview stay disabled until user picks a source
+        source: item.source || '',
         duration: item.duration || { min: 0, max: 30 },
         sources: undefined,
         delay: undefined,
@@ -82,7 +83,10 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
     return html`
       <${Select}
         value=${sourceValue}
-        options=${sourceOptions.length ? sourceOptions : [{ label: '(no sources)', value: '' }]}
+        options=${[
+          { label: '- select source -', value: '' },
+          ...sourceOptions,
+        ]}
         heightScale="compact"
         onChange=${(e) => {
           const newVal = e.target.value;
@@ -165,7 +169,10 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           label="Source"
           id="track-source"
           value=${item.source || ''}
-          options=${sourceOptions.length ? sourceOptions : [{ label: '(no sources)', value: '' }]}
+          options=${[
+            { label: '- select source -', value: '' },
+            ...sourceOptions,
+          ]}
           onChange=${handleSourceChange}
         />
 
@@ -186,7 +193,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           items=${item.sources || []}
           renderItem=${renderSourceSelect}
           getTitle=${(s) => s || 'Source'}
-          createItem=${() => sourceLabels[0] ?? ''}
+          createItem=${() => ''}
           onChange=${handleSourcesChange}
           addLabel="Add Source"
           condensed=${true}

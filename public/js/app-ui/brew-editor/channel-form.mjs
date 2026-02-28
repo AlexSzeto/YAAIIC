@@ -37,12 +37,14 @@ function createTrack() {
 
 /**
  * Returns true if a track has at least one valid (non-empty) source assigned.
+ * An empty string or null source (i.e. the placeholder "- select source -" option)
+ * is treated as "no source" and returns false.
  * @param {Object} track
  * @returns {boolean}
  */
 function trackHasSource(track) {
   if (track.type === 'loop') return Boolean(track.source);
-  return Array.isArray(track.sources) && track.sources.some(s => Boolean(s));
+  return Array.isArray(track.sources) && track.sources.length > 0 && track.sources.every(s => s && s.length > 0);
 }
 
 /**

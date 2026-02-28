@@ -19,6 +19,7 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H1, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
+import { Icon } from '../../custom-ui/layout/icon.mjs';
 import ListSelectModal from '../../custom-ui/overlays/list-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AppHeader } from '../themed-base.mjs';
@@ -125,7 +126,6 @@ export function BrewEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
   const [recordDuration, setRecordDuration] = useState(30);
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
@@ -141,13 +141,17 @@ export function BrewEditor() {
   // Audio playback refs
   const coffeeRef = useRef(null);
   const recorderRef = useRef(null);
-  const recordedBlobRef = useRef(null);
+  // true when the auto-stop timeout fires and the recording should be saved.
+  const autoSaveRecordingRef = useRef(false);
+  // Timeout handle for auto-stopping a recording session.
+  const recordTimeoutRef = useRef(null);
   const timerRef = useRef(null);
 
-  // ── Load brew list and current folder on mount ─────────────────────────────
+  // ── Load brew list, current folder, and global sources on mount ────────────
   useEffect(() => {
     loadBrewList();
     loadCurrentFolder();
+    loadGlobalSources();
   }, []);
 
   async function loadCurrentFolder() {
@@ -175,6 +179,18 @@ export function BrewEditor() {
       setSavedBrews(list.map(b => ({ id: b.name, label: b.name })));
     } catch (e) {
       toast.error(`Failed to load brews: ${e.message}`);
+    }
+  }
+
+  async function loadGlobalSources() {
+    try {
+      const res = await fetch('/api/sound-sources');
+      if (res.ok) {
+        const sources = await res.json();
+        setGlobalSources(sources);
+      }
+    } catch {
+      // Non-fatal: sources will be empty
     }
   }
 
@@ -269,6 +285,32 @@ export function BrewEditor() {
     };
   }
 
+  /**
+   * Collect all source labels referenced by any track in any channel.
+   */
+  function getUsedSourceLabels(brewData) {
+    const used = new Set();
+    for (const ch of (brewData.channels || [])) {
+      for (const track of (ch.tracks || [])) {
+        if (track.type === 'loop' && track.source) {
+          used.add(track.source);
+        } else if (Array.isArray(track.sources)) {
+          track.sources.filter(Boolean).forEach(s => used.add(s));
+        }
+      }
+    }
+    return used;
+  }
+
+  /**
+   * Prune the brew's sources to only those referenced by existing tracks.
+   */
+  function pruneBrewSources(brewData) {
+    const used = getUsedSourceLabels(brewData);
+    const prunedSources = (brewData.sources || []).filter(s => used.has(s.label));
+    return { ...brewData, sources: prunedSources };
+  }
+
   async function handleOpenBrew(item) {
     try {
       const res = await fetch(`/api/brews/${encodeURIComponent(item.id)}`);
@@ -279,7 +321,8 @@ export function BrewEditor() {
       // Merge with global sound sources
       const { globals, mergedBrew } = await mergeGlobalSources(resolved);
       setGlobalSources(globals);
-      setBrew(mergedBrew);
+      // Prune brew sources to only those used by tracks
+      setBrew(pruneBrewSources(mergedBrew));
       setIsListOpen(false);
     } catch (e) {
       toast.error(`Failed to load brew: ${e.message}`);
@@ -360,7 +403,14 @@ export function BrewEditor() {
 
   // ── Audio Preview ──────────────────────────────────────────────────────────
 
-  async function startPreview(brewOverride) {
+  /**
+   * Start audio preview, optionally with recording.
+   * @param {Object|null} brewOverride - A temp brew for sub-previews (channel preview).
+   *   Pass null/undefined to preview the full current brew.
+   * @param {boolean} withRecording - When true, record the full brew and auto-save on completion.
+   *   Ignored for sub-previews (brewOverride set).
+   */
+  async function startPreview(brewOverride, withRecording = false) {
     const targetBrew = brewOverride || brew;
     if (!targetBrew) return;
 
@@ -375,22 +425,37 @@ export function BrewEditor() {
     const coffee = new AmbientCoffee();
     coffeeRef.current = coffee;
 
-    // Wire up recording if enabled (only when previewing the full brew, not sub-previews)
-    if (isRecording && !brewOverride) {
-      setHasRecording(false);
-      recordedBlobRef.current = null;
+    // Wire up recording (only for the full brew, not sub-previews)
+    if (withRecording && !brewOverride) {
       const dest = AmbientCoffee.audioContext.createMediaStreamDestination();
       coffee.connect(dest);
       const chunks = [];
+      const brewLabel = targetBrew.label || 'unnamed';
       const recorder = new MediaRecorder(dest.stream);
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        recordedBlobRef.current = blob;
-        setHasRecording(true);
+      recorder.onstop = async () => {
+        // Only upload when the auto-stop timeout fired (not when user pressed Stop).
+        if (autoSaveRecordingRef.current) {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const filename = `brew-loop-${brewLabel}.webm`;
+          try {
+            const formData = new FormData();
+            formData.append('audio', blob, filename);
+            const res = await fetch('/upload/audio', { method: 'POST', body: formData });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({ error: res.statusText }));
+              throw new Error(data.error || res.statusText);
+            }
+            toast.success(`Recording "${filename}" saved to media library`);
+          } catch (e) {
+            toast.error(`Recording save failed: ${e.message}`);
+          }
+        }
+        autoSaveRecordingRef.current = false;
       };
       recorder.start();
       recorderRef.current = recorder;
+      setIsRecording(true);
     }
 
     try {
@@ -398,7 +463,7 @@ export function BrewEditor() {
       // to full volume so the MediaRecorder captures audio from the first frame.
       // For all other previews (sub-previews or non-recording), use the normal
       // loadBrew + playBrew flow which applies the standard fade-in.
-      if (isRecording && !brewOverride) {
+      if (withRecording && !brewOverride) {
         await coffee.cutInto(targetBrew);
       } else {
         await coffee.loadBrew(targetBrew);
@@ -412,10 +477,13 @@ export function BrewEditor() {
         setPlaybackSeconds(prev => prev + 1);
       }, 1000);
 
-      // When recording, auto-stop after the specified duration
-      if (isRecording && !brewOverride) {
+      // When recording, auto-stop after the specified duration and save the result.
+      if (withRecording && !brewOverride) {
         const secs = Math.max(1, Number(recordDuration) || 30);
-        setTimeout(() => stopPlayback(), secs * 1000);
+        recordTimeoutRef.current = setTimeout(() => {
+          autoSaveRecordingRef.current = true;
+          stopPlayback();
+        }, secs * 1000);
       }
     } catch (e) {
       toast.error(`Preview failed: ${e.message}`);
@@ -424,12 +492,18 @@ export function BrewEditor() {
   }
 
   function stopPlayback() {
+    // Cancel any pending auto-save timeout so it doesn't fire after a manual stop.
+    if (recordTimeoutRef.current) {
+      clearTimeout(recordTimeoutRef.current);
+      recordTimeoutRef.current = null;
+    }
     if (coffeeRef.current) {
       // Silence immediately
       coffeeRef.current.gain.value = 0;
       coffeeRef.current = null;
     }
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      // autoSaveRecordingRef.current is false here on manual stop → onstop discards blob.
       recorderRef.current.stop();
       recorderRef.current = null;
     }
@@ -440,39 +514,17 @@ export function BrewEditor() {
     }
     setPlaybackSeconds(0);
     setIsPlaying(false);
-  }
-
-  // ── Upload recorded audio loop ─────────────────────────────────────────────
-
-  async function handleUploadRecording() {
-    const blob = recordedBlobRef.current;
-    if (!blob) return;
-
-    const filename = `brew-loop-${brew?.label || 'unnamed'}.webm`;
-    try {
-      const formData = new FormData();
-      formData.append('audio', blob, filename);
-      toast.info(`Uploading recorded loop "${filename}"…`);
-      const res = await fetch('/upload/audio', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(data.error || res.statusText);
-      }
-      toast.success(`Loop "${filename}" added to media library`);
-      setHasRecording(false);
-      recordedBlobRef.current = null;
-    } catch (e) {
-      toast.error(`Upload failed: ${e.message}`);
-    }
+    setIsRecording(false);
   }
 
   // ── Source mutation helpers ────────────────────────────────────────────────
 
   /**
    * Handle a change to a global source. Updates both globalSources and the
-   * brew's sources array (for data structure validity), then persists to the API.
+   * brew's sources array (for data structure validity).
+   * Persistence is done explicitly via "Save Global".
    */
-  const handleGlobalSourceChange = useCallback(async (updatedSource, index) => {
+  const handleGlobalSourceChange = useCallback((updatedSource, index) => {
     // Update global list in memory
     const nextGlobals = [...globalSources];
     nextGlobals[index] = updatedSource;
@@ -488,32 +540,50 @@ export function BrewEditor() {
       }
       return { ...prev, sources: nextSources };
     });
-
-    // Persist to API (non-blocking)
-    try {
-      await fetch('/api/sound-sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedSource),
-      });
-    } catch {
-      // Non-fatal
-    }
   }, [globalSources]);
 
-  const handleGlobalSourcesChange = useCallback((nextGlobals) => {
+  const handleGlobalSourcesChange = useCallback(async (nextGlobals) => {
+    // Detect deleted sources (in old list but not in new list)
+    const nextLabels = new Set(nextGlobals.map(s => s.label).filter(Boolean));
+    const deletedSources = globalSources.filter(s => s.label && !nextLabels.has(s.label));
+
     setGlobalSources(nextGlobals);
-    // Mirror in brew sources: rebuild brew.sources to include all global sources
-    // used by the brew's channels, and add any new global sources at the end.
+    // Mirror in brew sources and clear any track references to deleted sources.
     setBrew(prev => {
       if (!prev) return prev;
       const globalLabels = new Set(nextGlobals.map(s => s.label));
+      const deletedLabels = new Set(deletedSources.map(s => s.label));
       // Keep brew sources not in the global list (shouldn't normally happen), then
       // replace/add from the new global list.
       const kept = (prev.sources || []).filter(s => !globalLabels.has(s.label));
-      return { ...prev, sources: [...nextGlobals, ...kept] };
+      // Clear track sources that pointed to a now-deleted global source
+      const channels = (prev.channels || []).map(ch => ({
+        ...ch,
+        tracks: (ch.tracks || []).map(track => {
+          if (track.type === 'loop' && deletedLabels.has(track.source)) {
+            return { ...track, source: '' };
+          }
+          if (Array.isArray(track.sources)) {
+            const clearedSources = track.sources.map(s => deletedLabels.has(s) ? '' : s);
+            return { ...track, sources: clearedSources };
+          }
+          return track;
+        }),
+      }));
+      return { ...prev, sources: [...nextGlobals, ...kept], channels };
     });
-  }, []);
+
+    // Delete removed sources from the API
+    for (const src of deletedSources) {
+      try {
+        await fetch(`/api/sound-sources/${encodeURIComponent(src.label)}`, {
+          method: 'DELETE',
+        });
+      } catch {
+        // Non-fatal
+      }
+    }
+  }, [globalSources]);
 
   // ── Source length cache update ─────────────────────────────────────────────
 
@@ -528,17 +598,32 @@ export function BrewEditor() {
   }, []);
 
   const handleChannelsChange = useCallback((channels) => {
-    setBrew(prev => ({ ...prev, channels }));
-  }, []);
+    setBrew(prev => {
+      if (!prev) return prev;
+      // Merge any global sources not yet in brew.sources before pruning,
+      // so sources newly referenced by event tracks are included in the saved brew.
+      const existingLabels = new Set((prev.sources || []).map(s => s.label));
+      const mergedSources = [
+        ...(prev.sources || []),
+        ...globalSources.filter(s => s.label && !existingLabels.has(s.label)),
+      ];
+      const updated = { ...prev, channels, sources: mergedSources };
+      return pruneBrewSources(updated);
+    });
+  }, [globalSources]);
 
   // Source labels derived from global sources — passed into ChannelForm/TrackForm.
   // Plain labels are used as values; display labels include the effective length when known.
   const sourceLabels = globalSources.map(s => s.label).filter(Boolean);
 
+  // Set of source labels currently referenced by any track in the loaded brew.
+  // Used to show lock icons on the Sound Sources list.
+  const usedSourceLabels = brew ? getUsedSourceLabels(brew) : new Set();
+
   // Disable the brew-level preview when any channel has no tracks or any track lacks a source
   function trackHasSource(track) {
     if (track.type === 'loop') return Boolean(track.source);
-    return Array.isArray(track.sources) && track.sources.some(s => Boolean(s));
+    return Array.isArray(track.sources) && track.sources.length > 0 && track.sources.every(s => Boolean(s));
   }
   const channels = brew?.channels || [];
   const brewPreviewDisabled = channels.length === 0 ||
@@ -620,6 +705,62 @@ export function BrewEditor() {
         emptyMessage="No saved brews yet"
       />
 
+      <!-- Sound Sources (global list, always visible) -->
+      <${Panel} variant="outlined">
+        <${DynamicList}
+          title="Sound Sources (Global)"
+          items=${globalSources}
+          renderItem=${(item, i) => html`
+            <${SoundSourceForm}
+              item=${item}
+              onSourceLengthsChange=${handleSourceLengthsChange}
+              onChange=${(updated) => handleGlobalSourceChange(updated, i)}
+            />
+          `}
+          getTitle=${(item) => {
+            const label = item.label || 'Source';
+            const len = sourceLengths[item.label];
+            const text = len != null ? `${label} (${len}s)` : label;
+            // lock = used by a channel in the current brew, lock-open = not used or no brew
+            const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open';
+            return html`
+              <span style="display:inline-flex;align-items:center;gap:6px;">
+                <${Icon} name=${iconName} size="14px" color=${theme.colors.text.secondary} />
+                ${text}
+              </span>
+            `;
+          }}
+          createItem=${createDefaultSource}
+          onChange=${handleGlobalSourcesChange}
+          addLabel="Add Source"
+        />
+      </${Panel}>
+
+      <!-- Action container between Sound Sources and Brew sections -->
+      <${HorizontalLayout} gap="small">
+        <${Button}
+          variant="medium-icon-text"
+          icon="save"
+          color="secondary"
+          onClick=${async () => {
+            try {
+              for (const src of globalSources) {
+                await fetch('/api/sound-sources', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(src),
+                });
+              }
+              toast.success('Global sources saved');
+            } catch (e) {
+              toast.error(`Save failed: ${e.message}`);
+            }
+          }}
+        >
+          Save Global
+        </${Button}>
+      </${HorizontalLayout}>
+
       <!-- Empty state -->
       ${!brew ? html`
         <${Panel} variant="default">
@@ -638,29 +779,6 @@ export function BrewEditor() {
             widthScale="full"
             onInput=${(e) => handleBrewChange({ label: e.target.value })}
             placeholder="Brew name"
-          />
-        </${Panel}>
-
-        <!-- Sound Sources (global list) -->
-        <${Panel} variant="outlined">
-          <${DynamicList}
-            title="Sound Sources"
-            items=${globalSources}
-            renderItem=${(item, i) => html`
-              <${SoundSourceForm}
-                item=${item}
-                onSourceLengthsChange=${handleSourceLengthsChange}
-                onChange=${(updated) => handleGlobalSourceChange(updated, i)}
-              />
-            `}
-            getTitle=${(item) => {
-              const label = item.label || 'Source';
-              const len = sourceLengths[item.label];
-              return len != null ? `${label} (${len}s)` : label;
-            }}
-            createItem=${createDefaultSource}
-            onChange=${handleGlobalSourcesChange}
-            addLabel="Add Source"
           />
         </${Panel}>
 
@@ -698,11 +816,13 @@ export function BrewEditor() {
             <!-- Left edge: Record button, duration input, preview toggle, timer -->
             <${Button}
               variant="medium-icon-text"
-              icon=${isRecording ? 'microphone-slash' : 'microphone'}
+              icon="microphone"
+              loading=${isRecording}
               color=${isRecording ? 'danger' : 'secondary'}
-              onClick=${() => setIsRecording(r => !r)}
+              disabled=${isRecording}
+              onClick=${() => startPreview(null, true)}
             >
-              ${isRecording ? 'Recording' : 'Record'}
+              ${isRecording ? 'Recording…' : 'Record'}
             </${Button}>
             <${Input}
               type="number"
@@ -711,6 +831,7 @@ export function BrewEditor() {
               widthScale="compact"
               heightScale="compact"
               min=${1}
+              disabled=${isRecording}
               onInput=${(e) => setRecordDuration(Number(e.target.value) || 30)}
             />
             <${Button}
@@ -728,16 +849,6 @@ export function BrewEditor() {
 
             <!-- Right edge: Save -->
             <div style="flex:1" />
-            ${hasRecording ? html`
-              <${Button}
-                variant="medium-icon-text"
-                icon="upload"
-                color="secondary"
-                onClick=${handleUploadRecording}
-              >
-                Upload Loop
-              </${Button}>
-            ` : null}
             <${Button}
               variant="medium-icon-text"
               icon="save"
@@ -745,7 +856,7 @@ export function BrewEditor() {
               disabled=${isSaving}
               onClick=${handleSave}
             >
-              ${isSaving ? 'Saving…' : 'Save'}
+              ${isSaving ? 'Saving…' : 'Save Brew'}
             </${Button}>
           </${HorizontalLayout}>
         </${Panel}>

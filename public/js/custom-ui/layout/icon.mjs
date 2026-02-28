@@ -42,6 +42,8 @@ const ICON_MAP = {
   'refresh': 'refresh',
   'sync': 'sync',
   'circle': 'circle',
+  'lock': 'lock',
+  'lock-open': 'lock_open',
   
   // Media
   'images': 'image',
