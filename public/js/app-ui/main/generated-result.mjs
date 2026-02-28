@@ -301,7 +301,9 @@ export function GeneratedResult({
               ` : null}
             </${MediaContainer}>
             ${image.audioUrl ? html`
-              <${AudioPlayer} audioUrl=${image.audioUrl} />
+              <div style=${{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px' }}>
+                <${AudioPlayer} audioUrl=${image.audioUrl} />
+              </div>
             ` : null}
           </${LeftColumn}>
 

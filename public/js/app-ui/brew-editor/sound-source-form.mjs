@@ -182,24 +182,21 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
         <${HorizontalLayout} gap="small" style=${{ alignItems: 'center' }}>
           <${Input}
             value=${clipLabel}
-            heightScale="compact"
             disabled=${true}
             placeholder="No clip selected"
           />
           <${Button}
-            variant="small-icon-text"
+            variant="medium-icon-text"
             icon="music"
             onClick=${() => setGalleryClipIndex(index)}
             title="Browse media gallery"
           >
             Browse
           </${Button}>
+          ${clipUrl ? html`
+            <${AudioPlayer} widthScale="normal" audioUrl=${clipUrl} />
+          ` : null}
         </${HorizontalLayout}>
-        ${clipUrl ? html`
-          <div style=${{ position: 'relative', height: '40px' }}>
-            <${AudioPlayer} audioUrl=${clipUrl} />
-          </div>
-        ` : null}
       </${VerticalLayout}>
     `;
   }, [clipDurations]);

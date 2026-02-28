@@ -5,19 +5,17 @@ import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { globalAudioPlayer } from '../global-audio-player.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
 // =========================================================================
 
-const Wrapper = styled('div')`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: ${props => props.padding};
+const PlayerContainer = styled('div')`
+  width: ${props => props.width || 'auto'};
+  ${props => props.flex ? `flex: ${props.flex};` : ''}
 `;
-Wrapper.className = 'wrapper';
+PlayerContainer.className = 'player-container';
 
 const Controls = styled('div')`
   display: flex;
@@ -80,6 +78,8 @@ ProgressFill.className = 'progress-fill';
  * @param {Object} props
  * @param {HTMLAudioElement} props.audioElement - Reference to the audio element
  * @param {number} props.duration - Total duration of the audio
+ * @param {boolean} [props.compact=false] - When true, hide left label; right shows currentTime while playing, duration otherwise
+ * @param {boolean} [props.isPlaying=false] - Whether audio is currently playing
  */
 class AudioTimeline extends Component {
   constructor(props) {
@@ -147,24 +147,37 @@ class AudioTimeline extends Component {
 
   formatTime = (seconds) => {
     if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
-    
+
+    // Short duration format: if total duration is under 1s, show seconds with 2 decimals
+    const { duration } = this.props;
+    if (duration > 0 && duration < 1) {
+      return `${seconds.toFixed(2)}s`;
+    }
+
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   render() {
-    const { duration } = this.props;
+    const { duration, compact = false, isPlaying = false } = this.props;
     const { theme, currentTime } = this.state;
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+    // In compact mode: right label shows currentTime while playing, duration otherwise
+    const rightLabelValue = compact
+      ? (isPlaying ? currentTime : duration)
+      : duration;
+
     return html`
       <${TimelineWrapper} gap=${theme.spacing.small.gap}>
-        <${Time} 
-          color=${theme.colors.text.secondary}
-          fontSize=${theme.typography.fontSize.small}
-        >${this.formatTime(currentTime)}</${Time}>
+        ${!compact ? html`
+          <${Time} 
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.small}
+          >${this.formatTime(currentTime)}</${Time}>
+        ` : null}
         
         <${ProgressBar} 
           backgroundColor=${theme.colors.overlay.background}
@@ -180,7 +193,7 @@ class AudioTimeline extends Component {
         <${Time} 
           color=${theme.colors.text.secondary}
           fontSize=${theme.typography.fontSize.small}
-        >${this.formatTime(duration)}</${Time}>
+        >${this.formatTime(rightLabelValue)}</${Time}>
       </${TimelineWrapper}>
     `;
   }
@@ -197,6 +210,7 @@ class AudioTimeline extends Component {
  * 
  * @param {Object} props
  * @param {string} props.audioUrl - URL of the audio file to play (required)
+ * @param {'normal'|'compact'|'full'} [props.widthScale='full'] - Width: 200px | 100px | 100%+flex-grow
  * @returns {preact.VNode|null} Returns null if audioUrl is not provided
  * 
  * @example
@@ -301,7 +315,7 @@ export class AudioPlayer extends Component {
   };
 
   render() {
-    const { audioUrl } = this.props;
+    const { audioUrl, widthScale = 'full' } = this.props;
     const { theme, isPlaying, duration } = this.state;
 
     if (!audioUrl) return null;
@@ -314,8 +328,12 @@ export class AudioPlayer extends Component {
         ? globalAudioPlayer.audioElement
         : null;
 
+    const { width, flex } = getWidthScaleStyle(widthScale);
+
+    const compact = widthScale !== 'full';
+
     return html`
-      <${Wrapper} padding=${theme.spacing.small.padding}>
+      <${PlayerContainer} padding=${theme.spacing.small.padding} width=${width} flex=${flex || ''}>
         <${Panel} variant="glass" padding="small">
           <${Controls} gap=${theme.spacing.medium.gap}>
             <${Button}
@@ -329,10 +347,12 @@ export class AudioPlayer extends Component {
             <${AudioTimeline}
               audioElement=${audioElement}
               duration=${duration}
+              compact=${compact}
+              isPlaying=${isPlaying}
             />
           </${Controls}>
         </${Panel}>
-      </${Wrapper}>
+      </${PlayerContainer}>
     `;
   }
 }
