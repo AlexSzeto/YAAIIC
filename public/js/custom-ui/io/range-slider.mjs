@@ -51,14 +51,34 @@ const ValueLabel = styled('span')`
 `;
 ValueLabel.className = 'range-slider-value-label';
 
-const RangeLabel = styled('span')`
+const RangeInput = styled('input')`
   font-size: ${props => props.fontSize};
   color: ${props => props.color};
   width: ${LABEL_WIDTH}px;
   text-align: center;
   flex-shrink: 0;
+  border: 2px ${props => props.borderStyle} ${props => props.borderColor};
+  border-radius: 6px;
+  background: transparent;
+  padding: 2px 0;
+  font-family: inherit;
+  outline: none;
+  transition: border-color ${props => props.transition}, box-shadow ${props => props.transition};
+  -moz-appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  &:focus {
+    box-shadow: 0 0 0 2px ${props => props.focusBorderColor};
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
 `;
-RangeLabel.className = 'range-slider-range-label';
+RangeInput.className = 'range-slider-range-input';
 
 const TrackContainer = styled('div')`
   position: relative;
@@ -234,6 +254,53 @@ export class RangeSlider extends Component {
     if (onChange) onChange({ min: this.state.currentMin, max: newMax });
   }
 
+  /** Apply a typed min-label value, clamped to [minAllowed, currentMax]. */
+  applyMinLabel(rawValue) {
+    const { minAllowed = 0, snap = 1, onChange } = this.props;
+    let v = parseFloat(rawValue);
+    if (isNaN(v)) return;
+    // Snap to step
+    v = Math.round(v / snap) * snap;
+    v = Math.max(minAllowed, Math.min(v, this.state.currentMax));
+    this.setState({ currentMin: v });
+    if (onChange) onChange({ min: v, max: this.state.currentMax });
+  }
+
+  /** Apply a typed max-label value, clamped to [currentMin, maxAllowed]. */
+  applyMaxLabel(rawValue) {
+    const { maxAllowed = 100, snap = 1, onChange } = this.props;
+    let v = parseFloat(rawValue);
+    if (isNaN(v)) return;
+    v = Math.round(v / snap) * snap;
+    v = Math.max(this.state.currentMin, Math.min(v, maxAllowed));
+    this.setState({ currentMax: v });
+    if (onChange) onChange({ min: this.state.currentMin, max: v });
+  }
+
+  handleMinLabelChange(e) {
+    this.applyMinLabel(e.target.value);
+  }
+
+  handleMaxLabelChange(e) {
+    this.applyMaxLabel(e.target.value);
+  }
+
+  handleMinLabelKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.applyMinLabel(e.target.value);
+      e.target.blur();
+    }
+  }
+
+  handleMaxLabelKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.applyMaxLabel(e.target.value);
+      e.target.blur();
+    }
+  }
+
   render() {
     const {
       minAllowed = 0,
@@ -310,16 +377,40 @@ export class RangeSlider extends Component {
           />
         </${TrackContainer}>
 
-        <!-- Min / Max bounds labels -->
+        <!-- Min / Max bounds inputs -->
         <${BoundsRow}>
-          <${RangeLabel}
+          <${RangeInput}
+            type="number"
             fontSize=${theme.typography.fontSize.medium}
-            color=${disabled ? theme.colors.text.disabled : theme.colors.text.muted}
-          >${this.formatValue(currentMin)}</${RangeLabel}>
-          <${RangeLabel}
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.primary}
+            borderColor=${disabled ? theme.colors.border.secondary : theme.colors.border.primary}
+            borderStyle=${theme.border.style}
+            focusBorderColor=${theme.colors.primary.border}
+            transition=${theme.transitions.fast}
+            value=${this.formatValue(currentMin)}
+            disabled=${disabled}
+            step=${snap}
+            min=${minAllowed}
+            max=${currentMax}
+            onChange=${(e) => this.handleMinLabelChange(e)}
+            onKeyDown=${(e) => this.handleMinLabelKeyDown(e)}
+          />
+          <${RangeInput}
+            type="number"
             fontSize=${theme.typography.fontSize.medium}
-            color=${disabled ? theme.colors.text.disabled : theme.colors.text.muted}
-          >${this.formatValue(currentMax)}</${RangeLabel}>
+            color=${disabled ? theme.colors.text.disabled : theme.colors.text.primary}
+            borderColor=${disabled ? theme.colors.border.secondary : theme.colors.border.primary}
+            borderStyle=${theme.border.style}
+            focusBorderColor=${theme.colors.primary.border}
+            transition=${theme.transitions.fast}
+            value=${this.formatValue(currentMax)}
+            disabled=${disabled}
+            step=${snap}
+            min=${currentMin}
+            max=${maxAllowed}
+            onChange=${(e) => this.handleMaxLabelChange(e)}
+            onKeyDown=${(e) => this.handleMaxLabelKeyDown(e)}
+          />
         </${BoundsRow}>
       </${Wrapper}>
       </${FormGroup}>

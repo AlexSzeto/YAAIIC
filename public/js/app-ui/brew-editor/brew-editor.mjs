@@ -27,6 +27,8 @@ import { SoundSourceForm } from './sound-source-form.mjs';
 import { ChannelForm } from './channel-form.mjs';
 import { AmbientCoffee } from '../../ambrew/ambient-coffee.js';
 import { openFolderSelect } from '../use-folder-select.mjs';
+import { Gallery } from '../main/gallery.mjs';
+import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
 // ============================================================================
 // Styled Components
@@ -133,8 +135,8 @@ export function BrewEditor() {
   // Cached effective playback lengths keyed by source label (not persisted).
   const [sourceLengths, setSourceLengths] = useState({});
 
-  // Hidden file inputs (refs to DOM input elements)
-  const uploadAudioInputRef = useRef(null);
+  // Brew-level gallery (audio only, read-only browsing)
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   // Audio playback refs
   const coffeeRef = useRef(null);
@@ -356,32 +358,6 @@ export function BrewEditor() {
     URL.revokeObjectURL(url);
   }
 
-  // ── Audio Upload ───────────────────────────────────────────────────────────
-
-  function handleUploadAudioClick() {
-    uploadAudioInputRef.current && uploadAudioInputRef.current.click();
-  }
-
-  async function handleUploadAudioFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', file);
-      toast.info(`Uploading "${file.name}"…`);
-      const res = await fetch('/upload/audio', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(data.error || res.statusText);
-      }
-      toast.success(`"${file.name}" uploaded to media library`);
-    } catch (e) {
-      toast.error(`Upload failed: ${e.message}`);
-    }
-  }
-
   // ── Audio Preview ──────────────────────────────────────────────────────────
 
   async function startPreview(brewOverride) {
@@ -576,15 +552,6 @@ export function BrewEditor() {
   return html`
     <${PageRoot} theme=${theme}>
 
-      <!-- Hidden inputs -->
-      <input
-        type="file"
-        accept="audio/*"
-        ref=${uploadAudioInputRef}
-        style="display:none"
-        onChange=${handleUploadAudioFile}
-      />
-
       <!-- Page header -->
       <${AppHeader}>
         <${H1}>Brew Editor</${H1}>
@@ -593,17 +560,9 @@ export function BrewEditor() {
             variant="medium-icon-text"
             icon="music"
             color="secondary"
-            onClick=${handleUploadAudioClick}
+            onClick=${() => setIsGalleryOpen(true)}
           >
-            Upload Audio
-          </${Button}>
-          <${Button}
-            variant="medium-icon-text"
-            icon="disc"
-            color="secondary"
-            onClick=${() => setIsListOpen(true)}
-          >
-            Open
+            Gallery
           </${Button}>
           <${Button}
             variant="medium-icon-text"
@@ -613,9 +572,27 @@ export function BrewEditor() {
           >
             ${currentFolder.label}
           </${Button}>
+          <${Button}
+            variant="medium-icon-text"
+            icon="save"
+            color="secondary"
+            onClick=${() => setIsListOpen(true)}
+          >
+            Open
+          </${Button}>
           <${HamburgerMenu} />
         </${HorizontalLayout}>
       </${AppHeader}>
+
+      <!-- Audio gallery modal (audio only, no search/action bar) -->
+      <${Gallery}
+        isOpen=${isGalleryOpen}
+        onClose=${() => setIsGalleryOpen(false)}
+        queryPath="/media-data"
+        previewFactory=${createGalleryPreview}
+        fileTypeFilter=${['audio']}
+        hideControls=${true}
+      />
 
       <!-- Brew selector modal (Open, New, per-item Export and Delete) -->
       <${ListSelectModal}

@@ -14,6 +14,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
+import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Gallery } from '../main/gallery.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
@@ -69,6 +70,7 @@ function calcSourceLength(clipDurations, repeatCount, repeatDelay) {
  * @param {Function} [props.onSourceLengthsChange] - Called with { [label]: length } on recalc
  */
 export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
+  const toast = useToast();
   // Track which clip index has the gallery open
   const [galleryClipIndex, setGalleryClipIndex] = useState(null);
   // Track which clip is being played inline (null = none)
@@ -77,6 +79,8 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
   const [clipDurations, setClipDurations] = useState([]);
   // Single shared Audio element for inline clip preview
   const audioRef = useRef(new Audio());
+  // Hidden file input for uploading audio
+  const uploadInputRef = useRef(null);
 
   const clips = item.clips || [];
   const repeatCount = item.repeatCount || { min: 1, max: 1 };
@@ -135,6 +139,39 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
     setGalleryClipIndex(null);
   }, [item, onChange, galleryClipIndex]);
 
+  /** Upload a local audio file and add it as a new clip to this source. */
+  const handleUploadClick = useCallback(() => {
+    uploadInputRef.current && uploadInputRef.current.click();
+  }, []);
+
+  const handleUploadFile = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', file);
+      toast.info(`Uploading "${file.name}"…`);
+      const res = await fetch('/upload/audio', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(data.error || res.statusText);
+      }
+      await res.json();
+
+      // Auto-add as a new clip (URL will be empty until processing completes;
+      // user can link it via Browse once the media entry is ready)
+      const clipName = file.name.replace(/\.[^.]+$/, '');
+      const newClip = { url: '', label: clipName };
+      const nextClips = [...(item.clips || []), newClip];
+      onChange({ ...item, clips: nextClips });
+      toast.success(`"${file.name}" uploaded – use Browse to link once processing is done`);
+    } catch (err) {
+      toast.error(`Upload failed: ${err.message}`);
+    }
+  }, [item, onChange, toast]);
+
   const handleClipPlay = useCallback((clip, index) => {
     const audio = audioRef.current;
     if (playingClipIndex === index) {
@@ -188,6 +225,14 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
   return html`
     <${VerticalLayout} gap="medium">
 
+      <input
+        type="file"
+        accept="audio/*"
+        ref=${uploadInputRef}
+        style="display:none"
+        onChange=${handleUploadFile}
+      />
+
       <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
         <${Input}
           label="Label"
@@ -195,6 +240,15 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           onInput=${handleLabelChange}
           placeholder="Source name"
         />
+        <${Button}
+          variant="medium-icon-text"
+          icon="music"
+          color="secondary"
+          onClick=${handleUploadClick}
+          title="Upload audio file and add as clip"
+        >
+          Upload
+        </${Button}>
       </${HorizontalLayout}>
 
       <${DynamicList}

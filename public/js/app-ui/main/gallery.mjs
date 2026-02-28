@@ -285,7 +285,8 @@ export function Gallery({
   fileTypeFilter = null, // Legacy: string like 'image' or array of allowed types like ['image', 'video']
   onSelectAsInput = null,  // Callback for "Use as Input" action from gallery preview
   folder = undefined,  // Optional folder filter (uid)
-  onDelete = null  // Callback when items are deleted
+  onDelete = null,  // Callback when items are deleted
+  hideControls = false  // When true, hides the bottom search/action row
 }) {
   const [galleryData, setGalleryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -657,6 +658,7 @@ export function Gallery({
             />
           </${HorizontalLayout}>
         </${SearchContainer}>
+        ${!hideControls ? html`
         <${Controls}>
           <${SearchContainer}>
             <${HorizontalLayout} gap="small">
@@ -696,6 +698,7 @@ export function Gallery({
             </${Button}>
           </${ButtonGroup}>
         </${Controls}>
+        ` : null}
       </${Content}>
     </${ModalOverlay}>
   `;
