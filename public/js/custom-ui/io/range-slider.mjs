@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -14,6 +15,7 @@ const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
   width: ${props => props.width};
+  flex: ${props => props.flex};
   opacity: ${props => props.disabled ? 0.5 : 1};
   pointer-events: ${props => props.disabled ? 'none' : 'auto'};
 `;
@@ -179,7 +181,7 @@ BoundsRow.className = 'range-slider-bounds-row';
  * @param {number} [props.min]                - Initial min handle value (defaults to minAllowed)
  * @param {number} [props.max]                - Initial max handle value (defaults to maxAllowed)
  * @param {number} [props.snap=1]             - Step/snap increment
- * @param {string} [props.width='100%']       - CSS width of the component
+ * @param {'normal'|'compact'|'full'} [props.widthScale='normal'] - Width category (200px | 50px | 100%+flex-grow)
  * @param {boolean} [props.disabled=false]    - When true, disables interaction and dims the slider
  * @param {Function} [props.onChange]         - Called with { min, max } on every value change
  * @returns {preact.VNode}
@@ -307,7 +309,7 @@ export class RangeSlider extends Component {
       maxAllowed = 100,
       snap = 1,
       label,
-      width = '100%',
+      widthScale = 'normal',
       disabled = false,
       // consumed props — not forwarded
       min: _min,
@@ -316,6 +318,7 @@ export class RangeSlider extends Component {
       ...rest
     } = this.props;
     const { currentMin, currentMax, theme } = this.state;
+    const { width, flex } = getWidthScaleStyle(widthScale);
 
     const range = maxAllowed - minAllowed;
     const minPct = ((currentMin - minAllowed) / range) * 100;
@@ -328,7 +331,7 @@ export class RangeSlider extends Component {
     const trackBg = disabled ? theme.colors.background.disabled : theme.colors.border.primary;
 
     return html`
-      <${FormGroup} width=${width} disabled=${disabled}>
+      <${FormGroup} width=${width} flex=${flex} disabled=${disabled}>
         ${label ? html`
           <${Label}
             color=${disabled ? theme.colors.text.disabled : theme.colors.text.secondary}

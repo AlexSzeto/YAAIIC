@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 
 // =========================================================================
 // Styled Components
@@ -14,6 +15,7 @@ const FormGroup = styled('div')`
   display: flex;
   flex-direction: column;
   width: ${props => props.width};
+  flex: ${props => props.flex};
   opacity: ${props => props.disabled ? 0.5 : 1};
   pointer-events: ${props => props.disabled ? 'none' : 'auto'};
 `;
@@ -148,7 +150,7 @@ OptionLabel.className = 'discrete-slider-option-label';
  * @param {Array}    props.options          - Array of option values to choose from
  * @param {*}        [props.value]          - Currently selected value (must be in options)
  * @param {Function} [props.onChange]       - Called with the selected value on change
- * @param {string}   [props.width='100%']   - CSS width of the component
+ * @param {'normal'|'compact'|'full'} [props.widthScale='normal'] - Width category (200px | 50px | 100%+flex-grow)
  * @param {boolean}  [props.disabled=false] - When true, disables interaction and dims the slider
  * @returns {preact.VNode}
  *
@@ -172,7 +174,8 @@ export class DiscreteSlider extends Component {
   constructor(props) {
     super(props);
     const { options = [], value } = props;
-    const idx = value !== undefined ? options.indexOf(value) : 0;
+    const getOptionValue = (opt) => (opt && typeof opt === 'object') ? opt.value : opt;
+    const idx = value !== undefined ? options.findIndex(opt => getOptionValue(opt) === value) : 0;
     this.state = {
       index: idx >= 0 ? idx : 0,
       theme: currentTheme.value,
@@ -194,21 +197,30 @@ export class DiscreteSlider extends Component {
     if (disabled) return;
     const idx = parseInt(e.target.value, 10);
     this.setState({ index: idx });
-    if (onChange) onChange(options[idx]);
+    if (onChange) {
+      const opt = options[idx];
+      const val = (opt && typeof opt === 'object') ? opt.value : opt;
+      // Pass a synthetic event object to match Select
+      onChange({ target: { value: val } });
+    }
   }
 
   handleLabelClick(idx) {
     const { options = [], onChange, disabled } = this.props;
     if (disabled) return;
     this.setState({ index: idx });
-    if (onChange) onChange(options[idx]);
+    if (onChange) {
+      const opt = options[idx];
+      const val = (opt && typeof opt === 'object') ? opt.value : opt;
+      onChange({ target: { value: val } });
+    }
   }
 
   render() {
     const {
       options = [],
       label,
-      width = '100%',
+      widthScale = 'normal',
       disabled = false,
       // consumed — not forwarded
       value: _value,
@@ -216,6 +228,7 @@ export class DiscreteSlider extends Component {
       ...rest
     } = this.props;
     const { index, theme } = this.state;
+    const { width, flex } = getWidthScaleStyle(widthScale);
 
     const maxIdx = options.length - 1;
     // Fill percentage for the webkit runnable track gradient
@@ -228,7 +241,7 @@ export class DiscreteSlider extends Component {
     const trackBg = disabled ? theme.colors.background.disabled : theme.colors.border.primary;
 
     return html`
-      <${FormGroup} width=${width} disabled=${disabled}>
+      <${FormGroup} width=${width} flex=${flex} disabled=${disabled}>
         ${label ? html`
           <${Label}
             color=${disabled ? theme.colors.text.disabled : theme.colors.text.secondary}
@@ -259,20 +272,23 @@ export class DiscreteSlider extends Component {
           />
         </${RangeWrapper}>
         <${LabelsRow}>
-          ${options.map((opt, i) => html`
-            <${OptionLabel}
-              key=${i}
-              fontSize=${theme.typography.fontSize.medium}
-              fontWeight=${i === index ? theme.typography.fontWeight.bold : theme.typography.fontWeight.normal}
-              color=${disabled
-                ? theme.colors.text.disabled
-                : (i === index ? theme.colors.primary.background : theme.colors.text.muted)
-              }
-              disabled=${disabled}
-              transition=${theme.transitions.fast}
-              onClick=${() => this.handleLabelClick(i)}
-            >${opt}</${OptionLabel}>
-          `)}
+          ${options.map((opt, i) => {
+            const optLabel = (opt && typeof opt === 'object') ? (opt.label !== undefined ? opt.label : opt.value) : opt;
+            return html`
+              <${OptionLabel}
+                key=${i}
+                fontSize=${theme.typography.fontSize.medium}
+                fontWeight=${i === index ? theme.typography.fontWeight.bold : theme.typography.fontWeight.normal}
+                color=${disabled
+                  ? theme.colors.text.disabled
+                  : (i === index ? theme.colors.primary.background : theme.colors.text.muted)
+                }
+                disabled=${disabled}
+                transition=${theme.transitions.fast}
+                onClick=${() => this.handleLabelClick(i)}
+              >${optLabel}</${OptionLabel}>
+            `;
+          })}
         </${LabelsRow}>
       </${Wrapper}>
       </${FormGroup}>

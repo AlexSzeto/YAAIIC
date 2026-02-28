@@ -23,9 +23,6 @@ const DISTANCE_OPTIONS = [
   { label: 'Medium', value: 'medium' },
   { label: 'Close', value: 'close' },
 ];
-const DISTANCE_LABELS = DISTANCE_OPTIONS.map(o => o.label);
-const DISTANCE_VALUE_TO_LABEL = Object.fromEntries(DISTANCE_OPTIONS.map(o => [o.value, o.label]));
-const DISTANCE_LABEL_TO_VALUE = Object.fromEntries(DISTANCE_OPTIONS.map(o => [o.label, o.value]));
 
 /** Default factory for a new track item. */
 function createTrack() {
@@ -69,8 +66,8 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
     onChange({ ...item, label: e.target.value });
   }, [item, onChange]);
 
-  const handleDistanceChange = useCallback((label) => {
-    onChange({ ...item, distance: DISTANCE_LABEL_TO_VALUE[label] ?? label });
+  const handleDistanceChange = useCallback((e) => {
+    onChange({ ...item, distance: e.target.value });
   }, [item, onChange]);
 
   const handleTracksChange = useCallback((tracks) => {
@@ -118,21 +115,24 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
     <${VerticalLayout} gap="medium">
 
       <${HorizontalLayout} gap="small">
-        <${ToggleSwitch}
-          label="Muffled"
-          checked=${item.muffled ?? false}
-          onChange=${(e) => onChange({ ...item, muffled: e.target.checked })}
-        />
-        <${ToggleSwitch}
-          label="Reverb"
-          checked=${item.reverb ?? false}
-          onChange=${(e) => onChange({ ...item, reverb: e.target.checked })}
-        />
+        <${VerticalLayout} gap="small">
+          <${ToggleSwitch}
+            label="Muffled"
+            checked=${item.muffled ?? false}
+            onChange=${(e) => onChange({ ...item, muffled: e.target.checked })}
+          />
+          <${ToggleSwitch}  
+            label="Reverb"
+            checked=${item.reverb ?? false}
+            onChange=${(e) => onChange({ ...item, reverb: e.target.checked })}
+          />
+        </${VerticalLayout}>
         <${DiscreteSlider}
           label="Distance"
           id="channel-distance"
-          options=${DISTANCE_LABELS}
-          value=${DISTANCE_VALUE_TO_LABEL[item.distance] ?? DISTANCE_VALUE_TO_LABEL['medium']}
+          value=${item.distance || 'medium'}
+          widthScale="wide"
+          options=${DISTANCE_OPTIONS}
           onChange=${handleDistanceChange}
         />
       </${HorizontalLayout}>

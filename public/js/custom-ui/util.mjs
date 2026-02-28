@@ -423,6 +423,7 @@ export function setCookie(name, value, days = 365) {
 export function getWidthScaleStyle(widthScale) {
   if (widthScale === 'full')    return { width: '100%', flex: '1 0 0' };
   if (widthScale === 'compact') return { width: '100px' };
+  if (widthScale === 'wide')    return { width: '400px' };
   return { width: '200px' }; // 'normal' (default)
 }
 

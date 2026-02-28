@@ -183,7 +183,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           snap=${0.1}
           min=${duration.min}
           max=${duration.max}
-          width="100%"
+          widthScale="wide"
           disabled=${loopHasNoSource}
           onChange=${({ min, max }) => onChange({ ...item, duration: { min, max } })}
         />
@@ -206,7 +206,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           snap=${0.1}
           min=${delay.min}
           max=${delay.max}
-          width="100%"
+          widthScale="wide"
           disabled=${eventHasNoSource}
           onChange=${({ min, max }) => onChange({ ...item, delay: { min, max } })}
         />

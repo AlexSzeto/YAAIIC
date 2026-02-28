@@ -249,7 +249,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           snap=${1}
           min=${repeatCount.min}
           max=${repeatCount.max}
-          width="100%"
+          widthScale="full"
           disabled=${hasNoClips}
           onChange=${({ min, max }) => onChange({ ...item, repeatCount: { min, max } })}
         />
@@ -260,7 +260,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           snap=${0.1}
           min=${repeatDelay.min}
           max=${repeatDelay.max}
-          width="100%"
+          widthScale="full"
           disabled=${hasNoClips}
           onChange=${({ min, max }) => onChange({ ...item, repeatDelay: { min, max } })}
         />
@@ -271,7 +271,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           snap=${0.1}
           min=${attack.min}
           max=${attack.max}
-          width="100%"
+          widthScale="full"
           disabled=${hasNoClips}
           onChange=${({ min, max }) => onChange({ ...item, attack: { min, max } })}
         />
@@ -282,7 +282,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           snap=${0.1}
           min=${decay.min}
           max=${decay.max}
-          width="100%"
+          widthScale="full"
           disabled=${hasNoClips}
           onChange=${({ min, max }) => onChange({ ...item, decay: { min, max } })}
         />

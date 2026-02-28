@@ -995,9 +995,9 @@
                     label="Qualitative Slider"
                     options=${['very low', 'low', 'medium', 'high', 'very high']}
                     value=${this.state.discreteValue}
-                    onChange=${(val) => {
-                      console.log('[DiscreteSlider] onChange:', val);
-                      this.setState({ discreteValue: val });
+                    onChange=${(e) => {
+                      console.log('[DiscreteSlider] onChange:', e.target.value);
+                      this.setState({ discreteValue: e.target.value });
                     }}
                   />
                 </div>
@@ -1007,7 +1007,7 @@
                     label="Numeric Slider"
                     options=${[0.25, 0.5, 1, 1.5, 2, 4]}
                     value=${1}
-                    onChange=${(val) => console.log('[DiscreteSlider numeric] onChange:', val)}
+                    onChange=${(e) => console.log('[DiscreteSlider numeric] onChange:', e.target.value)}
                   />
                 </div>
               <//>
