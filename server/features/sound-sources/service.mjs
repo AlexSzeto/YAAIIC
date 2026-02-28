@@ -42,8 +42,9 @@ export async function listSources() {
 }
 
 /**
- * Upsert a sound source by name (label). If a source with the same label
- * exists it is overwritten; otherwise it is appended.
+ * Upsert a sound source. Matches by `uid` first (if the source has one), then
+ * falls back to `label` for backward compatibility with sources that predate
+ * the uid field. If no match is found the source is appended.
  * @param {Object} source - Source object (must have a `label` string field)
  * @returns {Promise<void>}
  */
@@ -54,7 +55,15 @@ export async function upsertSource(source) {
     throw err;
   }
   const entries = readSourceData();
-  const idx = entries.findIndex(e => e.label === source.label);
+  let idx = -1;
+  // Prefer uid-based matching so renames overwrite the existing entry.
+  if (source.uid) {
+    idx = entries.findIndex(e => e.uid === source.uid);
+  }
+  // Fall back to label matching for sources without a uid.
+  if (idx < 0) {
+    idx = entries.findIndex(e => e.label === source.label);
+  }
   if (idx >= 0) {
     entries[idx] = source;
   } else {

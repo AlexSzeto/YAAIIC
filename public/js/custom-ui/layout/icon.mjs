@@ -115,6 +115,7 @@ const ICON_MAP = {
   'link': 'link',
   'lock': 'lock',
   'unlock': 'lock_open',
+  'lock-open-alt': 'lock_open_right',
   'calendar': 'calendar_today',
   'time': 'schedule',
   'flag': 'flag',

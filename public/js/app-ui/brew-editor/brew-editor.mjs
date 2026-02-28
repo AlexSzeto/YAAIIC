@@ -92,6 +92,7 @@ function createDefaultBrew() {
 
 function createDefaultSource() {
   return {
+    uid: crypto.randomUUID(),
     label: 'Source',
     clips: [],
     repeatCount: { min: 1, max: 1 },
@@ -187,7 +188,9 @@ export function BrewEditor() {
       const res = await fetch('/api/sound-sources');
       if (res.ok) {
         const sources = await res.json();
-        setGlobalSources(sources);
+        // Assign UIDs to any existing source that predates the uid field.
+        // These are held in memory and persisted the next time the user saves globals.
+        setGlobalSources(sources.map(s => s.uid ? s : { ...s, uid: crypto.randomUUID() }));
       }
     } catch {
       // Non-fatal: sources will be empty
@@ -240,10 +243,11 @@ export function BrewEditor() {
 
   /**
    * Fetch global sound sources, then merge with the brew's sources:
-   * - For each brew source whose label matches a global source, overwrite it
-   *   with the global data.
-   * - For each brew source whose label has no match in the global list, POST it
-   *   to the global list so it becomes global.
+   * - For each brew source matching a global source (by uid first, then label),
+   *   overwrite it with the global data. The global version is the source of truth,
+   *   so if the global label changed the brew source and track references are updated.
+   * - For each brew source with no match in the global list, POST it to the global
+   *   list so it becomes global.
    * Returns the updated globalSources array and a merged brew.
    */
   async function mergeGlobalSources(brewData) {
@@ -255,34 +259,61 @@ export function BrewEditor() {
       // Non-fatal: proceed without globals
     }
 
-    const globalMap = new Map(globals.map(s => [s.label, s]));
+    // Assign UIDs to any global source that predates the uid field.
+    globals = globals.map(s => s.uid ? s : { ...s, uid: crypto.randomUUID() });
+
+    const globalByUid = new Map(globals.map(s => [s.uid, s]));
+    const globalByLabel = new Map(globals.map(s => [s.label, s]));
     const brewSources = brewData.sources || [];
 
-    // Upsert any brew sources not yet in the global list
-    const toAdd = brewSources.filter(s => s.label && !globalMap.has(s.label));
+    // Upsert brew sources not yet in the global list (no uid match and no label match)
+    const toAdd = brewSources.filter(s => {
+      if (s.uid && globalByUid.has(s.uid)) return false;
+      if (s.label && globalByLabel.has(s.label)) return false;
+      return true;
+    });
     for (const src of toAdd) {
+      const srcWithUid = src.uid ? src : { ...src, uid: crypto.randomUUID() };
       try {
         await fetch('/api/sound-sources', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(src),
+          body: JSON.stringify(srcWithUid),
         });
-        globals.push(src);
-        globalMap.set(src.label, src);
+        globals.push(srcWithUid);
+        globalByUid.set(srcWithUid.uid, srcWithUid);
+        globalByLabel.set(srcWithUid.label, srcWithUid);
       } catch {
         // Non-fatal
       }
     }
 
-    // Build the merged brew sources: brew sources overwritten by global data
-    const mergedBrewSources = brewSources.map(s =>
-      globalMap.has(s.label) ? { ...globalMap.get(s.label) } : s
-    );
+    // Collect label renames: brew source matched by uid but global has a different label.
+    // The global label is the source of truth.
+    const labelRemap = new Map();
+    for (const brewSrc of brewSources) {
+      if (brewSrc.uid && globalByUid.has(brewSrc.uid)) {
+        const globalSrc = globalByUid.get(brewSrc.uid);
+        if (globalSrc.label !== brewSrc.label) {
+          labelRemap.set(brewSrc.label, globalSrc.label);
+        }
+      }
+    }
 
-    return {
-      globals,
-      mergedBrew: { ...brewData, sources: mergedBrewSources },
-    };
+    // Build merged brew sources: global data overwrites brew data on any match
+    const mergedBrewSources = brewSources.map(s => {
+      if (s.uid && globalByUid.has(s.uid)) return { ...globalByUid.get(s.uid) };
+      if (s.label && globalByLabel.has(s.label)) return { ...globalByLabel.get(s.label) };
+      return s;
+    });
+
+    let mergedBrew = { ...brewData, sources: mergedBrewSources };
+    // Apply any label renames to track source references
+    if (labelRemap.size > 0) {
+      mergedBrew = remapTrackSources(mergedBrew, labelRemap);
+    }
+
+    return { globals, mergedBrew };
   }
 
   /**
@@ -300,6 +331,29 @@ export function BrewEditor() {
       }
     }
     return used;
+  }
+
+  /**
+   * Rewrite track source references in a brew when source labels have been renamed.
+   * @param {Object} brewData
+   * @param {Map<string,string>} labelMap - Map from old label → new label
+   * @returns {Object} Updated brew data (new object reference)
+   */
+  function remapTrackSources(brewData, labelMap) {
+    if (!labelMap.size) return brewData;
+    const channels = (brewData.channels || []).map(ch => ({
+      ...ch,
+      tracks: (ch.tracks || []).map(track => {
+        if (track.type === 'loop' && labelMap.has(track.source)) {
+          return { ...track, source: labelMap.get(track.source) };
+        }
+        if (Array.isArray(track.sources)) {
+          return { ...track, sources: track.sources.map(s => labelMap.get(s) ?? s) };
+        }
+        return track;
+      }),
+    }));
+    return { ...brewData, channels };
   }
 
   /**
@@ -522,10 +576,12 @@ export function BrewEditor() {
   /**
    * Handle a change to a global source. Updates both globalSources and the
    * brew's sources array (for data structure validity).
+   * Matches the brew source by uid (preferred) or the old label as fallback.
+   * If the label changed the brew's track references are updated to match.
    * Persistence is done explicitly via "Save Global".
    */
   const handleGlobalSourceChange = useCallback((updatedSource, index) => {
-    // Update global list in memory
+    const oldSource = globalSources[index];
     const nextGlobals = [...globalSources];
     nextGlobals[index] = updatedSource;
     setGlobalSources(nextGlobals);
@@ -534,28 +590,45 @@ export function BrewEditor() {
     setBrew(prev => {
       if (!prev) return prev;
       const nextSources = [...(prev.sources || [])];
-      const brewIdx = nextSources.findIndex(s => s.label === updatedSource.label);
-      if (brewIdx >= 0) {
-        nextSources[brewIdx] = updatedSource;
+      // Match by uid if available, otherwise by the old source label
+      const brewIdx = nextSources.findIndex(s =>
+        (updatedSource.uid && s.uid === updatedSource.uid) ||
+        (!updatedSource.uid && s.label === oldSource.label)
+      );
+      if (brewIdx < 0) return { ...prev, sources: nextSources };
+      const oldBrewLabel = nextSources[brewIdx].label;
+      nextSources[brewIdx] = updatedSource;
+      // If the label changed, update track references to the new label
+      if (oldBrewLabel !== updatedSource.label) {
+        return remapTrackSources(
+          { ...prev, sources: nextSources },
+          new Map([[oldBrewLabel, updatedSource.label]])
+        );
       }
       return { ...prev, sources: nextSources };
     });
   }, [globalSources]);
 
   const handleGlobalSourcesChange = useCallback(async (nextGlobals) => {
-    // Detect deleted sources (in old list but not in new list)
-    const nextLabels = new Set(nextGlobals.map(s => s.label).filter(Boolean));
-    const deletedSources = globalSources.filter(s => s.label && !nextLabels.has(s.label));
+    // Detect deleted sources — prefer uid matching, fall back to label
+    const deletedSources = globalSources.filter(s => {
+      if (s.uid) return !nextGlobals.some(ng => ng.uid === s.uid);
+      return s.label && !nextGlobals.some(ng => ng.label === s.label);
+    });
 
     setGlobalSources(nextGlobals);
     // Mirror in brew sources and clear any track references to deleted sources.
     setBrew(prev => {
       if (!prev) return prev;
-      const globalLabels = new Set(nextGlobals.map(s => s.label));
+      const nextUids = new Set(nextGlobals.map(s => s.uid).filter(Boolean));
+      const nextLabels = new Set(nextGlobals.map(s => s.label));
       const deletedLabels = new Set(deletedSources.map(s => s.label));
-      // Keep brew sources not in the global list (shouldn't normally happen), then
-      // replace/add from the new global list.
-      const kept = (prev.sources || []).filter(s => !globalLabels.has(s.label));
+      // Keep brew sources not matched to any global source (shouldn't normally happen),
+      // then replace/add from the new global list.
+      const kept = (prev.sources || []).filter(s => {
+        if (s.uid) return !nextUids.has(s.uid) && !deletedLabels.has(s.label);
+        return !nextLabels.has(s.label);
+      });
       // Clear track sources that pointed to a now-deleted global source
       const channels = (prev.channels || []).map(ch => ({
         ...ch,
@@ -722,7 +795,7 @@ export function BrewEditor() {
             const len = sourceLengths[item.label];
             const text = len != null ? `${label} (${len}s)` : label;
             // lock = used by a channel in the current brew, lock-open = not used or no brew
-            const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open';
+            const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open-alt';
             return html`
               <span style="display:inline-flex;align-items:center;gap:6px;">
                 <${Icon} name=${iconName} size="14px" color=${theme.colors.text.secondary} />

@@ -1,39 +1,4 @@
-# Further fixes for the brew editor
-## Bugs and Design Flaws
-- For Track slider limits, all sliders need to have its maximum set to at least 1.00, and at most 60.00.
- - For sound sources, round the length of the clips to 2 decimal digits, and display those digits in the clip length display.
- - The source label is not updating from its default value when a new clip is added and a new clip source is selected.
- - Use the full audio player (from `custom-ui/media/audio-player.mjs`) in the dynamic list for clip playback.
- - The channel label is not updating from its default value when a new track added and the source is the first item on the select input. Add a `- select source -` with `null` value as the first item on the select input. Disable the duration/delay input and disable the preview when one of the sources is `null`. 
- - After pressing the record button, nothing happens - the play timer does not advance, there is no audible playback, and there's no indication that the recording has started.
+# Untitled
+## Goal
 ## Tasks
-- [x] Rearrange the layout and functions of the title bar actions:
-  - Move the upload button from the title bar to the sound source form. After a file is uploaded, automatically add it as a new clip to the sound source.
-  - In place of where the upload button used to be, add a Gallery button that functions the same as the gallery button in the main page, except that it only shows audio data, and the bottom row of search/actions (search/tag button, search input, view button, cancel button) is also removed. Use a boolean flag to control the gallery's view mode. 
-- [x] Change the range slider's min and max labels into inputs. The inputs should be disabled when the slider is disabled, and enabled when the slider is enabled. The inputs should update the slider's min and max values when the user types in a new value. The inputs should also update the slider's min and max values when the user presses the enter key.
-  - [x] 2.1 Updated RangeInput focused style to match custom-ui Input (2px border, 6px radius, `box-shadow: 0 0 0 2px` on focus, `theme.colors.primary.border`, transition, disabled opacity).
-- [x] In `track-form.mjs`, enforce slider limits so that the `maxAllowed` for the "Delay" (event) and "Duration per Loop" (loop) `RangeSlider` components is clamped to a minimum of `1.00` and a maximum of `60.00`, regardless of the dynamically computed values from source lengths.
-  - [x] 3.1 Also clamp `repeatDelayMax` and `attackDecayMax` in `sound-source-form.mjs` to the same `[1.00, 60.00]` range.
-- [x] In `sound-source-form.mjs`, change `loadAudioDuration` to resolve with the duration rounded to 2 decimal places (`Math.round(dur * 100) / 100`) instead of rounding to the nearest integer (`Math.round(dur)`). Update the duration display in `renderClipItem` to format the value to exactly 2 decimal digits using `.toFixed(2)`.
-- [x] In `sound-source-form.mjs`, auto-update the source `label` from its default value (`'Source'`) when the first clip is added via the gallery. In `handleGallerySelect`, if the current `item.label` is `'Source'` or empty and the selected entry has a name, set the source label to the entry's name.
-- [x] In `sound-source-form.mjs`, replace the inline play/stop button and shared `Audio` element in `renderClipItem` with the full `AudioPlayer` component from `custom-ui/media/audio-player.mjs`. Pass the clip's `url` as the `audioUrl` prop so each clip gets a proper player with progress bar and time display.
-- [x] create a `widthScale` property for the AudioPlayer custom-ui, using the custom-ui Input's implementation as a template. Refactor the codebase so that the wrapper element of the AudioPlayer is placed outside of the AudioPlayer component wherever it is currently placed.
-- [x] Make the following additional edits to the AudioPlayer custom-ui:
-  - [x] When the widthScale is not set to 'full', remove the left label and display the current timestamp on the right label while the sound is playing. It should still display the total duration of the sound source when it is not playing.
-  - [x] When the full length of the source sound is less than 1 second, change the label time format to show seconds only, with 2 decimal places.
-- [x] Update the data management behavior of the current brew under edit and fix the deletion of global sound sources:
-  - [x] As a reminder, the list of sound sources in the editor is global and independent of the brew currently being edited. If this is not the case, update the codebase so that it is.
-  - [x] Show the global sound sources when no brew is loaded.
-  - [x] Once a brew is loaded and its sources added to the global list, update the brew data so that only sources used by existing track are kept. Remove all other sources from the working data of the current brew. Keep the list of sources pruned this way as channels are added, removed, and edited.
-  - [x] When a sound source is deleted, remove it from the global list as well.
-- [x] Add an icon in front of the title for each sound source and its length:
-  - [x] When no brew is loaded, use the `lock-open` icon.
-  - [x] When a brew is loaded, use the `lock` icon if a channel is currently using the sound source.
-  - [x] When a brew is loaded, use the `lock-open` icon if no channel is currently using the sound source.
-- [x] In `channel-form.mjs`, add a `- select source -` placeholder option with a `null` (or empty string) value as the first item in the source `Select` inputs used by `TrackForm`. This prevents the first real source from being silently auto-selected without the user's explicit choice. When a global source is deleted and it is being used by one of the existing brew channels, update the track's source select to the placeholder value.
-- [x] Add an action container between Sound Sources and Brew Settings. Add a "Save Global" button to the action container that saves the global sources to the current brew. Update the Save button label for the brew to "Save Brew".
-- [x] In `track-form.mjs`, when the source select value is `null`/empty (the new placeholder), disable the duration/delay `RangeSlider` and disable the channel preview button. Update `trackHasSource` in both `track-form.mjs` and `channel-form.mjs` to treat the placeholder value as "no source."
-- [x] Fix a bug where event channel track sources are not being saved to the brew.
-- [x] In `brew-editor.mjs`, fix the record button so that pressing it immediately starts both playback and recording (calls `startPreview` with `isRecording` set to `true`). Currently, pressing "Record" only toggles a boolean flag and requires separately pressing "Preview" to begin. Update the record's button icon into a spinning circle to indicate that recording is actively in progress. While recording, disable the record button, and change the play button to a stop button. When stop is pressed, stop playback and ignore the recording. Remove the upload button that is only visible after the recording is available and save immediately if the user doesn't interrupt the recording session. Use toast message to notify the user that the recording had been saved.
-- [] The lock/unlock state of the global sound sources are not updating correctly when the current brew's track sources change. Update the calculation for the lock/unlock state so it is dynamically calculated based on the current brew's data, not a static property that only respond to specific change events.
 ## Implementation Details
