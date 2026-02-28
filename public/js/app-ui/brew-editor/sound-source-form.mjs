@@ -9,6 +9,7 @@
  */
 import { html } from 'htm/preact';
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
+import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
@@ -73,12 +74,8 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
   const toast = useToast();
   // Track which clip index has the gallery open
   const [galleryClipIndex, setGalleryClipIndex] = useState(null);
-  // Track which clip is being played inline (null = none)
-  const [playingClipIndex, setPlayingClipIndex] = useState(null);
   // Per-clip durations in seconds (null = not yet loaded / failed)
   const [clipDurations, setClipDurations] = useState([]);
-  // Single shared Audio element for inline clip preview
-  const audioRef = useRef(new Audio());
   // Hidden file input for uploading audio
   const uploadInputRef = useRef(null);
 
@@ -177,55 +174,35 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
     }
   }, [item, onChange, toast]);
 
-  const handleClipPlay = useCallback((clip, index) => {
-    const audio = audioRef.current;
-    if (playingClipIndex === index) {
-      audio.pause();
-      audio.currentTime = 0;
-      setPlayingClipIndex(null);
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = clip.url || '';
-      audio.play().catch(() => {});
-      audio.onended = () => setPlayingClipIndex(null);
-      setPlayingClipIndex(index);
-    }
-  }, [playingClipIndex]);
-
   const renderClipItem = useCallback((clip, index) => {
     const clipLabel = typeof clip === 'object' ? (clip.label || clip.url || '') : (clip || '');
     const clipUrl = typeof clip === 'object' ? (clip.url || '') : (clip || '');
-    const isThisPlaying = playingClipIndex === index;
-    const dur = clipDurations[index];
-    const durLabel = dur != null ? ` (${dur.toFixed(2)}s)` : '';
     return html`
-      <${HorizontalLayout} gap="small" style=${{ alignItems: 'center', flex: 1 }}>
-        <${Input}
-          value=${clipLabel}
-          heightScale="compact"
-          disabled=${true}
-          placeholder="No clip selected"
-        />
-        <${Button}
-          variant="small-icon"
-          icon=${isThisPlaying ? 'stop' : 'play'}
-          onClick=${() => handleClipPlay({ url: clipUrl, label: clipLabel }, index)}
-          title=${isThisPlaying ? 'Stop' : `Play clip${durLabel}`}
-          disabled=${!clipUrl}
-        />
-        ${dur != null ? html`<span style="font-size:0.8em;white-space:nowrap;color:#888">(${dur.toFixed(2)}s)</span>` : null}
-        <${Button}
-          variant="small-icon-text"
-          icon="music"
-          onClick=${() => setGalleryClipIndex(index)}
-          title="Browse media gallery"
-        >
-          Browse
-        </${Button}>
-      </${HorizontalLayout}>
+      <${VerticalLayout} gap="small" style=${{ flex: 1 }}>
+        <${HorizontalLayout} gap="small" style=${{ alignItems: 'center' }}>
+          <${Input}
+            value=${clipLabel}
+            heightScale="compact"
+            disabled=${true}
+            placeholder="No clip selected"
+          />
+          <${Button}
+            variant="small-icon-text"
+            icon="music"
+            onClick=${() => setGalleryClipIndex(index)}
+            title="Browse media gallery"
+          >
+            Browse
+          </${Button}>
+        </${HorizontalLayout}>
+        ${clipUrl ? html`
+          <div style=${{ position: 'relative', height: '40px' }}>
+            <${AudioPlayer} audioUrl=${clipUrl} />
+          </div>
+        ` : null}
+      </${VerticalLayout}>
     `;
-  }, [handleClipPlay, playingClipIndex, clipDurations]);
+  }, [clipDurations]);
 
   return html`
     <${VerticalLayout} gap="medium">
