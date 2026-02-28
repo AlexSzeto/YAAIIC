@@ -35,7 +35,7 @@ function loadAudioDuration(url) {
     audio.onloadedmetadata = () => {
       cleanup();
       const dur = audio.duration;
-      resolve(isFinite(dur) ? Math.round(dur) : null);
+      resolve(isFinite(dur) ? Math.round(dur * 100) / 100 : null);
     };
     audio.onerror = () => { cleanup(); resolve(null); };
     audio.src = url;
@@ -114,8 +114,8 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
   // ── Derived slider maxima ─────────────────────────────────────────────────
   const validDurations = clipDurations.filter(d => d != null);
   const longestClip = validDurations.length > 0 ? Math.max(...validDurations) : null;
-  const repeatDelayMax = longestClip != null ? Math.ceil(longestClip * 10) : 60;
-  const attackDecayMax = longestClip != null ? Math.ceil(longestClip) : 10;
+  const repeatDelayMax = Math.min(60, Math.max(1, longestClip != null ? Math.ceil(longestClip * 10) : 60));
+  const attackDecayMax = Math.min(60, Math.max(1, longestClip != null ? Math.ceil(longestClip) : 10));
   const hasNoClips = clips.length === 0;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -135,7 +135,12 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
       url: entry.audioUrl || entry.url || '',
       label: entry.name || '',
     };
-    onChange({ ...item, clips: nextClips });
+    const updated = { ...item, clips: nextClips };
+    // Auto-update source label from default when a gallery entry is selected
+    if ((!item.label || item.label === 'Source') && entry.name) {
+      updated.label = entry.name;
+    }
+    onChange(updated);
     setGalleryClipIndex(null);
   }, [item, onChange, galleryClipIndex]);
 
@@ -193,7 +198,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
     const clipUrl = typeof clip === 'object' ? (clip.url || '') : (clip || '');
     const isThisPlaying = playingClipIndex === index;
     const dur = clipDurations[index];
-    const durLabel = dur != null ? ` (${dur}s)` : '';
+    const durLabel = dur != null ? ` (${dur.toFixed(2)}s)` : '';
     return html`
       <${HorizontalLayout} gap="small" style=${{ alignItems: 'center', flex: 1 }}>
         <${Input}
@@ -209,7 +214,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           title=${isThisPlaying ? 'Stop' : `Play clip${durLabel}`}
           disabled=${!clipUrl}
         />
-        ${dur != null ? html`<span style="font-size:0.8em;white-space:nowrap;color:#888">(${dur}s)</span>` : null}
+        ${dur != null ? html`<span style="font-size:0.8em;white-space:nowrap;color:#888">(${dur.toFixed(2)}s)</span>` : null}
         <${Button}
           variant="small-icon-text"
           icon="music"

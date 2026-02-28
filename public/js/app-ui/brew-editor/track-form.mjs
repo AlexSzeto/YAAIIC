@@ -122,7 +122,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
     .map(s => sourceLengths[s])
     .filter(l => l != null && l > 0);
   const longestEventSource = assignedEventLengths.length > 0 ? Math.max(...assignedEventLengths) : null;
-  const eventDelayMax = longestEventSource != null ? longestEventSource * 10 : DEFAULT_DELAY_MAX;
+  const eventDelayMax = Math.min(60, Math.max(1, longestEventSource != null ? longestEventSource * 10 : DEFAULT_DELAY_MAX));
   const eventHasNoSource = eventSources.length === 0 || eventSources.every(s => !s);
 
   // For loop tracks: the assigned source's effective length
@@ -130,7 +130,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
   const loopSourceLength = (loopSourceLabel && sourceLengths[loopSourceLabel] != null)
     ? sourceLengths[loopSourceLabel]
     : null;
-  const loopDurationMax = loopSourceLength != null ? loopSourceLength : DEFAULT_DURATION_MAX;
+  const loopDurationMax = Math.min(60, Math.max(1, loopSourceLength != null ? loopSourceLength : DEFAULT_DURATION_MAX));
   const loopHasNoSource = !loopSourceLabel;
 
   return html`
