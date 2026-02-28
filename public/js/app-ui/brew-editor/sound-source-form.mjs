@@ -264,9 +264,6 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           disabled=${hasNoClips}
           onChange=${({ min, max }) => onChange({ ...item, repeatDelay: { min, max } })}
         />
-      </${HorizontalLayout}>
-
-      <${HorizontalLayout} gap="small">
         <${RangeSlider}
           label="Attack (s)"
           minAllowed=${0}

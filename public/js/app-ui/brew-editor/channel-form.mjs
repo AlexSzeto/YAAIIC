@@ -9,12 +9,13 @@
 import { html } from 'htm/preact';
 import { useCallback } from 'preact/hooks';
 import { Input } from '../../custom-ui/io/input.mjs';
-import { Select } from '../../custom-ui/io/select.mjs';
+
 import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { TrackForm } from './track-form.mjs';
+import { DiscreteSlider } from '../../custom-ui/io/discrete-slider.mjs';
 
 const DISTANCE_OPTIONS = [
   { label: 'Very Far', value: 'very-far' },
@@ -22,6 +23,9 @@ const DISTANCE_OPTIONS = [
   { label: 'Medium', value: 'medium' },
   { label: 'Close', value: 'close' },
 ];
+const DISTANCE_LABELS = DISTANCE_OPTIONS.map(o => o.label);
+const DISTANCE_VALUE_TO_LABEL = Object.fromEntries(DISTANCE_OPTIONS.map(o => [o.value, o.label]));
+const DISTANCE_LABEL_TO_VALUE = Object.fromEntries(DISTANCE_OPTIONS.map(o => [o.label, o.value]));
 
 /** Default factory for a new track item. */
 function createTrack() {
@@ -65,8 +69,8 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
     onChange({ ...item, label: e.target.value });
   }, [item, onChange]);
 
-  const handleDistanceChange = useCallback((e) => {
-    onChange({ ...item, distance: e.target.value });
+  const handleDistanceChange = useCallback((label) => {
+    onChange({ ...item, distance: DISTANCE_LABEL_TO_VALUE[label] ?? label });
   }, [item, onChange]);
 
   const handleTracksChange = useCallback((tracks) => {
@@ -113,22 +117,6 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
   return html`
     <${VerticalLayout} gap="medium">
 
-      <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
-        <${Input}
-          label="Label"
-          value=${item.label || ''}
-          onInput=${handleLabelChange}
-          placeholder="Channel name"
-        />
-        <${Select}
-          label="Distance"
-          id="channel-distance"
-          value=${item.distance || 'medium'}
-          options=${DISTANCE_OPTIONS}
-          onChange=${handleDistanceChange}
-        />
-      </${HorizontalLayout}>
-
       <${HorizontalLayout} gap="small">
         <${ToggleSwitch}
           label="Muffled"
@@ -140,8 +128,23 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
           checked=${item.reverb ?? false}
           onChange=${(e) => onChange({ ...item, reverb: e.target.checked })}
         />
+        <${DiscreteSlider}
+          label="Distance"
+          id="channel-distance"
+          options=${DISTANCE_LABELS}
+          value=${DISTANCE_VALUE_TO_LABEL[item.distance] ?? DISTANCE_VALUE_TO_LABEL['medium']}
+          onChange=${handleDistanceChange}
+        />
       </${HorizontalLayout}>
 
+      <${HorizontalLayout} gap="small">
+        <${Input}
+          label="Label"
+          value=${item.label || ''}
+          onInput=${handleLabelChange}
+          placeholder="Channel name"
+        />
+      </${HorizontalLayout}>
       <${DynamicList}
         title="Tracks"
         items=${tracks}

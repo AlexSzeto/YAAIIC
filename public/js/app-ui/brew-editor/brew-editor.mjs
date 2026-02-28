@@ -21,7 +21,7 @@ import { H1, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-bas
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import ListSelectModal from '../../custom-ui/overlays/list-select.mjs';
-import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { showDialog, showNumberPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { AppHeader } from '../themed-base.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { SoundSourceForm } from './sound-source-form.mjs';
@@ -70,7 +70,7 @@ const TimerPanel = styled('div')`
   min-width: 4rem;
   padding: ${props => props.theme.spacing.small.padding};
   border: ${props => props.theme.border.width} solid ${props => props.theme.colors.border.primary};
-  border-radius: ${props => props.theme.spacing.small.borderRadius};
+  border-radius: ${props => props.theme.spacing.medium.borderRadius};
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
   color: ${props => props.theme.colors.text.primary};
@@ -464,7 +464,7 @@ export function BrewEditor() {
    * @param {boolean} withRecording - When true, record the full brew and auto-save on completion.
    *   Ignored for sub-previews (brewOverride set).
    */
-  async function startPreview(brewOverride, withRecording = false) {
+  async function startPreview(brewOverride, withRecording = false, recordingDuration = null) {
     const targetBrew = brewOverride || brew;
     if (!targetBrew) return;
 
@@ -533,7 +533,7 @@ export function BrewEditor() {
 
       // When recording, auto-stop after the specified duration and save the result.
       if (withRecording && !brewOverride) {
-        const secs = Math.max(1, Number(recordDuration) || 30);
+        const secs = Math.max(1, Number(recordingDuration ?? recordDuration) || 30);
         recordTimeoutRef.current = setTimeout(() => {
           autoSaveRecordingRef.current = true;
           stopPlayback();
@@ -886,27 +886,22 @@ export function BrewEditor() {
         <!-- Action Bar -->
         <${Panel} variant="default">
           <${HorizontalLayout} gap="small" style=${{ flexWrap: 'wrap', alignItems: 'center' }}>
-            <!-- Left edge: Record button, duration input, preview toggle, timer -->
+            <!-- Left edge: Record button, preview toggle, timer -->
             <${Button}
               variant="medium-icon-text"
               icon="microphone"
               loading=${isRecording}
               color=${isRecording ? 'danger' : 'secondary'}
               disabled=${isRecording}
-              onClick=${() => startPreview(null, true)}
+              onClick=${async () => {
+                const duration = await showNumberPrompt('Recording Duration (seconds)', recordDuration, 1);
+                if (duration === null) return;
+                setRecordDuration(duration);
+                startPreview(null, true, duration);
+              }}
             >
               ${isRecording ? 'Recording…' : 'Record'}
             </${Button}>
-            <${Input}
-              type="number"
-              label="Duration (s)"
-              value=${recordDuration}
-              widthScale="compact"
-              heightScale="compact"
-              min=${1}
-              disabled=${isRecording}
-              onInput=${(e) => setRecordDuration(Number(e.target.value) || 30)}
-            />
             <${Button}
               variant="medium-icon-text"
               icon=${isPlaying ? 'stop' : 'play'}
