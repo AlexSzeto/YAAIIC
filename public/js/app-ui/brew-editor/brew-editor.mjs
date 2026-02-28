@@ -92,7 +92,7 @@ function createDefaultBrew() {
 
 function createDefaultSource() {
   return {
-    uid: crypto.randomUUID(),
+    uid: Date.now(),
     label: 'Source',
     clips: [],
     repeatCount: { min: 1, max: 1 },
@@ -190,7 +190,7 @@ export function BrewEditor() {
         const sources = await res.json();
         // Assign UIDs to any existing source that predates the uid field.
         // These are held in memory and persisted the next time the user saves globals.
-        setGlobalSources(sources.map(s => s.uid ? s : { ...s, uid: crypto.randomUUID() }));
+        setGlobalSources(sources.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i }));
       }
     } catch {
       // Non-fatal: sources will be empty
@@ -260,7 +260,7 @@ export function BrewEditor() {
     }
 
     // Assign UIDs to any global source that predates the uid field.
-    globals = globals.map(s => s.uid ? s : { ...s, uid: crypto.randomUUID() });
+    globals = globals.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i });
 
     const globalByUid = new Map(globals.map(s => [s.uid, s]));
     const globalByLabel = new Map(globals.map(s => [s.label, s]));
@@ -273,7 +273,7 @@ export function BrewEditor() {
       return true;
     });
     for (const src of toAdd) {
-      const srcWithUid = src.uid ? src : { ...src, uid: crypto.randomUUID() };
+      const srcWithUid = src.uid ? src : { ...src, uid: Date.now() };
       try {
         await fetch('/api/sound-sources', {
           method: 'POST',
