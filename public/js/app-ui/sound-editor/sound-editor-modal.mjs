@@ -27,6 +27,7 @@ import {
   BaseFooter,
 } from '../../custom-ui/overlays/modal-base.mjs';
 import { showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
+import { AppHeader } from '../themed-base.mjs';
 
 // ============================================================================
 // Module-level helpers
@@ -195,7 +196,7 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     const ws = WaveSurfer.create({
       container:     containerRef.current,
       waveColor:     theme.colors.primary.background,
-      progressColor: theme.colors.danger.background, // red playhead
+      progressColor: theme.colors.text.primary, // high-contrast playhead (black/white per theme)
       interact:      true,
       height:        128,
     });
@@ -205,14 +206,24 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
 
     ws.load(item.audioUrl);
 
-    ws.on('ready', async () => {
-      // Guard: only fetch on initial load. After trim/crop, loadBlob() re-triggers
-      // this event but we must NOT replace the edited buffer with the original file.
+    ws.on('ready', () => {
+      // Guard: only run on the initial load. After trim/crop, loadBlob() re-triggers
+      // ready but audioBufferRef is already set and renderClipRegions is called
+      // directly by the trim/crop handlers.
       if (audioBufferRef.current) return;
-      const res = await fetch(item.audioUrl);
-      const ab  = await res.arrayBuffer();
-      audioBufferRef.current = await new AudioContext().decodeAudioData(ab);
-      renderClipRegions(regions, clipRegions, null, clipColor);
+
+      // Fetch the audio buffer for editing in the background; does not block
+      // region rendering below.
+      (async () => {
+        const res = await fetch(item.audioUrl);
+        const ab  = await res.arrayBuffer();
+        audioBufferRef.current = await new AudioContext().decodeAudioData(ab);
+      })();
+
+      // WaveSurfer and the RegionsPlugin can perform post-ready DOM mutations
+      // (e.g. drag-selection wiring) that clear freshly added regions. A short
+      // delay ensures clip regions are painted after that settling period.
+      setTimeout(() => renderClipRegions(regions, clipRegions, null, clipColor), 100);
     });
 
     // Single click on the waveform: clear the active selection region so the
@@ -226,7 +237,11 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     });
 
     // When a drag-selection is completed, register it as the active region.
+    // Clip regions are added programmatically (id prefix 'clip-') and must be
+    // ignored here, otherwise they overwrite activeRegionRef and get deleted on
+    // the next interaction event.
     regions.on('region-created', region => {
+      if (region.id && region.id.startsWith('clip-')) return;
       if (activeRegionRef.current && activeRegionRef.current.id !== region.id) {
         activeRegionRef.current.remove();
       }
@@ -234,15 +249,24 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
       setHasSelection(true);
     });
 
-    ws.on('finish', () => {
+    // region-out fires when the playhead exits a region boundary, which is the
+    // correct signal for stopping or looping region-confined playback.
+    regions.on('region-out', region => {
+      if (region !== activeRegionRef.current) return;
       if (isLoopingRef.current) {
-        // Restart – prefer region play if a selection is active
-        const region = activeRegionRef.current;
-        if (region) {
-          region.play();
-        } else {
-          ws.play();
-        }
+        region.play();
+      } else {
+        ws.pause();
+        setIsPlaying(false);
+      }
+    });
+
+    // finish fires when the entire file reaches its end (no active selection, or
+    // the selection extends to the very end of the file).
+    ws.on('finish', () => {
+      if (activeRegionRef.current) return; // handled by region-out
+      if (isLoopingRef.current) {
+        ws.play();
       } else {
         setIsPlaying(false);
       }
@@ -378,64 +402,66 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   const footer = html`
-    <${VerticalLayout} gap="small">
+    <${HorizontalLayout} style=${{ width: '100%' }}>
       <${HorizontalLayout} gap="small">
         <${Button}
-          variant="medium-icon-text"
+          variant="small-icon"
+          icon="repeat"
+          onClick=${handleLoop}
+          title="Toggle loop mode"
+        ></${Button}>
+        <${Button}
+          variant="small-icon"
+          icon=${isPlaying ? 'pause' : 'play'}
+          onClick=${handlePlayPause}
+          title=${isPlaying ? 'Pause playback' : 'Play active region or full audio'}
+        ></${Button}>
+      </${HorizontalLayout}>
+      <div style="flex: 1;">
+      </div>
+      <${HorizontalLayout} gap="small">
+        <${Button}
+          variant="small-icon-text"
           icon="cut"
           onClick=${handleTrim}
           disabled=${!hasSelection}
           title="Remove selected region from audio"
         >Trim</${Button}>
         <${Button}
-          variant="medium-icon-text"
+          variant="small-icon-text"
           icon="crop"
           onClick=${handleCrop}
           disabled=${!hasSelection}
           title="Keep only the selected region"
         >Crop</${Button}>
         <${Button}
-          variant="medium-icon-text"
+          variant="small-icon-text"
           icon="plus"
           onClick=${handleAddClip}
           disabled=${!hasSelection}
           title="Save selected region as a named clip"
         >Clip</${Button}>
         <${Button}
-          variant="medium-icon-text"
+          variant="small-icon-text"
           icon="minus"
           onClick=${handleScrub}
           disabled=${!hasSelection}
           title="Remove clip regions overlapping selection"
         >Scrub</${Button}>
-      </${HorizontalLayout}>
-      <${HorizontalLayout} gap="small">
         <${Button}
-          variant="medium-icon-text"
-          icon=${isPlaying ? 'pause' : 'play'}
-          onClick=${handlePlayPause}
-          title=${isPlaying ? 'Pause playback' : 'Play active region or full audio'}
-        >${isPlaying ? 'Pause' : 'Play'}</${Button}>
-        <${Button}
-          variant="medium-icon-text"
-          icon="repeat"
-          onClick=${handleLoop}
-          title="Toggle loop mode"
-        >Loop</${Button}>
-        <${Button}
-          variant="medium-icon-text"
-          icon="x"
-          onClick=${onClose}
-          disabled=${isSaving}
-        >Cancel</${Button}>
-        <${Button}
-          variant="medium-icon-text"
+          variant="small-icon-text"
           icon="check"
           onClick=${handleSave}
           disabled=${isSaving}
         >${isSaving ? 'Saving…' : 'Save'}</${Button}>
+        <${Button}
+          variant="small-icon-text"
+          icon="x"
+          onClick=${onClose}
+          disabled=${isSaving}
+        >Cancel</${Button}>
       </${HorizontalLayout}>
-    </${VerticalLayout}>
+    </${HorizontalLayout}>
   `;
 
   const modalContent = html`
