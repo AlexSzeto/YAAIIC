@@ -32,6 +32,43 @@ import { Gallery } from '../main/gallery.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
 // ============================================================================
+// Audio helpers
+// ============================================================================
+
+/** Encode an AudioBuffer as a 16-bit PCM WAV Blob. */
+function audioBufferToWavBlob(audioBuffer) {
+  const numCh     = audioBuffer.numberOfChannels;
+  const rate      = audioBuffer.sampleRate;
+  const numFrames = audioBuffer.length;
+  const dataBytes = numFrames * numCh * 2;
+  const buf       = new ArrayBuffer(44 + dataBytes);
+  const view      = new DataView(buf);
+  const write     = (off, str) =>
+    [...str].forEach((c, i) => view.setUint8(off + i, c.charCodeAt(0)));
+
+  write(0, 'RIFF');  view.setUint32(4,  36 + dataBytes, true);
+  write(8, 'WAVE');  write(12, 'fmt ');
+  view.setUint32(16, 16,          true);
+  view.setUint16(20, 1,           true);
+  view.setUint16(22, numCh,       true);
+  view.setUint32(24, rate,        true);
+  view.setUint32(28, rate * numCh * 2, true);
+  view.setUint16(32, numCh * 2,   true);
+  view.setUint16(34, 16,          true);
+  write(36, 'data'); view.setUint32(40, dataBytes, true);
+
+  let off = 44;
+  for (let i = 0; i < numFrames; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      const s = Math.max(-1, Math.min(1, audioBuffer.getChannelData(ch)[i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+// ============================================================================
 // Styled Components
 // ============================================================================
 
@@ -490,11 +527,16 @@ export function BrewEditor() {
       recorder.onstop = async () => {
         // Only upload when the auto-stop timeout fired (not when user pressed Stop).
         if (autoSaveRecordingRef.current) {
-          const blob = new Blob(chunks, { type: 'audio/webm' });
-          const filename = `brew-loop-${brewLabel}.webm`;
+          const filename = `brew-loop-${brewLabel}.wav`;
           try {
+            // MediaRecorder captures webm; decode it then re-encode as WAV so
+            // the uploaded file is in a universally supported format.
+            const webmBlob = new Blob(chunks, { type: 'audio/webm' });
+            const arrayBuffer = await webmBlob.arrayBuffer();
+            const audioBuffer = await AmbientCoffee.audioContext.decodeAudioData(arrayBuffer);
+            const wavBlob = audioBufferToWavBlob(audioBuffer);
             const formData = new FormData();
-            formData.append('audio', blob, filename);
+            formData.append('audio', wavBlob, filename);
             const res = await fetch('/upload/audio', { method: 'POST', body: formData });
             if (!res.ok) {
               const data = await res.json().catch(() => ({ error: res.statusText }));

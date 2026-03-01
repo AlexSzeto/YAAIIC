@@ -151,6 +151,9 @@ const ICON_MAP = {
   'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
   'eye-slash': 'visibility_off',
+  'cut': 'content_cut',
+  'crop': 'crop',
+  'repeat': 'repeat',
 
 };
 
