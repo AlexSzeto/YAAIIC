@@ -125,19 +125,46 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
     onChange({ ...item, clips });
   }, [item, onChange]);
 
+  const handleAddClipClick = useCallback(() => {
+    setGalleryClipIndex('add');
+  }, []);
+
   const handleGallerySelect = useCallback((entry) => {
     if (galleryClipIndex === null) return;
-    const nextClips = [...(item.clips || [])];
-    nextClips[galleryClipIndex] = {
-      url: entry.audioUrl || entry.url || '',
-      label: entry.name || '',
-    };
-    const updated = { ...item, clips: nextClips };
-    // Auto-update source label from default when a gallery entry is selected
-    if ((!item.label || item.label === 'Source') && entry.name) {
-      updated.label = entry.name;
+
+    const existingClips = item.clips || [];
+
+    if (galleryClipIndex === 'add') {
+      // Bulk-import all clip regions if the entry has them, otherwise add one full-file clip
+      let newClips;
+      if (Array.isArray(entry.clips) && entry.clips.length > 0) {
+        newClips = entry.clips.map(clip => ({
+          url: entry.audioUrl,
+          label: clip.label,
+          start: clip.start,
+          end: clip.end,
+        }));
+      } else {
+        newClips = [{ url: entry.audioUrl || entry.url || '', label: entry.name || '' }];
+      }
+      const updated = { ...item, clips: [...existingClips, ...newClips] };
+      if ((!item.label || item.label === 'Source') && entry.name) {
+        updated.label = entry.name;
+      }
+      onChange(updated);
+    } else {
+      // Replace an existing clip at the given numeric index (Browse flow)
+      const nextClips = [...existingClips];
+      nextClips[galleryClipIndex] = {
+        url: entry.audioUrl || entry.url || '',
+        label: entry.name || '',
+      };
+      const updated = { ...item, clips: nextClips };
+      if ((!item.label || item.label === 'Source') && entry.name) {
+        updated.label = entry.name;
+      }
+      onChange(updated);
     }
-    onChange(updated);
     setGalleryClipIndex(null);
   }, [item, onChange, galleryClipIndex]);
 
@@ -237,6 +264,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
         getTitle=${(clip) => (typeof clip === 'object' ? clip.label || clip.url : clip) || 'Clip'}
         createItem=${() => ({ url: '', label: '' })}
         onChange=${handleClipsChange}
+        onAdd=${handleAddClipClick}
         addLabel="Add Clip"
         condensed=${true}
       />

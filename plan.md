@@ -4,6 +4,7 @@
 ## Implementation Details
 
 # Future Features
+- Localize client library files
 - Regen album cover
 - Purge (delete storge items not linked to a database item)
 - Higher Quality Flux Klein (add a field to use 9b param model for generation)

@@ -72,9 +72,10 @@ router.post('/upload/audio', upload.single('audio'), async (req, res) => {
     }
 
     console.log('Received audio upload:', req.file.originalname);
-    const extractedName = req.body.name || null;
+    const extractedName   = req.body.name   || null;
+    const extractedOrigin = req.body.origin ? parseInt(req.body.origin) : null;
 
-    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName);
+    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName, extractedOrigin);
 
     res.json({ success: true, taskId, message: 'Upload task created' });
   } catch (error) {

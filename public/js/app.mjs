@@ -16,6 +16,7 @@ import { currentTheme } from './custom-ui/theme.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/main/generation-form.mjs';
 import { GeneratedResult } from './app-ui/main/generated-result.mjs';
+import { SoundEditorModal } from './app-ui/sound-editor/sound-editor-modal.mjs';
 import { Gallery } from './app-ui/main/gallery.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
@@ -75,6 +76,7 @@ function App() {
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regenerateTaskId, setRegenerateTaskId] = useState(null);
+  const [soundEditorItem, setSoundEditorItem] = useState(null);
 
   // Phase 4: History & Gallery State
   const [history, setHistory] = useState([]);
@@ -745,6 +747,8 @@ function App() {
     if (image.uid) window.location.href = `inpaint.html?uid=${image.uid}`;
   };
 
+  const handleSoundEdit = useCallback((item) => setSoundEditorItem(item), []);
+
   const handleEdit = async (uid, field, value) => {
     try {
       let valueToSend = value;
@@ -1043,7 +1047,7 @@ function App() {
         </${VerticalLayout}>
       </${Panel}>
       
-      <${GeneratedResult} 
+      <${GeneratedResult}
         image=${generatedImage}
         onUseSeed=${handleUseSeed}
         onUsePrompt=${handleUsePrompt}
@@ -1052,41 +1056,26 @@ function App() {
         onUseDescription=${handleUseDescription}
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
+        onSoundEdit=${handleSoundEdit}
         onEdit=${handleEdit}
         onRegenerate=${handleRegenerate}
         onReprompt=${handleReprompt}
         onSelectAsInput=${handleSelectAsInput}
         isSelectDisabled=${(() => {
           const mediaType = generatedImage?.type || 'image';
-          
-          // Check if workflow needs images as input
           if (mediaType === 'image') {
-            // Disable if no workflow or workflow doesn't need images
             if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-            // Disable if all image slots are filled
             const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
             if (filledCount >= workflow.inputImages) return true;
             return false;
           }
-          
-          // Check if workflow needs audio as input
           if (mediaType === 'audio') {
-            // Disable if no workflow or workflow doesn't need audio
             if (!workflow || !workflow.inputAudios || workflow.inputAudios <= 0) return true;
-            // Disable if all audio slots are filled
-            const filledCount = inputAudios.filter(aud => aud && (aud.url)).length;
+            const filledCount = inputAudios.filter(aud => aud && aud.url).length;
             if (filledCount >= workflow.inputAudios) return true;
             return false;
           }
-          
-          // For video or other media types, disable selection (not supported as input yet)
           return true;
-        })()}
-        isInpaintDisabled=${(() => {
-          // Disable if the media type is not an image
-          const mediaType = generatedImage?.type || 'image';
-          if (mediaType !== 'image') return true;
-          return false;
         })()}
       />
 
@@ -1108,8 +1097,16 @@ function App() {
       `}
     </${VerticalLayout}>
 
+    ${soundEditorItem ? html`
+      <${SoundEditorModal}
+        item=${soundEditorItem}
+        onClose=${() => setSoundEditorItem(null)}
+        onSaved=${() => setSoundEditorItem(null)}
+      />
+    ` : null}
+
     ${taskId ? html`
-      <${ProgressBanner} 
+      <${ProgressBanner}
         key=${taskId}
         taskId=${taskId}
         sseManager=${sseManager}

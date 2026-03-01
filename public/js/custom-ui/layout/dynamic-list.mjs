@@ -254,6 +254,7 @@ export function DynamicList({
   onChange,
   addLabel = 'Add item',
   condensed = false,
+  onAdd,   // optional: () => void – replaces default handleAdd when provided
 }) {
   const theme = currentTheme.value;
 
@@ -290,7 +291,7 @@ export function DynamicList({
       variant="small-icon"
       icon="plus"
       color="secondary"
-      onClick=${handleAdd}
+      onClick=${onAdd ?? handleAdd}
     >
     </${Button}>
   `;

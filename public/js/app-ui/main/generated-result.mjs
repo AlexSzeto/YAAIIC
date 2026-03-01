@@ -179,12 +179,12 @@ export function GeneratedResult({
   onUseDescription,
   onDelete,
   onInpaint,
+  onSoundEdit,
   onSelectAsInput,
   onEdit,
   onRegenerate,
   onReprompt,
   isSelectDisabled = false,
-  isInpaintDisabled = false
 }) {
   if (!image) return null;
 
@@ -407,15 +407,26 @@ export function GeneratedResult({
           >
             Select
           </${Button}>
-          <${Button}
-            variant="primary"
-            icon="brush"
-            onClick=${() => onInpaint && onInpaint(image)}
-            disabled=${isInpaintDisabled}
-            title="Inpaint this image"
-          >
-            Inpaint
-          </${Button}>
+          ${image.type === 'audio'
+            ? html`
+              <${Button}
+                variant="primary"
+                icon="pencil"
+                onClick=${() => onSoundEdit && onSoundEdit(image)}
+                title="Edit this audio"
+              >
+                Edit
+              </${Button}>`
+            : html`
+              <${Button}
+                variant="primary"
+                icon="brush"
+                onClick=${() => onInpaint && onInpaint(image)}
+                title="Inpaint this image"
+              >
+                Inpaint
+              </${Button}>`
+          }
           <${Button}
             variant="primary"
             icon="export"

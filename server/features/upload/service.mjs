@@ -65,7 +65,7 @@ export { uploadFile as uploadFileToComfyUI };
  * @param {string|null} [name]      - Optional user-supplied name.
  * @returns {Promise<string>} Task ID.
  */
-export async function processMediaUpload(file, workflowsConfig, name = null) {
+export async function processMediaUpload(file, workflowsConfig, name = null, origin = null) {
   // Reset per-request logs
   resetPromptLog();
   resetProgressLog();
@@ -87,7 +87,7 @@ export async function processMediaUpload(file, workflowsConfig, name = null) {
   console.log(`Created upload task ${taskId}`);
 
   // Process upload task asynchronously
-  processUploadTask(taskId, file, workflowsConfig, name).catch(error => {
+  processUploadTask(taskId, file, workflowsConfig, name, origin).catch(error => {
     console.error(`Error in upload task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
   });
@@ -202,7 +202,7 @@ async function generateAlbumCover(taskId, requestData, workflowConfig, workflows
 /**
  * Process upload task asynchronously.
  */
-async function processUploadTask(taskId, file, workflowsConfig, extractedName = null) {
+async function processUploadTask(taskId, file, workflowsConfig, extractedName = null, origin = null) {
   try {
     // Detect file type
     const isAudio = file.mimetype.startsWith('audio/');
@@ -235,8 +235,16 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
         throw new Error('No default audio generation workflow configured');
       }
 
-      // Use extracted name if provided, otherwise use filename
-      const baseName = extractedName || file.originalname.replace(ext, '');
+      // Use extracted name if provided, otherwise format the filename
+      const formattedName = file.originalname
+        .replace(ext, '')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .split(/[_\s-]+/)
+        .filter(Boolean)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      const baseName = extractedName || formattedName;
 
       // Generate album cover using the defaultAudioGenerationWorkflow
       emitProgressUpdate(taskId, { percentage: 40, value: 2, max: 4 }, 'Generating album cover...');
@@ -271,6 +279,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
           audioFormat: ext.substring(1), // Remove leading dot
           workflow: 'Uploaded Audio',
           type: 'audio',
+          ...(origin != null && { origin }),
         };
 
         // Emit progress: Saving to database

@@ -53,6 +53,10 @@ export class SoundClip {
   #loaded = false
   /** @type {AudioBuffer} */
   #buffer = null
+  /** @type {number|null} seconds, or null for buffer start */
+  #start = null
+  /** @type {number|null} seconds, or null for buffer end */
+  #end = null
 
   /**
    *
@@ -76,7 +80,21 @@ export class SoundClip {
   }
 
   get duration() {
-    return this.#buffer.duration
+    if (!this.#buffer) return 0
+    return (this.#end ?? this.#buffer.duration) - (this.#start ?? 0)
+  }
+
+  get startOffset() {
+    return this.#start ?? 0
+  }
+
+  get effectiveDuration() {
+    return (this.#end ?? this.#buffer.duration) - this.startOffset
+  }
+
+  setOffsets(start, end) {
+    this.#start = start ?? null
+    this.#end   = end   ?? null
   }
 
   load(url = null) {
@@ -215,9 +233,9 @@ export class SoundSource {
       const bufferSource = AmbientCoffee.audioContext.createBufferSource()
       bufferSource.buffer = clip.buffer
       bufferSource.connect(envelope)
-      bufferSource.start(when, 0, clip.buffer.duration)
+      bufferSource.start(when, clip.startOffset, clip.effectiveDuration)
 
-      when += this.repeatDelay.random + clip.buffer.duration
+      when += this.repeatDelay.random + clip.effectiveDuration
     }
 
     let attack = this.attack.random
@@ -250,8 +268,9 @@ export class SoundSource {
   playSegmentInto(destination, when, duration) {
     const pick = new NonRepeatingPicker()
     const clip = pick.random(this.#clips)
-    duration = Math.min(duration, clip.buffer.duration)
-    const offset = Math.random() * (clip.buffer.duration - duration)
+    const available = clip.effectiveDuration
+    duration = Math.min(duration, available)
+    const offset = clip.startOffset + Math.random() * (available - duration)
 
     const bufferSource = AmbientCoffee.audioContext.createBufferSource()
     bufferSource.buffer = clip.buffer
@@ -589,9 +608,13 @@ class AmbientBrew {
       const loadingClips = []
       const fullURL = (url) => mediaUrl + url
 
-      const insertClip = (url) => {
-        if (!clipLibrary.find((url) => clipLibrary.url === fullURL(url))) {
+      const insertClip = (clipData) => {
+        const url = typeof clipData === 'string' ? clipData : clipData.url
+        if (!clipLibrary.find((c) => c.url === fullURL(url))) {
           const clip = new SoundClip()
+          if (typeof clipData === 'object' && (clipData.start != null || clipData.end != null)) {
+            clip.setOffsets(clipData.start ?? null, clipData.end ?? null)
+          }
           clipLibrary.push(clip)
           loadingClips.push(clip.load(fullURL(url)))
         }
@@ -618,19 +641,20 @@ class AmbientBrew {
               }
               return unpack
             } else if (typeof data === 'object' && data.url) {
-              return [data.url]
+              return [data]  // preserve full object so start/end survive
             } else if (typeof data === 'string') {
               return [data]
             }
             return []
           })
           .flat()
-        console.log(clips)
         clips.forEach(insertClip)
         return { clips, ...rest }
       })
-      const fetchClip = (url) =>
-        clipLibrary.find((clip) => clip.url === fullURL(url))
+      const fetchClip = (clipData) => {
+        const url = typeof clipData === 'string' ? clipData : clipData.url
+        return clipLibrary.find((clip) => clip.url === fullURL(url))
+      }
 
       Promise.all(loadingClips)
         .then(() => {

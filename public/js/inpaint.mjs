@@ -308,6 +308,7 @@ function InpaintApp() {
       formData.append('maskFilename', maskFilename);
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
+      if (mediaData.uid) formData.append('origin', String(mediaData.uid));
       
       // Append image field names from the source mediaData
       const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];

@@ -474,6 +474,7 @@ router.post('/generate/inpaint', upload.fields([
       req.body.image_0_filename = imageUploadResult.filename;
       req.body.mask_filename = maskUploadResult.filename;
       req.body.inpaint = true;
+      req.body.origin = req.body.origin ? parseInt(req.body.origin) : undefined;
       
       // Include parsed inpaintArea if provided
       if (parsedInpaintArea) {
