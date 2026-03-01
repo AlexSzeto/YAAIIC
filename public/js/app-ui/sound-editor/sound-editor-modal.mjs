@@ -184,6 +184,7 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
   const audioBufferRef = useRef(null);
   const activeRegionRef = useRef(null);
   const containerRef   = useRef(null); // plain <div> for WaveSurfer mount
+  const isPlayingRef = useRef(false); // ref mirrors isPlaying for use inside event closures
   const isLoopingRef   = useRef(false); // ref mirrors isLooping for use inside event closures
 
   // Clip region fill colour – muted variant of primary blue
@@ -229,10 +230,18 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     // Single click on the waveform: clear the active selection region so the
     // playhead moves without creating a new selection.
     ws.on('interaction', () => {
-      if (activeRegionRef.current) {
+      if (activeRegionRef.current 
+          && (ws.getCurrentTime() < activeRegionRef.current.start 
+          || ws.getCurrentTime() > activeRegionRef.current.end)) {
         activeRegionRef.current.remove();
         activeRegionRef.current = null;
         setHasSelection(false);
+
+        if(isPlayingRef.current) {
+          ws.pause();
+          setIsPlaying(false);
+          isPlayingRef.current = false;
+        }
       }
     });
 
@@ -256,8 +265,11 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
       if (isLoopingRef.current) {
         region.play();
       } else {
+        if(ws.getCurrentTime() < region.start + 0.01) return;
         ws.pause();
+
         setIsPlaying(false);
+        isPlayingRef.current = false;
       }
     });
 
@@ -286,7 +298,31 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     if (isPlaying) {
       ws.pause();
       setIsPlaying(false);
+      isPlayingRef.current = false;
     } else {
+      setIsLooping(false);
+      isLoopingRef.current = false;
+      const region = activeRegionRef.current;
+      if (region) {
+        region.play(true);
+      } else {
+        ws.play();
+      }
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+    }
+  }, [isPlaying]);
+
+  const handleLoop = useCallback(() => {
+    const ws = wavesurferRef.current;
+    if (!ws) return;
+    if (isPlaying) {
+      ws.pause();
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    } else {
+      setIsLooping(true);
+      isLoopingRef.current = true;
       const region = activeRegionRef.current;
       if (region) {
         region.play();
@@ -294,15 +330,9 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
         ws.play();
       }
       setIsPlaying(true);
+      isPlayingRef.current = true;
     }
   }, [isPlaying]);
-
-  const handleLoop = useCallback(() => {
-    setIsLooping(prev => {
-      isLoopingRef.current = !prev;
-      return !prev;
-    });
-  }, []);
 
   const handleTrim = useCallback(() => {
     const region = activeRegionRef.current;
