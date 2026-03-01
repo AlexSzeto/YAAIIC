@@ -88,6 +88,10 @@ export class SoundClip {
     return this.#start ?? 0
   }
 
+  get endOffset() {
+    return this.#end
+  }
+
   get effectiveDuration() {
     return (this.#end ?? this.#buffer.duration) - this.startOffset
   }
@@ -365,6 +369,7 @@ export class EventTrack {
     console.log('playing ' + this.label)
     this.#gain = AmbientCoffee.audioContext.createGain()
     this.#gain.connect(destination)
+    this.#playing = true
     this.#playEventLoops()
   }
 
@@ -375,6 +380,7 @@ export class EventTrack {
     clearTimeout(this.#eventTimeHandler)
     this.#eventTimeHandler = -1
     this.#gain.disconnect()
+    this.#playing = false
   }
 }
 
@@ -610,10 +616,15 @@ class AmbientBrew {
 
       const insertClip = (clipData) => {
         const url = typeof clipData === 'string' ? clipData : clipData.url
-        if (!clipLibrary.find((c) => c.url === fullURL(url))) {
+        const start = typeof clipData === 'object' ? (clipData.start ?? null) : null
+        const end = typeof clipData === 'object' ? (clipData.end ?? null) : null
+        const alreadyAdded = clipLibrary.find(
+          (c) => c.url === fullURL(url) && c.startOffset === (start ?? 0) && c.endOffset === end
+        )
+        if (!alreadyAdded) {
           const clip = new SoundClip()
-          if (typeof clipData === 'object' && (clipData.start != null || clipData.end != null)) {
-            clip.setOffsets(clipData.start ?? null, clipData.end ?? null)
+          if (start != null || end != null) {
+            clip.setOffsets(start, end)
           }
           clipLibrary.push(clip)
           loadingClips.push(clip.load(fullURL(url)))
@@ -653,7 +664,11 @@ class AmbientBrew {
       })
       const fetchClip = (clipData) => {
         const url = typeof clipData === 'string' ? clipData : clipData.url
-        return clipLibrary.find((clip) => clip.url === fullURL(url))
+        const start = typeof clipData === 'object' ? (clipData.start ?? null) : null
+        const end = typeof clipData === 'object' ? (clipData.end ?? null) : null
+        return clipLibrary.find(
+          (clip) => clip.url === fullURL(url) && clip.startOffset === (start ?? 0) && clip.endOffset === end
+        )
       }
 
       Promise.all(loadingClips)
