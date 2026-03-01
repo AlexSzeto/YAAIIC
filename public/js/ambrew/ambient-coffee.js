@@ -338,8 +338,6 @@ export class EventTrack {
     this.#sources = sources
     this.#eventDelay = Range.fromData(delay, 0, 0)
     this.#delayAfterPrev = delayAfterPrev
-    console.log('this.#delayAfterPrev: ' + this.#delayAfterPrev)
-
     if (
       this.#eventDelay.min === 0 &&
       this.#eventDelay.max === 0 &&
@@ -350,7 +348,6 @@ export class EventTrack {
   }
 
   #playEventLoops() {
-    console.log('start loop ' + this.label)
     const source = this.#eventSourcePicker.random(this.#sources)
     const delay = this.#eventDelay.random
     const when = this.#gain.context.currentTime + delay
@@ -366,7 +363,6 @@ export class EventTrack {
     if (this.#playing) {
       this.disconnect()
     }
-    console.log('playing ' + this.label)
     this.#gain = AmbientCoffee.audioContext.createGain()
     this.#gain.connect(destination)
     this.#playing = true
@@ -741,7 +737,6 @@ class AmbientBrew {
       this.#fade.context.currentTime + this.#fadeDuration
     )
     this.#playing = true
-    console.log('fading in ' + this.label)
   }
 
   disconnect() {
@@ -843,6 +838,17 @@ export class AmbientCoffee {
     } else {
       this.#brewing = nextBrew
       this.#brewing.fadeInto(this.#master)
+    }
+  }
+
+  /**
+   * Immediately stops and disconnects the currently playing brew.
+   * Safe to call even when nothing is playing.
+   */
+  stop() {
+    if (this.#brewing) {
+      this.#brewing.disconnect()
+      this.#brewing = null
     }
   }
 

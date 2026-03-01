@@ -594,8 +594,10 @@ export function BrewEditor() {
       recordTimeoutRef.current = null;
     }
     if (coffeeRef.current) {
-      // Silence immediately
+      // Silence immediately, then stop all internal track loops
       coffeeRef.current.gain.value = 0;
+      console.log('[BrewEditor] stopPlayback() — calling coffee.stop()');
+      coffeeRef.current.stop();
       coffeeRef.current = null;
     }
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
