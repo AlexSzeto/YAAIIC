@@ -1,19 +1,13 @@
-# Sound Editor — Additional Bug Fixes
+# Sound Editor — Playback and Looping Fixes
 
 ## Goal
 
-Address remaining bugs in the sound editor modal related to clip regions, playback constraints, and UI contrast.
+Address the remaining issues with audio playback behavior within the sound editor, specifically resolving start-of-selection playhead issues and modifying the loop button behavior.
 
 ## Tasks
 
-- [x] Clip regions are still being removed from the timeline whenever a new active region is selected.
-- [x] Playbacks are not working as intended - when a region is selected, playback is not stopping at the end of the selected area. The loop button doesn't work at all.
-- [x] Change the waveform progress color to be the primary contrast color (white in dark mode, black in light mode)
-- [x] When the audio editor first opens, the clip regions that already exists on the timeline are not showing properly.
-- [x] on the main page, when an edit that doesn't create new files occur, the updated clip regions are not saved back to the cached generation data on the client side. When a new clip is created as a result of file modification, the result is not added to the session history like uploads or normal generation actions.
 - [] fix the play action when a section is selected, it is still not working properly. Currently, the playhead moves to the start of the selection, but doesn't move or play sound.
 - [] change the behavior of the loop button from toggling loop mode to starting playback in loop mode, which should also turn the play button into the stop button. clicking the play button always start playback in non-looping mode.
-
 ## Implementation Details
 
 A wavesurfer region example file from their website, demonstrating multiple regions occupying the timeline, looping region playback, and confining playback to a region:
