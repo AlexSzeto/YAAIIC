@@ -304,7 +304,7 @@ export class AudioSelect extends Component {
                     <${Button}
                       variant="small-icon"
                       color="secondary"
-                      icon=${isPlaying ? 'pause' : 'play'}
+                      icon=${isPlaying ? 'stop' : 'play'}
                       onClick=${this.handlePlayPauseClick}
                       title=${isPlaying ? 'Pause' : 'Play'}
                     />

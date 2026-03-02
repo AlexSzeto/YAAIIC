@@ -361,7 +361,7 @@ export class AudioPlayer extends Component {
             <${Button}
               variant="medium-icon"
               color="secondary"
-              icon=${isPlaying ? 'pause' : 'play'}
+              icon=${isPlaying ? 'stop' : 'play'}
               onClick=${this.togglePlayPause}
               title=${isPlaying ? 'Pause' : 'Play'}
             />

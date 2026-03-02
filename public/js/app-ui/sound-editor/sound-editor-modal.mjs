@@ -186,6 +186,11 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
   const containerRef   = useRef(null); // plain <div> for WaveSurfer mount
   const isPlayingRef = useRef(false); // ref mirrors isPlaying for use inside event closures
   const isLoopingRef   = useRef(false); // ref mirrors isLooping for use inside event closures
+  // Mirrors clipRegions state so the 'ready' event handler (closed over at mount)
+  // always sees the latest clips after a trim/crop loadBlob cycle.
+  const clipRegionsRef = useRef(
+    (item.clips || []).map((c, i) => ({ ...c, id: `clip-${i}` }))
+  );
 
   // Clip region fill colour – muted variant of primary blue
   const clipColor = 'rgba(0,123,255,0.2)';
@@ -208,23 +213,22 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     ws.load(item.audioUrl);
 
     ws.on('ready', () => {
-      // Guard: only run on the initial load. After trim/crop, loadBlob() re-triggers
-      // ready but audioBufferRef is already set and renderClipRegions is called
-      // directly by the trim/crop handlers.
-      if (audioBufferRef.current) return;
+      // Only fetch and decode the raw audio buffer on the initial load.
+      // After trim/crop, loadBlob() re-triggers ready but audioBufferRef is
+      // already set with the edited buffer, so we skip the fetch.
+      if (!audioBufferRef.current) {
+        (async () => {
+          const res = await fetch(item.audioUrl);
+          const ab  = await res.arrayBuffer();
+          audioBufferRef.current = await new AudioContext().decodeAudioData(ab);
+        })();
+      }
 
-      // Fetch the audio buffer for editing in the background; does not block
-      // region rendering below.
-      (async () => {
-        const res = await fetch(item.audioUrl);
-        const ab  = await res.arrayBuffer();
-        audioBufferRef.current = await new AudioContext().decodeAudioData(ab);
-      })();
-
-      // WaveSurfer and the RegionsPlugin can perform post-ready DOM mutations
-      // (e.g. drag-selection wiring) that clear freshly added regions. A short
-      // delay ensures clip regions are painted after that settling period.
-      setTimeout(() => renderClipRegions(regions, clipRegions, null, clipColor), 100);
+      // Always re-render clip regions after any audio load. WaveSurfer clears
+      // all regions when it reloads audio (including after loadBlob), so we
+      // re-add them here rather than relying on a synchronous call made before
+      // ready fires. clipRegionsRef is kept current by the trim/crop handlers.
+      setTimeout(() => renderClipRegions(regions, clipRegionsRef.current, null, clipColor), 100);
     });
 
     // Single click on the waveform: clear the active selection region so the
@@ -340,12 +344,13 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     const newBuffer = applyTrim(audioBufferRef.current, region.start, region.end);
     const newClips  = adjustClipRegions(clipRegions, 'trim', region.start, region.end);
     audioBufferRef.current = newBuffer;
+    clipRegionsRef.current = newClips; // update ref so the 'ready' handler renders the correct clips
     activeRegionRef.current = null;
     setHasSelection(false);
     setClipRegions(newClips);
     setHasPhysicalEdits(true);
     wavesurferRef.current.loadBlob(audioBufferToWavBlob(newBuffer));
-    renderClipRegions(wsRegionsRef.current, newClips, null, clipColor);
+    // clip regions are re-rendered by the 'ready' handler once loadBlob completes
   }, [clipRegions]);
 
   const handleCrop = useCallback(() => {
@@ -354,12 +359,13 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     const newBuffer = applyCrop(audioBufferRef.current, region.start, region.end);
     const newClips  = adjustClipRegions(clipRegions, 'crop', region.start, region.end);
     audioBufferRef.current = newBuffer;
+    clipRegionsRef.current = newClips; // update ref so the 'ready' handler renders the correct clips
     activeRegionRef.current = null;
     setHasSelection(false);
     setClipRegions(newClips);
     setHasPhysicalEdits(true);
     wavesurferRef.current.loadBlob(audioBufferToWavBlob(newBuffer));
-    renderClipRegions(wsRegionsRef.current, newClips, null, clipColor);
+    // clip regions are re-rendered by the 'ready' handler once loadBlob completes
   }, [clipRegions]);
 
   const handleAddClip = useCallback(async () => {
@@ -369,6 +375,7 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     if (!label) return;
     const newClip = { id: `clip-${Date.now()}`, label, start: region.start, end: region.end };
     const updated = [...clipRegions, newClip];
+    clipRegionsRef.current = updated;
     setClipRegions(updated);
     renderClipRegions(wsRegionsRef.current, updated, activeRegionRef.current, clipColor);
   }, [clipRegions]);
@@ -379,6 +386,7 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
     const updated = clipRegions.filter(
       c => !(c.start >= region.start && c.end <= region.end)
     );
+    clipRegionsRef.current = updated;
     setClipRegions(updated);
     renderClipRegions(wsRegionsRef.current, updated, activeRegionRef.current, clipColor);
   }, [clipRegions]);
@@ -442,7 +450,7 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
         ></${Button}>
         <${Button}
           variant="small-icon"
-          icon=${isPlaying ? 'pause' : 'play'}
+          icon=${isPlaying ? 'stop' : 'play'}
           onClick=${handlePlayPause}
           title=${isPlaying ? 'Pause playback' : 'Play active region or full audio'}
         ></${Button}>

@@ -133,7 +133,7 @@ function createDefaultSource() {
     label: 'Source',
     clips: [],
     repeatCount: { min: 1, max: 1 },
-    repeatDelay: { min: 0, max: 0 },
+    repeatDelay: { min: 0.1, max: 0.1 },
     attack: { min: 0, max: 0.5 },
     decay: { min: 0, max: 0.5 },
   };

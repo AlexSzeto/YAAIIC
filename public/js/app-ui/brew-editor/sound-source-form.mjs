@@ -76,7 +76,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
 
   const clips = item.clips || [];
   const repeatCount = item.repeatCount || { min: 1, max: 1 };
-  const repeatDelay = item.repeatDelay || { min: 0, max: 0 };
+  const repeatDelay = item.repeatDelay || { min: 0.1, max: 0.1 };
   const attack = item.attack || { min: 0, max: 0.5 };
   const decay = item.decay || { min: 0, max: 0.5 };
 
