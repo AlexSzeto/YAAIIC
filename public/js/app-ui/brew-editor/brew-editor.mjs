@@ -26,7 +26,7 @@ import { AppHeader } from '../themed-base.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { SoundSourceForm } from './sound-source-form.mjs';
 import { ChannelForm } from './channel-form.mjs';
-import { AmbientCoffee } from '../../ambrew/ambient-coffee.js';
+import { AmbientCoffee } from '../../ambrew/ambient-coffee.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
 import { Gallery } from '../main/gallery.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
@@ -172,6 +172,9 @@ export function BrewEditor() {
   const [globalSources, setGlobalSources] = useState([]);
   // Cached effective playback lengths keyed by source label (not persisted).
   const [sourceLengths, setSourceLengths] = useState({});
+  // Runtime channel enable/disable state — never saved, resets on each preview start.
+  // Shape: { [channelLabel]: { enabled: boolean } }
+  const [channelStates, setChannelStates] = useState({});
 
   // Brew-level gallery (audio only, read-only browsing)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -508,6 +511,9 @@ export function BrewEditor() {
     // Stop any current playback
     stopPlayback();
 
+    // Reset runtime channel states so all channels are audible at the start
+    setChannelStates({});
+
     // Resume AudioContext if suspended (browser autoplay policy)
     if (AmbientCoffee.audioContext.state === 'suspended') {
       await AmbientCoffee.audioContext.resume();
@@ -729,6 +735,40 @@ export function BrewEditor() {
     });
   }, [globalSources]);
 
+  // ── Live channel property helpers ─────────────────────────────────────────
+
+  /** Helper to read a channel's enabled state (defaults to true). */
+  const isChannelEnabled = (label) => channelStates[label]?.enabled ?? true;
+
+  /**
+   * Called from the per-channel onChange before handleChannelsChange.
+   * Compares only the three live-editable properties and calls the appropriate
+   * setter on the playing AmbientChannel if a change is detected.
+   */
+  function handleChannelLiveUpdate(label, next, prev) {
+    if (!isPlaying || !coffeeRef.current) return;
+    const ch = coffeeRef.current.getChannel(label);
+    if (!ch) return;
+    if (next.distance !== prev.distance) ch.setDistance(next.distance);
+    if (next.muffled  !== prev.muffled)  ch.setMuffled(next.muffled);
+    if (next.reverb   !== prev.reverb)   ch.setReverb(next.reverb);
+  }
+
+  function handleChannelEnabled(label, enabled) {
+    setChannelStates(prev => ({ ...prev, [label]: { ...prev[label], enabled } }));
+    coffeeRef.current?.getChannel(label)?.setEnabled(enabled);
+  }
+
+  function handleChannelSolo(label) {
+    const allLabels = (brew?.channels || []).map(ch => ch.label);
+    const next = {};
+    allLabels.forEach(l => {
+      next[l] = { enabled: l === label };
+      coffeeRef.current?.getChannel(l)?.setEnabled(l === label);
+    });
+    setChannelStates(next);
+  }
+
   // Source labels derived from global sources — passed into ChannelForm/TrackForm.
   // Plain labels are used as values; display labels include the effective length when known.
   const sourceLabels = globalSources.map(s => s.label).filter(Boolean);
@@ -908,12 +948,12 @@ export function BrewEditor() {
               <${ChannelForm}
                 item=${item}
                 sourceLabels=${sourceLabels}
-                sources=${globalSources}
                 sourceLengths=${sourceLengths}
-                onPreview=${startPreview}
-                isPlaying=${isPlaying}
-                onStop=${stopPlayback}
+                enabled=${isChannelEnabled(item.label)}
+                onEnabledChange=${(enabled) => handleChannelEnabled(item.label, enabled)}
+                onSolo=${() => handleChannelSolo(item.label)}
                 onChange=${(updated) => {
+                  handleChannelLiveUpdate(item.label, updated, item);
                   const next = [...(brew.channels || [])];
                   next[i] = updated;
                   handleChannelsChange(next);

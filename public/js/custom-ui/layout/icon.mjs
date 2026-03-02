@@ -56,6 +56,7 @@ const ICON_MAP = {
   'microphone': 'mic',
   'microphone-slash': 'mic_off',
   'disc': 'album',
+  'headphone': 'headphones',
   
   // Communication
   'search': 'search',

@@ -1,10 +1,10 @@
 /**
  * channel-form.mjs – Sub-form for editing a single ambient channel.
  *
- * Props: { item, onChange, sourceLabels, sources, sourceLengths, onPreview, isPlaying, onStop }
+ * Props: { item, onChange, sourceLabels, sources, sourceLengths, enabled, onEnabledChange, onSolo }
  * Calls onChange(updatedItem) on every field edit.
- * Calls onPreview(tempBrew) to preview just this channel with all brew sources.
- * Calls onStop() to stop playback.
+ * Calls onEnabledChange(boolean) when the on/off toggle is flipped.
+ * Calls onSolo() when the Solo button is clicked.
  */
 import { html } from 'htm/preact';
 import { useCallback } from 'preact/hooks';
@@ -37,31 +37,18 @@ function createTrack() {
 }
 
 /**
- * Returns true if a track has at least one valid (non-empty) source assigned.
- * An empty string or null source (i.e. the placeholder "- select source -" option)
- * is treated as "no source" and returns false.
- * @param {Object} track
- * @returns {boolean}
- */
-function trackHasSource(track) {
-  if (track.type === 'loop') return Boolean(track.source);
-  return Array.isArray(track.sources) && track.sources.length > 0 && track.sources.every(s => s && s.length > 0);
-}
-
-/**
  * ChannelForm – Fields for a single channel entry.
  *
  * @param {Object}   props
- * @param {Object}   props.item           - The channel object
- * @param {Function} props.onChange       - Called with updated channel object
- * @param {string[]} props.sourceLabels   - Source labels available in the current brew
- * @param {Object[]} [props.sources]      - Full source objects for preview (all brew sources)
- * @param {Object}   [props.sourceLengths] - Map of source label → effective length (s)
- * @param {Function} [props.onPreview]    - Called with a temp brew to preview this channel
- * @param {boolean}  [props.isPlaying]    - Whether audio is currently playing globally
- * @param {Function} [props.onStop]       - Called to stop playback
+ * @param {Object}   props.item             - The channel object
+ * @param {Function} props.onChange         - Called with updated channel object
+ * @param {string[]} props.sourceLabels     - Source labels available in the current brew
+ * @param {Object}   [props.sourceLengths]  - Map of source label → effective length (s)
+ * @param {boolean}  [props.enabled]        - Runtime enabled state (default true)
+ * @param {Function} [props.onEnabledChange] - Called with new boolean when toggle is flipped
+ * @param {Function} [props.onSolo]         - Called when Solo button is clicked
  */
-export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], sourceLengths = {}, onPreview, isPlaying, onStop }) {
+export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths = {}, enabled = true, onEnabledChange, onSolo }) {
   const handleLabelChange = useCallback((e) => {
     onChange({ ...item, label: e.target.value });
   }, [item, onChange]);
@@ -73,16 +60,6 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
   const handleTracksChange = useCallback((tracks) => {
     onChange({ ...item, tracks });
   }, [item, onChange]);
-
-  const handleChannelPreview = useCallback(() => {
-    if (!onPreview) return;
-    const tempBrew = {
-      label: 'Preview',
-      sources,
-      channels: [item],
-    };
-    onPreview(tempBrew);
-  }, [item, sources, onPreview]);
 
   const renderTrack = useCallback((track, index) => {
     return html`
@@ -108,34 +85,46 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
 
   const tracks = item.tracks || [];
 
-  // Disable channel preview if there are no tracks or any track lacks a source
-  const previewDisabled = tracks.length === 0 || tracks.some(t => !trackHasSource(t));
-
   return html`
     <${VerticalLayout} gap="medium">
 
-      <${HorizontalLayout} gap="small">
-        <${VerticalLayout} gap="small">
+      <${VerticalLayout} gap="small">
+        <${HorizontalLayout} gap="small">
+          <${Button}
+            variant="small-icon-text"
+            icon="headphone"
+            color="secondary"
+            onClick=${() => onSolo?.()}
+          >
+            Solo
+          </${Button}>
+        </${HorizontalLayout}>
+        <${HorizontalLayout} gap="small">
+          <${ToggleSwitch}
+            label="On"
+            checked=${enabled}
+            onChange=${(e) => onEnabledChange?.(e.target.checked)}
+          />
           <${ToggleSwitch}
             label="Muffled"
             checked=${item.muffled ?? false}
             onChange=${(e) => onChange({ ...item, muffled: e.target.checked })}
           />
-          <${ToggleSwitch}  
+          <${ToggleSwitch}
             label="Reverb"
             checked=${item.reverb ?? false}
             onChange=${(e) => onChange({ ...item, reverb: e.target.checked })}
           />
-        </${VerticalLayout}>
-        <${DiscreteSlider}
-          label="Distance"
-          id="channel-distance"
-          value=${item.distance || 'medium'}
-          widthScale="wide"
-          options=${DISTANCE_OPTIONS}
-          onChange=${handleDistanceChange}
-        />
-      </${HorizontalLayout}>
+          <${DiscreteSlider}
+            label="Distance"
+            id="channel-distance"
+            value=${item.distance || 'medium'}
+            widthScale="wide"
+            options=${DISTANCE_OPTIONS}
+            onChange=${handleDistanceChange}
+          />
+        </${HorizontalLayout}>
+      </${VerticalLayout}>
 
       <${HorizontalLayout} gap="small">
         <${Input}
@@ -155,19 +144,6 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sources = [], s
         addLabel="Add Track"
       />
 
-      ${onPreview ? html`
-        <${HorizontalLayout} gap="small">
-          <${Button}
-            variant="medium-icon-text"
-            icon=${isPlaying ? 'stop' : 'play'}
-            color=${isPlaying ? 'secondary' : 'primary'}
-            disabled=${!isPlaying && previewDisabled}
-            onClick=${isPlaying ? onStop : handleChannelPreview}
-          >
-            ${isPlaying ? 'Stop' : 'Preview'}
-          </${Button}>
-        </${HorizontalLayout}>
-      ` : null}
     </${VerticalLayout}>
   `;
 }

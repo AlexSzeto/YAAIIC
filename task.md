@@ -5,14 +5,14 @@ Allow users to modify a channel's `distance`, `muffled`, and `reverb` properties
 
 ## Tasks
 
-- [ ] Rename ambrew files to `.mjs`: `ambient-coffee.js` → `ambient-coffee.mjs`, `reverb.js` → `reverb.mjs`; create `muffle.mjs`; update the import in `brew-editor.mjs`
-- [ ] Rework `AmbientChannel` signal chain so all three properties can be transitioned at runtime
-- [ ] Add `PROPERTY_TRANSITION_DURATION` constant and live setter methods to `AmbientChannel`
-- [ ] Expose channel lookup on `AmbientBrew` and `AmbientCoffee`
-- [ ] Wire live `distance`, `muffled`, and `reverb` updates from `brew-editor.mjs` to the audio engine during active playback
-- [ ] Add runtime channel enable/disable state to `brew-editor.mjs` and wire it to `setEnabled`
-- [ ] Implement solo logic in `brew-editor.mjs`
-- [ ] Update `ChannelForm` UI: add on/off toggle switch and solo button, remove per-channel preview buttons
+- [x] Rename ambrew files to `.mjs`: `ambient-coffee.js` → `ambient-coffee.mjs`, `reverb.js` → `reverb.mjs`; create `muffle.mjs`; update the import in `brew-editor.mjs`
+- [x] Rework `AmbientChannel` signal chain so all three properties can be transitioned at runtime
+- [x] Add `PROPERTY_TRANSITION_DURATION` constant and live setter methods to `AmbientChannel`
+- [x] Expose channel lookup on `AmbientBrew` and `AmbientCoffee`
+- [x] Wire live `distance`, `muffled`, and `reverb` updates from `brew-editor.mjs` to the audio engine during active playback
+- [x] Add runtime channel enable/disable state to `brew-editor.mjs` and wire it to `setEnabled`
+- [x] Implement solo logic in `brew-editor.mjs`
+- [x] Update `ChannelForm` UI: add on/off toggle switch and solo button, remove per-channel preview buttons
 
 ## Implementation Details
 
