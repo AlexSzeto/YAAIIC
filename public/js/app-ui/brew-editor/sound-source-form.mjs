@@ -199,7 +199,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
       <${HorizontalLayout} gap="small">
         <${RangeSlider}
           label="Repeat Count"
-          minAllowed=${0}
+          minAllowed=${1}
           maxAllowed=${20}
           snap=${1}
           min=${repeatCount.min}
@@ -210,9 +210,9 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
         />
         <${RangeSlider}
           label="Repeat Delay (s)"
-          minAllowed=${0}
+          minAllowed=${0.1}
           maxAllowed=${repeatDelayMax}
-          snap=${0.1}
+          snap=${0.05}
           min=${repeatDelay.min}
           max=${repeatDelay.max}
           widthScale="full"
@@ -223,7 +223,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           label="Attack (s)"
           minAllowed=${0}
           maxAllowed=${attackDecayMax}
-          snap=${0.1}
+          snap=${0.05}
           min=${attack.min}
           max=${attack.max}
           widthScale="full"
@@ -234,7 +234,7 @@ export function SoundSourceForm({ item, onChange, onSourceLengthsChange }) {
           label="Decay (s)"
           minAllowed=${0}
           maxAllowed=${attackDecayMax}
-          snap=${0.1}
+          snap=${0.05}
           min=${decay.min}
           max=${decay.max}
           widthScale="full"

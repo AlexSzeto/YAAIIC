@@ -8,7 +8,7 @@ import { getWidthScaleStyle } from '../util.mjs';
 // Styled Components
 // =========================================================================
 
-const LABEL_WIDTH = 40; // px — fixed width for endpoint labels
+const LABEL_WIDTH = 50; // px — fixed width for endpoint labels
 const SLIDER_RADIUS = 9; // px — half of thumb width/height
 
 const FormGroup = styled('div')`
@@ -211,6 +211,8 @@ export class RangeSlider extends Component {
       currentMin: min !== undefined ? min : minAllowed,
       currentMax: max !== undefined ? max : maxAllowed,
       theme: currentTheme.value,
+      minRaw: null, // string while min input is focused, null otherwise
+      maxRaw: null, // string while max input is focused, null otherwise
     };
   }
 
@@ -280,17 +282,28 @@ export class RangeSlider extends Component {
   }
 
   handleMinLabelChange(e) {
-    this.applyMinLabel(e.target.value);
+    this.setState({ minRaw: e.target.value });
   }
 
   handleMaxLabelChange(e) {
-    this.applyMaxLabel(e.target.value);
+    this.setState({ maxRaw: e.target.value });
+  }
+
+  handleMinLabelBlur(e) {
+    this.applyMinLabel(this.state.minRaw ?? e.target.value);
+    this.setState({ minRaw: null });
+  }
+
+  handleMaxLabelBlur(e) {
+    this.applyMaxLabel(this.state.maxRaw ?? e.target.value);
+    this.setState({ maxRaw: null });
   }
 
   handleMinLabelKeyDown(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       this.applyMinLabel(e.target.value);
+      this.setState({ minRaw: null });
       e.target.blur();
     }
   }
@@ -299,6 +312,7 @@ export class RangeSlider extends Component {
     if (e.key === 'Enter') {
       e.preventDefault();
       this.applyMaxLabel(e.target.value);
+      this.setState({ maxRaw: null });
       e.target.blur();
     }
   }
@@ -317,7 +331,7 @@ export class RangeSlider extends Component {
       onChange: _onChange,
       ...rest
     } = this.props;
-    const { currentMin, currentMax, theme } = this.state;
+    const { currentMin, currentMax, theme, minRaw, maxRaw } = this.state;
     const { width, flex } = getWidthScaleStyle(widthScale);
 
     const range = maxAllowed - minAllowed;
@@ -390,12 +404,13 @@ export class RangeSlider extends Component {
             borderStyle=${theme.border.style}
             focusBorderColor=${theme.colors.primary.border}
             transition=${theme.transitions.fast}
-            value=${this.formatValue(currentMin)}
+            value=${minRaw !== null ? minRaw : this.formatValue(currentMin)}
             disabled=${disabled}
             step=${snap}
             min=${minAllowed}
             max=${currentMax}
             onChange=${(e) => this.handleMinLabelChange(e)}
+            onBlur=${(e) => this.handleMinLabelBlur(e)}
             onKeyDown=${(e) => this.handleMinLabelKeyDown(e)}
           />
           <${RangeInput}
@@ -406,12 +421,13 @@ export class RangeSlider extends Component {
             borderStyle=${theme.border.style}
             focusBorderColor=${theme.colors.primary.border}
             transition=${theme.transitions.fast}
-            value=${this.formatValue(currentMax)}
+            value=${maxRaw !== null ? maxRaw : this.formatValue(currentMax)}
             disabled=${disabled}
             step=${snap}
             min=${currentMin}
             max=${maxAllowed}
             onChange=${(e) => this.handleMaxLabelChange(e)}
+            onBlur=${(e) => this.handleMaxLabelBlur(e)}
             onKeyDown=${(e) => this.handleMaxLabelKeyDown(e)}
           />
         </${BoundsRow}>
