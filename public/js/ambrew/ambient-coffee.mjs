@@ -331,6 +331,9 @@ export class EventTrack {
   /** @type {boolean} */
   #playing = false
 
+  /** @type {Range|null} */
+  #gainRange = null
+
   /**
    *
    * @param {string} label
@@ -353,10 +356,16 @@ export class EventTrack {
     }
   }
 
+  /** @param {Range} range */
+  setGainRange(range) { this.#gainRange = range }
+
   #playEventLoops() {
     const source = this.#eventSourcePicker.random(this.#sources)
     const delay = this.#eventDelay.random
     const when = this.#gain.context.currentTime + delay
+    if (this.#gainRange) {
+      this.#gain.gain.setValueAtTime(this.#gainRange.random, when)
+    }
     const duration = source.repeatInto(this.#gain, when)
 
     this.#eventTimeHandler = setTimeout(
@@ -391,14 +400,15 @@ export class EventTrack {
  * @implements AmbientTrack, LabeledObject
  */
 export class LoopingTrack {
+  static defaultCrossFadeDuration = 2
+  /** Minimum loop segment duration (s) required for equal-power crossfades to not overlap. */
+  static minSegmentDuration = 2 * LoopingTrack.defaultCrossFadeDuration
+
   static #equalPowerCrossfadeInCurve = ((resolution) =>
     new Float32Array(resolution).map((_, i) =>
       Math.sin((i / (resolution - 1)) * 0.5 * Math.PI)
     ))(64)
-  static #equalPowerCrossfadeOutCurve = this.#equalPowerCrossfadeInCurve
-    .slice()
-    .reverse()
-  static defaultCrossFadeDuration = 2
+  static #equalPowerCrossfadeOutCurve = LoopingTrack.#equalPowerCrossfadeInCurve.slice().reverse()
 
   /** @type {string} */
   label
@@ -424,6 +434,12 @@ export class LoopingTrack {
   /** @type {boolean} */
   #playing
 
+  /** @type {Range|null} */
+  #gainRange = null
+
+  /** @type {number|null} Ending gain of the previous segment, used as starting gain for the next. */
+  #currentGain = null
+
   /**
    *
    * @param {string} label
@@ -445,37 +461,39 @@ export class LoopingTrack {
     )
   }
 
+  /** @param {Range} range */
+  setGainRange(range) { this.#gainRange = range }
+
   #playContinuousAmbience() {
-    const crossFadeGain = AmbientCoffee.audioContext.createGain()
+    const ctx = AmbientCoffee.audioContext
     const when = this.#gain.context.currentTime
-    const duration = this.#source.playSegmentInto(
-      crossFadeGain,
-      when,
-      this.#duration.random
-    )
+    const duration = this.#duration.random
 
-    crossFadeGain.gain.setValueCurveAtTime(
-      LoopingTrack.#equalPowerCrossfadeInCurve,
-      when,
-      this.#crossfadeDuration
-    )
-    crossFadeGain.gain.setValueCurveAtTime(
-      LoopingTrack.#equalPowerCrossfadeOutCurve,
-      when + duration - this.#crossfadeDuration,
-      this.#crossfadeDuration
-    )
+    // Node 1: equal-power crossfade shape (0 → 1 → 1 → 0)
+    const crossFadeGain = ctx.createGain()
+    this.#source.playSegmentInto(crossFadeGain, when, duration)
+    crossFadeGain.gain.setValueAtTime(0, when)
+    crossFadeGain.gain.setValueCurveAtTime(LoopingTrack.#equalPowerCrossfadeInCurve, when, this.#crossfadeDuration)
+    crossFadeGain.gain.setValueCurveAtTime(LoopingTrack.#equalPowerCrossfadeOutCurve, when + duration - this.#crossfadeDuration, this.#crossfadeDuration)
 
-    crossFadeGain.connect(this.#gain)
-    setTimeout(
-      this.#playContinuousAmbience.bind(this),
-      (duration - this.#crossfadeDuration) * 1000
-    )
+    // Node 2: gain ramp from gainStart to gainEnd over the full segment duration
+    const gainStart = this.#currentGain ?? (this.#gainRange?.random ?? 1.0)
+    const gainEnd = this.#gainRange?.random ?? 1.0
+    this.#currentGain = gainEnd
+    const gainRampGain = ctx.createGain()
+    gainRampGain.gain.setValueAtTime(gainStart, when)
+    gainRampGain.gain.linearRampToValueAtTime(gainEnd, when + duration)
+
+    crossFadeGain.connect(gainRampGain)
+    gainRampGain.connect(this.#gain)
+    setTimeout(this.#playContinuousAmbience.bind(this), (duration - this.#crossfadeDuration) * 1000)
   }
 
   playInto(destination) {
     if (this.#playing) {
       this.disconnect()
     }
+    this.#currentGain = null
     this.#gain = AmbientCoffee.audioContext.createGain()
     this.#gain.connect(destination)
     this.#playContinuousAmbience()
@@ -495,14 +513,14 @@ export class LoopingTrack {
  * @class AmbientChannel
  * @implements AmbientTrack, LabeledObject
  */
-export class AmbientChannel {
-  static distances = {
-    'very-far': 0.1,
-    far: 0.25,
-    medium: 0.5,
-    close: 0.75,
-  }
+const DISTANCE_GAIN_MAP = {
+  'very-far': { min: 0.1,  max: 0.1  },
+  'far':      { min: 0.25, max: 0.25 },
+  'medium':   { min: 0.5,  max: 0.5  },
+  'close':    { min: 0.75, max: 0.75 },
+}
 
+export class AmbientChannel {
   /** Duration (seconds) for all property transition ramps. */
   static PROPERTY_TRANSITION_DURATION = 0.25
 
@@ -524,35 +542,46 @@ export class AmbientChannel {
   /** @type {AudioNode} entry point of the chain (first effect's input, or #output) */
   #first
 
-  /** @type {GainNode} distance/enable control — always last in chain */
+  /** @type {GainNode} enable/disable control — always last in chain */
   #output
 
   /** @type {boolean} */
   #enabled = true
 
-  /** @type {string} */
-  #distance = 'medium'
+  /** @type {Range} */
+  #gainRange = new Range(0.5, 0.5)
 
   constructor(
     label,
     tracks,
-    { distance = 'medium', muffled = false, reverb = false } = {}
+    { gain = null, distance, muffle = null, muffled, reverb = null } = {}
   ) {
     this.label = label
     this.#tracks = tracks
-    this.#distance = distance
+
+    // Backward compat: distance string → gain range
+    if (!gain && distance) gain = DISTANCE_GAIN_MAP[distance] ?? { min: 0.5, max: 0.5 }
+    const { min = 0.5, max = 0.5 } = gain ?? {}
+    this.#gainRange = new Range(min, max)
+
+    // Backward compat: old boolean muffle/reverb fields → profile strings
+    if (muffle === null && muffled === true)  muffle  = 'thick-wall'
+    if (typeof reverb === 'boolean')          reverb  = reverb ? 'church' : null
 
     const ctx = AmbientCoffee.audioContext
     this.#output = ctx.createGain()
-    this.#output.gain.value = AmbientChannel.distances[distance] ?? 1.0
+    this.#output.gain.value = 1
 
     this.#effects.set('muffle', new MuffleEffect(ctx))
     this.#effects.set('reverb', new ReverbEffect(ctx))
     this.#rebuildChain()
 
+    // Give each track a reference to the shared gain range so they can randomize per-segment/event
+    for (const track of this.#tracks) track.setGainRange?.(this.#gainRange)
+
     // Apply initial property states without transition
-    if (muffled) this.#effects.get('muffle').setActive(true)
-    if (reverb)  this.#effects.get('reverb').setActive(true)
+    if (muffle) this.#effects.get('muffle').setActive(muffle)
+    if (reverb) this.#effects.get('reverb').setActive(reverb)
   }
 
   #rebuildChain() {
@@ -573,47 +602,38 @@ export class AmbientChannel {
   }
 
   /**
-   * Ramps the output gain to the volume for the given distance.
-   * No-op if the channel is currently disabled — the distance is remembered
-   * for when the channel is re-enabled.
-   * @param {string} distance
+   * Updates the gain range used for per-segment/per-event volume randomization.
+   * Takes effect immediately for the next segment or event.
+   * @param {{ min: number, max: number }} range
    */
-  setDistance(distance) {
-    this.#distance = distance
-    if (this.#enabled) {
-      const target = AmbientChannel.distances[distance] ?? 1.0
-      const ctx = AmbientCoffee.audioContext
-      this.#output.gain.linearRampToValueAtTime(
-        target,
-        ctx.currentTime + AmbientChannel.PROPERTY_TRANSITION_DURATION
-      )
-    }
+  setGainRange({ min, max }) {
+    this.#gainRange.min = min
+    this.#gainRange.max = max
   }
 
   /**
-   * Toggles the muffle (lowpass) effect with a smooth transition.
-   * @param {boolean} muffled
+   * Sets the muffle profile with a smooth transition.
+   * @param {string|null} profile - 'glass-window' | 'thick-wall' | 'outside-car' | null (off)
    */
-  setMuffled(muffled) {
-    this.#effects.get('muffle')?.setActive(muffled, AmbientChannel.PROPERTY_TRANSITION_DURATION)
+  setMuffle(profile) {
+    this.#effects.get('muffle')?.setActive(profile, AmbientChannel.PROPERTY_TRANSITION_DURATION)
   }
 
   /**
-   * Toggles the reverb (wet/dry) effect with a smooth transition.
-   * @param {boolean} reverb
+   * Sets the reverb profile with a smooth transition.
+   * @param {string|null} profile - 'small-room' | 'church' | 'opera-hall' | null (off)
    */
-  setReverb(reverb) {
-    this.#effects.get('reverb')?.setActive(reverb, AmbientChannel.PROPERTY_TRANSITION_DURATION)
+  setReverb(profile) {
+    this.#effects.get('reverb')?.setActive(profile, AmbientChannel.PROPERTY_TRANSITION_DURATION)
   }
 
   /**
    * Enables or disables this channel by ramping the output gain.
-   * Remembers the current distance so re-enabling restores the correct level.
    * @param {boolean} enabled
    */
   setEnabled(enabled) {
     this.#enabled = enabled
-    const target = enabled ? (AmbientChannel.distances[this.#distance] ?? 1.0) : 0
+    const target = enabled ? 1 : 0
     const ctx = AmbientCoffee.audioContext
     this.#output.gain.linearRampToValueAtTime(
       target,

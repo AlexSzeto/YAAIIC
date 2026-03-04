@@ -142,9 +142,9 @@ function createDefaultSource() {
 function createDefaultChannel() {
   return {
     label: 'Channel',
-    distance: 'medium',
-    muffled: false,
-    reverb: false,
+    gain: { min: 0.5, max: 0.5 },
+    muffle: null,
+    reverb: null,
     tracks: [],
   };
 }
@@ -592,6 +592,7 @@ export function BrewEditor() {
         }, secs * 1000);
       }
     } catch (e) {
+      console.log(e)
       toast.error(`Preview failed: ${e.message}`);
       stopPlayback();
     }
@@ -753,8 +754,8 @@ export function BrewEditor() {
     if (!isPlaying || !coffeeRef.current) return;
     const ch = coffeeRef.current.getChannel(label);
     if (!ch) return;
-    if (next.distance !== prev.distance) ch.setDistance(next.distance);
-    if (next.muffled  !== prev.muffled)  ch.setMuffled(next.muffled);
+    if (next.gain?.min !== prev.gain?.min || next.gain?.max !== prev.gain?.max) ch.setGainRange(next.gain ?? { min: 0.5, max: 0.5 });
+    if (next.muffle   !== prev.muffle)   ch.setMuffle(next.muffle);
     if (next.reverb   !== prev.reverb)   ch.setReverb(next.reverb);
   }
 

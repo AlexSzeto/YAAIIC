@@ -15,13 +15,28 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { TrackForm } from './track-form.mjs';
-import { DiscreteSlider } from '../../custom-ui/io/discrete-slider.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
+import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
 
-const DISTANCE_OPTIONS = [
-  { label: 'Very Far', value: 'very-far' },
-  { label: 'Far', value: 'far' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Close', value: 'close' },
+const DISTANCE_TO_GAIN = {
+  'very-far': { min: 0.1,  max: 0.1  },
+  'far':      { min: 0.25, max: 0.25 },
+  'medium':   { min: 0.5,  max: 0.5  },
+  'close':    { min: 0.75, max: 0.75 },
+};
+
+const MUFFLE_OPTIONS = [
+  { label: 'Off',          value: '' },
+  { label: 'Glass Window', value: 'glass-window' },
+  { label: 'Thick Wall',   value: 'thick-wall' },
+  { label: 'Outside Car',  value: 'outside-car' },
+];
+
+const REVERB_OPTIONS = [
+  { label: 'Off',        value: '' },
+  { label: 'Small Room', value: 'small-room' },
+  { label: 'Church',     value: 'church' },
+  { label: 'Opera Hall', value: 'opera-hall' },
 ];
 
 /** Default factory for a new track item. */
@@ -49,12 +64,11 @@ function createTrack() {
  * @param {Function} [props.onSolo]         - Called when Solo button is clicked
  */
 export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths = {}, enabled = true, onEnabledChange, onSolo }) {
+  // Backward compat: derive gain from item.gain, falling back to item.distance string
+  const gain = item.gain ?? (item.distance ? DISTANCE_TO_GAIN[item.distance] : null) ?? { min: 0.5, max: 0.5 };
+
   const handleLabelChange = useCallback((e) => {
     onChange({ ...item, label: e.target.value });
-  }, [item, onChange]);
-
-  const handleDistanceChange = useCallback((e) => {
-    onChange({ ...item, distance: e.target.value });
   }, [item, onChange]);
 
   const handleTracksChange = useCallback((tracks) => {
@@ -98,32 +112,37 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths =
           >
             Solo
           </${Button}>
-        </${HorizontalLayout}>
-        <${HorizontalLayout} gap="small">
           <${ToggleSwitch}
             label="On"
             checked=${enabled}
             onChange=${(e) => onEnabledChange?.(e.target.checked)}
           />
-          <${ToggleSwitch}
-            label="Muffled"
-            checked=${item.muffled ?? false}
-            onChange=${(e) => onChange({ ...item, muffled: e.target.checked })}
+        </${HorizontalLayout}>
+        <${HorizontalLayout} gap="small">
+          <${Select}
+            label="Muffle"
+            id="channel-muffle"
+            value=${item.muffle ?? ''}
+            options=${MUFFLE_OPTIONS}
+            onChange=${(e) => onChange({ ...item, muffle: e.target.value || null })}
           />
-          <${ToggleSwitch}
+          <${Select}
             label="Reverb"
-            checked=${item.reverb ?? false}
-            onChange=${(e) => onChange({ ...item, reverb: e.target.checked })}
-          />
-          <${DiscreteSlider}
-            label="Distance"
-            id="channel-distance"
-            value=${item.distance || 'medium'}
-            widthScale="wide"
-            options=${DISTANCE_OPTIONS}
-            onChange=${handleDistanceChange}
+            id="channel-reverb"
+            value=${item.reverb ?? ''}
+            options=${REVERB_OPTIONS}
+            onChange=${(e) => onChange({ ...item, reverb: e.target.value || null })}
           />
         </${HorizontalLayout}>
+        <${RangeSlider}
+          label="Gain"
+          minAllowed=${0}
+          maxAllowed=${1}
+          snap=${0.01}
+          value=${{ min: gain.min, max: gain.max }}
+          widthScale="full"
+          onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
+        />
       </${VerticalLayout}>
 
       <${HorizontalLayout} gap="small">

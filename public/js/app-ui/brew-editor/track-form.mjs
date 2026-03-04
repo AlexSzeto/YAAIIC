@@ -60,7 +60,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
         type,
         // Default to '' (placeholder) so the slider/preview stay disabled until user picks a source
         source: item.source || '',
-        duration: item.duration || { min: 0, max: 30 },
+        duration: item.duration || { min: 4, max: 30 },
         sources: undefined,
         delay: undefined,
         delayAfterPrev: undefined,
@@ -178,7 +178,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
 
         <${RangeSlider}
           label="Duration per Loop (s)"
-          minAllowed=${1}
+          minAllowed=${4}
           maxAllowed=${loopDurationMax}
           snap=${0.1}
           min=${duration.min}

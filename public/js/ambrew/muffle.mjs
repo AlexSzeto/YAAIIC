@@ -1,3 +1,9 @@
+const MUFFLE_PROFILES = {
+  'glass-window': 4000,
+  'outside-car':  2000,
+  'thick-wall':    800,
+}
+
 export class MuffleEffect {
   #filter
 
@@ -10,8 +16,9 @@ export class MuffleEffect {
   get input()  { return this.#filter }
   get output() { return this.#filter }
 
-  setActive(active, duration = 0) {
-    const target = active ? 2000 : 20000
+  /** @param {string|null} profile - profile key or null/falsy for off. Defaults to 'thick-wall' when truthy but unrecognized. */
+  setActive(profile, duration = 0) {
+    const target = profile ? (MUFFLE_PROFILES[profile] ?? MUFFLE_PROFILES['thick-wall']) : 20000
     const ctx = this.#filter.context
     if (duration > 0) {
       this.#filter.frequency.linearRampToValueAtTime(target, ctx.currentTime + duration)

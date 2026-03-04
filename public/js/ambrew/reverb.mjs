@@ -380,22 +380,32 @@ class Filter extends Effect {
   }
 }
 
+const REVERB_PROFILES = {
+  'small-room': 0.8,
+  'church':     2.5,
+  'opera-hall': 5.0,
+}
+
 /**
  * Wraps SimpleReverb with a dry/wet parallel path.
- * Dry by default (wetGain = 0). Call setActive(true) to blend in reverb.
+ * Dry by default (wetGain = 0). Call setActive(profile) to blend in reverb.
  */
 export class ReverbEffect {
-  #input    // GainNode — split point
-  #reverb   // SimpleReverb
-  #wetGain  // GainNode — wet mix level
-  #output   // GainNode — merge point
+  #ctx
+  #input        // GainNode — split point
+  #reverb       // SimpleReverb
+  #wetGain      // GainNode — wet mix level
+  #output       // GainNode — merge point
+  #activeProfile // string|null — currently loaded profile
 
   constructor(ctx) {
+    this.#ctx    = ctx
     this.#input   = ctx.createGain()
-    this.#reverb  = new SimpleReverb(ctx, 2.5)
+    this.#reverb  = new SimpleReverb(ctx, REVERB_PROFILES['church'])
     this.#wetGain = ctx.createGain()
     this.#wetGain.gain.value = 0   // dry / off
     this.#output  = ctx.createGain()
+    this.#activeProfile = null
 
     // dry path
     this.#input.connect(this.#output)
@@ -408,14 +418,28 @@ export class ReverbEffect {
   get input()  { return this.#input }
   get output() { return this.#output }
 
-  setActive(active, duration = 0) {
-    const target = active ? 1 : 0
-    const ctx = this.#input.context
-    if (duration > 0) {
-      this.#wetGain.gain.linearRampToValueAtTime(target, ctx.currentTime + duration)
-    } else {
-      this.#wetGain.gain.setValueAtTime(target, ctx.currentTime)
+  /** @param {string|null} profile - profile key or null/falsy for off. Defaults to 'church' when truthy but unrecognized. */
+  setActive(profile, duration = 0) {
+    const ctx = this.#ctx
+    const wetTarget = profile ? 1 : 0
+
+    if (profile && profile !== this.#activeProfile) {
+      const reverbTime = REVERB_PROFILES[profile] ?? REVERB_PROFILES['church']
+      // Disconnect old reverb from wet path and rewire with new one
+      this.#input.disconnect(this.#reverb.input)
+      this.#reverb = new SimpleReverb(ctx, reverbTime)
+      this.#input.connect(this.#reverb.input)
+      this.#reverb.connect(this.#wetGain)
+      this.#activeProfile = profile
     }
+
+    if (duration > 0) {
+      this.#wetGain.gain.linearRampToValueAtTime(wetTarget, ctx.currentTime + duration)
+    } else {
+      this.#wetGain.gain.setValueAtTime(wetTarget, ctx.currentTime)
+    }
+
+    if (!profile) this.#activeProfile = null
   }
 
   connect(dest) { this.#output.connect(dest) }
