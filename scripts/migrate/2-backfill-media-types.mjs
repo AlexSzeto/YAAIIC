@@ -10,7 +10,7 @@
  * Run with: node server/scripts/migrate/2-backfill-media-types.mjs
  */
 import fs from 'fs';
-import { MEDIA_DATA_PATH } from '../../core/paths.mjs';
+import { MEDIA_DATA_PATH } from '../../server/core/paths.mjs';
 
 const raw = fs.readFileSync(MEDIA_DATA_PATH, 'utf8');
 const db = JSON.parse(raw);

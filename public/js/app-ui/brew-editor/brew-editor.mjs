@@ -511,9 +511,6 @@ export function BrewEditor() {
     // Stop any current playback
     stopPlayback();
 
-    // Reset runtime channel states so all channels are audible at the start
-    setChannelStates({});
-
     // Resume AudioContext if suspended (browser autoplay policy)
     if (AmbientCoffee.audioContext.state === 'suspended') {
       await AmbientCoffee.audioContext.resume();
@@ -572,6 +569,13 @@ export function BrewEditor() {
         coffee.playBrew(targetBrew.label);
       }
       setIsPlaying(true);
+
+      // Re-apply any persisted channel enabled states to the new session
+      Object.entries(channelStates).forEach(([label, state]) => {
+        if (state.enabled === false) {
+          coffee.getChannel(label)?.setEnabled(false);
+        }
+      });
 
       // Start the playback timer
       setPlaybackSeconds(0);
@@ -894,29 +898,31 @@ export function BrewEditor() {
       </${Panel}>
 
       <!-- Action container between Sound Sources and Brew sections -->
-      <${HorizontalLayout} gap="small">
-        <${Button}
-          variant="medium-icon-text"
-          icon="save"
-          color="secondary"
-          onClick=${async () => {
-            try {
-              for (const src of globalSources) {
-                await fetch('/api/sound-sources', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(src),
-                });
+      <${Panel} variant="default">
+        <${HorizontalLayout} gap="small">
+          <${Button}
+            variant="medium-icon-text"
+            icon="save"
+            color="secondary"
+            onClick=${async () => {
+              try {
+                for (const src of globalSources) {
+                  await fetch('/api/sound-sources', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(src),
+                  });
+                }
+                toast.success('Global sources saved');
+              } catch (e) {
+                toast.error(`Save failed: ${e.message}`);
               }
-              toast.success('Global sources saved');
-            } catch (e) {
-              toast.error(`Save failed: ${e.message}`);
-            }
-          }}
-        >
-          Save Global
-        </${Button}>
-      </${HorizontalLayout}>
+            }}
+          >
+            Save Global
+          </${Button}>
+        </${HorizontalLayout}>
+      </${Panel}>
 
       <!-- Empty state -->
       ${!brew ? html`
