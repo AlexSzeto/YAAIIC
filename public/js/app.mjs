@@ -1049,7 +1049,7 @@ function App() {
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${isGenerating}
+            isGenerating=${!!(taskId || regenerateTaskId)}
             onGenerate=${handleGenerate}
             onOpenGallery=${() => setIsGalleryOpen(true)}
             onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
@@ -1077,6 +1077,7 @@ function App() {
         onRegenerate=${handleRegenerate}
         onReprompt=${handleReprompt}
         onSelectAsInput=${handleSelectAsInput}
+        isGenerating=${!!(taskId || regenerateTaskId)}
         isSelectDisabled=${(() => {
           const mediaType = generatedImage?.type || 'image';
           if (mediaType === 'image') {
