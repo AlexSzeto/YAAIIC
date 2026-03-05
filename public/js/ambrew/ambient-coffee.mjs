@@ -2,8 +2,8 @@ import { MuffleEffect } from './muffle.mjs'
 import { ReverbEffect } from './reverb.mjs'
 
 // Defines canonical order of effects from source → output.
-// Frequency-shaping (muffle) precedes spatial/temporal (reverb) so the
-// reverb tail is processed through the muffle — the physically correct result.
+// Frequency-shaping (muffle) first, then spatial/temporal (reverb).
+// Pan and gain-range are per-track concerns, not channel-level effects.
 const EFFECT_CHAIN_PRIORITY = ['muffle', 'reverb']
 
 export class Range {
@@ -328,25 +328,34 @@ export class EventTrack {
   /** @type {GainNode} */
   #gain
 
+  /** @type {StereoPannerNode|null} */
+  #panner = null
+
   /** @type {boolean} */
   #playing = false
 
   /** @type {Range|null} */
   #gainRange = null
 
+  /** @type {{ mode: string, value?: number, min?: number, max?: number }|null} */
+  #panConfig = null
+
   /**
-   *
    * @param {string} label
    * @param {SoundSource[]} sources
    * @param {Object} options
-   * @param {Range} options.delay
-   * @param {boolean} options.delayAfterPrev
+   * @param {Range} [options.delay]
+   * @param {boolean} [options.delayAfterPrev]
+   * @param {{ min: number, max: number }|null} [options.gain]
+   * @param {{ mode: string, value?: number, min?: number, max?: number }|null} [options.pan]
    */
-  constructor(label, sources, { delay = null, delayAfterPrev = true } = {}) {
+  constructor(label, sources, { delay = null, delayAfterPrev = true, gain = null, pan = null } = {}) {
     this.label = label
     this.#sources = sources
     this.#eventDelay = Range.fromData(delay, 0, 0)
     this.#delayAfterPrev = delayAfterPrev
+    this.#gainRange = Range.fromData(gain, 0.5, 0.5)
+    this.#panConfig = pan ?? null
     if (
       this.#eventDelay.min === 0 &&
       this.#eventDelay.max === 0 &&
@@ -356,24 +365,69 @@ export class EventTrack {
     }
   }
 
-  /** @param {Range} range */
-  setGainRange(range) { this.#gainRange = range }
+  /** @param {{ min: number, max: number }|Range|null} data */
+  setGainRange(data) { this.#gainRange = Range.fromData(data, 0.5, 0.5) }
+
+  /**
+   * Updates the pan configuration. For fixed/off: updates the shared panner immediately.
+   * For random/sweep modes: the change takes effect on the next event.
+   * @param {{ mode: string, value?: number, min?: number, max?: number }|null} panConfig
+   */
+  setPanConfig(panConfig) {
+    this.#panConfig = panConfig ?? null
+    if (!this.#panner) return
+    // For fixed/off modes we can update the shared panner in-place.
+    // Dynamic modes are handled per-event so we just reset to centre here.
+    const mode = this.#panConfig?.mode
+    if (mode !== 'random' && mode !== 'left-to-right' && mode !== 'right-to-left') {
+      const target = mode === 'fixed' ? (this.#panConfig.value ?? 0) : 0
+      this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime)
+      this.#panner.pan.setValueAtTime(target, this.#panner.context.currentTime)
+    }
+  }
 
   #playEventLoops() {
     const source = this.#eventSourcePicker.random(this.#sources)
     const delay = this.#eventDelay.random
     const when = this.#gain.context.currentTime + delay
 
-    // Per-event gain node so the random gain applies only to this event,
-    // leaving other concurrent events (from clones) unaffected, and allowing
-    // the internal envelope inside repeatInto to still modulate volume on top.
+    // Per-event gain node — random gain applies only to this event so concurrent
+    // clones and the internal envelope inside repeatInto are unaffected.
     const eventGain = AmbientCoffee.audioContext.createGain()
-    if (this.#gainRange) {
-      eventGain.gain.setValueAtTime(this.#gainRange.random, when)
+    eventGain.gain.setValueAtTime(this.#gainRange.random, when)
+
+    const panMode = this.#panConfig?.mode
+    const useDynamicPan = panMode === 'random' || panMode === 'left-to-right' || panMode === 'right-to-left'
+
+    let eventPanner = null
+    if (useDynamicPan) {
+      // Insert a per-event panner between eventGain and #gain so concurrent events
+      // from clones each have independent pan positions.
+      eventPanner = AmbientCoffee.audioContext.createStereoPanner()
+      eventGain.connect(eventPanner)
+      eventPanner.connect(this.#gain)
+    } else {
+      eventGain.connect(this.#gain)
     }
-    eventGain.connect(this.#gain)
+
     const duration = source.repeatInto(eventGain, when)
-    setTimeout(() => eventGain.disconnect(), (delay + duration + 1) * 1000)
+
+    if (useDynamicPan && eventPanner) {
+      if (panMode === 'random') {
+        const min = this.#panConfig.min ?? -1
+        const max = this.#panConfig.max ?? 1
+        eventPanner.pan.setValueAtTime(min + Math.random() * (max - min), when)
+      } else if (panMode === 'left-to-right') {
+        eventPanner.pan.setValueAtTime(-1, when)
+        eventPanner.pan.linearRampToValueAtTime(1, when + duration)
+      } else if (panMode === 'right-to-left') {
+        eventPanner.pan.setValueAtTime(1, when)
+        eventPanner.pan.linearRampToValueAtTime(-1, when + duration)
+      }
+      setTimeout(() => { eventPanner.disconnect(); eventGain.disconnect() }, (delay + duration + 1) * 1000)
+    } else {
+      setTimeout(() => eventGain.disconnect(), (delay + duration + 1) * 1000)
+    }
 
     this.#eventTimeHandler = setTimeout(
       this.#playEventLoops.bind(this),
@@ -386,7 +440,14 @@ export class EventTrack {
       this.disconnect()
     }
     this.#gain = AmbientCoffee.audioContext.createGain()
-    this.#gain.connect(destination)
+    this.#panner = AmbientCoffee.audioContext.createStereoPanner()
+    // Apply initial pan config (fixed/off sets the panner; dynamic modes leave it at 0)
+    const mode = this.#panConfig?.mode
+    if (mode === 'fixed') {
+      this.#panner.pan.value = this.#panConfig.value ?? 0
+    }
+    this.#gain.connect(this.#panner)
+    this.#panner.connect(destination)
     this.#playing = true
     this.#playEventLoops()
   }
@@ -397,6 +458,7 @@ export class EventTrack {
     }
     clearTimeout(this.#eventTimeHandler)
     this.#eventTimeHandler = -1
+    this.#panner.disconnect()
     this.#gain.disconnect()
     this.#playing = false
   }
@@ -438,23 +500,33 @@ export class LoopingTrack {
   /** @type {GainNode} */
   #gain
 
-  /** @type {boolean} */
-  #playing
+  /** @type {StereoPannerNode|null} */
+  #panner = null
 
-  /** @type {Range|null} */
-  #gainRange = null
+  /** @type {boolean} */
+  #playing = false
+
+  /** @type {Range} */
+  #gainRange
+
+  /** @type {{ mode: string, value?: number, min?: number, max?: number }|null} */
+  #panConfig = null
 
   /** @type {number|null} Ending gain of the previous segment, used as starting gain for the next. */
   #currentGain = null
 
+  /** @type {number|null} Ending pan of the previous segment, used as starting pan for the next. */
+  #currentPan = null
+
   /**
-   *
    * @param {string} label
    * @param {SoundSource} source
    * @param {Object} options
-   * @param {Range} options.duration
+   * @param {{ min: number, max: number }|null} [options.duration]
+   * @param {{ min: number, max: number }|null} [options.gain]
+   * @param {{ mode: string, value?: number, min?: number, max?: number }|null} [options.pan]
    */
-  constructor(label, source, { duration = null } = {}) {
+  constructor(label, source, { duration = null, gain = null, pan = null } = {}) {
     this.label = label
     this.#source = source
     this.#duration = Range.fromData(
@@ -466,10 +538,32 @@ export class LoopingTrack {
       LoopingTrack.defaultCrossFadeDuration,
       source.duration.min / 2
     )
+    this.#gainRange = Range.fromData(gain, 0.5, 0.5)
+    this.#panConfig = pan ?? null
   }
 
-  /** @param {Range} range */
-  setGainRange(range) { this.#gainRange = range }
+  /** @param {{ min: number, max: number }|Range|null} data */
+  setGainRange(data) { this.#gainRange = Range.fromData(data, 0.5, 0.5) }
+
+  /**
+   * Updates the pan configuration. Fixed, random, and off modes are supported for loop tracks.
+   * @param {{ mode: string, value?: number, min?: number, max?: number }|null} panConfig
+   */
+  setPanConfig(panConfig) {
+    this.#panConfig = panConfig ?? null
+    this.#currentPan = null // reset so next segment picks a fresh value in the new range
+    if (!this.#panner) return
+    if (this.#panConfig?.mode === 'fixed') {
+      const target = this.#panConfig.value ?? 0
+      this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime)
+      this.#panner.pan.setValueAtTime(target, this.#panner.context.currentTime)
+    } else if (this.#panConfig?.mode !== 'random') {
+      // Off — cancel any scheduled ramp and centre immediately
+      this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime)
+      this.#panner.pan.setValueAtTime(0, this.#panner.context.currentTime)
+    }
+    // For 'random', the running ramp continues until the next segment boundary
+  }
 
   #playContinuousAmbience() {
     const ctx = AmbientCoffee.audioContext
@@ -484,8 +578,8 @@ export class LoopingTrack {
     crossFadeGain.gain.setValueCurveAtTime(LoopingTrack.#equalPowerCrossfadeOutCurve, when + duration - this.#crossfadeDuration, this.#crossfadeDuration)
 
     // Node 2: gain ramp from gainStart to gainEnd over the full segment duration
-    const gainStart = this.#currentGain ?? (this.#gainRange?.random ?? 1.0)
-    const gainEnd = this.#gainRange?.random ?? 1.0
+    const gainStart = this.#currentGain ?? this.#gainRange.random
+    const gainEnd = this.#gainRange.random
     this.#currentGain = gainEnd
     const gainRampGain = ctx.createGain()
     gainRampGain.gain.setValueAtTime(gainStart, when)
@@ -493,6 +587,18 @@ export class LoopingTrack {
 
     crossFadeGain.connect(gainRampGain)
     gainRampGain.connect(this.#gain)
+
+    // Pan ramp: random mode sweeps from previous end to a new random end each segment
+    if (this.#panConfig?.mode === 'random') {
+      const min = this.#panConfig.min ?? -1
+      const max = this.#panConfig.max ?? 1
+      const panStart = this.#currentPan ?? (min + Math.random() * (max - min))
+      const panEnd = min + Math.random() * (max - min)
+      this.#currentPan = panEnd
+      this.#panner.pan.setValueAtTime(panStart, when)
+      this.#panner.pan.linearRampToValueAtTime(panEnd, when + duration)
+    }
+
     setTimeout(this.#playContinuousAmbience.bind(this), (duration - this.#crossfadeDuration) * 1000)
   }
 
@@ -501,8 +607,16 @@ export class LoopingTrack {
       this.disconnect()
     }
     this.#currentGain = null
+    this.#currentPan = null
     this.#gain = AmbientCoffee.audioContext.createGain()
-    this.#gain.connect(destination)
+    this.#panner = AmbientCoffee.audioContext.createStereoPanner()
+    // Apply initial pan for fixed mode; random mode sets values per-segment in #playContinuousAmbience
+    if (this.#panConfig?.mode === 'fixed') {
+      this.#panner.pan.value = this.#panConfig.value ?? 0
+    }
+    this.#gain.connect(this.#panner)
+    this.#panner.connect(destination)
+    this.#playing = true
     this.#playContinuousAmbience()
   }
 
@@ -512,7 +626,9 @@ export class LoopingTrack {
     }
     clearTimeout(this.#eventTimeHandler)
     this.#eventTimeHandler = -1
+    this.#panner.disconnect()
     this.#gain.disconnect()
+    this.#playing = false
   }
 }
 
@@ -555,8 +671,8 @@ export class AmbientChannel {
   /** @type {boolean} */
   #enabled = true
 
-  /** @type {Range} */
-  #gainRange = new Range(0.5, 0.5)
+  /** @type {number} master volume (0–1) applied to #output */
+  #gain = 0.5
 
   constructor(
     label,
@@ -566,10 +682,16 @@ export class AmbientChannel {
     this.label = label
     this.#tracks = tracks
 
-    // Backward compat: distance string → gain range
-    if (!gain && distance) gain = DISTANCE_GAIN_MAP[distance] ?? { min: 0.5, max: 0.5 }
-    const { min = 0.5, max = 0.5 } = gain ?? {}
-    this.#gainRange = new Range(min, max)
+    // Backward compat: distance string → single gain value
+    if (gain === null && distance) {
+      const mapped = DISTANCE_GAIN_MAP[distance]
+      gain = mapped ? (mapped.min + mapped.max) / 2 : 0.5
+    }
+    // Backward compat: old gain range object → midpoint
+    if (typeof gain === 'object' && gain !== null) {
+      gain = ((gain.min ?? 0.5) + (gain.max ?? 0.5)) / 2
+    }
+    this.#gain = gain ?? 0.5
 
     // Backward compat: old boolean muffle/reverb fields → profile strings
     if (muffle === null && muffled === true)  muffle  = 'thick-wall'
@@ -577,14 +699,11 @@ export class AmbientChannel {
 
     const ctx = AmbientCoffee.audioContext
     this.#output = ctx.createGain()
-    this.#output.gain.value = 1
+    this.#output.gain.value = this.#gain
 
     this.#effects.set('muffle', new MuffleEffect(ctx))
     this.#effects.set('reverb', new ReverbEffect(ctx))
     this.#rebuildChain()
-
-    // Give each track a reference to the shared gain range so they can randomize per-segment/event
-    for (const track of this.#tracks) track.setGainRange?.(this.#gainRange)
 
     // Apply initial property states without transition
     if (muffle) this.#effects.get('muffle').setActive(muffle)
@@ -609,13 +728,15 @@ export class AmbientChannel {
   }
 
   /**
-   * Updates the gain range used for per-segment/per-event volume randomization.
-   * Takes effect immediately for the next segment or event.
-   * @param {{ min: number, max: number }} range
+   * Sets the master channel volume with a smooth ramp.
+   * @param {number} value - 0.0 to 1.0
    */
-  setGainRange({ min, max }) {
-    this.#gainRange.min = min
-    this.#gainRange.max = max
+  setGain(value) {
+    this.#gain = value
+    if (this.#enabled) {
+      const ctx = AmbientCoffee.audioContext
+      this.#output.gain.linearRampToValueAtTime(value, ctx.currentTime + AmbientChannel.PROPERTY_TRANSITION_DURATION)
+    }
   }
 
   /**
@@ -636,16 +757,27 @@ export class AmbientChannel {
 
   /**
    * Enables or disables this channel by ramping the output gain.
+   * When re-enabling, ramps back to the current #gain value (not 1.0).
    * @param {boolean} enabled
    */
   setEnabled(enabled) {
     this.#enabled = enabled
-    const target = enabled ? 1 : 0
+    const target = enabled ? this.#gain : 0
     const ctx = AmbientCoffee.audioContext
     this.#output.gain.linearRampToValueAtTime(
       target,
       ctx.currentTime + AmbientChannel.PROPERTY_TRANSITION_DURATION
     )
+  }
+
+  /**
+   * Returns the track at the given index, or null if out of range.
+   * Used by brew-editor for per-track live updates during preview.
+   * @param {number} index
+   * @returns {EventTrack|LoopingTrack|null}
+   */
+  getTrack(index) {
+    return this.#tracks[index] ?? null
   }
 
   playInto(destination) {

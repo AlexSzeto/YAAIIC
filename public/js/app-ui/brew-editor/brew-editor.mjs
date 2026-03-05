@@ -142,7 +142,7 @@ function createDefaultSource() {
 function createDefaultChannel() {
   return {
     label: 'Channel',
-    gain: { min: 0.5, max: 0.5 },
+    gain: 0.5,
     muffle: null,
     reverb: null,
     tracks: [],
@@ -754,9 +754,20 @@ export function BrewEditor() {
     if (!isPlaying || !coffeeRef.current) return;
     const ch = coffeeRef.current.getChannel(label);
     if (!ch) return;
-    if (next.gain?.min !== prev.gain?.min || next.gain?.max !== prev.gain?.max) ch.setGainRange(next.gain ?? { min: 0.5, max: 0.5 });
-    if (next.muffle   !== prev.muffle)   ch.setMuffle(next.muffle);
-    if (next.reverb   !== prev.reverb)   ch.setReverb(next.reverb);
+    if (next.gain    !== prev.gain)    ch.setGain(next.gain ?? 0.5);
+    if (next.muffle  !== prev.muffle)  ch.setMuffle(next.muffle);
+    if (next.reverb  !== prev.reverb)  ch.setReverb(next.reverb);
+    // Per-track live updates (gain range and pan)
+    const nextTracks = next.tracks || [];
+    const prevTracks = prev.tracks || [];
+    nextTracks.forEach((nextTrack, i) => {
+      const prevTrack = prevTracks[i];
+      if (!prevTrack) return;
+      const track = ch.getTrack(i);
+      if (!track) return;
+      if (JSON.stringify(nextTrack.gain) !== JSON.stringify(prevTrack.gain)) track.setGainRange(nextTrack.gain ?? { min: 0.5, max: 0.5 });
+      if (JSON.stringify(nextTrack.pan)  !== JSON.stringify(prevTrack.pan))  track.setPanConfig(nextTrack.pan ?? null);
+    });
   }
 
   function handleChannelEnabled(label, enabled) {

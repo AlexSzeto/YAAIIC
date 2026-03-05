@@ -10,12 +10,25 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
+import { Slider } from '../../custom-ui/io/slider.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 
 const TYPE_OPTIONS = [
   { label: 'Event', value: 'event' },
   { label: 'Loop', value: 'loop' },
+];
+
+// Pan mode options differ by track type: loops only support fixed/random.
+const PAN_MODE_OPTIONS_EVENT = [
+  { label: 'Fixed',         value: 'fixed' },
+  { label: 'Random',        value: 'random' },
+  { label: 'Left to Right', value: 'left-to-right' },
+  { label: 'Right to Left', value: 'right-to-left' },
+];
+const PAN_MODE_OPTIONS_LOOP = [
+  { label: 'Fixed',  value: 'fixed' },
+  { label: 'Random', value: 'random' },
 ];
 
 /** Static fallback maxima when no source length data is available. */
@@ -53,17 +66,22 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
         delayAfterPrev: item.delayAfterPrev ?? false,
         source: undefined,
         duration: undefined,
+        // Keep pan when switching to event; fixed/random are valid for both types
+        pan: item.pan ?? { mode: 'fixed', value: 0 },
       });
     } else {
       onChange({
         ...item,
         type,
-        // Default to '' (placeholder) so the slider/preview stay disabled until user picks a source
         source: item.source || '',
         duration: item.duration || { min: 4, max: 30 },
         sources: undefined,
         delay: undefined,
         delayAfterPrev: undefined,
+        // Reset sweep pan modes when switching to loop (loop supports fixed and random only)
+        pan: (item.pan?.mode === 'left-to-right' || item.pan?.mode === 'right-to-left')
+          ? { mode: 'fixed', value: 0 }
+          : (item.pan ?? { mode: 'fixed', value: 0 }),
       });
     }
   }, [item, onChange, sourceLabels]);
@@ -92,7 +110,6 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           const newVal = e.target.value;
           const next = [...(item.sources || [])];
           next[index] = newVal;
-          // Auto-update track label when a source is set and label is still the default
           const updated = { ...item, sources: next };
           if (newVal && (item.label === 'Track' || !item.label)) {
             updated.label = newVal;
@@ -107,7 +124,6 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
 
   const handleSourceChange = useCallback((e) => {
     const newSource = e.target.value;
-    // Auto-update track label when source changes and label is still the default
     const updated = { ...item, source: newSource };
     if (newSource && (item.label === 'Track' || !item.label)) {
       updated.label = newSource;
@@ -115,10 +131,30 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
     onChange(updated);
   }, [item, onChange]);
 
+  // --- Pan handlers ---
+
+  // Backward compat: null/off pan → treat as fixed center
+  const panMode = item.pan?.mode === 'off' || item.pan == null ? 'fixed' : item.pan.mode;
+  const panOptions = item.type === 'loop' ? PAN_MODE_OPTIONS_LOOP : PAN_MODE_OPTIONS_EVENT;
+
+  const handlePanModeChange = useCallback((e) => {
+    const mode = e.target.value;
+    if (mode === 'fixed') {
+      onChange({ ...item, pan: { mode: 'fixed', value: item.pan?.value ?? 0 } });
+    } else if (mode === 'random') {
+      onChange({ ...item, pan: { mode: 'random', min: item.pan?.min ?? -1, max: item.pan?.max ?? 1 } });
+    } else {
+      onChange({ ...item, pan: { mode } });
+    }
+  }, [item, onChange]);
+
   const delay = item.delay || { min: 0.1, max: 5 };
   const rawDuration = item.duration || { min: 4, max: 30 };
   // Clamp min to crossfade-safe minimum so old data with min=0 displays correctly.
   const duration = { min: Math.max(4, rawDuration.min), max: Math.max(4, rawDuration.max) };
+
+  // Gain range (per-track) — backward compat: missing gain defaults to 0.5/0.5
+  const gain = item.gain ?? { min: 0.5, max: 0.5 };
 
   // ── Dynamic slider limits ─────────────────────────────────────────────────
 
@@ -219,6 +255,51 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           onChange=${(e) => onChange({ ...item, delayAfterPrev: e.target.checked })}
         />
       `}
+
+      <${RangeSlider}
+        label="Gain"
+        minAllowed=${0}
+        maxAllowed=${1}
+        snap=${0.01}
+        min=${gain.min}
+        max=${gain.max}
+        widthScale="wide"
+        onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
+      />
+
+      <${HorizontalLayout}>
+        <${Select}
+          label="Pan"
+          id="track-pan-mode"
+          value=${panMode}
+          options=${panOptions}
+          onChange=${handlePanModeChange}
+        />
+        ${panMode === 'fixed' && html`
+          <${Slider}
+            label="Pan Value"
+            minAllowed=${-1}
+            maxAllowed=${1}
+            snap=${0.1}
+            value=${item.pan?.value ?? 0}
+            widthScale="wide"
+            variant="knob"
+            onChange=${(v) => onChange({ ...item, pan: { mode: 'fixed', value: v } })}
+          />
+        `}
+        ${panMode === 'random' && html`
+          <${RangeSlider}
+            label="Pan Range"
+            minAllowed=${-1}
+            maxAllowed=${1}
+            snap=${0.1}
+            min=${item.pan?.min ?? -1}
+            max=${item.pan?.max ?? 1}
+            widthScale="wide"
+            onChange=${({ min, max }) => onChange({ ...item, pan: { mode: 'random', min, max } })}
+          />
+        `}
+      </${HorizontalLayout}>
     </${VerticalLayout}>
   `;
 }

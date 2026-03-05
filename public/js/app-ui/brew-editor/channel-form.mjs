@@ -9,21 +9,13 @@
 import { html } from 'htm/preact';
 import { useCallback } from 'preact/hooks';
 import { Input } from '../../custom-ui/io/input.mjs';
-
+import { Slider } from '../../custom-ui/io/slider.mjs';
 import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { TrackForm } from './track-form.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
-import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
-
-const DISTANCE_TO_GAIN = {
-  'very-far': { min: 0.1,  max: 0.1  },
-  'far':      { min: 0.25, max: 0.25 },
-  'medium':   { min: 0.5,  max: 0.5  },
-  'close':    { min: 0.75, max: 0.75 },
-};
 
 const MUFFLE_OPTIONS = [
   { label: 'Off',          value: '' },
@@ -48,6 +40,8 @@ function createTrack() {
     sources: [],
     delay: { min: 0.1, max: 5 },
     delayAfterPrev: false,
+    gain: { min: 0.5, max: 0.5 },
+    pan: { mode: 'fixed', value: 0 },
   };
 }
 
@@ -64,8 +58,13 @@ function createTrack() {
  * @param {Function} [props.onSolo]         - Called when Solo button is clicked
  */
 export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths = {}, enabled = true, onEnabledChange, onSolo }) {
-  // Backward compat: derive gain from item.gain, falling back to item.distance string
-  const gain = item.gain ?? (item.distance ? DISTANCE_TO_GAIN[item.distance] : null) ?? { min: 0.5, max: 0.5 };
+  // Backward compat: old gain range object or distance string → single number
+  let gain = item.gain;
+  if (typeof gain === 'object' && gain !== null) {
+    gain = ((gain.min ?? 0.5) + (gain.max ?? 0.5)) / 2;
+  } else if (typeof gain !== 'number') {
+    gain = 0.5;
+  }
 
   const handleLabelChange = useCallback((e) => {
     onChange({ ...item, label: e.target.value });
@@ -134,15 +133,14 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths =
             onChange=${(e) => onChange({ ...item, reverb: e.target.value || null })}
           />
         </${HorizontalLayout}>
-        <${RangeSlider}
+        <${Slider}
           label="Gain"
           minAllowed=${0}
           maxAllowed=${1}
           snap=${0.01}
-          min=${gain.min}
-          max=${gain.max}
+          value=${gain}
           widthScale="full"
-          onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
+          onChange=${(v) => onChange({ ...item, gain: v })}
         />
       </${VerticalLayout}>
 
