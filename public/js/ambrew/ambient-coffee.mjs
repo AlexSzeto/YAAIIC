@@ -363,10 +363,17 @@ export class EventTrack {
     const source = this.#eventSourcePicker.random(this.#sources)
     const delay = this.#eventDelay.random
     const when = this.#gain.context.currentTime + delay
+
+    // Per-event gain node so the random gain applies only to this event,
+    // leaving other concurrent events (from clones) unaffected, and allowing
+    // the internal envelope inside repeatInto to still modulate volume on top.
+    const eventGain = AmbientCoffee.audioContext.createGain()
     if (this.#gainRange) {
-      this.#gain.gain.setValueAtTime(this.#gainRange.random, when)
+      eventGain.gain.setValueAtTime(this.#gainRange.random, when)
     }
-    const duration = source.repeatInto(this.#gain, when)
+    eventGain.connect(this.#gain)
+    const duration = source.repeatInto(eventGain, when)
+    setTimeout(() => eventGain.disconnect(), (delay + duration + 1) * 1000)
 
     this.#eventTimeHandler = setTimeout(
       this.#playEventLoops.bind(this),
@@ -467,7 +474,7 @@ export class LoopingTrack {
   #playContinuousAmbience() {
     const ctx = AmbientCoffee.audioContext
     const when = this.#gain.context.currentTime
-    const duration = this.#duration.random
+    const duration = Math.max(this.#crossfadeDuration * 2, this.#duration.random)
 
     // Node 1: equal-power crossfade shape (0 → 1 → 1 → 0)
     const crossFadeGain = ctx.createGain()

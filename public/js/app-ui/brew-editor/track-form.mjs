@@ -116,7 +116,9 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
   }, [item, onChange]);
 
   const delay = item.delay || { min: 0.1, max: 5 };
-  const duration = item.duration || { min: 0, max: 30 };
+  const rawDuration = item.duration || { min: 4, max: 30 };
+  // Clamp min to crossfade-safe minimum so old data with min=0 displays correctly.
+  const duration = { min: Math.max(4, rawDuration.min), max: Math.max(4, rawDuration.max) };
 
   // ── Dynamic slider limits ─────────────────────────────────────────────────
 

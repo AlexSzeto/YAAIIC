@@ -139,7 +139,8 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths =
           minAllowed=${0}
           maxAllowed=${1}
           snap=${0.01}
-          value=${{ min: gain.min, max: gain.max }}
+          min=${gain.min}
+          max=${gain.max}
           widthScale="full"
           onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
         />

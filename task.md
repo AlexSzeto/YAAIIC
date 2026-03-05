@@ -25,7 +25,11 @@ Replace the discrete distance slider with a generalized gain range, add a pan pa
 - [x] Replace distance `DiscreteSlider` with gain range inputs in `channel-form.mjs` — use the existing `RangeSlider` component (already used in `track-form.mjs`) with `minAllowed=0`, `maxAllowed=1`, `snap=0.01`. Label: "Gain". Update `createDefaultChannel()` in `brew-editor.mjs` to use `gain: { min: 0.5, max: 0.5 }` instead of `distance: 'medium'`. Wire `handleChannelLiveUpdate` to call `setGainRange`. Add backward compat: old JSON `distance` strings map to fixed gain ranges (`very-far` → `{0.1, 0.1}`, `far` → `{0.25, 0.25}`, `medium` → `{0.5, 0.5}`, `close` → `{0.75, 0.75}`).
   - Test: Create a new channel and verify the gain slider defaults to 0.5/0.5. Load an old brew with `distance: "far"`, verify it loads and the slider shows 0.25/0.25.
 
-- [ ] Create `pan.mjs` with `PanEffect` class — wrap a `StereoPannerNode`. Expose `get input`, `get output`, `setActive(panConfig, duration)`, `connect(dest)`, `disconnect()`, `dispose()`. The `panConfig` is an object `{ mode, value?, min?, max? }` or `null` (center/off).
+- [x] Fix default values for new tracks (currently set to 0-1) and old tracks (currently also set to 0-1 on load, no matter what the old settings were)
+
+- [x] Gain range is not working for event based channels - it should pick a single gain value from its range per event audio played, and that gain should stay the same through the playback of that entire event. That event's internal envelop might adjust the volume further.
+
+- [ ] Create `pan.mjs` with `PanEffect` class using the implementation of gain range as a reference for how they are handled during loops and events — wrap a `StereoPannerNode`. Expose `get input`, `get output`, `setActive(panConfig, duration)`, `connect(dest)`, `disconnect()`, `dispose()`. The `panConfig` is an object `{ mode, value?, min?, max? }` or `null` (center/off).
   - Test: Manually instantiate in browser console, connect to audio context destination, call `setActive({ mode: 'fixed', value: 1 })` and verify audio pans right.
 
 - [ ] Add pan to `AmbientChannel` — insert `PanEffect` into the effect chain after reverb (priority: `muffle → reverb → pan`). Add `setPan(panConfig)` public method. For `fixed` mode: set static pan position. For `random` mode (event tracks): pick a random pan value from `[min, max]` per event. For `left-to-right` and `right-to-left` modes (event tracks): schedule a linear ramp from –1→+1 or +1→–1 spanning the event's full duration.
