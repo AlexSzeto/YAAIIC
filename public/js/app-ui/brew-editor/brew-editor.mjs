@@ -157,7 +157,8 @@ function createDefaultChannel() {
 // ============================================================================
 
 export function BrewEditor() {
-  const theme = currentTheme.value;
+  const [theme, setTheme] = useState(currentTheme.value);
+  useEffect(() => currentTheme.subscribe(setTheme), []);
   const toast = useToast();
 
   // ── State ──────────────────────────────────────────────────────────────────
