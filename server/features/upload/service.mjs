@@ -65,7 +65,7 @@ export { uploadFile as uploadFileToComfyUI };
  * @param {string|null} [name]      - Optional user-supplied name.
  * @returns {Promise<string>} Task ID.
  */
-export async function processMediaUpload(file, workflowsConfig, name = null, origin = null) {
+export async function processMediaUpload(file, workflowsConfig, name = null, origin = null, clips = null, metadata = null) {
   // Reset per-request logs
   resetPromptLog();
   resetProgressLog();
@@ -87,7 +87,7 @@ export async function processMediaUpload(file, workflowsConfig, name = null, ori
   console.log(`Created upload task ${taskId}`);
 
   // Process upload task asynchronously
-  processUploadTask(taskId, file, workflowsConfig, name, origin).catch(error => {
+  processUploadTask(taskId, file, workflowsConfig, name, origin, clips, metadata).catch(error => {
     console.error(`Error in upload task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
   });
@@ -202,7 +202,7 @@ async function generateAlbumCover(taskId, requestData, workflowConfig, workflows
 /**
  * Process upload task asynchronously.
  */
-async function processUploadTask(taskId, file, workflowsConfig, extractedName = null, origin = null) {
+async function processUploadTask(taskId, file, workflowsConfig, extractedName = null, origin = null, clips = null, metadata = null) {
   try {
     // Detect file type
     const isAudio = file.mimetype.startsWith('audio/');
@@ -271,7 +271,9 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
       try {
         const albumResult = await generateAlbumCover(taskId, albumRequestData, albumWorkflow, workflowsConfig);
 
-        // Create generationData with both audio and image info
+        // Create generationData with both audio and image info.
+        // Metadata provided by the client (ported from the original audio entry)
+        // overrides the LLM-generated values from the album generation pipeline.
         const generationData = {
           ...albumResult,
           saveAudioPath: saveMediaPath,
@@ -280,6 +282,13 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
           workflow: 'Uploaded Audio',
           type: 'audio',
           ...(origin != null && { origin }),
+          // Always persist clips explicitly — null means "no clips", [] means "cleared".
+          clips: clips !== null ? clips : (albumResult.clips ?? []),
+          // Port original entry metadata when this is a derived audio edit.
+          ...(metadata?.tags        != null && { tags:        metadata.tags }),
+          ...(metadata?.description != null && { description: metadata.description }),
+          ...(metadata?.summary     != null && { summary:     metadata.summary }),
+          ...(metadata?.prompt      != null && { prompt:      metadata.prompt }),
         };
 
         // Emit progress: Saving to database

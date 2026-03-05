@@ -220,18 +220,6 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           ]}
           onChange=${handleSourceChange}
         />
-
-        <${RangeSlider}
-          label="Duration per Loop (s)"
-          minAllowed=${4}
-          maxAllowed=${loopDurationMax}
-          snap=${0.1}
-          min=${duration.min}
-          max=${duration.max}
-          widthScale="wide"
-          disabled=${loopHasNoSource}
-          onChange=${({ min, max }) => onChange({ ...item, duration: { min, max } })}
-        />
       ` : html`
         <${DynamicList}
           title="Sources"
@@ -243,36 +231,53 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           addLabel="Add Source"
           condensed=${true}
         />
+      `}      
+
+      <${HorizontalLayout} alignItems="flex-start">
+        ${item.type === 'loop' ? html`
+          <${RangeSlider}
+            label="Duration per Loop (s)"
+            minAllowed=${4}
+            maxAllowed=${loopDurationMax}
+            snap=${0.1}
+            min=${duration.min}
+            max=${duration.max}
+            widthScale="wide"
+            disabled=${loopHasNoSource}
+            onChange=${({ min, max }) => onChange({ ...item, duration: { min, max } })}
+          />
+        ` : html`
+          <${VerticalLayout} gap="small">
+            <${RangeSlider}
+              label="Delay (s)"
+              minAllowed=${0.1}
+              maxAllowed=${eventDelayMax}
+              snap=${0.1}
+              min=${delay.min}
+              max=${delay.max}
+              widthScale="wide"
+              disabled=${eventHasNoSource}
+              onChange=${({ min, max }) => onChange({ ...item, delay: { min, max } })}
+            />
+            <${ToggleSwitch}
+              label="Delay After Previous"
+              checked=${item.delayAfterPrev ?? false}
+              onChange=${(e) => onChange({ ...item, delayAfterPrev: e.target.checked })}
+            />
+          </${VerticalLayout}>
+        `}
 
         <${RangeSlider}
-          label="Delay (s)"
-          minAllowed=${0.1}
-          maxAllowed=${eventDelayMax}
-          snap=${0.1}
-          min=${delay.min}
-          max=${delay.max}
+          label="Gain"
+          minAllowed=${0}
+          maxAllowed=${1}
+          snap=${0.01}
+          min=${gain.min}
+          max=${gain.max}
           widthScale="wide"
-          disabled=${eventHasNoSource}
-          onChange=${({ min, max }) => onChange({ ...item, delay: { min, max } })}
+          onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
         />
-
-        <${ToggleSwitch}
-          label="Delay After Previous"
-          checked=${item.delayAfterPrev ?? false}
-          onChange=${(e) => onChange({ ...item, delayAfterPrev: e.target.checked })}
-        />
-      `}
-
-      <${RangeSlider}
-        label="Gain"
-        minAllowed=${0}
-        maxAllowed=${1}
-        snap=${0.01}
-        min=${gain.min}
-        max=${gain.max}
-        widthScale="wide"
-        onChange=${({ min, max }) => onChange({ ...item, gain: { min, max } })}
-      />
+      </${HorizontalLayout}>
 
       <${HorizontalLayout}>
         <${Select}

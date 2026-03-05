@@ -162,11 +162,13 @@ function adjustClipRegions(clips, op, selStart, selEnd) {
  * SoundEditorModal – In-browser waveform editor modal.
  *
  * @param {Object}   props
- * @param {Object}   props.item    – media-data entry for the audio being edited
- * @param {Function} props.onClose – called when modal is dismissed without saving
- * @param {Function} props.onSaved – called with the new (or updated) media-data entry after save
+ * @param {Object}   props.item       – media-data entry for the audio being edited
+ * @param {Function} props.onClose    – called when modal is dismissed without saving
+ * @param {Function} props.onSaved    – called with the updated media-data entry after a metadata-only save
+ * @param {Function} props.onSaveTask – called with a taskId after a physical edit upload starts;
+ *                                      the caller should track completion via SSE (e.g. ProgressBanner)
  */
-export function SoundEditorModal({ item, onClose, onSaved }) {
+export function SoundEditorModal({ item, onClose, onSaved, onSaveTask }) {
   const theme = currentTheme.value;
   const toast = useToast();
 
@@ -397,25 +399,28 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
       const clipsForStorage = clipRegions.map(({ label, start, end }) => ({ label, start, end }));
 
       if (hasPhysicalEdits) {
+        // Upload produces a new derived entry via an async task (album cover generation).
+        // Pass clips in the FormData so the server saves them with the new entry from the start,
+        // rather than trying to patch an entry that doesn't exist yet.
         const blob     = audioBufferToWavBlob(audioBufferRef.current);
         const formData = new FormData();
         formData.append('audio',  blob, 'edit.wav');
         formData.append('name',   item.name);
         formData.append('origin', String(item.uid));
+        // Always send clips (even as empty []) so the derived entry explicitly
+        // tracks clip state rather than inheriting stale data from the album pipeline.
+        formData.append('clips', JSON.stringify(clipsForStorage));
+        // Port original metadata so the album-generation LLM step doesn't overwrite it.
+        if (item.tags        != null) formData.append('tags',        JSON.stringify(item.tags));
+        if (item.description != null) formData.append('description', item.description);
+        if (item.summary     != null) formData.append('summary',     item.summary);
+        if (item.prompt      != null) formData.append('prompt',      item.prompt);
         const res  = await fetch('/upload/audio', { method: 'POST', body: formData });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-        // Patch the new entry with clip regions if any were defined
-        if (clipsForStorage.length > 0) {
-          await fetch('/edit', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ ...data.entry, clips: clipsForStorage }),
-          });
-          data.entry = { ...data.entry, clips: clipsForStorage };
-        }
-        onSaved(data.entry);
+        // Hand off the taskId to the caller; the caller tracks SSE completion
+        // and adds the finished entry to history (e.g. via ProgressBanner).
+        onSaveTask(data.taskId);
       } else {
         // Metadata-only: patch the existing item in place
         const updated = { ...item, clips: clipsForStorage };
@@ -432,10 +437,9 @@ export function SoundEditorModal({ item, onClose, onSaved }) {
       }
     } catch (err) {
       toast.error(`Save failed: ${err.message}`);
-    } finally {
       setIsSaving(false);
     }
-  }, [clipRegions, hasPhysicalEdits, item, onSaved, toast]);
+  }, [clipRegions, hasPhysicalEdits, item, onSaved, onSaveTask, toast]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

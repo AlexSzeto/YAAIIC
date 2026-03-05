@@ -749,21 +749,21 @@ function App() {
 
   const handleSoundEdit = useCallback((item) => setSoundEditorItem(item), []);
 
+  // Called after a metadata-only save (clip regions changed, no new file).
   const handleSoundEditSaved = useCallback((savedEntry) => {
     setSoundEditorItem(null);
-    const isNewEntry = savedEntry.uid !== soundEditorItem?.uid;
-    if (isNewEntry) {
-      // Physical edit produced a new file: add to session history and display it,
-      // matching the behaviour of uploads and normal generation results.
-      setGeneratedImage(savedEntry);
-      setHistory(prev => [savedEntry, ...prev]);
-    } else {
-      // Metadata-only save (clip regions updated, no new file): update the
-      // existing entry in place without disturbing the rest of the history.
-      setHistory(prev => prev.map(h => h.uid === savedEntry.uid ? savedEntry : h));
-      setGeneratedImage(prev => prev?.uid === savedEntry.uid ? savedEntry : prev);
-    }
-  }, [soundEditorItem]);
+    setHistory(prev => prev.map(h => h.uid === savedEntry.uid ? savedEntry : h));
+    setGeneratedImage(prev => prev?.uid === savedEntry.uid ? savedEntry : prev);
+  }, []);
+
+  // Called after a physical edit (trim/crop) upload starts.
+  // The upload creates a new derived entry asynchronously (album cover generation),
+  // so we close the modal and hand the taskId to the existing ProgressBanner mechanism
+  // which fetches the finished entry via SSE and adds it to history.
+  const handleSoundEditSaveTask = useCallback((taskId) => {
+    setSoundEditorItem(null);
+    setTaskId(taskId);
+  }, []);
 
   const handleEdit = async (uid, field, value) => {
     try {
@@ -1119,6 +1119,7 @@ function App() {
         item=${soundEditorItem}
         onClose=${() => setSoundEditorItem(null)}
         onSaved=${handleSoundEditSaved}
+        onSaveTask=${handleSoundEditSaveTask}
       />
     ` : null}
 
