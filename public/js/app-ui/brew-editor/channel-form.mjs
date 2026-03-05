@@ -17,11 +17,22 @@ import { VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mj
 import { TrackForm } from './track-form.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 
+const RADIO_OPTIONS = [
+  { label: 'Off',           value: '' },
+  { label: 'Old Radio',     value: 'old-radio' },
+  { label: 'Walkie-Talkie', value: 'walkie-talkie' },
+];
+
+const BOOL_OPTIONS = [
+  { label: 'Off', value: '' },
+  { label: 'On',  value: 'on' },
+];
+
 const MUFFLE_OPTIONS = [
   { label: 'Off',          value: '' },
   { label: 'Glass Window', value: 'glass-window' },
-  { label: 'Thick Wall',   value: 'thick-wall' },
   { label: 'Outside Car',  value: 'outside-car' },
+  { label: 'Thick Wall',   value: 'thick-wall' },
 ];
 
 const REVERB_OPTIONS = [
@@ -40,7 +51,7 @@ function createTrack() {
     sources: [],
     delay: { min: 0.1, max: 5 },
     delayAfterPrev: false,
-    gain: { min: 0.5, max: 0.5 },
+    gain: { min: 1.0, max: 1.0 },
     pan: { mode: 'fixed', value: 0 },
   };
 }
@@ -132,23 +143,26 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths =
             options=${REVERB_OPTIONS}
             onChange=${(e) => onChange({ ...item, reverb: e.target.value || null })}
           />
-        </${HorizontalLayout}>
-        <${HorizontalLayout} gap="small">
-          <${ToggleSwitch}
-            label="Old Radio"
-            checked=${item.oldRadio ?? false}
-            onChange=${(e) => onChange({ ...item, oldRadio: e.target.checked })}
+          <${Select}
+            label="Radio"
+            id="channel-radio"
+            value=${item.radio ?? ''}
+            options=${RADIO_OPTIONS}
+            onChange=${(e) => onChange({ ...item, radio: e.target.value || null })}
           />
-          <${ToggleSwitch}
+          <${Select}
             label="Underwater"
-            checked=${item.underwater ?? false}
-            onChange=${(e) => onChange({ ...item, underwater: e.target.checked })}
+            id="channel-underwater"
+            value=${item.underwater ? 'on' : ''}
+            options=${BOOL_OPTIONS}
+            onChange=${(e) => onChange({ ...item, underwater: !!e.target.value })}
+
           />
         </${HorizontalLayout}>
         <${Slider}
           label="Gain"
           minAllowed=${0}
-          maxAllowed=${1}
+          maxAllowed=${2}
           snap=${0.01}
           value=${gain}
           widthScale="full"

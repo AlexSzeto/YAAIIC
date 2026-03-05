@@ -1,12 +1,12 @@
 import { MuffleEffect } from './muffle.mjs'
 import { ReverbEffect } from './reverb.mjs'
-import { OldRadioEffect } from './old-radio.mjs'
+import { RadioEffect } from './radio.mjs'
 import { UnderwaterEffect } from './underwater.mjs'
 
 // Defines canonical order of effects from source → output.
 // Frequency-shaping first (muffle, old-radio, underwater), then spatial/temporal (reverb).
 // Pan and gain-range are per-track concerns, not channel-level effects.
-const EFFECT_CHAIN_PRIORITY = ['muffle', 'reverb', 'old-radio', 'underwater']
+const EFFECT_CHAIN_PRIORITY = ['muffle', 'reverb', 'radio', 'underwater']
 
 export class Range {
   /** @type {number} */
@@ -679,7 +679,7 @@ export class AmbientChannel {
   constructor(
     label,
     tracks,
-    { gain = null, distance, muffle = null, muffled, reverb = null, oldRadio = false, underwater = false } = {}
+    { gain = null, distance, muffle = null, muffled, reverb = null, radio = null, oldRadio = false, underwater = false } = {}
   ) {
     this.label = label
     this.#tracks = tracks
@@ -696,8 +696,10 @@ export class AmbientChannel {
     this.#gain = gain ?? 0.5
 
     // Backward compat: old boolean muffle/reverb fields → profile strings
-    if (muffle === null && muffled === true)  muffle  = 'thick-wall'
-    if (typeof reverb === 'boolean')          reverb  = reverb ? 'church' : null
+    if (muffle === null && muffled === true)  muffle = 'thick-wall'
+    if (typeof reverb === 'boolean')          reverb = reverb ? 'church' : null
+    // Backward compat: old boolean oldRadio field → radio profile
+    if (!radio && oldRadio === true)          radio  = 'old-radio'
 
     const ctx = AmbientCoffee.audioContext
     this.#output = ctx.createGain()
@@ -705,14 +707,14 @@ export class AmbientChannel {
 
     this.#effects.set('muffle', new MuffleEffect(ctx))
     this.#effects.set('reverb', new ReverbEffect(ctx))
-    this.#effects.set('old-radio', new OldRadioEffect(ctx))
+    this.#effects.set('radio', new RadioEffect(ctx))
     this.#effects.set('underwater', new UnderwaterEffect(ctx))
     this.#rebuildChain()
 
     // Apply initial property states without transition
     if (muffle)    this.#effects.get('muffle').setActive(muffle)
     if (reverb)    this.#effects.get('reverb').setActive(reverb)
-    if (oldRadio)  this.#effects.get('old-radio').setActive(true)
+    if (radio)     this.#effects.get('radio').setActive(radio)
     if (underwater) this.#effects.get('underwater').setActive(true)
   }
 
@@ -762,11 +764,11 @@ export class AmbientChannel {
   }
 
   /**
-   * Enables or disables the old radio effect with a smooth transition.
-   * @param {boolean} active
+   * Sets the radio effect profile with a smooth transition.
+   * @param {string|null} profile - 'old-radio' | 'walkie-talkie' | null (off)
    */
-  setOldRadio(active) {
-    this.#effects.get('old-radio')?.setActive(active, AmbientChannel.PROPERTY_TRANSITION_DURATION)
+  setRadio(profile) {
+    this.#effects.get('radio')?.setActive(profile, AmbientChannel.PROPERTY_TRANSITION_DURATION)
   }
 
   /**

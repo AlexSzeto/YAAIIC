@@ -226,6 +226,17 @@ export class RangeSlider extends Component {
     if (this.unsubscribe) this.unsubscribe();
   }
 
+  componentDidUpdate(prevProps) {
+    const { minAllowed = 0, maxAllowed = 100, onChange } = this.props;
+    if (prevProps.minAllowed === minAllowed && prevProps.maxAllowed === maxAllowed) return;
+    const { currentMin, currentMax } = this.state;
+    const clampedMin = Math.max(minAllowed, Math.min(currentMin, maxAllowed));
+    const clampedMax = Math.max(minAllowed, Math.min(currentMax, maxAllowed));
+    if (clampedMin === currentMin && clampedMax === currentMax) return;
+    this.setState({ currentMin: clampedMin, currentMax: clampedMax });
+    if (onChange) onChange({ min: clampedMin, max: clampedMax });
+  }
+
   /** Format a number for display, respecting the snap decimal precision. */
   formatValue(value) {
     const snap = this.props.snap ?? 1;

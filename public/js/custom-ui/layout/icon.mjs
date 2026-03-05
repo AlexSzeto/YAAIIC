@@ -44,6 +44,8 @@ const ICON_MAP = {
   'circle': 'circle',
   'lock': 'lock',
   'lock-open': 'lock_open',
+  'eye': 'visibility',
+  'eye-slash': 'visibility_off',
   
   // Media
   'images': 'image',
@@ -151,7 +153,6 @@ const ICON_MAP = {
   'down-arrow': 'arrow_downward',
   'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
-  'eye-slash': 'visibility_off',
   'cut': 'content_cut',
   'crop': 'crop',
   'repeat': 'repeat',

@@ -381,27 +381,34 @@ class Filter extends Effect {
 }
 
 const REVERB_PROFILES = {
-  'small-room': 0.8,
-  'church':     2.5,
-  'opera-hall': 5.0,
+  // reverbTime: IR tail length (s) | cutoff: lowpass Hz on wet signal | resonance: filter Q
+  'small-room': { reverbTime: 0.8, cutoff: 5000, resonance: 0.8 },
+  'church':     { reverbTime: 2.5, cutoff: 3000, resonance: 1.2 },
+  'opera-hall': { reverbTime: 5.0, cutoff: 1500, resonance: 1.8 },
 }
 
 /**
- * Wraps SimpleReverb with a dry/wet parallel path.
+ * Wraps SimpleReverb with a dry/wet parallel path and a per-profile lowpass filter
+ * on the wet signal to shape the tonal character of the reverb tail.
  * Dry by default (wetGain = 0). Call setActive(profile) to blend in reverb.
  */
 export class ReverbEffect {
   #ctx
-  #input        // GainNode — split point
-  #reverb       // SimpleReverb
-  #wetGain      // GainNode — wet mix level
-  #output       // GainNode — merge point
+  #input         // GainNode — split point
+  #reverb        // SimpleReverb
+  #filter        // BiquadFilterNode — lowpass on wet path only
+  #wetGain       // GainNode — wet mix level
+  #output        // GainNode — merge point
   #activeProfile // string|null — currently loaded profile
 
   constructor(ctx) {
     this.#ctx    = ctx
     this.#input   = ctx.createGain()
-    this.#reverb  = new SimpleReverb(ctx, REVERB_PROFILES['church'])
+    this.#reverb  = new SimpleReverb(ctx, REVERB_PROFILES['church'].reverbTime)
+    this.#filter  = ctx.createBiquadFilter()
+    this.#filter.type = 'lowpass'
+    this.#filter.frequency.value = REVERB_PROFILES['church'].cutoff
+    this.#filter.Q.value         = REVERB_PROFILES['church'].resonance
     this.#wetGain = ctx.createGain()
     this.#wetGain.gain.value = 0   // dry / off
     this.#output  = ctx.createGain()
@@ -409,9 +416,10 @@ export class ReverbEffect {
 
     // dry path
     this.#input.connect(this.#output)
-    // wet path
+    // wet path: reverb → filter → wetGain → output
     this.#input.connect(this.#reverb.input)
-    this.#reverb.connect(this.#wetGain)
+    this.#reverb.connect(this.#filter)
+    this.#filter.connect(this.#wetGain)
     this.#wetGain.connect(this.#output)
   }
 
@@ -424,12 +432,15 @@ export class ReverbEffect {
     const wetTarget = profile ? 1 : 0
 
     if (profile && profile !== this.#activeProfile) {
-      const reverbTime = REVERB_PROFILES[profile] ?? REVERB_PROFILES['church']
-      // Disconnect old reverb from wet path and rewire with new one
+      const p = REVERB_PROFILES[profile] ?? REVERB_PROFILES['church']
+      // Reconstruct the convolver IR for the new reverb time
       this.#input.disconnect(this.#reverb.input)
-      this.#reverb = new SimpleReverb(ctx, reverbTime)
+      this.#reverb = new SimpleReverb(ctx, p.reverbTime)
       this.#input.connect(this.#reverb.input)
-      this.#reverb.connect(this.#wetGain)
+      this.#reverb.connect(this.#filter)
+      // Update filter shape for this profile
+      this.#filter.frequency.value = p.cutoff
+      this.#filter.Q.value         = p.resonance
       this.#activeProfile = profile
     }
 

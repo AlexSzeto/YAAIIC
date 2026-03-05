@@ -70,11 +70,13 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
         pan: item.pan ?? { mode: 'fixed', value: 0 },
       });
     } else {
+      const sourceLen = item.source ? sourceLengths[item.source] : null;
+      const durMax = Math.min(60, Math.max(4, sourceLen ?? DEFAULT_DURATION_MAX));
       onChange({
         ...item,
         type,
         source: item.source || '',
-        duration: item.duration || { min: 4, max: 30 },
+        duration: item.duration || { min: Math.max(4, durMax * 0.5), max: durMax },
         sources: undefined,
         delay: undefined,
         delayAfterPrev: undefined,
@@ -84,7 +86,7 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
           : (item.pan ?? { mode: 'fixed', value: 0 }),
       });
     }
-  }, [item, onChange, sourceLabels]);
+  }, [item, onChange, sourceLengths]);
 
   const handleClonesChange = useCallback((e) => {
     const val = parseInt(e.target.value, 10);
@@ -128,8 +130,13 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
     if (newSource && (item.label === 'Track' || !item.label)) {
       updated.label = newSource;
     }
+    if (newSource) {
+      const sourceLen = sourceLengths[newSource];
+      const durMax = Math.min(60, Math.max(4, sourceLen ?? DEFAULT_DURATION_MAX));
+      updated.duration = { min: Math.max(4, durMax * 0.5), max: durMax };
+    }
     onChange(updated);
-  }, [item, onChange]);
+  }, [item, onChange, sourceLengths]);
 
   // --- Pan handlers ---
 
@@ -153,8 +160,8 @@ export function TrackForm({ item, onChange, sourceLabels = [], sourceLengths = {
   // Clamp min to crossfade-safe minimum so old data with min=0 displays correctly.
   const duration = { min: Math.max(4, rawDuration.min), max: Math.max(4, rawDuration.max) };
 
-  // Gain range (per-track) — backward compat: missing gain defaults to 0.5/0.5
-  const gain = item.gain ?? { min: 0.5, max: 0.5 };
+  // Gain range (per-track) — backward compat: missing gain defaults to 1.0/1.0
+  const gain = item.gain ?? { min: 1.0, max: 1.0 };
 
   // ── Dynamic slider limits ─────────────────────────────────────────────────
 

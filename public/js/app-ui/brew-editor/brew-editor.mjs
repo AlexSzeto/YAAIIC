@@ -145,7 +145,7 @@ function createDefaultChannel() {
     gain: 0.5,
     muffle: null,
     reverb: null,
-    oldRadio: false,
+    radio: null,
     underwater: false,
     tracks: [],
   };
@@ -177,6 +177,8 @@ export function BrewEditor() {
   // Runtime channel enable/disable state — never saved, resets on each preview start.
   // Shape: { [channelLabel]: { enabled: boolean } }
   const [channelStates, setChannelStates] = useState({});
+  // Whether the global Sound Sources panel is visible. Shown by default, hidden when a brew opens.
+  const [showSources, setShowSources] = useState(true);
 
   // Brew-level gallery (audio only, read-only browsing)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -419,6 +421,7 @@ export function BrewEditor() {
       setGlobalSources(globals);
       // Prune brew sources to only those used by tracks
       setBrew(pruneBrewSources(mergedBrew));
+      setShowSources(false);
       setIsListOpen(false);
     } catch (e) {
       toast.error(`Failed to load brew: ${e.message}`);
@@ -759,7 +762,7 @@ export function BrewEditor() {
     if (next.gain      !== prev.gain)      ch.setGain(next.gain ?? 0.5);
     if (next.muffle    !== prev.muffle)    ch.setMuffle(next.muffle);
     if (next.reverb    !== prev.reverb)    ch.setReverb(next.reverb);
-    if (next.oldRadio  !== prev.oldRadio)  ch.setOldRadio(next.oldRadio ?? false);
+    if (next.radio     !== prev.radio)     ch.setRadio(next.radio ?? null);
     if (next.underwater !== prev.underwater) ch.setUnderwater(next.underwater ?? false);
     // Per-track live updates (gain range and pan)
     const nextTracks = next.tracks || [];
@@ -877,45 +880,55 @@ export function BrewEditor() {
           },
         ]}
         onSelectItem=${handleOpenBrew}
-        onAction=${() => { setBrew(createDefaultBrew()); setIsListOpen(false); }}
+        onAction=${() => { setBrew(createDefaultBrew()); setShowSources(false); setIsListOpen(false); }}
         onClose=${() => setIsListOpen(false)}
         emptyMessage="No saved brews yet"
       />
 
-      <!-- Sound Sources (global list, always visible) -->
-      <${Panel} variant="outlined">
-        <${DynamicList}
-          title="Sound Sources (Global)"
-          items=${globalSources}
-          renderItem=${(item, i) => html`
-            <${SoundSourceForm}
-              item=${item}
-              onSourceLengthsChange=${handleSourceLengthsChange}
-              onChange=${(updated) => handleGlobalSourceChange(updated, i)}
-            />
-          `}
-          getTitle=${(item) => {
-            const label = item.label || 'Source';
-            const len = sourceLengths[item.label];
-            const text = len != null ? `${label} (${len}s)` : label;
-            // lock = used by a channel in the current brew, lock-open = not used or no brew
-            const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open-alt';
-            return html`
-              <span style="display:inline-flex;align-items:center;gap:6px;">
-                <${Icon} name=${iconName} size="14px" color=${theme.colors.text.secondary} />
-                ${text}
-              </span>
-            `;
-          }}
-          createItem=${createDefaultSource}
-          onChange=${handleGlobalSourcesChange}
-          addLabel="Add Source"
-        />
-      </${Panel}>
+      <!-- Sound Sources (global list, collapsible) -->
+      ${showSources && html`
+        <${Panel} variant="outlined">
+          <${DynamicList}
+            title="Sound Sources (Global)"
+            items=${globalSources}
+            renderItem=${(item, i) => html`
+              <${SoundSourceForm}
+                item=${item}
+                onSourceLengthsChange=${handleSourceLengthsChange}
+                onChange=${(updated) => handleGlobalSourceChange(updated, i)}
+              />
+            `}
+            getTitle=${(item) => {
+              const label = item.label || 'Source';
+              const len = sourceLengths[item.label];
+              const text = len != null ? `${label} (${len}s)` : label;
+              // lock = used by a channel in the current brew, lock-open = not used or no brew
+              const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open-alt';
+              return html`
+                <span style="display:inline-flex;align-items:center;gap:6px;">
+                  <${Icon} name=${iconName} size="14px" color=${theme.colors.text.secondary} />
+                  ${text}
+                </span>
+              `;
+            }}
+            createItem=${createDefaultSource}
+            onChange=${handleGlobalSourcesChange}
+            addLabel="Add Source"
+          />
+        </${Panel}>
+      `}
 
       <!-- Action container between Sound Sources and Brew sections -->
       <${Panel} variant="default">
         <${HorizontalLayout} gap="small">
+          <${Button}
+            variant="medium-icon-text"
+            icon=${showSources ? 'eye-slash' : 'eye'}
+            color="secondary"
+            onClick=${() => setShowSources(v => !v)}
+          >
+            ${showSources ? 'Hide' : 'Show'}
+          </${Button}>
           <${Button}
             variant="medium-icon-text"
             icon="save"
