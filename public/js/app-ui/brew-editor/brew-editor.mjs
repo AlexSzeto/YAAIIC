@@ -145,6 +145,8 @@ function createDefaultChannel() {
     gain: 0.5,
     muffle: null,
     reverb: null,
+    oldRadio: false,
+    underwater: false,
     tracks: [],
   };
 }
@@ -754,9 +756,11 @@ export function BrewEditor() {
     if (!isPlaying || !coffeeRef.current) return;
     const ch = coffeeRef.current.getChannel(label);
     if (!ch) return;
-    if (next.gain    !== prev.gain)    ch.setGain(next.gain ?? 0.5);
-    if (next.muffle  !== prev.muffle)  ch.setMuffle(next.muffle);
-    if (next.reverb  !== prev.reverb)  ch.setReverb(next.reverb);
+    if (next.gain      !== prev.gain)      ch.setGain(next.gain ?? 0.5);
+    if (next.muffle    !== prev.muffle)    ch.setMuffle(next.muffle);
+    if (next.reverb    !== prev.reverb)    ch.setReverb(next.reverb);
+    if (next.oldRadio  !== prev.oldRadio)  ch.setOldRadio(next.oldRadio ?? false);
+    if (next.underwater !== prev.underwater) ch.setUnderwater(next.underwater ?? false);
     // Per-track live updates (gain range and pan)
     const nextTracks = next.tracks || [];
     const prevTracks = prev.tracks || [];

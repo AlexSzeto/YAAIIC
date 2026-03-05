@@ -133,6 +133,18 @@ export function ChannelForm({ item, onChange, sourceLabels = [], sourceLengths =
             onChange=${(e) => onChange({ ...item, reverb: e.target.value || null })}
           />
         </${HorizontalLayout}>
+        <${HorizontalLayout} gap="small">
+          <${ToggleSwitch}
+            label="Old Radio"
+            checked=${item.oldRadio ?? false}
+            onChange=${(e) => onChange({ ...item, oldRadio: e.target.checked })}
+          />
+          <${ToggleSwitch}
+            label="Underwater"
+            checked=${item.underwater ?? false}
+            onChange=${(e) => onChange({ ...item, underwater: e.target.checked })}
+          />
+        </${HorizontalLayout}>
         <${Slider}
           label="Gain"
           minAllowed=${0}

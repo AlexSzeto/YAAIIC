@@ -57,16 +57,16 @@ Replace the discrete distance slider with a generalized gain range, add a pan pa
 
 - [x] add a `variant` paremeter to the custom-ui slider. `normal` (default) variant maintains the colored line section that it currently has. a `knob` variant removes the coloring, keeping the knob as the only section that has primary (blue) color. Update the pan fixed value slider to use the `knob` variant.
 
-- [ ] Create `old-radio.mjs` with `OldRadioEffect` class — signal chain: input `GainNode` → `BiquadFilter` (bandpass, frequency ~1800 Hz, Q ~0.7 to cover 300–3400 Hz) → `WaveShaperNode` (mild saturation curve) → wet `GainNode` → output `GainNode`. Dry path: input → output. `setActive(active, duration)` ramps the wet gain. Expose `get input`, `get output`, `connect`, `disconnect`, `dispose`.
+- [x] Create `old-radio.mjs` with `OldRadioEffect` class — signal chain: input `GainNode` → `BiquadFilter` (bandpass, frequency ~1800 Hz, Q ~0.7 to cover 300–3400 Hz) → `WaveShaperNode` (mild saturation curve) → wet `GainNode` → output `GainNode`. Dry path: input → output. `setActive(active, duration)` ramps the wet gain. Expose `get input`, `get output`, `connect`, `disconnect`, `dispose`.
   - Test: Add `OldRadioEffect` to a playing channel. Toggle it on and verify audio sounds tinny/telephone-like.
 
-- [ ] Create `underwater.mjs` with `UnderwaterEffect` class — signal chain: input `GainNode` → `BiquadFilter` (lowpass ~400 Hz) → `BiquadFilter` (peaking ~600 Hz, Q ~3, gain +6 dB for resonance) → wet `GainNode` → output `GainNode`. Dry path: input → output. `setActive(active, duration)` ramps the wet gain.
+- [x] Create `underwater.mjs` with `UnderwaterEffect` class — signal chain: input `GainNode` → `BiquadFilter` (lowpass ~400 Hz) → `BiquadFilter` (peaking ~600 Hz, Q ~3, gain +6 dB for resonance) → wet `GainNode` → output `GainNode`. Dry path: input → output. `setActive(active, duration)` ramps the wet gain.
   - Test: Add `UnderwaterEffect` to a playing channel. Toggle it on and verify audio sounds heavily muffled and resonant.
 
-- [ ] Add old radio and underwater to `AmbientChannel` — insert `OldRadioEffect` and `UnderwaterEffect` into the effect chain (priority: `muffle → reverb → old-radio → underwater → pan`). Add `setOldRadio(bool)` and `setUnderwater(bool)` public methods. Channel data includes `oldRadio: boolean` and `underwater: boolean` (default `false`).
+- [x] Add old radio and underwater to `AmbientChannel` — insert `OldRadioEffect` and `UnderwaterEffect` into the effect chain (priority: `muffle → reverb → old-radio → underwater → pan`). Add `setOldRadio(bool)` and `setUnderwater(bool)` public methods. Channel data includes `oldRadio: boolean` and `underwater: boolean` (default `false`).
   - Test: Open brew editor, toggle Old Radio on a channel during preview, verify the effect is audible. Do the same for Underwater.
 
-- [ ] Add old radio and underwater toggle switches to `channel-form.mjs` — add two `ToggleSwitch` controls labeled "Old Radio" and "Underwater". Wire `handleChannelLiveUpdate` to call `setOldRadio` and `setUnderwater`. Update `createDefaultChannel()` to include `oldRadio: false, underwater: false`.
+- [x] Add old radio and underwater toggle switches to `channel-form.mjs` — add two `ToggleSwitch` controls labeled "Old Radio" and "Underwater". Wire `handleChannelLiveUpdate` to call `setOldRadio` and `setUnderwater`. Update `createDefaultChannel()` to include `oldRadio: false, underwater: false`.
   - Test: Create a channel, verify both toggles default to off. Toggle each on and off during preview.
 
 - [ ] Backward-compatibility smoke test — load a brew JSON that uses the old schema (`distance`, `muffled`, `reverb` as boolean). Verify it loads, plays, and all parameters map correctly. Save it and verify the new schema is written. Re-load and verify it still works.

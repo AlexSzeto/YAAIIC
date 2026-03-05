@@ -1,10 +1,12 @@
 import { MuffleEffect } from './muffle.mjs'
 import { ReverbEffect } from './reverb.mjs'
+import { OldRadioEffect } from './old-radio.mjs'
+import { UnderwaterEffect } from './underwater.mjs'
 
 // Defines canonical order of effects from source → output.
-// Frequency-shaping (muffle) first, then spatial/temporal (reverb).
+// Frequency-shaping first (muffle, old-radio, underwater), then spatial/temporal (reverb).
 // Pan and gain-range are per-track concerns, not channel-level effects.
-const EFFECT_CHAIN_PRIORITY = ['muffle', 'reverb']
+const EFFECT_CHAIN_PRIORITY = ['muffle', 'reverb', 'old-radio', 'underwater']
 
 export class Range {
   /** @type {number} */
@@ -677,7 +679,7 @@ export class AmbientChannel {
   constructor(
     label,
     tracks,
-    { gain = null, distance, muffle = null, muffled, reverb = null } = {}
+    { gain = null, distance, muffle = null, muffled, reverb = null, oldRadio = false, underwater = false } = {}
   ) {
     this.label = label
     this.#tracks = tracks
@@ -703,11 +705,15 @@ export class AmbientChannel {
 
     this.#effects.set('muffle', new MuffleEffect(ctx))
     this.#effects.set('reverb', new ReverbEffect(ctx))
+    this.#effects.set('old-radio', new OldRadioEffect(ctx))
+    this.#effects.set('underwater', new UnderwaterEffect(ctx))
     this.#rebuildChain()
 
     // Apply initial property states without transition
-    if (muffle) this.#effects.get('muffle').setActive(muffle)
-    if (reverb) this.#effects.get('reverb').setActive(reverb)
+    if (muffle)    this.#effects.get('muffle').setActive(muffle)
+    if (reverb)    this.#effects.get('reverb').setActive(reverb)
+    if (oldRadio)  this.#effects.get('old-radio').setActive(true)
+    if (underwater) this.#effects.get('underwater').setActive(true)
   }
 
   #rebuildChain() {
@@ -753,6 +759,22 @@ export class AmbientChannel {
    */
   setReverb(profile) {
     this.#effects.get('reverb')?.setActive(profile, AmbientChannel.PROPERTY_TRANSITION_DURATION)
+  }
+
+  /**
+   * Enables or disables the old radio effect with a smooth transition.
+   * @param {boolean} active
+   */
+  setOldRadio(active) {
+    this.#effects.get('old-radio')?.setActive(active, AmbientChannel.PROPERTY_TRANSITION_DURATION)
+  }
+
+  /**
+   * Enables or disables the underwater effect with a smooth transition.
+   * @param {boolean} active
+   */
+  setUnderwater(active) {
+    this.#effects.get('underwater')?.setActive(active, AmbientChannel.PROPERTY_TRANSITION_DURATION)
   }
 
   /**
