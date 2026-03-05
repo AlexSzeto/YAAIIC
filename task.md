@@ -71,11 +71,11 @@ Replace the discrete distance slider with a generalized gain range, add a pan pa
 
 - [x] Fix a bug in the audio editor modal where if a clip is trimmed or clipped then saved, the gallery gets updated with a broken entry in the session history. 
 
-- [-] Fix a bug in the audio editor modal where clip regions are not being saved when a clip is trimmed or clipped in the same edit session, even though the regions appear correctly in the timeline before they are saved. This may be related to most of the generated data being overwritten by the album generation workflow - the tags/prompt/description/summary are not ported over from the previous audio either. This might mean the edit needs an upload endpoint that accepts more parameters (data properties from the old audio entry) that can be entered directly into the new uploaded entry.
+- [x] Fix a bug in the audio editor modal where clip regions are not being saved when a clip is trimmed or clipped in the same edit session, even though the regions appear correctly in the timeline before they are saved. This may be related to most of the generated data being overwritten by the album generation workflow - the tags/prompt/description/summary are not ported over from the previous audio either. This might mean the edit needs an upload endpoint that accepts more parameters (data properties from the old audio entry) that can be entered directly into the new uploaded entry.
 
 (NOTE: needs manual testing to verify)
 
-- [] Add uids (using Date.now() like other uids) to the Ambient Brews so when its name changes and saves, it would save over
+- [x] Add uids (using Date.now() like other uids) to the Ambient Brews so when its name changes and saves, it would save over
 the existing entry instead of creating a new entry with a new name. The endpoints need to be updated so that the brew entries are identified by their UIDs.
 
 ## Implementation Details

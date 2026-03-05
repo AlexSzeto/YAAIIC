@@ -2,76 +2,46 @@
  * Brew Service – Business logic for reading/writing ambient brew recipes.
  *
  * All brews are stored in a single flat JSON file: `server/database/brew-data.json`.
- * The file contains an array of { name, data } entries, mirroring the structure
- * of media-data.json.
+ * The file contains an array of { uid, name, data } entries.
  *
- * On first load, if brew-data.json does not exist but the legacy `server/database/brews/`
- * directory contains JSON files, they are automatically migrated into the flat format
- * and the old directory is removed.
+ * UIDs are stable numeric timestamps (Date.now()) assigned on first save.
+ * Existing entries without a uid are migrated automatically on the first read.
  *
  * @module features/brew/service
  */
-import path from 'path';
 import fs from 'fs';
-import fsPromises from 'fs/promises';
-import { DATABASE_DIR, BREW_DATA_PATH } from '../../core/paths.mjs';
-
-const LEGACY_BREWS_DIR = path.join(DATABASE_DIR, 'brews');
-
-// ---------------------------------------------------------------------------
-// Migration: legacy per-file → flat brew-data.json
-// ---------------------------------------------------------------------------
-
-// function migrateLegacyBrews() {
-//   if (fs.existsSync(BREW_DATA_PATH)) return; // already migrated
-
-//   if (!fs.existsSync(LEGACY_BREWS_DIR)) return; // nothing to migrate
-
-//   const files = fs.readdirSync(LEGACY_BREWS_DIR).filter(f => f.endsWith('.json'));
-//   if (files.length === 0) return;
-
-//   const entries = [];
-//   for (const file of files) {
-//     try {
-//       const raw = fs.readFileSync(path.join(LEGACY_BREWS_DIR, file), 'utf8');
-//       const data = JSON.parse(raw);
-//       const name = file.replace(/\.json$/, '');
-//       entries.push({ name, data });
-//     } catch (e) {
-//       console.warn(`Brew migration: skipping "${file}":`, e.message);
-//     }
-//   }
-
-//   fs.writeFileSync(BREW_DATA_PATH, JSON.stringify(entries, null, 2), 'utf8');
-//   console.log(`Brew migration: migrated ${entries.length} brew(s) to brew-data.json`);
-
-//   // Remove legacy directory
-//   try {
-//     for (const file of files) {
-//       fs.unlinkSync(path.join(LEGACY_BREWS_DIR, file));
-//     }
-//     fs.rmdirSync(LEGACY_BREWS_DIR);
-//     console.log('Brew migration: removed legacy brews/ directory');
-//   } catch (e) {
-//     console.warn('Brew migration: could not remove legacy brews/ directory:', e.message);
-//   }
-// }
-
-// Run migration synchronously at module load
-// migrateLegacyBrews();
+import { BREW_DATA_PATH } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/** Read and parse brew-data.json. Returns [] if file does not exist. */
+/**
+ * Read and parse brew-data.json.
+ * Auto-migrates entries that are missing a uid (legacy format).
+ * Returns [] if the file does not exist.
+ */
 function readBrewData() {
+  let entries;
   try {
     const raw = fs.readFileSync(BREW_DATA_PATH, 'utf8');
-    return JSON.parse(raw);
+    entries = JSON.parse(raw);
   } catch {
     return [];
   }
+
+  // Migration: assign stable UIDs to entries that predate the uid field.
+  let changed = false;
+  let nextUid = Date.now();
+  entries.forEach(e => {
+    if (!e.uid) {
+      e.uid = nextUid++;
+      changed = true;
+    }
+  });
+  if (changed) writeBrewData(entries);
+
+  return entries;
 }
 
 /** Write the entries array back to brew-data.json. */
@@ -85,56 +55,59 @@ function writeBrewData(entries) {
 
 /**
  * List all saved brew recipes.
- * @returns {Promise<Array<{name: string}>>}
+ * @returns {Promise<Array<{uid: number, name: string}>>}
  */
 export async function listBrews() {
   const entries = readBrewData();
-  return entries.map(e => ({ name: e.name }));
+  return entries.map(e => ({ uid: e.uid, name: e.name }));
 }
 
 /**
- * Load a brew recipe by name.
- * @param {string} name
- * @returns {Promise<Object>} Parsed brew recipe
+ * Load a brew recipe by uid.
+ * Injects the entry's uid into the returned data so the client can track it.
+ * @param {number} uid
+ * @returns {Promise<Object>} Parsed brew recipe (includes uid field)
  */
-export async function loadBrew(name) {
+export async function loadBrew(uid) {
   const entries = readBrewData();
-  const entry = entries.find(e => e.name === name);
+  const entry = entries.find(e => e.uid === uid);
   if (!entry) {
-    const err = new Error(`Brew not found: ${name}`);
+    const err = new Error(`Brew not found: ${uid}`);
     err.code = 'ENOENT';
     throw err;
   }
-  return entry.data;
+  // Inject uid so the client always has it even when loading legacy data.
+  return { ...entry.data, uid: entry.uid };
 }
 
 /**
- * Save (create or overwrite) a brew recipe.
- * @param {string} name
- * @param {Object} data
+ * Save (create or overwrite) a brew recipe, identified by uid.
+ * @param {number} uid
+ * @param {string} name  – display name (may differ from data.label if renamed)
+ * @param {Object} data  – the full brew recipe object
  * @returns {Promise<void>}
  */
-export async function saveBrew(name, data) {
+export async function saveBrew(uid, name, data) {
   const entries = readBrewData();
-  const idx = entries.findIndex(e => e.name === name);
+  const idx = entries.findIndex(e => e.uid === uid);
   if (idx >= 0) {
-    entries[idx] = { name, data };
+    entries[idx] = { uid, name, data };
   } else {
-    entries.push({ name, data });
+    entries.push({ uid, name, data });
   }
   writeBrewData(entries);
 }
 
 /**
- * Delete a brew recipe by name.
- * @param {string} name
+ * Delete a brew recipe by uid.
+ * @param {number} uid
  * @returns {Promise<void>}
  */
-export async function deleteBrew(name) {
+export async function deleteBrew(uid) {
   const entries = readBrewData();
-  const idx = entries.findIndex(e => e.name === name);
+  const idx = entries.findIndex(e => e.uid === uid);
   if (idx < 0) {
-    const err = new Error(`Brew not found: ${name}`);
+    const err = new Error(`Brew not found: ${uid}`);
     err.code = 'ENOENT';
     throw err;
   }

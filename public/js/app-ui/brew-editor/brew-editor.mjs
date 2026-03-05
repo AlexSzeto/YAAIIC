@@ -121,6 +121,7 @@ TimerPanel.className = 'brew-timer-panel';
 
 function createDefaultBrew() {
   return {
+    uid: Date.now(),
     label: 'New Brew',
     sources: [],
     channels: [],
@@ -221,7 +222,8 @@ export function BrewEditor() {
       const res = await fetch('/api/brews');
       if (!res.ok) throw new Error(await res.text());
       const list = await res.json();
-      setSavedBrews(list.map(b => ({ id: b.name, label: b.name })));
+      // Each entry is { uid, name } — use uid as the stable id.
+      setSavedBrews(list.map(b => ({ id: b.uid, label: b.name })));
     } catch (e) {
       toast.error(`Failed to load brews: ${e.message}`);
     }
@@ -411,7 +413,7 @@ export function BrewEditor() {
 
   async function handleOpenBrew(item) {
     try {
-      const res = await fetch(`/api/brews/${encodeURIComponent(item.id)}`);
+      const res = await fetch(`/api/brews/${item.id}`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       // Resolve any plain-string clip URLs to { url, label } objects
@@ -433,12 +435,18 @@ export function BrewEditor() {
       toast.error('Brew label is required');
       return;
     }
+    // Ensure the brew has a uid — new brews from createDefaultBrew() already do,
+    // but older in-memory state (e.g. imported JSON) might not.
+    const uid = brew.uid ?? Date.now();
+    const brewWithUid = brew.uid ? brew : { ...brew, uid };
+    if (!brew.uid) setBrew(brewWithUid);
+
     setIsSaving(true);
     try {
       const res = await fetch('/api/brews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: brew.label, data: brew }),
+        body: JSON.stringify({ uid, name: brewWithUid.label, data: brewWithUid }),
       });
       if (!res.ok) throw new Error(await res.text());
       await loadBrewList();
@@ -450,21 +458,19 @@ export function BrewEditor() {
     }
   }
 
-  async function handleDeleteByName(name) {
+  async function handleDelete(item) {
     const result = await showDialog(
-      `Delete "${name}"? This cannot be undone.`,
+      `Delete "${item.label}"? This cannot be undone.`,
       'Confirm Delete',
       ['Delete', 'Cancel']
     );
     if (result !== 'Delete') return;
 
     try {
-      const res = await fetch(`/api/brews/${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/brews/${item.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       // If the deleted brew is currently loaded, clear it
-      if (brew?.label === name) setBrew(null);
+      if (brew?.uid === item.id) setBrew(null);
       await loadBrewList();
       toast.success('Brew deleted');
     } catch (e) {
@@ -472,18 +478,17 @@ export function BrewEditor() {
     }
   }
 
-
-  async function handleExportByName(name) {
-    // Export loaded brew directly; otherwise fetch first
-    if (brew && brew.label === name) {
-      exportBrewData(name, brew);
+  async function handleExport(item) {
+    // Export the loaded brew directly if it matches; otherwise fetch from server.
+    if (brew && brew.uid === item.id) {
+      exportBrewData(item.label, brew);
       return;
     }
     try {
-      const res = await fetch(`/api/brews/${encodeURIComponent(name)}`);
+      const res = await fetch(`/api/brews/${item.id}`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      exportBrewData(name, data);
+      exportBrewData(item.label, data);
     } catch (e) {
       toast.error(`Export failed: ${e.message}`);
     }
@@ -870,13 +875,13 @@ export function BrewEditor() {
           {
             icon: 'download',
             title: 'Export brew as JSON',
-            onClick: (item) => handleExportByName(item.id),
+            onClick: (item) => handleExport(item),
           },
           {
             icon: 'trash',
             color: 'danger',
             title: 'Delete brew',
-            onClick: (item) => handleDeleteByName(item.id),
+            onClick: (item) => handleDelete(item),
           },
         ]}
         onSelectItem=${handleOpenBrew}

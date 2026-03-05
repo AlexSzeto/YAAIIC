@@ -2,10 +2,10 @@
  * Brew Router – REST endpoints for ambient brew recipe management.
  *
  * Routes:
- *   GET    /api/brews         – list all saved brews
- *   GET    /api/brews/:name   – load a brew by name
- *   POST   /api/brews         – save/create a brew (body: { name, data })
- *   DELETE /api/brews/:name   – delete a brew by name
+ *   GET    /api/brews         – list all saved brews ({ uid, name }[])
+ *   GET    /api/brews/:uid    – load a brew by uid
+ *   POST   /api/brews         – save/create a brew (body: { uid, name, data })
+ *   DELETE /api/brews/:uid    – delete a brew by uid
  *
  * @module features/brew/router
  */
@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * GET /api/brews
- * Returns an array of saved brew names.
+ * Returns an array of { uid, name } for all saved brews.
  */
 router.get('/api/brews', async (_req, res) => {
   try {
@@ -29,12 +29,16 @@ router.get('/api/brews', async (_req, res) => {
 });
 
 /**
- * GET /api/brews/:name
- * Returns the brew recipe JSON for the given name.
+ * GET /api/brews/:uid
+ * Returns the brew recipe JSON for the given uid.
  */
-router.get('/api/brews/:name', async (req, res) => {
+router.get('/api/brews/:uid', async (req, res) => {
   try {
-    const brew = await loadBrew(req.params.name);
+    const uid = parseInt(req.params.uid);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'uid must be a valid number' });
+    }
+    const brew = await loadBrew(uid);
     res.json(brew);
   } catch (error) {
     if (error.code === 'ENOENT') {
@@ -47,15 +51,18 @@ router.get('/api/brews/:name', async (req, res) => {
 
 /**
  * POST /api/brews
- * Creates or overwrites a brew. Body: { name: string, data: Object }
+ * Creates or overwrites a brew. Body: { uid: number, name: string, data: Object }
  */
 router.post('/api/brews', async (req, res) => {
   try {
-    const { name, data } = req.body;
+    const { uid, name, data } = req.body;
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ error: 'name is required' });
     }
-    await saveBrew(name, data);
+    if (uid == null || typeof uid !== 'number') {
+      return res.status(400).json({ error: 'uid is required and must be a number' });
+    }
+    await saveBrew(uid, name, data);
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving brew:', error);
@@ -64,12 +71,16 @@ router.post('/api/brews', async (req, res) => {
 });
 
 /**
- * DELETE /api/brews/:name
- * Deletes the brew with the given name.
+ * DELETE /api/brews/:uid
+ * Deletes the brew with the given uid.
  */
-router.delete('/api/brews/:name', async (req, res) => {
+router.delete('/api/brews/:uid', async (req, res) => {
   try {
-    await deleteBrew(req.params.name);
+    const uid = parseInt(req.params.uid);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'uid must be a valid number' });
+    }
+    await deleteBrew(uid);
     res.json({ success: true });
   } catch (error) {
     if (error.code === 'ENOENT') {
