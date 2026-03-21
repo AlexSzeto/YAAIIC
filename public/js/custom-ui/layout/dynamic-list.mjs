@@ -57,7 +57,7 @@ ItemShell.className = 'dynamic-list-item-shell';
 const ItemHeader = styled('div')`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: ${props => props.theme.spacing.small.gap};
   padding: ${props => props.theme.spacing.small.padding};
   background-color: ${props => props.theme.colors.background.secondary};
   cursor: pointer;
@@ -110,13 +110,13 @@ const DragGhost = styled('div')`
   width: ${props => props.width}px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: ${props => props.theme.spacing.small.gap};
+  padding: ${props => props.theme.spacing.small.padding};
   min-height: 44px;
   border: ${props => `${props.theme.border.width} ${props.theme.border.style} ${props.theme.colors.border.accent || props.theme.colors.border.secondary}`};
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   background-color: ${props => props.theme.colors.background.secondary};
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  box-shadow: ${props => props.theme.shadow.dragging};
   opacity: 0.92;
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
