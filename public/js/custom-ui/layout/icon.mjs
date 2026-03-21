@@ -41,6 +41,11 @@ const ICON_MAP = {
   'upload': 'upload',
   'refresh': 'refresh',
   'sync': 'sync',
+  'circle': 'circle',
+  'lock': 'lock',
+  'lock-open': 'lock_open',
+  'eye': 'visibility',
+  'eye-slash': 'visibility_off',
   
   // Media
   'images': 'image',
@@ -50,6 +55,10 @@ const ICON_MAP = {
   'music': 'music_note',
   'volume': 'volume_up',
   'volume-mute': 'volume_off',
+  'microphone': 'mic',
+  'microphone-slash': 'mic_off',
+  'disc': 'album',
+  'headphone': 'headphones',
   
   // Communication
   'search': 'search',
@@ -109,6 +118,7 @@ const ICON_MAP = {
   'link': 'link',
   'lock': 'lock',
   'unlock': 'lock_open',
+  'lock-open-alt': 'lock_open_right',
   'calendar': 'calendar_today',
   'time': 'schedule',
   'flag': 'flag',
@@ -143,7 +153,9 @@ const ICON_MAP = {
   'down-arrow': 'arrow_downward',
   'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
-  'eye-slash': 'visibility_off',
+  'cut': 'content_cut',
+  'crop': 'crop',
+  'repeat': 'repeat',
 
 };
 

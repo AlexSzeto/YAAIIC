@@ -286,6 +286,55 @@ router.post('/regenerate', async (req, res) => {
 
     try {
       const comfyuiWorkflows = loadWorkflows();
+
+      // Special case: regenerate album art image using the album art workflow
+      if (fields.length === 1 && fields[0] === 'imageUrl') {
+        const config = req.app.locals.config;
+        const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+        const albumWorkflow = comfyuiWorkflows.workflows.find(w => w.name === 'Text to Image (Album)');
+
+        if (!albumWorkflow) {
+          emitTaskError(taskId, 'Album art workflow not found');
+          setTimeout(() => deleteTask(taskId), 5000);
+          return;
+        }
+
+        const requestData = {
+          workflow: 'Text to Image (Album)',
+          name: imageEntry.name || '',
+          seed: Math.floor(Math.random() * 4294967295)
+        };
+
+        const { taskId: innerTaskId } = initializeGenerationTask(requestData, albumWorkflow, config);
+        const completionData = await processGenerationTask(innerTaskId, requestData, albumWorkflow, config, true, uploadFileToComfyUI);
+
+        imageEntry.imageUrl = completionData.imageUrl;
+        saveMediaData();
+
+        const { saveImagePath: _sip, saveAudioPath: _sap, ...imageDataForClient } = imageEntry;
+
+        const sseTask = getTask(taskId);
+        if (sseTask && sseTask.sseClients) {
+          const completionMessage = {
+            taskId,
+            status: 'completed',
+            progress: { percentage: 100, currentStep: 'Complete', currentValue: 1, maxValue: 1 },
+            mediaData: imageDataForClient,
+            message: 'Album image regenerated',
+            timestamp: new Date().toISOString()
+          };
+          const msgData = JSON.stringify(completionMessage);
+          sseTask.sseClients.forEach(client => {
+            try { client.write(`event: complete\ndata: ${msgData}\n\n`); }
+            catch (e) { console.error('Failed to send album art completion:', e); }
+          });
+        }
+
+        console.log(`Album image regeneration completed for UID: ${uid}`);
+        setTimeout(() => deleteTask(taskId), 5000);
+        return;
+      }
+
       const postGenTasks = comfyuiWorkflows.defaultImageGenerationTasks || [];
 
       let completedFields = 0;
@@ -474,6 +523,7 @@ router.post('/generate/inpaint', upload.fields([
       req.body.image_0_filename = imageUploadResult.filename;
       req.body.mask_filename = maskUploadResult.filename;
       req.body.inpaint = true;
+      req.body.origin = req.body.origin ? parseInt(req.body.origin) : undefined;
       
       // Include parsed inpaintArea if provided
       if (parsedInpaintArea) {

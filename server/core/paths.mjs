@@ -38,6 +38,12 @@ export const DEFAULT_CONFIG_PATH = path.join(SERVER_DIR, 'config.default.json');
 /** Path to `server/database/media-data.json` */
 export const MEDIA_DATA_PATH = path.join(DATABASE_DIR, 'media-data.json');
 
+/** Path to `server/database/brew-data.json` */
+export const BREW_DATA_PATH = path.join(DATABASE_DIR, 'brew-data.json');
+
+/** Path to `server/database/sound-sources.json` */
+export const SOUND_SOURCES_PATH = path.join(DATABASE_DIR, 'sound-sources.json');
+
 /** Path to `server/resource/workflows/` (individual ComfyUI workflow JSON files) */
 export const COMFYUI_WORKFLOWS_DIR = path.join(RESOURCE_DIR, 'workflows');
 

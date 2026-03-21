@@ -245,11 +245,12 @@ class TextPromptDialog extends Component {
               marginBottom="20px"
             >
               <${Input}
-                type="text"
+                type=${this.props.type || 'text'}
                 value=${inputValue}
                 placeholder=${placeholder || ''}
                 onInput=${this.handleInputChange}
                 widthScale="full"
+                min=${this.props.min}
               />
             </${BaseContent}>
             <${BaseFooter}
@@ -415,8 +416,54 @@ export function showDialog(text, title = 'Dialog', options = null) {
  *   // User cancelled
  * }
  */
+/**
+ * Displays a number prompt dialog with a numeric input field.
+ *
+ * @param {string} title - The title to display in the dialog header
+ * @param {number} [initialValue=0] - Initial numeric value for the input
+ * @param {number} [min] - Optional minimum value for the input
+ *
+ * @returns {Promise<number|null>} - Promise that resolves with the entered number on confirm, or null on cancel
+ *
+ * @example
+ * const duration = await showNumberPrompt('Recording Duration (seconds)', 30, 1);
+ * if (duration !== null) startRecording(duration);
+ */
+export function showNumberPrompt(title, initialValue = 0, min = undefined) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const cleanup = () => {
+    render(null, container);
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
+  };
+
+  return new Promise((resolve) => {
+    const handleConfirm = (value) => {
+      cleanup();
+      const num = Number(value);
+      resolve(isNaN(num) ? null : num);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    render(html`<${TextPromptDialog}
+      title=${title}
+      initialValue=${String(initialValue)}
+      type="number"
+      min=${min}
+      onConfirm=${handleConfirm}
+      onCancel=${handleCancel}
+    />`, container);
+  });
+}
+
 export function showTextPrompt(title, initialValue = '', placeholder = '') {
-  console.log('showTextPrompt called with:', { title, initialValue, placeholder });
 
   // Create container element
   const container = document.createElement('div');

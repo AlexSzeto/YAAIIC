@@ -5,19 +5,21 @@ import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { globalAudioPlayer } from '../global-audio-player.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
+
+// Monotonically increasing counter used to give each AudioPlayer instance a
+// unique identity, so instances sharing the same audioUrl don't interfere.
+let _nextInstanceId = 0;
 
 // =========================================================================
 // Styled Components
 // =========================================================================
 
-const Wrapper = styled('div')`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: ${props => props.padding};
+const PlayerContainer = styled('div')`
+  width: ${props => props.width || 'auto'};
+  ${props => props.flex ? `flex: ${props.flex};` : ''}
 `;
-Wrapper.className = 'wrapper';
+PlayerContainer.className = 'player-container';
 
 const Controls = styled('div')`
   display: flex;
@@ -52,7 +54,7 @@ const ProgressBar = styled('div')`
   overflow: hidden;
   background-color: ${props => props.backgroundColor};
   transition: ${props => props.transition};
-  
+
   &:hover {
     height: 8px;
   }
@@ -76,10 +78,13 @@ ProgressFill.className = 'progress-fill';
  * AudioTimeline Component
  * Displays progress bar and time information for audio playback.
  * Manages its own currentTime state to prevent parent re-renders.
- * 
+ *
  * @param {Object} props
  * @param {HTMLAudioElement} props.audioElement - Reference to the audio element
- * @param {number} props.duration - Total duration of the audio
+ * @param {number} props.duration - Playback duration to display (region duration or full file)
+ * @param {number} [props.startOffset=0] - Start offset in seconds (for region-based playback)
+ * @param {boolean} [props.compact=false] - When true, hide left label; right shows currentTime while playing, duration otherwise
+ * @param {boolean} [props.isPlaying=false] - Whether audio is currently playing
  */
 class AudioTimeline extends Component {
   constructor(props) {
@@ -132,14 +137,14 @@ class AudioTimeline extends Component {
   };
 
   handleProgressClick = (e) => {
-    const { audioElement, duration } = this.props;
+    const { audioElement, duration, startOffset = 0 } = this.props;
     if (!audioElement) return;
 
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;
-    const newTime = percentage * duration;
+    const newTime = startOffset + percentage * duration;
 
     audioElement.currentTime = newTime;
     this.setState({ currentTime: newTime });
@@ -147,40 +152,55 @@ class AudioTimeline extends Component {
 
   formatTime = (seconds) => {
     if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
-    
+
+    // Short duration format: if total duration is under 1s, show seconds with 2 decimals
+    const { duration } = this.props;
+    if (duration > 0 && duration < 1) {
+      return `${seconds.toFixed(2)}s`;
+    }
+
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   render() {
-    const { duration } = this.props;
+    const { duration, compact = false, isPlaying = false, startOffset = 0 } = this.props;
     const { theme, currentTime } = this.state;
 
-    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+    // Time relative to the region start (or 0 if no region)
+    const relativeTime = Math.max(0, currentTime - startOffset);
+    const progress = duration > 0 ? Math.min(100, (relativeTime / duration) * 100) : 0;
+
+    // In compact mode: right label shows relativeTime while playing, duration otherwise
+    const rightLabelValue = compact
+      ? (isPlaying ? relativeTime : duration)
+      : duration;
 
     return html`
       <${TimelineWrapper} gap=${theme.spacing.small.gap}>
-        <${Time} 
-          color=${theme.colors.text.secondary}
-          fontSize=${theme.typography.fontSize.small}
-        >${this.formatTime(currentTime)}</${Time}>
-        
-        <${ProgressBar} 
+        ${!compact ? html`
+          <${Time}
+            color=${theme.colors.text.secondary}
+            fontSize=${theme.typography.fontSize.small}
+          >${this.formatTime(relativeTime)}</${Time}>
+        ` : null}
+
+        <${ProgressBar}
           backgroundColor=${theme.colors.overlay.background}
           transition=${`height ${theme.transitions.fast}`}
           onClick=${this.handleProgressClick}
         >
-          <${ProgressFill} 
+          <${ProgressFill}
             width=${`${progress}%`}
             backgroundColor=${theme.colors.primary.background}
           />
         </${ProgressBar}>
-        
-        <${Time} 
+
+        <${Time}
           color=${theme.colors.text.secondary}
           fontSize=${theme.typography.fontSize.small}
-        >${this.formatTime(duration)}</${Time}>
+        >${this.formatTime(rightLabelValue)}</${Time}>
       </${TimelineWrapper}>
     `;
   }
@@ -194,15 +214,22 @@ class AudioTimeline extends Component {
  * AudioPlayer Component
  * An overlay audio player with play/pause, progress bar, and time display.
  * Designed to sit at the bottom of an album image or as a standalone player.
- * 
+ *
  * @param {Object} props
  * @param {string} props.audioUrl - URL of the audio file to play (required)
+ * @param {'normal'|'compact'|'full'} [props.widthScale='full'] - Width: 200px | 100px | 100%+flex-grow
+ * @param {number} [props.start] - Optional start time in seconds for region playback
+ * @param {number} [props.end] - Optional end time in seconds for region playback
  * @returns {preact.VNode|null} Returns null if audioUrl is not provided
- * 
+ *
  * @example
  * // Basic usage
  * <AudioPlayer audioUrl="/path/to/audio.mp3" />
- * 
+ *
+ * @example
+ * // Region playback (plays only 10s–25s of the file)
+ * <AudioPlayer audioUrl="/audio.mp3" start=${10} end=${25} />
+ *
  * @example
  * // As overlay on album image
  * <div style="position: relative;">
@@ -213,6 +240,7 @@ class AudioTimeline extends Component {
 export class AudioPlayer extends Component {
   constructor(props) {
     super(props);
+    this._instanceId = ++_nextInstanceId;
     this.state = {
       theme: currentTheme.value,
       isPlaying: false,
@@ -234,17 +262,17 @@ export class AudioPlayer extends Component {
     if (this.unsubscribeAudio) this.unsubscribeAudio();
     this._cancelMetadataLoad();
 
-    // Stop audio if this component's URL is currently playing
+    // Stop audio if this specific instance is currently playing
     const { audioUrl } = this.props;
-    if (audioUrl && globalAudioPlayer.isPlaying(audioUrl)) {
+    if (audioUrl && globalAudioPlayer.isPlaying(audioUrl, this._instanceId)) {
       globalAudioPlayer.stop();
     }
   }
 
   componentDidUpdate(prevProps) {
-    // When the audio source changes, stop the previous audio and reset state
+    // When the audio source changes, stop if this instance owns playback, then reset
     if (prevProps.audioUrl !== this.props.audioUrl) {
-      if (prevProps.audioUrl && globalAudioPlayer.isPlaying(prevProps.audioUrl)) {
+      if (prevProps.audioUrl && globalAudioPlayer.isPlaying(prevProps.audioUrl, this._instanceId)) {
         globalAudioPlayer.stop();
       }
       this.setState({ isPlaying: false, duration: 0 });
@@ -277,12 +305,13 @@ export class AudioPlayer extends Component {
 
   handleAudioStateChange = () => {
     const { audioUrl } = this.props;
-    const isPlaying = globalAudioPlayer.isPlaying(audioUrl);
+    const isPlaying = globalAudioPlayer.isPlaying(audioUrl, this._instanceId);
     const updates = { isPlaying };
 
-    // Update duration when our audio's metadata is available
+    // Update duration when this instance owns the active audio element
     if (
       globalAudioPlayer.currentAudioUrl === audioUrl &&
+      globalAudioPlayer.currentInstanceId === this._instanceId &&
       globalAudioPlayer.audioElement
     ) {
       const d = globalAudioPlayer.audioElement.duration;
@@ -295,44 +324,58 @@ export class AudioPlayer extends Component {
   };
 
   togglePlayPause = () => {
-    const { audioUrl } = this.props;
+    const { audioUrl, start, end } = this.props;
     if (!audioUrl) return;
-    globalAudioPlayer.toggle(audioUrl);
+    const region = (start != null && end != null) ? { start, end } : null;
+    globalAudioPlayer.toggle(audioUrl, region, this._instanceId);
   };
 
   render() {
-    const { audioUrl } = this.props;
+    const { audioUrl, widthScale = 'full', start, end } = this.props;
     const { theme, isPlaying, duration } = this.state;
 
     if (!audioUrl) return null;
 
-    // Only pass the shared audio element when it is loaded with our URL,
+    // Only pass the shared audio element when this specific instance owns playback,
     // so AudioTimeline tracks the correct position and seeking works.
     const audioElement =
       globalAudioPlayer.audioElement &&
-      globalAudioPlayer.currentAudioUrl === audioUrl
+      globalAudioPlayer.currentAudioUrl === audioUrl &&
+      globalAudioPlayer.currentInstanceId === this._instanceId
         ? globalAudioPlayer.audioElement
         : null;
 
+    const { width, flex } = getWidthScaleStyle(widthScale);
+
+    const compact = widthScale !== 'full';
+
+    // When region props are provided, display the region duration instead of the full file duration
+    const hasRegion = start != null && end != null;
+    const effectiveDuration = hasRegion ? (end - start) : duration;
+    const startOffset = hasRegion ? start : 0;
+
     return html`
-      <${Wrapper} padding=${theme.spacing.small.padding}>
+      <${PlayerContainer} padding=${theme.spacing.small.padding} width=${width} flex=${flex || ''}>
         <${Panel} variant="glass" padding="small">
           <${Controls} gap=${theme.spacing.medium.gap}>
             <${Button}
               variant="medium-icon"
               color="secondary"
-              icon=${isPlaying ? 'pause' : 'play'}
+              icon=${isPlaying ? 'stop' : 'play'}
               onClick=${this.togglePlayPause}
               title=${isPlaying ? 'Pause' : 'Play'}
             />
 
             <${AudioTimeline}
               audioElement=${audioElement}
-              duration=${duration}
+              duration=${effectiveDuration}
+              startOffset=${startOffset}
+              compact=${compact}
+              isPlaying=${isPlaying}
             />
           </${Controls}>
         </${Panel}>
-      </${Wrapper}>
+      </${PlayerContainer}>
     `;
   }
 }

@@ -192,14 +192,16 @@ function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, 
  * @param {string} [props.title='Select Item'] - Modal title
  * @param {Array<Object>} [props.items=[]] - Array of item objects with id, label, optional icon, optional disabled
  * @param {string} [props.itemIcon] - Default icon for items that don't specify one
- * @param {string} [props.actionLabel] - Label for the action button (e.g., "New Item")
+ * @param {string} [props.actionLabel] - Label for the primary action button (e.g., "New Item")
+ * @param {string} [props.secondaryActionLabel] - Label for a secondary action button (e.g., "Import")
  * @param {Array} [props.itemActions] - Per-item action buttons: [{ icon, color?, title?, onClick, closeAfter? }]
  * @param {boolean} [props.showActionButton=true] - Show the action button in footer
  * @param {'default'|'narrow'} [props.variant='default'] - Modal width variant ('default'=500px, 'narrow'=340px)
  * @param {string} [props.selectedId] - Currently selected item id
  * @param {string} [props.emptyMessage='No items available'] - Message to show when items array is empty
  * @param {Function} [props.onSelectItem] - Callback when item is selected: (item) => void
- * @param {Function} [props.onAction] - Callback for action button: () => void
+ * @param {Function} [props.onAction] - Callback for primary action button: () => void
+ * @param {Function} [props.onSecondaryAction] - Callback for secondary action button: () => void
  * @param {Function} [props.onClose] - Callback when modal is closed: () => void
  * @returns {preact.VNode|null}
  *
@@ -281,6 +283,7 @@ class ListSelectModal extends Component {
       items = [],
       itemIcon,
       actionLabel,
+      secondaryActionLabel,
       itemActions,
       showActionButton = true,
       variant = 'default',
@@ -348,6 +351,15 @@ class ListSelectModal extends Component {
               >
                 Cancel
               </>
+              ${showActionButton && secondaryActionLabel ? html`
+                <${Button}
+                  variant="medium-text"
+                  color="secondary"
+                  onClick=${() => this.props.onSecondaryAction && this.props.onSecondaryAction()}
+                >
+                  ${secondaryActionLabel}
+                </>
+              ` : null}
               ${showActionButton && actionLabel ? html`
                 <${Button}
                   variant="medium-text"
@@ -380,14 +392,16 @@ class ListSelectModal extends Component {
  * @param {string} [options.title='Select Item'] - Modal title
  * @param {Array<Object>} [options.items=[]] - List items with id, label, icon (optional), disabled (optional)
  * @param {string} [options.itemIcon] - Default boxicon name for items
- * @param {string} [options.actionLabel] - Label for action button (e.g., "New Item")
+ * @param {string} [options.actionLabel] - Label for primary action button (e.g., "New Item")
+ * @param {string} [options.secondaryActionLabel] - Label for secondary action button (e.g., "Import")
  * @param {Array} [options.itemActions] - Per-item action buttons: [{ icon, color?, title?, onClick, closeAfter? }]
  * @param {boolean} [options.showActionButton=true] - Show the action button in footer
  * @param {'default'|'narrow'} [options.variant='default'] - Modal width ('default'=500px, 'narrow'=340px)
  * @param {string} [options.selectedId] - Currently selected item id
  * @param {string} [options.emptyMessage='No items available'] - Message to show when items array is empty
  * @param {Function} [options.onSelectItem] - Callback when item is selected: (item) => void
- * @param {Function} [options.onAction] - Callback for action button: () => void
+ * @param {Function} [options.onAction] - Callback for primary action button: () => void
+ * @param {Function} [options.onSecondaryAction] - Callback for secondary action button: () => void
  * @param {Function} [options.onClose] - Callback when modal is closed: () => void
  *
  * @returns {Function} Cleanup function to close the modal

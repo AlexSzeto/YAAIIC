@@ -1,6 +1,5 @@
 ---
-agent: agent
-description: Fixes windows based console commands not working on Antigravity
+trigger: always_on
 ---
 
 When running commands on Windows, the run_command tool may append an extra quote or malform the command string, causing it to hang or fail.

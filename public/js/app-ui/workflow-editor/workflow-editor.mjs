@@ -658,7 +658,7 @@ export function WorkflowEditor() {
         <${HorizontalLayout} gap="small">
           <${Button}
             variant="medium-icon-text"
-            icon="folder"
+            icon="save"
             color="secondary"
             onClick=${() => setIsModalOpen(true)}
           >

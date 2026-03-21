@@ -53,6 +53,10 @@
     import { HoverPanelProvider, useHoverPanel } from './overlays/hover-panel.mjs';
     import { useRef } from 'preact/hooks';
     import { Icon } from './layout/icon.mjs';
+    import { RangeSlider } from './io/range-slider.mjs';
+    import { Slider } from './io/slider.mjs';
+    import { DiscreteSlider } from './io/discrete-slider.mjs';
+    import { ToggleSwitch } from './io/toggle-switch.mjs';
 
     
     // =========================================================================
@@ -490,6 +494,19 @@
           // Modal states
           modalOpen: false,
           modalSize: 'medium',
+          // Slider states
+          sliderGain: 0.5,
+          sliderPan: 0,
+          // RangeSlider states
+          rangeDefault: { min: 0, max: 100 },
+          rangeSnap: { min: 2, max: 7.5 },
+          rangeNarrow: { min: 25, max: 50 },
+          // DiscreteSlider state
+          discreteValue: 'medium',
+          // ToggleSwitch states
+          toggle1: false,
+          toggle2: true,
+          toggle3Disabled: false,
         };
         
         // Mock SSE manager for testing ProgressBanner
@@ -922,6 +939,197 @@
                 </${ComponentGrid}>
               </${Section}>
               
+              
+              <!-- IO: Slider -->
+              <${Section}>
+                <${SectionTitle}>Slider Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Single-value slider — layout mirrors RangeSlider so they stack and align.</p>
+
+                <div style="max-width: 400px;">
+                  <${Slider}
+                    label="Gain (0–1)"
+                    minAllowed=${0}
+                    maxAllowed=${1}
+                    snap=${0.01}
+                    value=${this.state.sliderGain}
+                    widthScale="full"
+                    onChange=${(v) => {
+                      console.log('[Slider gain] onChange:', v);
+                      this.setState({ sliderGain: v });
+                    }}
+                  />
+                  <${RangeSlider}
+                    label="Gain Range (stacked for alignment check)"
+                    minAllowed=${0}
+                    maxAllowed=${1}
+                    snap=${0.01}
+                    min=${0.3}
+                    max=${0.7}
+                    widthScale="full"
+                    onChange=${({ min, max }) => console.log('[RangeSlider align] onChange:', { min, max })}
+                  />
+                </div>
+
+                <div style="max-width: 400px; margin-top: 16px;">
+                  <${Slider}
+                    label="Pan (–1 to +1)"
+                    minAllowed=${-1}
+                    maxAllowed=${1}
+                    snap=${0.1}
+                    value=${this.state.sliderPan}
+                    widthScale="full"
+                    onChange=${(v) => {
+                      console.log('[Slider pan] onChange:', v);
+                      this.setState({ sliderPan: v });
+                    }}
+                  />
+                </div>
+
+                <div style="max-width: 400px; margin-top: 16px;">
+                  <${Slider}
+                    label="Pan Value — knob variant (no fill)"
+                    minAllowed=${-1}
+                    maxAllowed=${1}
+                    snap=${0.1}
+                    value=${0}
+                    widthScale="full"
+                    variant="knob"
+                    onChange=${(v) => console.log('[Slider knob] onChange:', v)}
+                  />
+                </div>
+
+                <div style="max-width: 400px; margin-top: 16px;">
+                  <${Slider}
+                    label="Disabled"
+                    minAllowed=${0}
+                    maxAllowed=${100}
+                    value=${42}
+                    widthScale="full"
+                    disabled=${true}
+                  />
+                </div>
+              <//>
+
+              <!-- IO: RangeSlider -->
+              <${Section}>
+                <${SectionTitle}>RangeSlider Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Dual-handle range slider using two native input[type="range"] elements</p>
+
+                <div style="max-width: 400px;">
+                  <${RangeSlider}
+                    label="Default Range"
+                    minAllowed=${0}
+                    maxAllowed=${100}
+                    min=${this.state.rangeDefault.min}
+                    max=${this.state.rangeDefault.max}
+                    onChange=${({ min, max }) => {
+                      console.log('[RangeSlider default] onChange:', { min, max });
+                      this.setState({ rangeDefault: { min, max } });
+                    }}
+                  />
+                </div>
+
+                <div style="max-width: 400px;">
+                  <${RangeSlider}
+                    label="Snap to 0.5"
+                    minAllowed=${0}
+                    maxAllowed=${10}
+                    snap=${0.5}
+                    min=${this.state.rangeSnap.min}
+                    max=${this.state.rangeSnap.max}
+                    onChange=${({ min, max }) => {
+                      console.log('[RangeSlider snap] onChange:', { min, max });
+                      this.setState({ rangeSnap: { min, max } });
+                    }}
+                  />
+                </div>
+
+                <div style="max-width: 200px;">
+                  <${RangeSlider}
+                    label="Narrow Range"
+                    minAllowed=${20}
+                    maxAllowed=${60}
+                    min=${this.state.rangeNarrow.min}
+                    max=${this.state.rangeNarrow.max}
+                    onChange=${({ min, max }) => {
+                      console.log('[RangeSlider narrow] onChange:', { min, max });
+                      this.setState({ rangeNarrow: { min, max } });
+                    }}
+                  />
+                </div>
+              <//>
+
+              <!-- IO: DiscreteSlider -->
+              <${Section}>
+                <${SectionTitle}>DiscreteSlider Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Slider for choosing from a fixed list of labeled options</p>
+
+                <div style="max-width: 400px;">
+                  <${DiscreteSlider}
+                    label="Qualitative Slider"
+                    options=${['very low', 'low', 'medium', 'high', 'very high']}
+                    value=${this.state.discreteValue}
+                    onChange=${(e) => {
+                      console.log('[DiscreteSlider] onChange:', e.target.value);
+                      this.setState({ discreteValue: e.target.value });
+                    }}
+                  />
+                </div>
+
+                <div style="max-width: 400px;">
+                  <${DiscreteSlider}
+                    label="Numeric Slider"
+                    options=${[0.25, 0.5, 1, 1.5, 2, 4]}
+                    value=${1}
+                    onChange=${(e) => console.log('[DiscreteSlider numeric] onChange:', e.target.value)}
+                  />
+                </div>
+              <//>
+
+              <!-- IO: ToggleSwitch -->
+              <${Section}>
+                <${SectionTitle}>ToggleSwitch Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Toggle using a hidden checkbox with CSS-driven visual transitions</p>
+
+                <${ComponentGrid}>
+                  <!-- Default toggle (no label) -->
+                  <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                    <span style="font-size: 12px; opacity: 0.6;">Default toggle</span>
+                    <${ToggleSwitch}
+                      checked=${this.state.toggle1}
+                      onChange=${(e) => {
+                        console.log('[ToggleSwitch default] onChange:', e.target.checked);
+                        this.setState({ toggle1: e.target.checked });
+                      }}
+                    />
+                  </div>
+
+                  <!-- Toggle with label (initially on) -->
+                  <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                    <span style="font-size: 12px; opacity: 0.6;">With label (initially on)</span>
+                    <${ToggleSwitch}
+                      label="Enable feature"
+                      checked=${this.state.toggle2}
+                      onChange=${(e) => {
+                        console.log('[ToggleSwitch labeled] onChange:', e.target.checked);
+                        this.setState({ toggle2: e.target.checked });
+                      }}
+                    />
+                  </div>
+
+                  <!-- Disabled toggle -->
+                  <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                    <span style="font-size: 12px; opacity: 0.6;">Disabled</span>
+                    <${ToggleSwitch}
+                      label="Unavailable"
+                      checked=${this.state.toggle3Disabled}
+                      disabled=${true}
+                      onChange=${(e) => console.log('[ToggleSwitch disabled] onChange:', e.target.checked)}
+                    />
+                  </div>
+                <//>
+              <//>
+
               <${Section}>
                 <${SectionTitle}>ButtonGroup Component</${SectionTitle}>
                 <p style="margin-bottom: 16px; opacity: 0.7;">Click buttons to toggle selection</p>
@@ -1157,14 +1365,20 @@
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
                       Album Art Area
                     </div>
-                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
+                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                    </div>
                   </div>
                   <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
                       Album Art Area
                     </div>
-                    <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
+                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                    </div>
                   </div>
+                  <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                  <${AudioPlayer} widthScale="normal" audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
                 <//${ComponentGrid}>
               </${Section}>
               
@@ -1290,7 +1504,7 @@
                   <${HoverPanelTriggers} />
                 </>
               <//>
-              
+
               <!-- More component sections will be added as they are refactored -->
               
                 <//${Page}>

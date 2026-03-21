@@ -553,11 +553,19 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     // -----------------------------------------------------------------------
     // COMFYUI WORKFLOW EXECUTION
     // -----------------------------------------------------------------------
-    const comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: workflowData, client_id: CLIENT_ID })
-    });
+    let comfyResponse;
+    try {
+      comfyResponse = await fetch(`${comfyUIAPIPath}/prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: workflowData, client_id: CLIENT_ID })
+      });
+    } catch (err) {
+      if (err.cause?.code === 'ECONNREFUSED') {
+        throw new Error(`Cannot connect to ComfyUI at ${comfyUIAPIPath}`);
+      }
+      throw err;
+    }
 
     if (!comfyResponse.ok) {
       throw new Error(`ComfyUI request failed: ${comfyResponse.status} ${comfyResponse.statusText}`);

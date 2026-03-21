@@ -67,6 +67,13 @@ const ViewButtonOverlay = styled('div')`
 `;
 ViewButtonOverlay.className = 'view-button-overlay';
 
+const RegenerateImageOverlay = styled('div')`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+`;
+RegenerateImageOverlay.className = 'regenerate-image-overlay';
+
 const RightColumn = styled('div')`
   flex: 1;
   display: flex;
@@ -179,12 +186,13 @@ export function GeneratedResult({
   onUseDescription,
   onDelete,
   onInpaint,
+  onSoundEdit,
   onSelectAsInput,
   onEdit,
   onRegenerate,
   onReprompt,
   isSelectDisabled = false,
-  isInpaintDisabled = false
+  isGenerating = false,
 }) {
   if (!image) return null;
 
@@ -292,6 +300,17 @@ export function GeneratedResult({
                   />
                 </${ViewButtonOverlay}>
               ` : null}
+              ${image.type === 'audio' ? html`
+                <${RegenerateImageOverlay}>
+                  <${Button}
+                    variant="small-icon"
+                    icon="revision"
+                    onClick=${() => onRegenerate && onRegenerate(image.uid, 'imageUrl')}
+                    title="Regenerate album art"
+                    disabled=${isGenerating}
+                  />
+                </${RegenerateImageOverlay}>
+              ` : null}
               ${image.timeTaken !== undefined && image.timeTaken !== null ? html`
                 <${TimeOverlay}>
                   <${Panel} variant="glass" padding="small">
@@ -301,7 +320,9 @@ export function GeneratedResult({
               ` : null}
             </${MediaContainer}>
             ${image.audioUrl ? html`
-              <${AudioPlayer} audioUrl=${image.audioUrl} />
+              <div style=${{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px' }}>
+                <${AudioPlayer} audioUrl=${image.audioUrl} />
+              </div>
             ` : null}
           </${LeftColumn}>
 
@@ -372,6 +393,7 @@ export function GeneratedResult({
               onRegenerate=${onRegenerate}
               editingField=${editingField}
               image=${image}
+              isGenerating=${isGenerating}
             />
 
             <${InfoField}
@@ -405,15 +427,26 @@ export function GeneratedResult({
           >
             Select
           </${Button}>
-          <${Button}
-            variant="primary"
-            icon="brush"
-            onClick=${() => onInpaint && onInpaint(image)}
-            disabled=${isInpaintDisabled}
-            title="Inpaint this image"
-          >
-            Inpaint
-          </${Button}>
+          ${image.type === 'audio'
+            ? html`
+              <${Button}
+                variant="primary"
+                icon="pencil"
+                onClick=${() => onSoundEdit && onSoundEdit(image)}
+                title="Edit this audio"
+              >
+                Edit
+              </${Button}>`
+            : html`
+              <${Button}
+                variant="primary"
+                icon="brush"
+                onClick=${() => onInpaint && onInpaint(image)}
+                title="Inpaint this image"
+              >
+                Inpaint
+              </${Button}>`
+          }
           <${Button}
             variant="primary"
             icon="export"
@@ -496,7 +529,7 @@ class TabbedInfoField extends Component {
   };
 
   render() {
-    const { tabs, onCopy, editingField, onCancel, onRegenerate, image } = this.props;
+    const { tabs, onCopy, editingField, onCancel, onRegenerate, image, isGenerating } = this.props;
     const { selectedTab, editValue } = this.state;
 
     const activeTab = tabs.find(t => t.id === selectedTab);
@@ -526,7 +559,7 @@ class TabbedInfoField extends Component {
                 icon="revision"
                 onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
                 title="Regenerate ${activeTab.name}"
-                disabled=${!canRegenerate}
+                disabled=${!canRegenerate || isGenerating}
               />
               <${Button}
                 variant="small-icon"

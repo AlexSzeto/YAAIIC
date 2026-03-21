@@ -16,11 +16,13 @@ import { currentTheme } from './custom-ui/theme.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { GenerationForm } from './app-ui/main/generation-form.mjs';
 import { GeneratedResult } from './app-ui/main/generated-result.mjs';
+import { SoundEditorModal } from './app-ui/sound-editor/sound-editor-modal.mjs';
 import { Gallery } from './app-ui/main/gallery.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
-import { showFolderSelect } from './app-ui/folder-select.mjs';
+
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
+import { openFolderSelect } from './app-ui/use-folder-select.mjs';
 
 import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
@@ -74,6 +76,7 @@ function App() {
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regenerateTaskId, setRegenerateTaskId] = useState(null);
+  const [soundEditorItem, setSoundEditorItem] = useState(null);
 
   // Phase 4: History & Gallery State
   const [history, setHistory] = useState([]);
@@ -744,6 +747,24 @@ function App() {
     if (image.uid) window.location.href = `inpaint.html?uid=${image.uid}`;
   };
 
+  const handleSoundEdit = useCallback((item) => setSoundEditorItem(item), []);
+
+  // Called after a metadata-only save (clip regions changed, no new file).
+  const handleSoundEditSaved = useCallback((savedEntry) => {
+    setSoundEditorItem(null);
+    setHistory(prev => prev.map(h => h.uid === savedEntry.uid ? savedEntry : h));
+    setGeneratedImage(prev => prev?.uid === savedEntry.uid ? savedEntry : prev);
+  }, []);
+
+  // Called after a physical edit (trim/crop) upload starts.
+  // The upload creates a new derived entry asynchronously (album cover generation),
+  // so we close the modal and hand the taskId to the existing ProgressBanner mechanism
+  // which fetches the finished entry via SSE and adds it to history.
+  const handleSoundEditSaveTask = useCallback((taskId) => {
+    setSoundEditorItem(null);
+    setTaskId(taskId);
+  }, []);
+
   const handleEdit = async (uid, field, value) => {
     try {
       let valueToSend = value;
@@ -823,42 +844,23 @@ function App() {
 
   // Folder handlers
   const handleOpenFolderSelect = () => {
-    showFolderSelect(async (selectedUid) => {
-      try {
-        // Call POST /folder to select the folder on the server
-        const response = await fetch('/folder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: selectedUid })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to select folder');
-        }
-        
-        const folderData = await response.json();
-        const selectedFolder = folderData.list.find(f => f.uid === selectedUid) || { uid: '', label: 'Unsorted' };
-        
+    openFolderSelect({
+      currentFolder,
+      toast,
+      onFolderChanged: async (selectedFolder) => {
         // Update current folder state
         setCurrentFolder(selectedFolder);
-        
-        // Refresh gallery to show images from the new folder
-        const recent = backfillMissingProperties(await fetchJson(`/media-data?limit=10&folder=${selectedUid}`));
+
+        // Refresh gallery to show items from the new folder
+        const recent = backfillMissingProperties(
+          await fetchJson(`/media-data?limit=10&folder=${selectedFolder.uid}`)
+        );
         if (Array.isArray(recent)) {
           setHistory(recent);
-          if (recent.length > 0) {
-            setGeneratedImage(recent[0]);
-          } else {
-            setGeneratedImage(null);
-          }
+          setGeneratedImage(recent.length > 0 ? recent[0] : null);
         }
-        
-        toast.success(`Switched to folder: ${selectedFolder.label}`);
-      } catch (err) {
-        console.error('Failed to switch folder:', err);
-        toast.error('Failed to switch folder');
-      }
-    }, null, null, null, currentFolder.uid);
+      },
+    });
   };
 
   // Gallery handlers
@@ -1047,7 +1049,7 @@ function App() {
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${isGenerating}
+            isGenerating=${!!(taskId || regenerateTaskId)}
             onGenerate=${handleGenerate}
             onOpenGallery=${() => setIsGalleryOpen(true)}
             onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
@@ -1061,7 +1063,7 @@ function App() {
         </${VerticalLayout}>
       </${Panel}>
       
-      <${GeneratedResult} 
+      <${GeneratedResult}
         image=${generatedImage}
         onUseSeed=${handleUseSeed}
         onUsePrompt=${handleUsePrompt}
@@ -1070,41 +1072,27 @@ function App() {
         onUseDescription=${handleUseDescription}
         onDelete=${handleDeleteImage}
         onInpaint=${handleInpaint}
+        onSoundEdit=${handleSoundEdit}
         onEdit=${handleEdit}
         onRegenerate=${handleRegenerate}
         onReprompt=${handleReprompt}
         onSelectAsInput=${handleSelectAsInput}
+        isGenerating=${!!(taskId || regenerateTaskId)}
         isSelectDisabled=${(() => {
           const mediaType = generatedImage?.type || 'image';
-          
-          // Check if workflow needs images as input
           if (mediaType === 'image') {
-            // Disable if no workflow or workflow doesn't need images
             if (!workflow || !workflow.inputImages || workflow.inputImages <= 0) return true;
-            // Disable if all image slots are filled
             const filledCount = inputImages.filter(img => img && (img.blob || img.url)).length;
             if (filledCount >= workflow.inputImages) return true;
             return false;
           }
-          
-          // Check if workflow needs audio as input
           if (mediaType === 'audio') {
-            // Disable if no workflow or workflow doesn't need audio
             if (!workflow || !workflow.inputAudios || workflow.inputAudios <= 0) return true;
-            // Disable if all audio slots are filled
-            const filledCount = inputAudios.filter(aud => aud && (aud.url)).length;
+            const filledCount = inputAudios.filter(aud => aud && aud.url).length;
             if (filledCount >= workflow.inputAudios) return true;
             return false;
           }
-          
-          // For video or other media types, disable selection (not supported as input yet)
           return true;
-        })()}
-        isInpaintDisabled=${(() => {
-          // Disable if the media type is not an image
-          const mediaType = generatedImage?.type || 'image';
-          if (mediaType !== 'image') return true;
-          return false;
         })()}
       />
 
@@ -1126,8 +1114,17 @@ function App() {
       `}
     </${VerticalLayout}>
 
+    ${soundEditorItem ? html`
+      <${SoundEditorModal}
+        item=${soundEditorItem}
+        onClose=${() => setSoundEditorItem(null)}
+        onSaved=${handleSoundEditSaved}
+        onSaveTask=${handleSoundEditSaveTask}
+      />
+    ` : null}
+
     ${taskId ? html`
-      <${ProgressBanner} 
+      <${ProgressBanner}
         key=${taskId}
         taskId=${taskId}
         sseManager=${sseManager}
