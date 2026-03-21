@@ -56,7 +56,6 @@ const Knob = styled('div')`
   height: 14px;
   border-radius: 50%;
   background-color: ${props => props.backgroundColor};
-  box-shadow: ${props => props.shadow};
   transition: left ${props => props.transition}, background-color ${props => props.transition};
 `;
 Knob.className = 'toggle-switch-knob';
