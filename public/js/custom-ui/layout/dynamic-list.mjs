@@ -112,6 +112,7 @@ const DragGhost = styled('div')`
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
+  min-height: 44px;
   border: ${props => `${props.theme.border.width} ${props.theme.border.style} ${props.theme.colors.border.accent || props.theme.colors.border.secondary}`};
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   background-color: ${props => props.theme.colors.background.secondary};
@@ -152,6 +153,8 @@ function DynamicListItem({
   onDragStart,
   initialCollapsed = true,
   isDragTarget,
+  showDragButton,
+  showMoveUpDownButtons,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -174,27 +177,31 @@ function DynamicListItem({
         />
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
         <div onClick=${stopProp} style="display:flex;gap:4px;">
-          <${Button}
-            variant="small-icon"
-            icon="swap-vertical"
-            onMouseDown=${handleDragMouseDown}
-            title="Drag to reorder"
-            style=${{ cursor: 'grab' }}
-          />
-          <${Button}
-            variant="small-icon"
-            icon="up-arrow"
-            disabled=${index === 0}
-            onClick=${onMoveUp}
-            title="Move up"
-          />
-          <${Button}
-            variant="small-icon"
-            icon="down-arrow"
-            disabled=${index === total - 1}
-            onClick=${onMoveDown}
-            title="Move down"
-          />
+          ${showDragButton && html`
+            <${Button}
+              variant="small-icon"
+              icon="swap-vertical"
+              onMouseDown=${handleDragMouseDown}
+              title="Drag to reorder"
+              style=${{ cursor: 'grab' }}
+            />
+          `}
+          ${showMoveUpDownButtons && html`
+            <${Button}
+              variant="small-icon"
+              icon="up-arrow"
+              disabled=${index === 0}
+              onClick=${onMoveUp}
+              title="Move up"
+            />
+            <${Button}
+              variant="small-icon"
+              icon="down-arrow"
+              disabled=${index === total - 1}
+              onClick=${onMoveDown}
+              title="Move down"
+            />
+          `}
           <${Button}
             variant="small-icon"
             icon="trash"
@@ -229,6 +236,8 @@ function CondensedDynamicListItem({
   onDelete,
   onDragStart,
   isDragTarget,
+  showDragButton,
+  showMoveUpDownButtons,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -244,27 +253,31 @@ function CondensedDynamicListItem({
         ${renderItem(item, index)}
       </${CondensedItemContent}>
       <div style="display:flex;gap:4px;flex-shrink:0;">
-        <${Button}
-          variant="small-icon"
-          icon="swap-vertical"
-          onMouseDown=${handleDragMouseDown}
-          title="Drag to reorder"
-          style=${{ cursor: 'grab' }}
-        />
-        <${Button}
-          variant="small-icon"
-          icon="up-arrow"
-          disabled=${index === 0}
-          onClick=${onMoveUp}
-          title="Move up"
-        />
-        <${Button}
-          variant="small-icon"
-          icon="down-arrow"
-          disabled=${index === total - 1}
-          onClick=${onMoveDown}
-          title="Move down"
-        />
+        ${showDragButton && html`
+          <${Button}
+            variant="small-icon"
+            icon="swap-vertical"
+            onMouseDown=${handleDragMouseDown}
+            title="Drag to reorder"
+            style=${{ cursor: 'grab' }}
+          />
+        `}
+        ${showMoveUpDownButtons && html`
+          <${Button}
+            variant="small-icon"
+            icon="up-arrow"
+            disabled=${index === 0}
+            onClick=${onMoveUp}
+            title="Move up"
+          />
+          <${Button}
+            variant="small-icon"
+            icon="down-arrow"
+            disabled=${index === total - 1}
+            onClick=${onMoveDown}
+            title="Move down"
+          />
+        `}
         <${Button}
           variant="small-icon"
           icon="trash"
@@ -297,14 +310,16 @@ function CondensedDynamicListItem({
  * live. Releasing the mouse commits the final position.
  *
  * @param {Object}   props
- * @param {string}   [props.title]          - Optional section title rendered in the header row.
- * @param {Array}    props.items            - Array of item data objects.
- * @param {Function} props.renderItem       - `(item, index) => VNode` sub-form renderer.
- * @param {Function} [props.getTitle]       - `(item, index) => string` item header label (unused in condensed mode).
- * @param {Function} props.createItem       - `() => Object` factory for a blank new item.
- * @param {Function} props.onChange         - `(items) => void` called on every mutation.
- * @param {string}   [props.addLabel]       - Label for the add button (default "Add item").
- * @param {boolean}  [props.condensed=false] - Use condensed inline layout (no panel, no collapse).
+ * @param {string}   [props.title]               - Optional section title rendered in the header row.
+ * @param {Array}    props.items                 - Array of item data objects.
+ * @param {Function} props.renderItem            - `(item, index) => VNode` sub-form renderer.
+ * @param {Function} [props.getTitle]            - `(item, index) => string` item header label (unused in condensed mode).
+ * @param {Function} props.createItem            - `() => Object` factory for a blank new item.
+ * @param {Function} props.onChange              - `(items) => void` called on every mutation.
+ * @param {string}   [props.addLabel]            - Label for the add button (default "Add item").
+ * @param {boolean}  [props.condensed=false]     - Use condensed inline layout (no panel, no collapse).
+ * @param {boolean}  [props.showDragButton=true] - Show the drag-to-reorder handle button.
+ * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
  * @returns {preact.VNode}
  *
  * @example
@@ -329,7 +344,9 @@ export function DynamicList({
   onChange,
   addLabel = 'Add item',
   condensed = false,
-  onAdd,   // optional: () => void – replaces default handleAdd when provided
+  onAdd,                      // optional: () => void – replaces default handleAdd when provided
+  showDragButton = true,      // show the swap-vertical drag handle
+  showMoveUpDownButtons = false, // show the up/down arrow buttons
 }) {
   const theme = currentTheme.value;
 
@@ -403,8 +420,8 @@ export function DynamicList({
   const computeDropIndex = useCallback((clientY) => {
     const root = document.getElementById(listId);
     if (!root) return 0;
-    // Exclude the faded source item so only the N-1 real candidate slots are measured.
-    const children = Array.from(root.querySelectorAll(':scope > [data-dli]:not([data-dli-src])'));
+    // All [data-dli] children are the N-1 non-source items (source is not rendered during drag).
+    const children = Array.from(root.querySelectorAll(':scope > [data-dli]'));
     for (let i = 0; i < children.length; i++) {
       const rect = children[i].getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
@@ -544,6 +561,8 @@ export function DynamicList({
                 onDelete=${() => handleDelete(index)}
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
+                showDragButton=${showDragButton}
+                showMoveUpDownButtons=${showMoveUpDownButtons}
                 theme=${theme}
               />
             `
@@ -560,6 +579,8 @@ export function DynamicList({
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
                 initialCollapsed=${!isNew}
+                showDragButton=${showDragButton}
+                showMoveUpDownButtons=${showMoveUpDownButtons}
                 theme=${theme}
               />
             `
@@ -582,8 +603,10 @@ export function DynamicList({
     const result = [];
 
     for (let index = 0; index < items.length; index++) {
+      // Skip the source item entirely – the placeholder takes its visual slot.
+      if (index === fromIndex) continue;
+
       const item = items[index];
-      const isSrc = index === fromIndex;
       const isNew = newlyAddedIndexRef.current === index;
       if (isNew) newlyAddedIndexRef.current = null;
 
@@ -603,7 +626,9 @@ export function DynamicList({
             onMoveDown=${() => handleMoveDown(index)}
             onDelete=${() => handleDelete(index)}
             onDragStart=${handleDragStart}
-            isDragTarget=${isSrc}
+            isDragTarget=${false}
+            showDragButton=${showDragButton}
+            showMoveUpDownButtons=${showMoveUpDownButtons}
             theme=${theme}
           />
         `
@@ -618,18 +643,15 @@ export function DynamicList({
             onMoveDown=${() => handleMoveDown(index)}
             onDelete=${() => handleDelete(index)}
             onDragStart=${handleDragStart}
-            isDragTarget=${isSrc}
+            isDragTarget=${false}
             initialCollapsed=${!isNew}
+            showDragButton=${showDragButton}
+            showMoveUpDownButtons=${showMoveUpDownButtons}
             theme=${theme}
           />
         `;
 
-      // Mark the source with data-dli-src so computeDropIndex skips it.
-      result.push(
-        isSrc
-          ? html`<div key=${'item-' + index} data-dli data-dli-src>${innerNode}</div>`
-          : html`<div key=${'item-' + index} data-dli>${innerNode}</div>`
-      );
+      result.push(html`<div key=${'item-' + index} data-dli>${innerNode}</div>`);
     }
 
     // Placeholder at the very end (cursor past all items).
