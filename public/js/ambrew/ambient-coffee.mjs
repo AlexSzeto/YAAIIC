@@ -601,7 +601,7 @@ export class LoopingTrack {
       this.#panner.pan.linearRampToValueAtTime(panEnd, when + duration)
     }
 
-    setTimeout(this.#playContinuousAmbience.bind(this), (duration - this.#crossfadeDuration) * 1000)
+    this.#eventTimeHandler = setTimeout(this.#playContinuousAmbience.bind(this), (duration - this.#crossfadeDuration) * 1000)
   }
 
   playInto(destination) {
