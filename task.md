@@ -5,17 +5,17 @@ Create `scripts/scaffold.mjs` — a Node.js script that generates a clean, proje
 
 ## Tasks
 
-- [ ] Refactor `.agents/rules/client.md` to remove the YAAIIC-specific hamburger-menu navigation registration requirement (line 20), keeping all generic architecture/styling rules intact.
-- [ ] Refactor `.agents/rules/server.md` to remove the specific feature domain bullet points (`media/`, `generation/`, `upload/`) from the Directory Structure section, replacing them with a generic description of the feature domain pattern. Keep all design pattern rules (Service Layer, Repository, DI, Path Handling, Data Management, Code Hygiene).
-- [ ] Create `.agents/rules/project.md` — a new rule file with YAAIIC-specific content extracted from the above files, including: the specific feature domains (`media`, `generation`, `upload`, `brew`, `sound-sources`, `export`, `workflows`, `llm`), the hamburger-menu navigation registration requirement, and any other project-specific conventions. Use the same frontmatter format as other rule files (`trigger: model_decision`).
-- [ ] Create the `scripts/scaffold-template/` directory with the following template files mirroring their destination paths:
+- [x] Refactor `.agents/rules/client.md` to remove the YAAIIC-specific hamburger-menu navigation registration requirement (line 20), keeping all generic architecture/styling rules intact.
+- [x] Refactor `.agents/rules/server.md` to remove the specific feature domain bullet points (`media/`, `generation/`, `upload/`) from the Directory Structure section, replacing them with a generic description of the feature domain pattern. Keep all design pattern rules (Service Layer, Repository, DI, Path Handling, Data Management, Code Hygiene).
+- [x] Create `.agents/rules/project.md` — a new rule file with YAAIIC-specific content extracted from the above files, including: the specific feature domains (`media`, `generation`, `upload`, `brew`, `sound-sources`, `export`, `workflows`, `llm`), the hamburger-menu navigation registration requirement, and any other project-specific conventions. Use the same frontmatter format as other rule files (`trigger: model_decision`).
+- [x] Create the `scripts/scaffold-template/` directory with the following template files mirroring their destination paths:
   - `package.json` — current deps kept exactly, `"name": "{{PACKAGE_NAME}}"`, `"version": "1.0.0"`, `"description": ""`
   - `server/server.mjs` — minimal: imports `express`, `loadConfig` from `./core/config.mjs`, `PUBLIC_DIR` from `./core/paths.mjs`; serves `public/` as static; starts on `config.serverPort || 3000`
   - `server/config.default.json` — `{ "serverPort": 3000 }`
   - `public/index.html` — same importmap and lib `<script>` tags as current `index.html`, title = `{{PROJECT_NAME}}`, no favicon/css/font links
   - `public/js/app.mjs` — minimal Preact/htm stub: imports `h`, `render` from `preact`, `html` from `htm/preact`, `Page`, `currentTheme` from `custom-ui/themed-base.mjs`; renders a `<Page>` with a centered "Hello World" heading
   - `public/js/util.mjs` — verbatim copy of current `public/js/util.mjs`
-- [ ] Write `scripts/scaffold.mjs` with:
+- [x] Write `scripts/scaffold.mjs` with:
   - CLI: `node scripts/scaffold.mjs <outputFolder> [projectName]`
   - If `projectName` is omitted, derive a default by converting the folder basename from `dash-case` to `Title Case` and prompt the user via `readline` to confirm or override
   - A `DIR_COPIES` const for dynamic recursive directory copies (each entry: `{ src, dest, exclude? }`)

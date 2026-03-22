@@ -17,7 +17,6 @@ description: when working on the client facing (i.e. /public) side of the websit
     - **Reusable Components**: Place generic, reusable UI components in `public/js/custom-ui/` (e.g., `io/`, `layout/`, `msg/`).
     - **App-Specific Logic**: Place application-specific components and logic in `public/js/app-ui/`.
     - **Utility Functions**: Generic utilities go in `public/js/custom-ui/util.mjs`.
-- **Navigation Registration**: Every new page must be registered in `public/js/app-ui/hamburger-menu.mjs` as part of the same task that creates it. Do not ship a page without a navigation entry.
 
 ## Component Implementation Standards
 - **State Management**:
