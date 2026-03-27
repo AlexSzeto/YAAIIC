@@ -20,6 +20,7 @@ export function injectAutocompleteStyles(index) {
       max-height: ${getThemeValue('sizing.medium.height')};
       overflow-y: auto;
       position: fixed !important;
+      z-index: 20000 !important;
       min-width: ${getThemeValue('sizing.medium.width')};
       list-style: none !important;
       padding: 0 !important;

@@ -1,86 +1,129 @@
-# Scaffold Script
+﻿# Custom UI: Tabs and Floating Panel Components
 
 ## Goal
-Create `scripts/scaffold.mjs` — a Node.js script that generates a clean, project-agnostic copy of this project's skeleton into a target folder. After running the script and doing `npm i` in the destination, the new project should immediately start with a functional Express server, a blank themed Preact/htm index page, and all custom-ui components available.
+
+Add two new reusable custom UI components: a `Tabs` component for horizontal tab-based content switching, and a `FloatingPanel` component for a draggable, portal-rendered overlay panel. Both components should follow existing codebase conventions and be documented in `test.html`.
 
 ## Tasks
 
-- [x] Refactor `.agents/rules/client.md` to remove the YAAIIC-specific hamburger-menu navigation registration requirement (line 20), keeping all generic architecture/styling rules intact.
-- [x] Refactor `.agents/rules/server.md` to remove the specific feature domain bullet points (`media/`, `generation/`, `upload/`) from the Directory Structure section, replacing them with a generic description of the feature domain pattern. Keep all design pattern rules (Service Layer, Repository, DI, Path Handling, Data Management, Code Hygiene).
-- [x] Create `.agents/rules/project.md` — a new rule file with YAAIIC-specific content extracted from the above files, including: the specific feature domains (`media`, `generation`, `upload`, `brew`, `sound-sources`, `export`, `workflows`, `llm`), the hamburger-menu navigation registration requirement, and any other project-specific conventions. Use the same frontmatter format as other rule files (`trigger: model_decision`).
-- [x] Create the `scripts/scaffold-template/` directory with the following template files mirroring their destination paths:
-  - `package.json` — current deps kept exactly, `"name": "{{PACKAGE_NAME}}"`, `"version": "1.0.0"`, `"description": ""`
-  - `server/server.mjs` — minimal: imports `express`, `loadConfig` from `./core/config.mjs`, `PUBLIC_DIR` from `./core/paths.mjs`; serves `public/` as static; starts on `config.serverPort || 3000`
-  - `server/config.default.json` — `{ "serverPort": 3000 }`
-  - `public/index.html` — same importmap and lib `<script>` tags as current `index.html`, title = `{{PROJECT_NAME}}`, no favicon/css/font links
-  - `public/js/app.mjs` — minimal Preact/htm stub: imports `h`, `render` from `preact`, `html` from `htm/preact`, `Page`, `currentTheme` from `custom-ui/themed-base.mjs`; renders a `<Page>` with a centered "Hello World" heading
-  - `public/js/util.mjs` — verbatim copy of current `public/js/util.mjs`
-- [x] Write `scripts/scaffold.mjs` with:
-  - CLI: `node scripts/scaffold.mjs <outputFolder> [projectName]`
-  - If `projectName` is omitted, derive a default by converting the folder basename from `dash-case` to `Title Case` and prompt the user via `readline` to confirm or override
-  - A `DIR_COPIES` const for dynamic recursive directory copies (each entry: `{ src, dest, exclude? }`)
-  - A `TEMPLATE_FILES` const for template file copies from `scripts/scaffold-template/` (each entry: `{ src, dest, replacements? }`)
-  - A `EMPTY_DIRS` const listing folders to create with a `.gitkeep` placeholder
-  - Script flow: create output dir → copy dirs from `DIR_COPIES` → copy `.gitignore` → copy+replace placeholders from `TEMPLATE_FILES` → create empty dirs from `EMPTY_DIRS` → print success summary with next steps
-- [ ] Manual test: run `node scripts/scaffold.mjs <tempFolder>`, follow the prompts, then in the output folder run `npm i` and `npm start`. Verify server starts at `http://localhost:3000`. Run `node scripts/download-libs.mjs`, then reload the page and confirm the Preact stub renders correctly with no console errors.
+- [ ] Create `public/js/custom-ui/layout/tab-panels.mjs` with the `Tabs` component
+- [ ] Style the `Tabs` component: rounded top corners on tab buttons, active tab bottom edge merges into the panel body, panel body has rounded corners matching `Panel` variant styles
+- [ ] Implement `Tabs` panel body variant support: `default`, `elevated`, `outlined`, `glass` — matching how `Panel` resolves variant styles via a JS switch into an inline `style` object
+- [ ] Implement `Tabs` tab size prop: `tabSize` — `'small-text' | 'medium-text'` passed through to each tab's child `Button` as its `variant` prop (default: `'medium-text'`)
+- [ ] Implement `Tabs` active tab highlighting: active tab's `Button` uses `color='primary'`, inactive uses `color='secondary'`, matching `ButtonGroup` selection pattern
+- [ ] Create `public/js/custom-ui/overlays/floating-panel.mjs` with the `FloatingPanel` component
+- [ ] Implement `FloatingPanel` portal rendering via `createPortal` to `document.body`, following `modal.mjs` pattern
+- [ ] Implement `FloatingPanel` `initialPosition` prop: one of `'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left' | 'center'` — resolved to `top`/`left` pixel values on mount using `position: fixed`
+- [ ] Implement `FloatingPanel` drag behavior: mousedown on drag handle starts drag; mousemove on `document` updates panel position; mouseup releases; position clamped to viewport bounds
+- [ ] Implement `FloatingPanel` toolbar strip: drag handle icon at top-left, `actions` buttons in the middle, spacer, optional close button at top-right; all buttons use `variant='medium-icon'`
+- [ ] Implement `FloatingPanel` visibility via `isOpen` and `onClose` props, following `modal.mjs` pattern; close button only rendered when `onClose` is provided
+- [ ] Implement `FloatingPanel` `variant` styling (`default`, `elevated`, `outlined`, `glass`) using the same theme token resolution as `Panel`, but without a dark overlay backdrop
+- [ ] Add `Tabs` usage examples to `public/js/custom-ui/test.html` demonstrating: all panel variants, both tab sizes, and controlled `activeTab` / `onTabChange` usage
+- [ ] Add `FloatingPanel` usage examples to `public/js/custom-ui/test.html` demonstrating: all `initialPosition` values, with and without close button, with and without action buttons, and all panel variants
 
 ## Implementation Details
 
-### `DIR_COPIES` const (in `scaffold.mjs`)
+### Tabs (`public/js/custom-ui/nav/tabs.mjs`)
+
+**Props:**
 ```js
-const DIR_COPIES = [
-  { src: '.agents',             dest: '.agents' },
-  { src: '.github',             dest: '.github' },
-  { src: 'scripts',             dest: 'scripts', exclude: ['migrate'] },
-  { src: 'public/js/custom-ui', dest: 'public/js/custom-ui' },
-  { src: 'public/fonts',        dest: 'public/fonts' },
-  { src: 'server/core',         dest: 'server/core' },
-];
+Tabs({
+  tabs,           // Array<{ id: string, label: string, content: VNode }> - required
+  activeTab,      // string - id of the active tab - required (controlled)
+  onTabChange,    // (id: string) => void - required (controlled)
+  tabSize,        // 'small-text' | 'medium-text' - default: 'medium-text'
+  variant,        // 'default' | 'elevated' | 'outlined' | 'glass' - default: 'default'
+  ...rest         // forwarded to root element
+})
 ```
 
-### `TEMPLATE_FILES` const (in `scaffold.mjs`)
+**Structure:**
+```
+<div class="tabs-root" ...rest>
+  <div class="tabs-bar">
+    [for each tab] <Button variant={tabSize} color={isActive ? 'primary' : 'secondary'} onClick={...}>{label}</Button>
+  </div>
+  <div class="tabs-panel" style={variantStyle}>
+    {activeTabContent}
+  </div>
+</div>
+```
+
+**Styling notes:**
+- Each tab button has top-left and top-right border-radius, bottom border-radius = 0 (visually removed for active tab to fuse with panel body)
+- Active tab bottom border matches the panel body background so they appear fused
+- Panel body uses the same variant->style resolution switch as `Panel` (see `layout/panel.mjs`)
+- Use `theme.border.radius`, `theme.colors.background.*`, `theme.shadow.*` tokens
+
+**Patterns to follow:**
+- Class component with `currentTheme.subscribe` in `componentDidMount` / `componentWillUnmount`
+- All styled components use `StyledX` naming + `.className = 'x'`
+- Variant styles resolved via JS `switch` into inline `style` object
+
+---
+
+### FloatingPanel (`public/js/custom-ui/overlays/floating-panel.mjs`)
+
+**Props:**
 ```js
-const TEMPLATE_FILES = [
-  { src: 'package.json',               dest: 'package.json',               replacements: true },
-  { src: 'server/server.mjs',          dest: 'server/server.mjs' },
-  { src: 'server/config.default.json', dest: 'server/config.default.json' },
-  { src: 'public/index.html',          dest: 'public/index.html',          replacements: true },
-  { src: 'public/js/app.mjs',          dest: 'public/js/app.mjs' },
-  { src: 'public/js/util.mjs',         dest: 'public/js/util.mjs' },
-];
+FloatingPanel({
+  isOpen,          // boolean - required
+  onClose,         // () => void - optional; if provided, renders close button
+  initialPosition, // 'top-left'|'top'|'top-right'|'right'|'bottom-right'|'bottom'|'bottom-left'|'left'|'center' - default: 'center'
+  actions,         // Array<{ icon: string, color?: string, onClick: fn }> - optional
+  variant,         // 'default' | 'elevated' | 'outlined' | 'glass' - default: 'elevated'
+  width,           // string (CSS value) - optional, sizes to content if omitted
+  height,          // string (CSS value) - optional, sizes to content if omitted
+  children,        // VNode - panel body content
+  ...rest          // forwarded to panel container
+})
 ```
-Placeholders: `{{PROJECT_NAME}}` → human-readable title (e.g. "My Cool App"), `{{PACKAGE_NAME}}` → kebab-case npm name (e.g. "my-cool-app").
 
-### `EMPTY_DIRS` const (in `scaffold.mjs`)
-```js
-const EMPTY_DIRS = [
-  'docs/feature-history',
-  'docs/groomed-features',
-  'server/features',
-  'server/database',
-  'public/js/app-ui',
-  'public/media',
-];
+**Structure:**
 ```
-Each directory is created and populated with a `.gitkeep` file.
-
-### Individual file copies
-- `.gitignore` — copied directly from project root to output root.
-
-### Project name derivation
-- Basename of `outputFolder` (e.g. `my-new-project`) → split on `-` → Title Case each word → join with spaces (e.g. `My New Project`).
-- `PACKAGE_NAME` is the kebab-case basename of `outputFolder` (already in that format if user followed convention).
-
-### `scripts/scaffold-template/` structure
+Portal(document.body) ->
+  <div class="floating-panel" style={position: fixed, top, left, width?, height?, ...variantStyle}>
+    <div class="floating-toolbar">
+      <Button variant="medium-icon" icon="grip-dots" />  <- mousedown starts drag
+      {actions.map(a => <Button variant="medium-icon" icon={a.icon} color={a.color} onClick={a.onClick} />)}
+      <div class="toolbar-spacer" />  <- flex: 1
+      {onClose && <Button variant="medium-icon" icon="x" onClick={onClose} />}
+    </div>
+    <div class="floating-body">
+      {children}
+    </div>
+  </div>
 ```
-scripts/scaffold-template/
-  package.json
-  server/
-    server.mjs
-    config.default.json
-  public/
-    index.html
-    js/
-      app.mjs
-      util.mjs
-```
+
+**Position resolution (on mount):**
+- `top-left`     -> `{ top: margin, left: margin }`
+- `top`          -> `{ top: margin, left: 50%, transform: translateX(-50%) }`
+- `top-right`    -> `{ top: margin, right: margin }`
+- `right`        -> `{ top: 50%, right: margin, transform: translateY(-50%) }`
+- `bottom-right` -> `{ bottom: margin, right: margin }`
+- `bottom`       -> `{ bottom: margin, left: 50%, transform: translateX(-50%) }`
+- `bottom-left`  -> `{ bottom: margin, left: margin }`
+- `left`         -> `{ top: 50%, left: margin, transform: translateY(-50%) }`
+- `center`       -> `{ top: 50%, left: 50%, transform: translate(-50%, -50%) }`
+- After first render, resolve actual `top`/`left` pixel values from the DOM and store in state so dragging can offset from a known numeric origin (use a ref on the panel element and call `getBoundingClientRect()` on the underlying DOM node).
+
+**Drag behavior:**
+- State: `{ x: number, y: number, isDragging: bool, dragStartX, dragStartY, originX, originY }`
+- `mousedown` on drag handle: record `dragStartX/Y` = `e.clientX/Y`, `originX/Y` = current `x/y`, set `isDragging = true`
+- `mousemove` on `document`: if dragging, `newX = originX + (e.clientX - dragStartX)`, `newY = originY + (e.clientY - dragStartY)`, clamp to viewport
+- `mouseup` on `document`: set `isDragging = false`
+- Attach/detach document listeners in `componentDidMount` / `componentWillUnmount`
+
+**Styling notes:**
+- No dark backdrop overlay (unlike modals)
+- `variant` resolves to style object via same switch pattern as `Panel`
+- Drag handle uses `cursor: grab`, `cursor: grabbing` while `isDragging`
+- Use `theme.border.radius`, `theme.colors.background.*`, `theme.shadow.*` tokens
+- `z-index: 1000` to float above page content
+
+**Patterns to follow:**
+- `createPortal` from `preact/compat` targeting `document.body`
+- Class component with `currentTheme.subscribe` + drag event listeners in lifecycle methods
+- `StyledX` component naming + `.className = 'x'`
+- Returns `null` when `!isOpen`
+- Per client rules: do NOT attach `ref` to a styled component — attach it to a plain inner `<div>` for DOM measurement
