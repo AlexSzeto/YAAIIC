@@ -6,20 +6,20 @@ Add two new reusable custom UI components: a `Tabs` component for horizontal tab
 
 ## Tasks
 
-- [ ] Create `public/js/custom-ui/layout/tab-panels.mjs` with the `Tabs` component
-- [ ] Style the `Tabs` component: rounded top corners on tab buttons, active tab bottom edge merges into the panel body, panel body has rounded corners matching `Panel` variant styles
-- [ ] Implement `Tabs` panel body variant support: `default`, `elevated`, `outlined`, `glass` — matching how `Panel` resolves variant styles via a JS switch into an inline `style` object
-- [ ] Implement `Tabs` tab size prop: `tabSize` — `'small-text' | 'medium-text'` passed through to each tab's child `Button` as its `variant` prop (default: `'medium-text'`)
-- [ ] Implement `Tabs` active tab highlighting: active tab's `Button` uses `color='primary'`, inactive uses `color='secondary'`, matching `ButtonGroup` selection pattern
-- [ ] Create `public/js/custom-ui/overlays/floating-panel.mjs` with the `FloatingPanel` component
-- [ ] Implement `FloatingPanel` portal rendering via `createPortal` to `document.body`, following `modal.mjs` pattern
-- [ ] Implement `FloatingPanel` `initialPosition` prop: one of `'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left' | 'center'` — resolved to `top`/`left` pixel values on mount using `position: fixed`
-- [ ] Implement `FloatingPanel` drag behavior: mousedown on drag handle starts drag; mousemove on `document` updates panel position; mouseup releases; position clamped to viewport bounds
-- [ ] Implement `FloatingPanel` toolbar strip: drag handle icon at top-left, `actions` buttons in the middle, spacer, optional close button at top-right; all buttons use `variant='medium-icon'`
-- [ ] Implement `FloatingPanel` visibility via `isOpen` and `onClose` props, following `modal.mjs` pattern; close button only rendered when `onClose` is provided
-- [ ] Implement `FloatingPanel` `variant` styling (`default`, `elevated`, `outlined`, `glass`) using the same theme token resolution as `Panel`, but without a dark overlay backdrop
-- [ ] Add `Tabs` usage examples to `public/js/custom-ui/test.html` demonstrating: all panel variants, both tab sizes, and controlled `activeTab` / `onTabChange` usage
-- [ ] Add `FloatingPanel` usage examples to `public/js/custom-ui/test.html` demonstrating: all `initialPosition` values, with and without close button, with and without action buttons, and all panel variants
+- [x] Create `public/js/custom-ui/nav/tabs.mjs` with the `Tabs` component
+- [x] Style the `Tabs` component: rounded top corners on tab buttons, active tab bottom edge merges into the panel body, panel body has rounded corners matching `Panel` variant styles
+- [x] Implement `Tabs` panel body variant support: `default`, `elevated`, `outlined`, `glass` — matching how `Panel` resolves variant styles via a JS switch into an inline `style` object
+- [x] Implement `Tabs` tab size prop: `tabSize` — `'small-text' | 'medium-text'` passed through to each tab's child `Button` as its `variant` prop (default: `'medium-text'`)
+- [x] Implement `Tabs` active tab highlighting: active tab's `Button` uses `color='primary'`, inactive uses `color='secondary'`, matching `ButtonGroup` selection pattern
+- [x] Create `public/js/custom-ui/overlays/floating-panel.mjs` with the `FloatingPanel` component
+- [x] Implement `FloatingPanel` portal rendering via `createPortal` to `document.body`, following `modal.mjs` pattern
+- [x] Implement `FloatingPanel` `initialPosition` prop: one of `'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left' | 'center'` — resolved to `top`/`left` pixel values on mount using `position: fixed`
+- [x] Implement `FloatingPanel` drag behavior: mousedown on drag handle starts drag; mousemove on `document` updates panel position; mouseup releases; position clamped to viewport bounds
+- [x] Implement `FloatingPanel` toolbar strip: drag handle icon at top-left, `actions` buttons in the middle, spacer, optional close button at top-right; all buttons use `variant='medium-icon'`
+- [x] Implement `FloatingPanel` visibility via `isOpen` and `onClose` props, following `modal.mjs` pattern; close button only rendered when `onClose` is provided
+- [x] Implement `FloatingPanel` `variant` styling (`default`, `elevated`, `outlined`, `glass`) using the same theme token resolution as `Panel`, but without a dark overlay backdrop
+- [x] Add `Tabs` usage examples to `public/js/custom-ui/test.html` demonstrating: all panel variants, both tab sizes, and controlled `activeTab` / `onTabChange` usage
+- [x] Add `FloatingPanel` usage examples to `public/js/custom-ui/test.html` demonstrating: all `initialPosition` values, with and without close button, with and without action buttons, and all panel variants
 
 ## Implementation Details
 

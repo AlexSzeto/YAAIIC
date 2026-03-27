@@ -228,7 +228,8 @@ export class DiscreteSlider extends Component {
       ...rest
     } = this.props;
     const { index, theme } = this.state;
-    const { width, flex } = getWidthScaleStyle(widthScale);
+    let { width, flex } = getWidthScaleStyle(widthScale);
+    width = width.endsWith('px') ? Math.max(Number(width.replace('px', '')), options.length * LABEL_WIDTH) + 'px' : width;
 
     const maxIdx = options.length - 1;
     // Fill percentage for the webkit runnable track gradient

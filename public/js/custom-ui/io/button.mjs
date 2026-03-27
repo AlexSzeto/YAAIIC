@@ -84,7 +84,8 @@ TextSpan.className = 'text-span';
  *   - 'large-icon': Large square button with icon only (44x44)
  *   - 'small-text': Compact tag-style button with text
  *   - 'small-icon': Small square button with icon only (28x28)
- * @param {'primary'|'secondary'|'success'|'danger'} [props.color='secondary'] - Color theme
+ * @param {'primary'|'secondary'|'success'|'danger'|'transparent'} [props.color='secondary'] - Color theme
+ *   - 'transparent': No background, subtle hover effect, uses primary text color
  * @param {boolean} [props.loading=false] - Shows spinner, disables button
  * @param {boolean} [props.disabled=false] - Disabled state
  * @param {string} [props.icon] - Icon name for the Icon component (e.g. 'play', 'trash')
@@ -109,6 +110,10 @@ TextSpan.className = 'text-span';
  * @example
  * // Loading state
  * <Button loading={true}>Processing...</Button>
+ * 
+ * @example
+ * // Transparent button for tabs or overlays
+ * <Button color="transparent">No Background</Button>
  */
 export class Button extends Component {
   constructor(props) {
@@ -184,6 +189,19 @@ export class Button extends Component {
 
     // Color configurations
     const getColorStyles = (colorName) => {
+      // Handle transparent variant specially
+      if (colorName === 'transparent') {
+        return {
+          bg: 'transparent',
+          hover: theme.colors.background.hover,
+          active: theme.colors.background.hover,
+          hoverBorder: 'transparent',
+          activeBorder: 'transparent',
+          focus: 'transparent',
+          text: theme.colors.text.primary
+        };
+      }
+      
       const colorTheme = theme.colors[colorName] || theme.colors.secondary;
       return {
         bg: colorTheme.background,

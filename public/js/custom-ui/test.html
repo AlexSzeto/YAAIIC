@@ -57,6 +57,9 @@
     import { Slider } from './io/slider.mjs';
     import { DiscreteSlider } from './io/discrete-slider.mjs';
     import { ToggleSwitch } from './io/toggle-switch.mjs';
+    import { TabPanels } from './nav/tab-panels.mjs';
+    import { FloatingPanel } from './overlays/floating-panel.mjs';
+    import { DynamicList } from './layout/dynamic-list.mjs';
 
     
     // =========================================================================
@@ -111,6 +114,18 @@
       border-bottom: 1px solid currentColor;
       padding-bottom: 8px;
       opacity: 0.5;
+    `;
+    
+    /**
+     * Category header for grouping component sections
+     */
+    const CategoryHeader = styled('h1')`
+      margin-top: 48px;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid currentColor;
+      opacity: 0.8;
+      font-size: 28px;
     `;
     
     /**
@@ -507,6 +522,28 @@
           toggle1: false,
           toggle2: true,
           toggle3Disabled: false,
+          // Tabs states
+          activeTab: 'tab1',
+          activeTabVariant: 'tab1',
+          activeTabSize: 'tab1',
+          // FloatingPanel states
+          floatingPanelOpen: false,
+          floatingPanelPosition: 'center',
+          floatingPanelVariant: 'elevated',
+          // DynamicList states
+          dynamicListItems: [
+            { id: 1, title: 'First Item', description: 'Description for first item' },
+            { id: 2, title: 'Second Item', description: 'Description for second item' },
+            { id: 3, title: 'Third Item', description: 'Description for third item' }
+          ],
+          condensedListItems: ['Apple', 'Banana', 'Cherry', 'Date'],
+          // DynamicList states
+          dynamicListItems: [
+            { id: 1, title: 'First Item', description: 'Description for first item' },
+            { id: 2, title: 'Second Item', description: 'Description for second item' },
+            { id: 3, title: 'Third Item', description: 'Description for third item' }
+          ],
+          condensedListItems: ['Apple', 'Banana', 'Cherry', 'Date'],
         };
         
         // Mock SSE manager for testing ProgressBanner
@@ -674,24 +711,169 @@
                   <//>
                   
                   <!-- Component Sections -->
-                <${Section}>
-                <${SectionTitle}>Page Component<//>
-                <p>The Page component provides global styles including:</p>
-                <ul>
-                  <li>Font family (Arial, sans-serif)</li>
-                  <li>Background color from theme</li>
-                  <li>Text color from theme</li>
-                  <li>CSS reset / base styles</li>
-                  <li>Custom scrollbar styling</li>
-                </ul>
-              <//>
-              
-              <${Section}>
-                <${SectionTitle}>Icons</${SectionTitle}>
-                <${Icon} name="arrow-right-stroke" size="24px" />
-              </${Section}>
-              <${Section}>
-                <${SectionTitle}>Button Component</${SectionTitle}>
+                  
+                  <${CategoryHeader}>Layout Components<//>
+                  
+                  <${Section}>
+                    <${SectionTitle}>Page Component<//>
+                    <p>The Page component provides global styles including:</p>
+                    <ul>
+                      <li>Font family (Arial, sans-serif)</li>
+                      <li>Background color from theme</li>
+                      <li>Text color from theme</li>
+                      <li>CSS reset / base styles</li>
+                      <li>Custom scrollbar styling</li>
+                    </ul>
+                  <//>
+                  
+                  <${Section}>
+                    <${SectionTitle}>Icon Component</${SectionTitle}>
+                    <p style="margin-bottom: 16px; opacity: 0.7;">Theme-aware icon rendering with Material Symbols or Box Icons</p>
+                    <${Icon} name="arrow-right-stroke" size="24px" />
+                  </${Section}>
+                  
+                  <${Section}>
+                    <${SectionTitle}>Panel Component</${SectionTitle}>
+                    <p style="margin-bottom: 16px; opacity: 0.7;">Versatile container with variants and optional color theming</p>
+                    
+                    <h3 style="margin: 24px 0 12px; opacity: 0.8;">Variants (Default Colors)</h3>
+                    <${ComponentGrid}>
+                      <${Panel}>
+                        <strong>Default Panel</strong>
+                        <p>Solid background with subtle border.</p>
+                      <//>
+                      <${Panel} variant="elevated">
+                        <strong>Elevated Panel</strong>
+                        <p>Raised appearance with shadow.</p>
+                      <//>
+                      <${Panel} variant="outlined">
+                        <strong>Outlined Panel</strong>
+                        <p>Transparent background with border.</p>
+                      <//>
+                      <div style="position: relative; background: linear-gradient(45deg, #007bff, #28a745); padding: 20px; border-radius: 8px;">
+                        <${Panel} variant="glass">
+                          <strong>Glass Panel</strong>
+                          <p>Semi-transparent with blur effect.</p>
+                        <//>
+                      </div>
+                    </>
+                    
+                    <h3 style="margin: 24px 0 12px; opacity: 0.8;">Elevated Panels with Colors</h3>
+                    <${ComponentGrid}>
+                      <${Panel} variant="elevated" color="success">
+                        <strong>Success</strong>
+                        <p>Positive feedback or completed states.</p>
+                      <//>
+                      <${Panel} variant="elevated" color="danger">
+                        <strong>Danger</strong>
+                        <p>Errors or destructive actions.</p>
+                      <//>
+                      <${Panel} variant="elevated" color="primary">
+                        <strong>Primary</strong>
+                        <p>Primary brand color.</p>
+                      <//>
+                      <${Panel} variant="elevated" color="secondary">
+                        <strong>Secondary</strong>
+                        <p>Secondary brand color.</p>
+                      <//>
+                    </>
+                    
+                    <h3 style="margin: 24px 0 12px; opacity: 0.8;">Default Panels with Colors</h3>
+                    <${ComponentGrid}>
+                      <${Panel} color="success">
+                        <strong>Success Default</strong>
+                      <//>
+                      <${Panel} color="danger">
+                        <strong>Danger Default</strong>
+                      <//>
+                      <${Panel} color="primary">
+                        <strong>Primary Default</strong>
+                      <//>
+                      <${Panel} color="secondary">
+                        <strong>Secondary Default</strong>
+                      <//>
+                    </>
+                    
+                    <h3 style="margin: 24px 0 12px; opacity: 0.8;">Outlined Panels with Colors</h3>
+                    <${ComponentGrid}>
+                      <${Panel} variant="outlined" color="success">
+                        <strong>Success Outlined</strong>
+                      <//>
+                      <${Panel} variant="outlined" color="danger">
+                        <strong>Danger Outlined</strong>
+                      <//>
+                      <${Panel} variant="outlined" color="primary">
+                        <strong>Primary Outlined</strong>
+                      <//>
+                      <${Panel} variant="outlined" color="secondary">
+                        <strong>Secondary Outlined</strong>
+                      <//>
+                    </>
+                  </${Section}>
+                  
+                  <${Section}>
+                    <${SectionTitle}>DynamicList Component</${SectionTitle}>
+                    <p style="margin-bottom: 16px; opacity: 0.7;">Reusable list with add/delete/reorder operations</p>
+                    
+                    <h4 style="margin: 16px 0 8px;">Standard Mode (collapsible panels)</h4>
+                    <${DynamicList}
+                      title="Task List"
+                      items=${this.state.dynamicListItems}
+                      renderItem=${(item, index) => html`
+                        <div>
+                          <${Input}
+                            label="Title"
+                            value=${item.title}
+                            onChange=${(e) => {
+                              const newItems = [...this.state.dynamicListItems];
+                              newItems[index] = { ...item, title: e.target.value };
+                              this.setState({ dynamicListItems: newItems });
+                            }}
+                          />
+                          <${Textarea}
+                            label="Description"
+                            value=${item.description}
+                            onChange=${(e) => {
+                              const newItems = [...this.state.dynamicListItems];
+                              newItems[index] = { ...item, description: e.target.value };
+                              this.setState({ dynamicListItems: newItems });
+                            }}
+                            rows=${3}
+                          />
+                        </div>
+                      `}
+                      getTitle=${(item) => item.title || 'Untitled'}
+                      createItem=${() => ({ id: Date.now(), title: '', description: '' })}
+                      onChange=${(items) => this.setState({ dynamicListItems: items })}
+                      addLabel="Add Task"
+                    />
+                    
+                    <h4 style="margin: 32px 0 8px;">Condensed Mode (inline layout)</h4>
+                    <${DynamicList}
+                      title="Simple List"
+                      items=${this.state.condensedListItems}
+                      renderItem=${(item, index) => html`
+                        <${Input}
+                          value=${item}
+                          onChange=${(e) => {
+                            const newItems = [...this.state.condensedListItems];
+                            newItems[index] = e.target.value;
+                            this.setState({ condensedListItems: newItems });
+                          }}
+                          placeholder="Enter item text"
+                        />
+                      `}
+                      createItem=${() => ''}
+                      onChange=${(items) => this.setState({ condensedListItems: items })}
+                      addLabel="Add Item"
+                      condensed=${true}
+                    />
+                  </${Section}>
+                  
+                  <${CategoryHeader}>Input/Output Components<//>
+                  
+                  <${Section}>
+                    <${SectionTitle}>Button Component</${SectionTitle}>
                 <p style="margin-bottom: 16px; opacity: 0.7;">All button variants with color themes</p>
                 
                 <h4 style="margin: 16px 0 8px;">Medium Text Buttons (default)</h4>
@@ -734,6 +916,13 @@
                   <${Button} variant="small-icon" icon="edit" color="primary" title="Edit" />
                   <${Button} variant="small-icon" icon="refresh" color="success" title="Refresh" />
                   <${Button} variant="small-icon" icon="trash" color="danger" title="Delete" />
+                <//>
+                
+                <h4 style="margin: 16px 0 8px;">Transparent Buttons (for tabs/overlays)</h4>
+                <${ComponentGrid}>
+                  <${Button} color="transparent">Transparent Text<//>
+                  <${Button} variant="medium-icon-text" icon="cog" color="transparent">With Icon<//>
+                  <${Button} variant="small-text" color="transparent">Small Transparent<//>
                 <//>
               <//>
               
@@ -1064,7 +1253,7 @@
                 <${SectionTitle}>DiscreteSlider Component<//>
                 <p style="margin-bottom: 16px; opacity: 0.7;">Slider for choosing from a fixed list of labeled options</p>
 
-                <div style="max-width: 400px;">
+                <div style="max-width: 600px;">
                   <${DiscreteSlider}
                     label="Qualitative Slider"
                     options=${['very low', 'low', 'medium', 'high', 'very high']}
@@ -1076,7 +1265,7 @@
                   />
                 </div>
 
-                <div style="max-width: 400px;">
+                <div style="max-width: 600px;">
                   <${DiscreteSlider}
                     label="Numeric Slider"
                     options=${[0.25, 0.5, 1, 1.5, 2, 4]}
@@ -1130,6 +1319,8 @@
                 <//>
               <//>
 
+              <${CategoryHeader}>Navigation Components<//>
+
               <${Section}>
                 <${SectionTitle}>ButtonGroup Component</${SectionTitle}>
                 <p style="margin-bottom: 16px; opacity: 0.7;">Click buttons to toggle selection</p>
@@ -1170,7 +1361,265 @@
                 />
               </${Section}>
               
+              <${Section}>
+                <${SectionTitle}>TabPanels Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Horizontal tab-based content switcher with variant styles</p>
+                
+                <h4 style="margin: 16px 0 8px;">Default Variant (medium tabs)</h4>
+                <${TabPanels}
+                  tabs=${[
+                    { id: 'tab1', label: 'First Tab', content: html`<p>First tab content. This demonstrates the default variant.</p>` },
+                    { id: 'tab2', label: 'Second Tab', content: html`<p>Second tab content with more information.</p>` },
+                    { id: 'tab3', label: 'Third Tab', content: html`<p>Third tab content.</p>` }
+                  ]}
+                  activeTab=${this.state.activeTab}
+                  onTabChange=${(id) => this.setState({ activeTab: id })}
+                  variant="default"
+                />
 
+                <h4 style="margin: 32px 0 8px;">Elevated Variant</h4>
+                <${TabPanels}
+                  tabs=${[
+                    { id: 'tab1', label: 'Overview', content: html`<p>Elevated panel with shadow effect.</p>` },
+                    { id: 'tab2', label: 'Details', content: html`<p>More detailed information here.</p>` },
+                    { id: 'tab3', label: 'Settings', content: html`<p>Configuration options.</p>` }
+                  ]}
+                  activeTab=${this.state.activeTabVariant}
+                  onTabChange=${(id) => this.setState({ activeTabVariant: id })}
+                  variant="elevated"
+                />
+
+                <h4 style="margin: 32px 0 8px;">Outlined Variant</h4>
+                <${TabPanels}
+                  tabs=${[
+                    { id: 'tab1', label: 'First', content: html`<p>Outlined panel with border.</p>` },
+                    { id: 'tab2', label: 'Second', content: html`<p>Second tab.</p>` }
+                  ]}
+                  activeTab=${this.state.activeTabVariant}
+                  onTabChange=${(id) => this.setState({ activeTabVariant: id })}
+                  variant="outlined"
+                />
+
+                <h4 style="margin: 32px 0 8px;">Glass Variant</h4>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 8px;">
+                  <${TabPanels}
+                    tabs=${[
+                      { id: 'tab1', label: 'Glass', content: html`<p>Glass panel with blur effect.</p>` },
+                      { id: 'tab2', label: 'Effect', content: html`<p>Semi-transparent background.</p>` }
+                    ]}
+                    activeTab=${this.state.activeTabVariant}
+                    onTabChange=${(id) => this.setState({ activeTabVariant: id })}
+                    variant="glass"
+                  />
+                </div>
+
+                <h4 style="margin: 32px 0 8px;">Small Tab Size</h4>
+                <${TabPanels}
+                  tabs=${[
+                    { id: 'tab1', label: 'Compact', content: html`<p>Small tabs for tighter layouts.</p>` },
+                    { id: 'tab2', label: 'Efficient', content: html`<p>Uses less vertical space.</p>` },
+                    { id: 'tab3', label: 'Dense', content: html`<p>Dense UI style.</p>` }
+                  ]}
+                  activeTab=${this.state.activeTabSize}
+                  onTabChange=${(id) => this.setState({ activeTabSize: id })}
+                  tabSize="small-text"
+                  variant="elevated"
+                />
+              <//>
+
+              <${CategoryHeader}>Media Components<//>
+
+              <${Section}>
+                <${SectionTitle}>ImageSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Image selection with preview, upload, and overlay controls</p>
+                
+                <${ComponentGrid}>
+                  <${ImageSelect}
+                    label="Empty State"
+                    value=${this.state.imageSelectValue1}
+                    onChange=${this.handleImageChange1}
+                  />
+                  <${ImageSelect}
+                    label="With Image"
+                    value=${this.state.imageSelectValue2}
+                    onChange=${this.handleImageChange2}
+                  />
+                  <${ImageSelect}
+                    label="Disabled"
+                    value=${this.state.imageSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioSelect Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio selection with album art preview, play controls, and overlay buttons</p>
+                
+                <${ComponentGrid}>
+                  <${AudioSelect}
+                    label="Empty State"
+                    value=${this.state.audioSelectValue1}
+                    onChange=${this.handleAudioChange1}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="With Audio (Album Art)"
+                    value=${this.state.audioSelectValue2}
+                    onChange=${this.handleAudioChange2}
+                    onSelectFromGallery=${() => console.log('Open audio gallery')}
+                  />
+                  <${AudioSelect}
+                    label="Disabled"
+                    value=${this.state.audioSelectValue2}
+                    disabled=${true}
+                  />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>AudioPlayer Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Audio player overlay with play/pause, progress bar, and time display</p>
+                
+                <${ComponentGrid}>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
+                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                    </div>
+                  </div>
+                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
+                      Album Art Area
+                    </div>
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
+                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                    </div>
+                  </div>
+                  <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                  <${AudioPlayer} widthScale="normal" audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                </${ComponentGrid}>
+              </${Section}>
+              
+              <${CategoryHeader}>Message/Notification Components<//>
+              
+              <${Section}>
+                <${SectionTitle}>Toast Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Global notification system with success, error, info, and warning variants</p>
+                
+                <${ComponentGrid}>
+                  <${ToastTriggers} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>ProgressBanner Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error. Now uses provider pattern with useProgress hook.</p>
+                
+                <${ComponentGrid}>
+                  <${ProgressTriggers} mockSSEManager=${this.mockSSEManager} />
+                <//>
+              </${Section}>
+              
+              <${CategoryHeader}>Overlay Components<//>
+              
+              <${Section}>
+                <${SectionTitle}>Dialog Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Modal dialog with overlay - supports basic alerts, confirmations, and text prompts</p>
+                
+                <${ComponentGrid}>
+                  <${DialogTriggers} />
+                <//>
+              </${Section}>
+              
+              <${Section}>
+                <${SectionTitle}>Modal Component</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Declarative modal component with customizable size, header, content, and footer</p>
+                
+                <${ComponentGrid}>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'small' })}
+                    >
+                      Show Small Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'medium' })}
+                    >
+                      Show Medium Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'large' })}
+                    >
+                      Show Large Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => createImageModal('https://picsum.photos/800/600', false, 'Sample Image')}
+                    >
+                      Show Image Modal
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="success"
+                      onClick=${() => createImageModal(
+                        'https://picsum.photos/800/600',
+                        true,
+                        'Selectable Image',
+                        () => alert('Image selected!'),
+                        'Select This Image'
+                      )}
+                    >
+                      Show Image Modal with Select
+                    <//>
+                  </div>
+                <//>
+                
+                <${Modal}
+                  isOpen=${this.state.modalOpen}
+                  onClose=${() => this.setState({ modalOpen: false })}
+                  title=${`Modal Example (${this.state.modalSize})`}
+                  size=${this.state.modalSize}
+                  footer=${html`
+                    <${Button} 
+                      variant="medium-text"
+                      color="secondary"
+                      onClick=${() => this.setState({ modalOpen: false })}
+                    >
+                      Cancel
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => {
+                        alert('Action confirmed!');
+                        this.setState({ modalOpen: false });
+                      }}
+                    >
+                      Confirm
+                    <//>
+                  `}
+                >
+                  <p>This is a ${this.state.modalSize} size modal with custom footer buttons.</p>
+                  <p style="margin-top: 16px;">The Modal component supports:</p>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Multiple size variants (small, medium, large, full)</li>
+                    <li>Custom header, content, and footer</li>
+                    <li>Escape key to close</li>
+                    <li>Click outside to close</li>
+                    <li>Body scroll locking when open</li>
+                  </ul>
+                <//>
+              </${Section}>
               
               <${Section}>
                 <${SectionTitle}>ListSelect Component</${SectionTitle}>
@@ -1309,200 +1758,115 @@
               </${Section}>
               
               <${Section}>
-                <${SectionTitle}>ImageSelect Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Image selection with preview, upload, and overlay controls</p>
-                
-                <${ComponentGrid}>
-                  <${ImageSelect}
-                    label="Empty State"
-                    value=${this.state.imageSelectValue1}
-                    onChange=${this.handleImageChange1}
-                  />
-                  <${ImageSelect}
-                    label="With Image"
-                    value=${this.state.imageSelectValue2}
-                    onChange=${this.handleImageChange2}
-                  />
-                  <${ImageSelect}
-                    label="Disabled"
-                    value=${this.state.imageSelectValue2}
-                    disabled=${true}
-                  />
-                <//>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>AudioSelect Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Audio selection with album art preview, play controls, and overlay buttons</p>
-                
-                <${ComponentGrid}>
-                  <${AudioSelect}
-                    label="Empty State"
-                    value=${this.state.audioSelectValue1}
-                    onChange=${this.handleAudioChange1}
-                    onSelectFromGallery=${() => console.log('Open audio gallery')}
-                  />
-                  <${AudioSelect}
-                    label="With Audio (Album Art)"
-                    value=${this.state.audioSelectValue2}
-                    onChange=${this.handleAudioChange2}
-                    onSelectFromGallery=${() => console.log('Open audio gallery')}
-                  />
-                  <${AudioSelect}
-                    label="Disabled"
-                    value=${this.state.audioSelectValue2}
-                    disabled=${true}
-                  />
-                <//>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>AudioPlayer Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Audio player overlay with play/pause, progress bar, and time display</p>
-                
-                <${ComponentGrid}>
-                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
-                      Album Art Area
-                    </div>
-                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
-                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
-                    </div>
-                  </div>
-                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
-                      Album Art Area
-                    </div>
-                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
-                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
-                    </div>
-                  </div>
-                  <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
-                  <${AudioPlayer} widthScale="normal" audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
-                <//${ComponentGrid}>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>ProgressBanner Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Fixed banner that displays real-time progress for tasks, auto-dismisses on completion/error. Now uses provider pattern with useProgress hook.</p>
-                
-                <${ComponentGrid}>
-                  <${ProgressTriggers} mockSSEManager=${this.mockSSEManager} />
-                <//>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>Toast Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Global notification system with success, error, info, and warning variants</p>
-                
-                <${ComponentGrid}>
-                  <${ToastTriggers} />
-                <//>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>Dialog Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Modal dialog with overlay - supports basic alerts, confirmations, and text prompts</p>
-                
-                <${ComponentGrid}>
-                  <${DialogTriggers} />
-                <//>
-              </${Section}>
-              
-              <${Section}>
-                <${SectionTitle}>Modal Component</${SectionTitle}>
-                <p style="margin-bottom: 16px; opacity: 0.7;">Declarative modal component with customizable size, header, content, and footer</p>
-                
-                <${ComponentGrid}>
-                  <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <${Button} 
-                      variant="medium-text"
-                      color="primary"
-                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'small' })}
-                    >
-                      Show Small Modal
-                    <//>
-                    <${Button} 
-                      variant="medium-text"
-                      color="primary"
-                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'medium' })}
-                    >
-                      Show Medium Modal
-                    <//>
-                    <${Button} 
-                      variant="medium-text"
-                      color="primary"
-                      onClick=${() => this.setState({ modalOpen: true, modalSize: 'large' })}
-                    >
-                      Show Large Modal
-                    <//>
-                    <${Button} 
-                      variant="medium-text"
-                      color="secondary"
-                      onClick=${() => createImageModal('https://picsum.photos/800/600', false, 'Sample Image')}
-                    >
-                      Show Image Modal
-                    <//>
-                    <${Button} 
-                      variant="medium-text"
-                      color="success"
-                      onClick=${() => createImageModal(
-                        'https://picsum.photos/800/600',
-                        true,
-                        'Selectable Image',
-                        () => alert('Image selected!'),
-                        'Select This Image'
-                      )}
-                    >
-                      Show Image Modal with Select
-                    <//>
-                  </div>
-                <//>
-                
-                <${Modal}
-                  isOpen=${this.state.modalOpen}
-                  onClose=${() => this.setState({ modalOpen: false })}
-                  title=${`Modal Example (${this.state.modalSize})`}
-                  size=${this.state.modalSize}
-                  footer=${html`
-                    <${Button} 
-                      variant="medium-text"
-                      color="secondary"
-                      onClick=${() => this.setState({ modalOpen: false })}
-                    >
-                      Cancel
-                    <//>
-                    <${Button} 
-                      variant="medium-text"
-                      color="primary"
-                      onClick=${() => {
-                        alert('Action confirmed!');
-                        this.setState({ modalOpen: false });
-                      }}
-                    >
-                      Confirm
-                    <//>
-                  `}
-                >
-                  <p>This is a ${this.state.modalSize} size modal with custom footer buttons.</p>
-                  <p style="margin-top: 16px;">The Modal component supports:</p>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Multiple size variants (small, medium, large, full)</li>
-                    <li>Custom header, content, and footer</li>
-                    <li>Escape key to close</li>
-                    <li>Click outside to close</li>
-                    <li>Body scroll locking when open</li>
-                  </ul>
-                <//>
-              </${Section}>
-              
-              <${Section}>
                 <${SectionTitle}>Hover Panel Component<//>
                 <p style="margin-bottom: 16px; opacity: 0.7;">Context-based hover panel for tooltips and floating content</p>
                 
                 <${ComponentGrid}>
                   <${HoverPanelTriggers} />
                 </>
+              <//>
+
+              <${Section}>
+                <${SectionTitle}>FloatingPanel Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Draggable, portal-rendered overlay panel with optional toolbar actions</p>
+                
+                <${ComponentGrid}>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ 
+                        floatingPanelOpen: true, 
+                        floatingPanelPosition: 'center',
+                        floatingPanelVariant: 'elevated'
+                      })}
+                    >
+                      Show Floating Panel (Center)
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ 
+                        floatingPanelOpen: true, 
+                        floatingPanelPosition: 'top-right',
+                        floatingPanelVariant: 'elevated'
+                      })}
+                    >
+                      Show Panel (Top Right)
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ 
+                        floatingPanelOpen: true, 
+                        floatingPanelPosition: 'bottom-left',
+                        floatingPanelVariant: 'outlined'
+                      })}
+                    >
+                      Show Panel (Bottom Left, Outlined)
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ 
+                        floatingPanelOpen: true, 
+                        floatingPanelPosition: 'left',
+                        floatingPanelVariant: 'glass'
+                      })}
+                    >
+                      Show Panel (Left, Glass)
+                    <//>
+                    <${Button} 
+                      variant="medium-text"
+                      color="primary"
+                      onClick=${() => this.setState({ 
+                        floatingPanelOpen: true, 
+                        floatingPanelPosition: 'top',
+                        floatingPanelVariant: 'default'
+                      })}
+                    >
+                      Show Panel (Top, Default)
+                    <//>
+                  </div>
+                <//>
+                
+                <${FloatingPanel}
+                  isOpen=${this.state.floatingPanelOpen}
+                  onClose=${() => this.setState({ floatingPanelOpen: false })}
+                  initialPosition=${this.state.floatingPanelPosition}
+                  variant=${this.state.floatingPanelVariant}
+                  width="400px"
+                  actions=${[
+                    { 
+                      icon: 'refresh', 
+                      color: 'primary', 
+                      onClick: () => {
+                        console.log('Refresh action clicked');
+                      }
+                    },
+                    { 
+                      icon: 'save', 
+                      color: 'success', 
+                      onClick: () => {
+                        console.log('Save action clicked');
+                      }
+                    }
+                  ]}
+                >
+                  <h3 style="margin-top: 0;">Floating Panel Demo</h3>
+                  <p>This panel is draggable. Grab the handle (menu icon) at the top-left and drag to move it.</p>
+                  <p style="margin-top: 16px;">Features:</p>
+                  <ul style="padding-left: 20px;">
+                    <li>Portal rendering to document.body</li>
+                    <li>Draggable via toolbar handle</li>
+                    <li>Multiple initial positions</li>
+                    <li>Variant styles (default, elevated, outlined, glass)</li>
+                    <li>Optional action buttons in toolbar</li>
+                    <li>Optional close button</li>
+                  </ul>
+                  <p style="margin-top: 16px;">Position: <strong>${this.state.floatingPanelPosition}</strong></p>
+                  <p>Variant: <strong>${this.state.floatingPanelVariant}</strong></p>
+                <//>
               <//>
 
               <!-- More component sections will be added as they are refactored -->

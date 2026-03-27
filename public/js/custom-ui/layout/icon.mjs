@@ -157,6 +157,7 @@ const ICON_MAP = {
   'cut': 'content_cut',
   'crop': 'crop',
   'repeat': 'repeat',
+  'drag-handle': 'drag_indicator',
 
 };
 

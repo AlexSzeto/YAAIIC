@@ -104,7 +104,7 @@ CondensedItemContent.className = 'dynamic-list-condensed-item-content';
 const DragGhost = styled('div')`
   position: fixed;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 20000;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   width: ${props => props.width}px;
@@ -116,7 +116,7 @@ const DragGhost = styled('div')`
   border: ${props => `${props.theme.border.width} ${props.theme.border.style} ${props.theme.colors.border.accent || props.theme.colors.border.secondary}`};
   border-radius: ${props => props.theme.spacing.medium.borderRadius};
   background-color: ${props => props.theme.colors.background.secondary};
-  box-shadow: ${props => props.theme.shadow.dragging};
+  box-shadow: ${props => props.theme.shadow.elevated};
   opacity: 0.92;
   font-family: ${props => props.theme.typography.fontFamily};
   font-size: ${props => props.theme.typography.fontSize.medium};
@@ -370,7 +370,8 @@ export function DynamicList({
     title: '',
     ghostX: 0,
     ghostY: 0,
-    offsetY: 0,      // cursor offset within the dragged item
+    offsetX: 0,      // cursor offset from item's left edge
+    offsetY: 0,      // cursor offset from item's top edge
     listWidth: 0,
   });
 
@@ -433,28 +434,57 @@ export function DynamicList({
 
   const handleDragStart = useCallback((e, index, itemTitle) => {
     const root = document.getElementById(listId);
-    const listWidth = root ? root.getBoundingClientRect().width : 300;
+    if (!root) return;
+    
+    // Find the item shell element for this index
+    const itemElements = Array.from(root.querySelectorAll(':scope > [data-dli]'));
+    console.log('🐛 Found items:', itemElements.length, 'dragging index:', index);
+    const itemElement = itemElements[index];
+    if (!itemElement) {
+      console.error('🐛 Item element not found for index:', index);
+      return;
+    }
+    
+    const itemRect = itemElement.getBoundingClientRect();
+    const listRect = root.getBoundingClientRect();
+    
+    console.log('🐛 Drag Debug:', {
+      clickX: e.clientX,
+      clickY: e.clientY,
+      itemLeft: itemRect.left,
+      itemTop: itemRect.top,
+      itemWidth: itemRect.width,
+      itemHeight: itemRect.height,
+    });
+    
+    // Calculate offset from mouse position to item's top-left corner
+    const offsetX = e.clientX - itemRect.left;
+    const offsetY = e.clientY - itemRect.top;
 
-    // Approximate offset so the ghost appears centred on the row (~19px half-height)
-    const offsetY = 19;
+    // Initial ghost position: item's position
+    const ghostX = itemRect.left;
+    const ghostY = itemRect.top;
+    
+    console.log('🐛 Ghost Initial:', { ghostX, ghostY, offsetX, offsetY });
 
     dragRef.current = {
       active: true,
       fromIndex: index,
       toIndex: index,
       title: itemTitle,
-      ghostX: e.clientX - listWidth / 2,
-      ghostY: e.clientY - offsetY,
+      ghostX,
+      ghostY,
+      offsetX,
       offsetY,
-      listWidth,
+      listWidth: listRect.width,
     };
 
     setDragState({
       fromIndex: index,
       toIndex: index,
-      ghostX: e.clientX - listWidth / 2,
-      ghostY: e.clientY - offsetY,
-      width: listWidth,
+      ghostX,
+      ghostY,
+      width: listRect.width,
       title: itemTitle,
     });
 
@@ -462,7 +492,8 @@ export function DynamicList({
       const dr = dragRef.current;
       if (!dr.active) return;
 
-      const gx = ev.clientX - dr.listWidth / 2;
+      // Ghost position = mouse position - offset to maintain pickup point
+      const gx = ev.clientX - dr.offsetX;
       const gy = ev.clientY - dr.offsetY;
       dr.ghostX = gx;
       dr.ghostY = gy;
