@@ -79,12 +79,13 @@ router.post('/upload/audio', upload.single('audio'), async (req, res) => {
     const extractedDescription = req.body.description || null;
     const extractedSummary     = req.body.summary     || null;
     const extractedPrompt      = req.body.prompt      || null;
+    const extractedAudioFormat = req.body.audioFormat || null;
 
     const metadata = (extractedTags || extractedDescription || extractedSummary || extractedPrompt)
       ? { tags: extractedTags, description: extractedDescription, summary: extractedSummary, prompt: extractedPrompt }
       : null;
 
-    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName, extractedOrigin, extractedClips, metadata);
+    const taskId = await processMediaUpload(req.file, loadWorkflows(), extractedName, extractedOrigin, extractedClips, metadata, extractedAudioFormat);
 
     res.json({ success: true, taskId, message: 'Upload task created' });
   } catch (error) {
