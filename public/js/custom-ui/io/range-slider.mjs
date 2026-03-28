@@ -408,6 +408,7 @@ export class RangeSlider extends Component {
       label,
       widthScale = 'normal',
       disabled = false,
+      hideInputs = false,
       // consumed props — not forwarded
       min: _min,
       max: _max,
@@ -462,6 +463,7 @@ export class RangeSlider extends Component {
             step=${snap}
             value=${currentMin}
             disabled=${disabled}
+            onInput=${(e) => this.handleMinChange(e)}
             onChange=${(e) => this.handleMinChange(e)}
             style="z-index: ${currentMin === currentMax ? 1 : 2}"
           />
@@ -473,12 +475,14 @@ export class RangeSlider extends Component {
             step=${snap}
             value=${currentMax}
             disabled=${disabled}
+            onInput=${(e) => this.handleMaxChange(e)}
             onChange=${(e) => this.handleMaxChange(e)}
             style="z-index: ${currentMin === currentMax ? 2 : 1}"
           />
         </${TrackContainer}>
 
         <!-- Min / Max bounds inputs -->
+        ${!hideInputs && html`
         <${BoundsRow}>
           <${RangeInput}
             type="number"
@@ -515,6 +519,7 @@ export class RangeSlider extends Component {
             onKeyDown=${(e) => this.handleMaxLabelKeyDown(e)}
           />
         </${BoundsRow}>
+        `}
       </${Wrapper}>
       </${FormGroup}>
     `;

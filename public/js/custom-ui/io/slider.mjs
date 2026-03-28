@@ -224,6 +224,13 @@ export class Slider extends Component {
     if (onChange) onChange(newValue);
   }
 
+  handleSliderInput(e) {
+    const { onChange } = this.props;
+    const newValue = parseFloat(e.target.value);
+    this.setState({ currentValue: newValue });
+    if (onChange) onChange(newValue);
+  }
+
   handleTrackMouseDown(e) {
     // Only primary button; if user clicked the thumb itself let the browser handle it natively
     if (e.button !== 0 || e.target.tagName === 'INPUT') return;
@@ -300,6 +307,7 @@ export class Slider extends Component {
       widthScale = 'normal',
       variant = 'normal',
       disabled = false,
+      hideInputs = false,
       // consumed — not forwarded
       value: _value,
       onChange: _onChange,
@@ -346,11 +354,13 @@ export class Slider extends Component {
               step=${snap}
               value=${currentValue}
               disabled=${disabled}
+              onInput=${(e) => this.handleSliderInput(e)}
               onChange=${(e) => this.handleSliderChange(e)}
             />
           </${TrackContainer}>
 
           <!-- Value input bottom-left, invisible spacer bottom-right to match RangeSlider alignment -->
+          ${!hideInputs && html`
           <${BoundsRow}>
             <${ValueInput}
               type="number"
@@ -371,6 +381,7 @@ export class Slider extends Component {
             />
             <${RightSpacer} />
           </${BoundsRow}>
+          `}
 
         </${Wrapper}>
       </${FormGroup}>
