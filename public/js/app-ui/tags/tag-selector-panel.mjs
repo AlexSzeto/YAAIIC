@@ -150,6 +150,8 @@ export class TagSelectorPanel extends Component {
     this.autoCompleteInstance = null;
     this.autoCompleteId = null;
     this.breadcrumbRef = createRef();
+    this.navigationSectionRef = createRef();
+    this.scrollToNodeName = null; // Track which node to scroll to after navigation
   }
 
   componentDidMount() {
@@ -185,6 +187,12 @@ export class TagSelectorPanel extends Component {
         searchValue: '',
         hasProcessedInitialSearch: false
       });
+    }
+    
+    // Scroll to the marked node after navigation
+    if (this.scrollToNodeName && prevState.currentNode !== this.state.currentNode) {
+      this.scrollToNode(this.scrollToNodeName);
+      this.scrollToNodeName = null;
     }
   }
 
@@ -240,6 +248,54 @@ export class TagSelectorPanel extends Component {
     } else {
       console.warn('Breadcrumb ref not set, cannot scroll to right');
     }
+  }
+
+  /**
+   * Scroll the navigation section to show a specific node at the top
+   * @param {string} nodeName - The node name to scroll to
+   */
+  scrollToNode(nodeName) {
+    if (!this.navigationSectionRef.current) {
+      console.warn('Navigation section ref not set, cannot scroll to node');
+      return;
+    }
+
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      // Get the DOM element from the styled component ref
+      const navigationSection = this.navigationSectionRef.current.base || this.navigationSectionRef.current;
+      if (!navigationSection) {
+        console.warn('Navigation section not available for scrolling');
+        return;
+      }
+
+      // Try exact match first
+      let targetButton = navigationSection.querySelector(`button[data-node-name="${nodeName}"]`);
+
+      // If not found, try to match by extracting the last segment (after last /)
+      if (!targetButton && nodeName.includes('/')) {
+        const lastSegment = nodeName.split('/').pop();
+        targetButton = navigationSection.querySelector(`button[data-node-name="${lastSegment}"]`);
+      }
+      
+      // If still not found, try without the prefix (e.g., "tag_group:hair/x" -> "x")
+      if (!targetButton && nodeName.includes(':')) {
+        const withoutPrefix = nodeName.split(':').pop();
+        if (withoutPrefix.includes('/')) {
+          const lastSegment = withoutPrefix.split('/').pop();
+          targetButton = navigationSection.querySelector(`button[data-node-name="${lastSegment}"]`);
+        } else {
+          targetButton = navigationSection.querySelector(`button[data-node-name="${withoutPrefix}"]`);
+        }
+      }
+
+      if (targetButton) {
+        targetButton.scrollIntoView();
+      } else {
+        console.warn('Target button not found for node:', nodeName, 'Available buttons:', 
+          Array.from(navigationSection.querySelectorAll('button')).map(b => b.getAttribute('data-node-name')));
+      }
+    });
   }
 
   /**
@@ -343,11 +399,22 @@ export class TagSelectorPanel extends Component {
    * Navigate back to a specific point in the path
    */
   navigateToPathIndex = (index) => {
-    const { path } = this.state;
+    const { path, currentNode } = this.state;
     
     if (index < 0 || index >= path.length) {
       return;
     }
+    
+    // Store the node to scroll to - this should be the node that comes after
+    // the one we're navigating to in the path
+    // If we're at path [A, B, C] with currentNode D, and click index 1 (B),
+    // we want to scroll to C after navigating to B
+    const targetPathIndex = index;
+    const nextNodeInPath = path[targetPathIndex + 1];
+    
+    // If there's a next node in the path, scroll to that
+    // Otherwise, scroll to the current node (we're one level back)
+    this.scrollToNodeName = nextNodeInPath || currentNode;
     
     // Set current node to the selected path item
     // and trim path to everything before that index
@@ -362,6 +429,13 @@ export class TagSelectorPanel extends Component {
    * Navigate to root
    */
   navigateToRoot = () => {
+    const { path } = this.state;
+    
+    // Remember the first item in the path to scroll to it
+    if (path.length > 0) {
+      this.scrollToNodeName = path[0];
+    }
+    
     this.setState({
       path: [],
       currentNode: 'tag_groups',
@@ -724,7 +798,7 @@ export class TagSelectorPanel extends Component {
     }
 
     return html`
-      <${NavigationSection} paddingRight=${theme.spacing.medium.padding}>
+      <${NavigationSection} ref=${this.navigationSectionRef} paddingRight=${theme.spacing.medium.padding}>
         <${VerticalLayout} gap="small">
           ${children.map(child => {
             const displayName = formatTagDisplayName(child);
@@ -737,6 +811,7 @@ export class TagSelectorPanel extends Component {
                 color="secondary"
                 icon=${isNavigable ? 'folder' : 'tag'}
                 onClick=${() => this.navigateToNode(child)}
+                data-node-name=${child}
               >
                 ${displayName}
               </${Button}>
