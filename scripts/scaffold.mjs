@@ -32,6 +32,7 @@ const TEMPLATE_DIR = path.join(__dirname, 'scaffold-template');
  */
 const DIR_COPIES = [
   { src: '.agents',             dest: '.agents' },
+  { src: '.claude',             dest: '.claude' },
   { src: '.github',             dest: '.github' },
   { src: 'scripts',             dest: 'scripts', exclude: ['migrate'] },
   { src: 'public/js/custom-ui', dest: 'public/js/custom-ui' },
