@@ -7,7 +7,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { SeedControl } from '../seed-control.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { getThemeValue } from '../../custom-ui/theme.mjs';
-import { createTagSelectionHandler } from '../tags/tag-insertion-util.mjs';
+import { createTagSelectionHandler, extractWordAtCursor } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -52,6 +52,7 @@ export function InpaintForm({
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
+  const [initialSearchTerm, setInitialSearchTerm] = useState('');
   const textareaRef = useRef(null);
 
   // Set up contextmenu listener for tag selector
@@ -66,6 +67,10 @@ export function InpaintForm({
       if (!workflow?.autocomplete || !isTagDefinitionsLoaded()) {
         return; // Right-click suppressed, but no panel shown
       }
+
+      // Extract word at cursor position
+      const wordAtCursor = extractWordAtCursor(textarea);
+      setInitialSearchTerm(wordAtCursor);
 
       // Show the tag selector panel
       setShowTagPanel(true);
@@ -174,6 +179,7 @@ export function InpaintForm({
         isOpen=${showTagPanel}
         onSelect=${handleTagSelect}
         onClose=${handleCloseTagPanel}
+        initialSearchTerm=${initialSearchTerm}
       />
 
     </${FormContainer}>

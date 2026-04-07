@@ -8,7 +8,7 @@ import { ImageSelect } from '../../custom-ui/media/image-select.mjs';
 import { AudioSelect } from '../../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { createTagSelectionHandler } from '../tags/tag-insertion-util.mjs';
+import { createTagSelectionHandler, extractWordAtCursor } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -44,6 +44,7 @@ export function GenerationForm({
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
+  const [initialSearchTerm, setInitialSearchTerm] = useState('');
   const textareaRef = useRef(null);
 
   // Set up contextmenu listener for tag selector
@@ -58,6 +59,10 @@ export function GenerationForm({
       if (!workflow?.autocomplete || !isTagDefinitionsLoaded()) {
         return; // Right-click suppressed, but no panel shown
       }
+
+      // Extract word at cursor position
+      const wordAtCursor = extractWordAtCursor(textarea);
+      setInitialSearchTerm(wordAtCursor);
 
       // Show the tag selector panel
       setShowTagPanel(true);
@@ -221,6 +226,7 @@ export function GenerationForm({
         isOpen=${showTagPanel}
         onSelect=${handleTagSelect}
         onClose=${handleCloseTagPanel}
+        initialSearchTerm=${initialSearchTerm}
       />
 
     </${VerticalLayout}>

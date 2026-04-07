@@ -122,6 +122,7 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Function} props.onSelect - Callback when a tag is selected: (tagName) => void
  * @param {Function} props.onClose - Callback when modal should close: () => void
+ * @param {string} [props.initialSearchTerm] - Optional initial search term to navigate to when opening
  * @returns {preact.VNode}
  * 
  * @example
@@ -129,6 +130,7 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  *   isOpen={isOpen}
  *   onSelect={(tag) => console.log('Selected:', tag)}
  *   onClose={() => console.log('Closed')}
+ *   initialSearchTerm="blue eyes"
  * />
  */
 export class TagSelectorPanel extends Component {
@@ -140,7 +142,8 @@ export class TagSelectorPanel extends Component {
       path: [], // Navigation path as array of node names
       currentNode: 'tag_groups', // Current node key
       searchValue: '',
-      categoryTree: {} // Will be populated when modal opens
+      categoryTree: {}, // Will be populated when modal opens
+      hasProcessedInitialSearch: false // Track if we've processed the initial search term
     };
     
     this.searchInputId = 'tag-selector-search-' + Math.random().toString(36).substr(2, 9);
@@ -160,17 +163,28 @@ export class TagSelectorPanel extends Component {
     if (this.props.isOpen && !prevProps.isOpen) {
       // Load category tree
       const categoryTree = getCategoryTree();
-      this.setState({ categoryTree });
+      this.setState({ 
+        categoryTree,
+        hasProcessedInitialSearch: false // Reset flag when opening
+      });
       
       // Wait for next tick to ensure DOM is ready for autocomplete
       setTimeout(() => {
         this.initializeAutocomplete();
+        this.processInitialSearchTerm();
       }, 0);
     }
     
     // Clean up autocomplete when modal closes
     if (!this.props.isOpen && prevProps.isOpen) {
       this.cleanupAutocomplete();
+      // Reset to root when closing
+      this.setState({
+        path: [],
+        currentNode: 'tag_groups',
+        searchValue: '',
+        hasProcessedInitialSearch: false
+      });
     }
   }
 
@@ -421,12 +435,8 @@ export class TagSelectorPanel extends Component {
               return;
             }
             
-            // Navigate to the selected tag/category with isCategory flag
-            this.navigateToTag(selectedItem.internal, selectedItem.isCategory);
-            
-            // Update search input value
-            inputElement.value = selectedDisplay;
-            this.setState({ searchValue: selectedDisplay });
+            // Navigate to the selected tag/category and update search value
+            this.navigateToTag(selectedItem.internal, selectedItem.isCategory, selectedDisplay);
           }
         }
       }
@@ -435,6 +445,53 @@ export class TagSelectorPanel extends Component {
     // Store the autocomplete ID and inject styles for this instance
     this.autoCompleteId = this.autoCompleteInstance.id;
     injectAutocompleteStyles(this.autoCompleteId);
+  }
+
+  /**
+   * Process initial search term if provided
+   * If the term exists and has a definition, navigate to it
+   */
+  processInitialSearchTerm() {
+    const { initialSearchTerm } = this.props;
+    const { hasProcessedInitialSearch } = this.state;
+    
+    // Only process once per opening
+    if (hasProcessedInitialSearch || !initialSearchTerm || !initialSearchTerm.trim()) {
+      return;
+    }
+    
+    // Normalize the search term: try both with spaces and underscores
+    const searchTermWithSpaces = initialSearchTerm.replace(/_/g, ' ').trim();
+    const searchTermWithUnderscores = initialSearchTerm.replace(/\s+/g, '_').trim();
+    
+    // Check if the term has a definition (getTagDefinition handles both spaces and underscores)
+    const definition = getTagDefinition(searchTermWithSpaces) || getTagDefinition(searchTermWithUnderscores);
+
+    if (definition) {
+      // Navigate to the tag
+      // First, look up the tag in autocomplete data to get the internal name
+      const autocompleteData = getMergedAutocompleteData();
+      
+      // Try to find matching item - autocomplete display names use spaces
+      let matchingItem = autocompleteData.find(item => 
+        item.display.toLowerCase() === searchTermWithSpaces.toLowerCase()
+      );
+      
+      // If not found with spaces, try with underscores in the internal name
+      if (!matchingItem) {
+        matchingItem = autocompleteData.find(item => 
+          item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
+        );
+      }
+      
+      if (matchingItem) {
+        // Navigate and set the search value in one call
+        this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
+      }
+    }
+    
+    // Mark as processed
+    this.setState({ hasProcessedInitialSearch: true });
   }
 
   /**
@@ -494,8 +551,9 @@ export class TagSelectorPanel extends Component {
    * Navigate to a specific tag or category in the tree
    * @param {string} internalName - The internal name of the tag or category to navigate to
    * @param {boolean} isCategory - Whether the item is a category (has children) or a tag
+   * @param {string} [searchValue=''] - Optional search value to set (defaults to empty)
    */
-  navigateToTag(internalName, isCategory) {
+  navigateToTag(internalName, isCategory, searchValue = '') {
     // Build full path to the node
     const path = this.buildPathToNode(internalName);
     
@@ -503,7 +561,7 @@ export class TagSelectorPanel extends Component {
     this.setState({
       path: path,
       currentNode: internalName,
-      searchValue: ''
+      searchValue: searchValue
     });
   }
 
