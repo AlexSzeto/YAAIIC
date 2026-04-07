@@ -235,19 +235,19 @@ export class TagSelectorPanel extends Component {
    * Scroll breadcrumb to the rightmost position
    */
   scrollBreadcrumbToRight() {
-    console.log('Scrolling breadcrumb to right', this.breadcrumbRef);
-    if (this.breadcrumbRef.current.base) {
-      // Use nextTick to ensure DOM is updated
-      requestAnimationFrame(() => {
-        if (this.breadcrumbRef.current.base) {
-          this.breadcrumbRef.current.base.scrollLeft = this.breadcrumbRef.current.base.scrollWidth;
-        } else {
-          console.warn('Breadcrumb ref not set on scroll attempt');
-        }
-      });
-    } else {
-      console.warn('Breadcrumb ref not set, cannot scroll to right');
-    }
+    requestAnimationFrame(() => {
+      const breadcrumb = this.breadcrumbRef.current && (this.breadcrumbRef.current.base || this.breadcrumbRef.current);
+      if (!breadcrumb) {
+        console.warn('Breadcrumb ref not set, cannot scroll to right');
+        return;
+      }
+      const lastButton = breadcrumb.querySelector('button:last-child');
+      if (lastButton) {
+        lastButton.scrollIntoView();
+      } else {
+        console.warn('No breadcrumb buttons found to scroll into view');
+      }
+    });
   }
 
   /**
@@ -636,7 +636,7 @@ export class TagSelectorPanel extends Component {
       path: path,
       currentNode: internalName,
       searchValue: searchValue
-    });
+    }, () => this.scrollBreadcrumbToRight());
   }
 
   /**
