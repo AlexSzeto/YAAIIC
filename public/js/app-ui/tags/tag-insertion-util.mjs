@@ -104,6 +104,50 @@ export function insertTagIntoPrompt(existingPrompt, tag) {
  * // Use with TagSelectorPanel
  * <TagSelectorPanel onSelect={handleTagSelect} ... />
  */
+/**
+ * Replace the first occurrence of a term in a prompt with a new tag
+ * 
+ * Normalizes both the search term and prompt text to match regardless of
+ * whether underscores or spaces are used.
+ * 
+ * @param {string} existingPrompt - The current prompt text
+ * @param {string} searchTerm - The term to replace (spaces or underscores)
+ * @param {string} newTag - The replacement tag
+ * @returns {string} The prompt with the first matching occurrence replaced
+ * 
+ * @example
+ * replaceTagInPrompt('girl, blue_eyes, hair', 'blue eyes', 'red_eyes') // Returns: 'girl, red_eyes, hair'
+ */
+export function replaceTagInPrompt(existingPrompt, searchTerm, newTag) {
+  if (!existingPrompt || !searchTerm) {
+    return existingPrompt;
+  }
+
+  // Normalize: try to match with both spaces and underscores treated as equivalent
+  const normalizedSearch = searchTerm.trim().replace(/_/g, ' ');
+  const normalizedSearchUnderscore = searchTerm.trim().replace(/\s+/g, '_');
+
+  // Try matching with spaces first, then underscores
+  const spacePattern = new RegExp(
+    '(?<![\\w])' + normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w])',
+    'i'
+  );
+  const underscorePattern = new RegExp(
+    '(?<![\\w])' + normalizedSearchUnderscore.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w])',
+    'i'
+  );
+
+  if (spacePattern.test(existingPrompt)) {
+    return existingPrompt.replace(spacePattern, newTag);
+  }
+  if (underscorePattern.test(existingPrompt)) {
+    return existingPrompt.replace(underscorePattern, newTag);
+  }
+
+  // If no match found, fall back to inserting
+  return insertTagIntoPrompt(existingPrompt, newTag);
+}
+
 export function createTagSelectionHandler(getCurrentValue, setValue, onClose) {
   return (tagName) => {
     // Get current prompt value

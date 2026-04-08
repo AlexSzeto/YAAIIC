@@ -7,7 +7,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { SeedControl } from '../seed-control.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { getThemeValue } from '../../custom-ui/theme.mjs';
-import { createTagSelectionHandler, extractWordAtCursor } from '../tags/tag-insertion-util.mjs';
+import { createTagSelectionHandler, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -90,6 +90,13 @@ export function InpaintForm({
       (newValue) => onFieldChange('description', newValue)
     );
     handler(tagName);
+  };
+
+  // Handler for tag replacement from tag selector panel
+  const handleTagReplace = (tagName) => {
+    const currentPrompt = formState.description || '';
+    const newPrompt = replaceTagInPrompt(currentPrompt, initialSearchTerm, tagName);
+    onFieldChange('description', newPrompt);
   };
 
   // Handler to close tag panel
@@ -178,6 +185,7 @@ export function InpaintForm({
       <${TagSelectorPanel}
         isOpen=${showTagPanel}
         onSelect=${handleTagSelect}
+        onReplace=${handleTagReplace}
         onClose=${handleCloseTagPanel}
         initialSearchTerm=${initialSearchTerm}
       />

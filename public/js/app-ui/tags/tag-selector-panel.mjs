@@ -123,6 +123,7 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  * @param {Function} props.onSelect - Callback when a tag is selected: (tagName) => void
  * @param {Function} props.onClose - Callback when modal should close: () => void
  * @param {string} [props.initialSearchTerm] - Optional initial search term to navigate to when opening
+ * @param {Function} [props.onReplace] - Optional callback when a tag replaces the initial search term: (tagName) => void
  * @returns {preact.VNode}
  * 
  * @example
@@ -640,20 +641,40 @@ export class TagSelectorPanel extends Component {
   }
 
   /**
+   * Get the tag name for the current node
+   * @returns {string}
+   */
+  getCurrentTagName() {
+    const { currentNode } = this.state;
+    return currentNode.replace(/^tag_groups?:?\/*/i, '').replace(/.*\//, '').replace(/_/g, ' ');
+  }
+
+  /**
    * Handle tag insertion
    */
   handleInsert = () => {
-    const { currentNode } = this.state;
     const { onSelect } = this.props;
     
-    // Get the tag name without any prefix or path
-    const tagName = currentNode.replace(/^tag_groups?:?\/*/i, '').replace(/.*\//, '').replace(/_/g, ' ');
-    
     if (onSelect) {
-      onSelect(tagName);
+      onSelect(this.getCurrentTagName());
     }
     
     // Don't close the modal - user can continue selecting tags
+  }
+
+  /**
+   * Handle tag replacement (replaces the initial search term in the prompt)
+   */
+  handleReplace = () => {
+    const { onReplace, onClose } = this.props;
+    
+    if (onReplace) {
+      onReplace(this.getCurrentTagName());
+    }
+    
+    if (onClose) {
+      onClose();
+    }
   }
 
   render() {
@@ -824,7 +845,9 @@ export class TagSelectorPanel extends Component {
 
   renderFooter() {
     const { theme, currentNode } = this.state;
+    const { initialSearchTerm } = this.props;
     const currentDefinition = getTagDefinition(currentNode);
+    const hasInitialTerm = !!(initialSearchTerm && initialSearchTerm.trim());
     
     return html`
       <${FooterSection}
@@ -839,6 +862,14 @@ export class TagSelectorPanel extends Component {
           onClick=${this.handleInsert}
         >
           Insert
+        </${Button}>
+        <${Button}
+          variant="medium-text"
+          color="primary"
+          disabled=${!currentDefinition || !hasInitialTerm}
+          onClick=${this.handleReplace}
+        >
+          Replace
         </${Button}>
       </${FooterSection}>
     `;

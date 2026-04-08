@@ -8,7 +8,7 @@ import { ImageSelect } from '../../custom-ui/media/image-select.mjs';
 import { AudioSelect } from '../../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { createTagSelectionHandler, extractWordAtCursor } from '../tags/tag-insertion-util.mjs';
+import { createTagSelectionHandler, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -82,6 +82,13 @@ export function GenerationForm({
       (newValue) => onFieldChange('description', newValue)
     );
     handler(tagName);
+  };
+
+  // Handler for tag replacement from tag selector panel
+  const handleTagReplace = (tagName) => {
+    const currentPrompt = formState.description || '';
+    const newPrompt = replaceTagInPrompt(currentPrompt, initialSearchTerm, tagName);
+    onFieldChange('description', newPrompt);
   };
 
   // Handler to close tag panel
@@ -225,6 +232,7 @@ export function GenerationForm({
       <${TagSelectorPanel}
         isOpen=${showTagPanel}
         onSelect=${handleTagSelect}
+        onReplace=${handleTagReplace}
         onClose=${handleCloseTagPanel}
         initialSearchTerm=${initialSearchTerm}
       />
