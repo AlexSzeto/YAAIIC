@@ -44,7 +44,7 @@ git add -A
 Copy the message to the clipboard so the user can paste it directly into VS Code's commit input box:
 
 ```
-echo <message> | clip
+Set-Clipboard -Value "<message>"
 ```
 
 Then output the commit message in this format:
