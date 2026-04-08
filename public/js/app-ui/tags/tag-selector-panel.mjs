@@ -122,6 +122,7 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Function} props.onSelect - Callback when a tag is selected: (tagName) => void
  * @param {Function} props.onClose - Callback when modal should close: () => void
+ * @param {string} [props.initialSearchTerm] - Optional initial search term to navigate to when opening
  * @returns {preact.VNode}
  * 
  * @example
@@ -129,6 +130,7 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  *   isOpen={isOpen}
  *   onSelect={(tag) => console.log('Selected:', tag)}
  *   onClose={() => console.log('Closed')}
+ *   initialSearchTerm="blue eyes"
  * />
  */
 export class TagSelectorPanel extends Component {
@@ -140,13 +142,16 @@ export class TagSelectorPanel extends Component {
       path: [], // Navigation path as array of node names
       currentNode: 'tag_groups', // Current node key
       searchValue: '',
-      categoryTree: {} // Will be populated when modal opens
+      categoryTree: {}, // Will be populated when modal opens
+      hasProcessedInitialSearch: false // Track if we've processed the initial search term
     };
     
     this.searchInputId = 'tag-selector-search-' + Math.random().toString(36).substr(2, 9);
     this.autoCompleteInstance = null;
     this.autoCompleteId = null;
     this.breadcrumbRef = createRef();
+    this.navigationSectionRef = createRef();
+    this.scrollToNodeName = null; // Track which node to scroll to after navigation
   }
 
   componentDidMount() {
@@ -160,17 +165,34 @@ export class TagSelectorPanel extends Component {
     if (this.props.isOpen && !prevProps.isOpen) {
       // Load category tree
       const categoryTree = getCategoryTree();
-      this.setState({ categoryTree });
+      this.setState({ 
+        categoryTree,
+        hasProcessedInitialSearch: false // Reset flag when opening
+      });
       
       // Wait for next tick to ensure DOM is ready for autocomplete
       setTimeout(() => {
         this.initializeAutocomplete();
+        this.processInitialSearchTerm();
       }, 0);
     }
     
     // Clean up autocomplete when modal closes
     if (!this.props.isOpen && prevProps.isOpen) {
       this.cleanupAutocomplete();
+      // Reset to root when closing
+      this.setState({
+        path: [],
+        currentNode: 'tag_groups',
+        searchValue: '',
+        hasProcessedInitialSearch: false
+      });
+    }
+    
+    // Scroll to the marked node after navigation
+    if (this.scrollToNodeName && prevState.currentNode !== this.state.currentNode) {
+      this.scrollToNode(this.scrollToNodeName);
+      this.scrollToNodeName = null;
     }
   }
 
@@ -213,19 +235,67 @@ export class TagSelectorPanel extends Component {
    * Scroll breadcrumb to the rightmost position
    */
   scrollBreadcrumbToRight() {
-    console.log('Scrolling breadcrumb to right', this.breadcrumbRef);
-    if (this.breadcrumbRef.current.base) {
-      // Use nextTick to ensure DOM is updated
-      requestAnimationFrame(() => {
-        if (this.breadcrumbRef.current.base) {
-          this.breadcrumbRef.current.base.scrollLeft = this.breadcrumbRef.current.base.scrollWidth;
-        } else {
-          console.warn('Breadcrumb ref not set on scroll attempt');
-        }
-      });
-    } else {
-      console.warn('Breadcrumb ref not set, cannot scroll to right');
+    requestAnimationFrame(() => {
+      const breadcrumb = this.breadcrumbRef.current && (this.breadcrumbRef.current.base || this.breadcrumbRef.current);
+      if (!breadcrumb) {
+        console.warn('Breadcrumb ref not set, cannot scroll to right');
+        return;
+      }
+      const lastButton = breadcrumb.querySelector('button:last-child');
+      if (lastButton) {
+        lastButton.scrollIntoView();
+      } else {
+        console.warn('No breadcrumb buttons found to scroll into view');
+      }
+    });
+  }
+
+  /**
+   * Scroll the navigation section to show a specific node at the top
+   * @param {string} nodeName - The node name to scroll to
+   */
+  scrollToNode(nodeName) {
+    if (!this.navigationSectionRef.current) {
+      console.warn('Navigation section ref not set, cannot scroll to node');
+      return;
     }
+
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      // Get the DOM element from the styled component ref
+      const navigationSection = this.navigationSectionRef.current.base || this.navigationSectionRef.current;
+      if (!navigationSection) {
+        console.warn('Navigation section not available for scrolling');
+        return;
+      }
+
+      // Try exact match first
+      let targetButton = navigationSection.querySelector(`button[data-node-name="${nodeName}"]`);
+
+      // If not found, try to match by extracting the last segment (after last /)
+      if (!targetButton && nodeName.includes('/')) {
+        const lastSegment = nodeName.split('/').pop();
+        targetButton = navigationSection.querySelector(`button[data-node-name="${lastSegment}"]`);
+      }
+      
+      // If still not found, try without the prefix (e.g., "tag_group:hair/x" -> "x")
+      if (!targetButton && nodeName.includes(':')) {
+        const withoutPrefix = nodeName.split(':').pop();
+        if (withoutPrefix.includes('/')) {
+          const lastSegment = withoutPrefix.split('/').pop();
+          targetButton = navigationSection.querySelector(`button[data-node-name="${lastSegment}"]`);
+        } else {
+          targetButton = navigationSection.querySelector(`button[data-node-name="${withoutPrefix}"]`);
+        }
+      }
+
+      if (targetButton) {
+        targetButton.scrollIntoView();
+      } else {
+        console.warn('Target button not found for node:', nodeName, 'Available buttons:', 
+          Array.from(navigationSection.querySelectorAll('button')).map(b => b.getAttribute('data-node-name')));
+      }
+    });
   }
 
   /**
@@ -329,11 +399,22 @@ export class TagSelectorPanel extends Component {
    * Navigate back to a specific point in the path
    */
   navigateToPathIndex = (index) => {
-    const { path } = this.state;
+    const { path, currentNode } = this.state;
     
     if (index < 0 || index >= path.length) {
       return;
     }
+    
+    // Store the node to scroll to - this should be the node that comes after
+    // the one we're navigating to in the path
+    // If we're at path [A, B, C] with currentNode D, and click index 1 (B),
+    // we want to scroll to C after navigating to B
+    const targetPathIndex = index;
+    const nextNodeInPath = path[targetPathIndex + 1];
+    
+    // If there's a next node in the path, scroll to that
+    // Otherwise, scroll to the current node (we're one level back)
+    this.scrollToNodeName = nextNodeInPath || currentNode;
     
     // Set current node to the selected path item
     // and trim path to everything before that index
@@ -348,6 +429,13 @@ export class TagSelectorPanel extends Component {
    * Navigate to root
    */
   navigateToRoot = () => {
+    const { path } = this.state;
+    
+    // Remember the first item in the path to scroll to it
+    if (path.length > 0) {
+      this.scrollToNodeName = path[0];
+    }
+    
     this.setState({
       path: [],
       currentNode: 'tag_groups',
@@ -421,12 +509,8 @@ export class TagSelectorPanel extends Component {
               return;
             }
             
-            // Navigate to the selected tag/category with isCategory flag
-            this.navigateToTag(selectedItem.internal, selectedItem.isCategory);
-            
-            // Update search input value
-            inputElement.value = selectedDisplay;
-            this.setState({ searchValue: selectedDisplay });
+            // Navigate to the selected tag/category and update search value
+            this.navigateToTag(selectedItem.internal, selectedItem.isCategory, selectedDisplay);
           }
         }
       }
@@ -435,6 +519,53 @@ export class TagSelectorPanel extends Component {
     // Store the autocomplete ID and inject styles for this instance
     this.autoCompleteId = this.autoCompleteInstance.id;
     injectAutocompleteStyles(this.autoCompleteId);
+  }
+
+  /**
+   * Process initial search term if provided
+   * If the term exists and has a definition, navigate to it
+   */
+  processInitialSearchTerm() {
+    const { initialSearchTerm } = this.props;
+    const { hasProcessedInitialSearch } = this.state;
+    
+    // Only process once per opening
+    if (hasProcessedInitialSearch || !initialSearchTerm || !initialSearchTerm.trim()) {
+      return;
+    }
+    
+    // Normalize the search term: try both with spaces and underscores
+    const searchTermWithSpaces = initialSearchTerm.replace(/_/g, ' ').trim();
+    const searchTermWithUnderscores = initialSearchTerm.replace(/\s+/g, '_').trim();
+    
+    // Check if the term has a definition (getTagDefinition handles both spaces and underscores)
+    const definition = getTagDefinition(searchTermWithSpaces) || getTagDefinition(searchTermWithUnderscores);
+
+    if (definition) {
+      // Navigate to the tag
+      // First, look up the tag in autocomplete data to get the internal name
+      const autocompleteData = getMergedAutocompleteData();
+      
+      // Try to find matching item - autocomplete display names use spaces
+      let matchingItem = autocompleteData.find(item => 
+        item.display.toLowerCase() === searchTermWithSpaces.toLowerCase()
+      );
+      
+      // If not found with spaces, try with underscores in the internal name
+      if (!matchingItem) {
+        matchingItem = autocompleteData.find(item => 
+          item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
+        );
+      }
+      
+      if (matchingItem) {
+        // Navigate and set the search value in one call
+        this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
+      }
+    }
+    
+    // Mark as processed
+    this.setState({ hasProcessedInitialSearch: true });
   }
 
   /**
@@ -494,8 +625,9 @@ export class TagSelectorPanel extends Component {
    * Navigate to a specific tag or category in the tree
    * @param {string} internalName - The internal name of the tag or category to navigate to
    * @param {boolean} isCategory - Whether the item is a category (has children) or a tag
+   * @param {string} [searchValue=''] - Optional search value to set (defaults to empty)
    */
-  navigateToTag(internalName, isCategory) {
+  navigateToTag(internalName, isCategory, searchValue = '') {
     // Build full path to the node
     const path = this.buildPathToNode(internalName);
     
@@ -503,8 +635,8 @@ export class TagSelectorPanel extends Component {
     this.setState({
       path: path,
       currentNode: internalName,
-      searchValue: ''
-    });
+      searchValue: searchValue
+    }, () => this.scrollBreadcrumbToRight());
   }
 
   /**
@@ -666,7 +798,7 @@ export class TagSelectorPanel extends Component {
     }
 
     return html`
-      <${NavigationSection} paddingRight=${theme.spacing.medium.padding}>
+      <${NavigationSection} ref=${this.navigationSectionRef} paddingRight=${theme.spacing.medium.padding}>
         <${VerticalLayout} gap="small">
           ${children.map(child => {
             const displayName = formatTagDisplayName(child);
@@ -679,6 +811,7 @@ export class TagSelectorPanel extends Component {
                 color="secondary"
                 icon=${isNavigable ? 'folder' : 'tag'}
                 onClick=${() => this.navigateToNode(child)}
+                data-node-name=${child}
               >
                 ${displayName}
               </${Button}>

@@ -10,6 +10,8 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import sharp from 'sharp';
 import { modifyGenerationDataWithPrompt } from '../generation/orchestrator.mjs';
 import { checkPromptStatus } from '../generation/orchestrator.mjs';
@@ -28,6 +30,8 @@ import {
   resetProgressLog
 } from '../../core/sse.mjs';
 import { resetPromptLog } from '../../core/llm.mjs';
+
+const execFileAsync = promisify(execFile);
 
 // Function to add media data entry (will be set by server.mjs)
 let addMediaDataEntry = null;
@@ -65,7 +69,7 @@ export { uploadFile as uploadFileToComfyUI };
  * @param {string|null} [name]      - Optional user-supplied name.
  * @returns {Promise<string>} Task ID.
  */
-export async function processMediaUpload(file, workflowsConfig, name = null, origin = null, clips = null, metadata = null) {
+export async function processMediaUpload(file, workflowsConfig, name = null, origin = null, clips = null, metadata = null, audioFormat = null) {
   // Reset per-request logs
   resetPromptLog();
   resetProgressLog();
@@ -87,7 +91,7 @@ export async function processMediaUpload(file, workflowsConfig, name = null, ori
   console.log(`Created upload task ${taskId}`);
 
   // Process upload task asynchronously
-  processUploadTask(taskId, file, workflowsConfig, name, origin, clips, metadata).catch(error => {
+  processUploadTask(taskId, file, workflowsConfig, name, origin, clips, metadata, audioFormat).catch(error => {
     console.error(`Error in upload task ${taskId}:`, error);
     emitTaskErrorByTaskId(taskId, 'Upload failed', error.message);
   });
@@ -202,7 +206,7 @@ async function generateAlbumCover(taskId, requestData, workflowConfig, workflows
 /**
  * Process upload task asynchronously.
  */
-async function processUploadTask(taskId, file, workflowsConfig, extractedName = null, origin = null, clips = null, metadata = null) {
+async function processUploadTask(taskId, file, workflowsConfig, extractedName = null, origin = null, clips = null, metadata = null, audioFormat = null) {
   try {
     // Detect file type
     const isAudio = file.mimetype.startsWith('audio/');
@@ -212,7 +216,7 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
     emitProgressUpdate(taskId, { percentage: 10, value: 1, max: 4 }, `Uploading ${fileTypeLabel.toLowerCase()}...`);
 
     // Determine file type and extension
-    const ext = path.extname(file.originalname) || (isAudio ? '.mp3' : '.png');
+    let ext = path.extname(file.originalname).toLowerCase() || (isAudio ? '.mp3' : '.png');
     const fileType = isAudio ? 'audio' : 'image';
 
     // Save file to storage directory
@@ -222,11 +226,33 @@ async function processUploadTask(taskId, file, workflowsConfig, extractedName = 
 
     // Generate filename using type_index format
     const nextIndex = findNextIndex(fileType, STORAGE_DIR);
-    const filename = `${fileType}_${nextIndex}${ext}`;
+    let filename = `${fileType}_${nextIndex}${ext}`;
 
-    const saveMediaPath = path.join(STORAGE_DIR, filename);
+    let saveMediaPath = path.join(STORAGE_DIR, filename);
     fs.writeFileSync(saveMediaPath, file.buffer);
     console.log(`${fileTypeLabel} saved to: ${saveMediaPath}`);
+
+    // Convert audio format when the uploaded file's extension differs from the
+    // requested audioFormat (e.g. browser exports WAV but storage wants MP3).
+    if (isAudio && audioFormat) {
+      const requestedExt = `.${audioFormat.toLowerCase()}`;
+      if (ext !== requestedExt) {
+        const convertedFilename = `${fileType}_${nextIndex}${requestedExt}`;
+        const convertedPath = path.join(STORAGE_DIR, convertedFilename);
+        try {
+          await execFileAsync('ffmpeg', ['-y', '-i', saveMediaPath, convertedPath]);
+        } catch (err) {
+          throw new Error(`FFmpeg audio conversion failed: ${err.message}`);
+        }
+        // Remove the original uploaded file now that conversion succeeded
+        fs.unlinkSync(saveMediaPath);
+        console.log(`Converted ${ext} → ${requestedExt}: ${convertedPath}`);
+        // Update path variables to point at the converted file
+        filename      = convertedFilename;
+        saveMediaPath = convertedPath;
+        ext           = requestedExt;
+      }
+    }
 
     // Handle audio files differently
     if (isAudio) {

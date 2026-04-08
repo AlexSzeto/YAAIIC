@@ -224,6 +224,51 @@ export class Slider extends Component {
     if (onChange) onChange(newValue);
   }
 
+  handleSliderInput(e) {
+    const { onChange } = this.props;
+    const newValue = parseFloat(e.target.value);
+    this.setState({ currentValue: newValue });
+    if (onChange) onChange(newValue);
+  }
+
+  handleTrackMouseDown(e) {
+    // Only primary button; if user clicked the thumb itself let the browser handle it natively
+    if (e.button !== 0 || e.target.tagName === 'INPUT') return;
+    const { minAllowed = 0, maxAllowed = 100, snap = 1, onChange } = this.props;
+
+    const trackEl = e.currentTarget;
+    const input = trackEl.querySelector('input[type="range"]');
+
+    const computeValue = (clientX) => {
+      const rect = trackEl.getBoundingClientRect();
+      const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const raw = minAllowed + fraction * (maxAllowed - minAllowed);
+      const snapped = Math.round(raw / snap) * snap;
+      return Math.max(minAllowed, Math.min(snapped, maxAllowed));
+    };
+
+    // Jump knob to click position immediately — set DOM value directly for instant visual
+    const initial = computeValue(e.clientX);
+    if (input) input.value = initial;
+    this.setState({ currentValue: initial });
+    if (onChange) onChange(initial);
+
+    // Continue dragging via document-level listeners (avoids re-triggering this handler)
+    const onMouseMove = (moveEvent) => {
+      const v = computeValue(moveEvent.clientX);
+      // Update DOM directly for smooth 60fps visual, setState for state sync
+      if (input) input.value = v;
+      this.setState({ currentValue: v });
+      if (onChange) onChange(v);
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
   /** Apply a typed value from the number input, snapped and clamped. */
   applyInputValue(rawValue) {
     const { minAllowed = 0, maxAllowed = 100, snap = 1, onChange } = this.props;
@@ -262,6 +307,7 @@ export class Slider extends Component {
       widthScale = 'normal',
       variant = 'normal',
       disabled = false,
+      hideInputs = false,
       // consumed — not forwarded
       value: _value,
       onChange: _onChange,
@@ -293,6 +339,7 @@ export class Slider extends Component {
             thumbFill=${thumbFill}
             thumbBorder=${thumbBorder}
             transition=${theme.transitions.fast}
+            onMouseDown=${(e) => this.handleTrackMouseDown(e)}
           >
             <${TrackFill}
               trackBg=${trackBg}
@@ -307,11 +354,13 @@ export class Slider extends Component {
               step=${snap}
               value=${currentValue}
               disabled=${disabled}
+              onInput=${(e) => this.handleSliderInput(e)}
               onChange=${(e) => this.handleSliderChange(e)}
             />
           </${TrackContainer}>
 
           <!-- Value input bottom-left, invisible spacer bottom-right to match RangeSlider alignment -->
+          ${!hideInputs && html`
           <${BoundsRow}>
             <${ValueInput}
               type="number"
@@ -332,6 +381,7 @@ export class Slider extends Component {
             />
             <${RightSpacer} />
           </${BoundsRow}>
+          `}
 
         </${Wrapper}>
       </${FormGroup}>

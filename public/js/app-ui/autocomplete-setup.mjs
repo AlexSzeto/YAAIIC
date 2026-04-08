@@ -1,6 +1,7 @@
 // Autocomplete Setup Module
 import { loadTags, getTags, isTagsLoaded } from './tags/tags.mjs';
 import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
+import './textarea-caret-position-wrapper.mjs';
 
 let autoCompleteJS = null;
 let stylesInjected = false;
@@ -156,8 +157,8 @@ export function initAutoComplete() {
           
           list.style.position = 'fixed';
           list.style.left = (textareaRect.left + caretPos.left) + 'px';
-          list.style.top = (textareaRect.top + caretPos.top + caretPos.height) + 'px';
-          list.style.zIndex = '1000';
+          list.style.top = (textareaRect.top + caretPos.top + caretPos.height - textarea.scrollTop) + 'px';
+          list.style.zIndex = '20000';
         },
         selection: (event) => {
           // Check if autocomplete is disabled for the current workflow

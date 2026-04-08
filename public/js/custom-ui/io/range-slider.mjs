@@ -269,6 +269,78 @@ export class RangeSlider extends Component {
     if (onChange) onChange({ min: this.state.currentMin, max: newMax });
   }
 
+  handleTrackMouseDown(e) {
+    // Only primary button; if user clicked the thumb itself let the browser handle it natively
+    if (e.button !== 0 || e.target.tagName === 'INPUT') return;
+    const { minAllowed = 0, maxAllowed = 100, snap = 1, onChange } = this.props;
+
+    const trackEl = e.currentTarget;
+    const inputs = trackEl.querySelectorAll('input[type="range"]');
+    const minInput = inputs[0];
+    const maxInput = inputs[1];
+
+    // Capture current min/max at the start of the drag
+    let { currentMin, currentMax } = this.state;
+
+    const getClickValue = (clientX) => {
+      const rect = trackEl.getBoundingClientRect();
+      const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      return minAllowed + fraction * (maxAllowed - minAllowed);
+    };
+
+    const snapClamp = (v, lo, hi) =>
+      Math.max(lo, Math.min(Math.round(v / snap) * snap, hi));
+
+    // Determine which knob to pick based on the initial click
+    const clickValue = getClickValue(e.clientX);
+    const distToMin = Math.abs(clickValue - currentMin);
+    const distToMax = Math.abs(clickValue - currentMax);
+    let pickMin;
+    if (distToMin === distToMax) {
+      pickMin = clickValue <= currentMin; // left → min, right → max
+    } else {
+      pickMin = distToMin < distToMax;
+    }
+
+    // Apply initial position — set DOM value directly for instant visual
+    if (pickMin) {
+      const v = snapClamp(clickValue, minAllowed, currentMax);
+      if (minInput) minInput.value = v;
+      currentMin = v;
+      this.setState({ currentMin: v });
+      if (onChange) onChange({ min: v, max: currentMax });
+    } else {
+      const v = snapClamp(clickValue, currentMin, maxAllowed);
+      if (maxInput) maxInput.value = v;
+      currentMax = v;
+      this.setState({ currentMax: v });
+      if (onChange) onChange({ min: currentMin, max: v });
+    }
+
+    // Continue dragging via document-level listeners
+    const onMouseMove = (moveEvent) => {
+      const cv = getClickValue(moveEvent.clientX);
+      if (pickMin) {
+        const v = snapClamp(cv, minAllowed, this.state.currentMax);
+        // Update DOM directly for smooth 60fps visual, setState for state sync
+        if (minInput) minInput.value = v;
+        this.setState({ currentMin: v });
+        if (onChange) onChange({ min: v, max: this.state.currentMax });
+      } else {
+        const v = snapClamp(cv, this.state.currentMin, maxAllowed);
+        if (maxInput) maxInput.value = v;
+        this.setState({ currentMax: v });
+        if (onChange) onChange({ min: this.state.currentMin, max: v });
+      }
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
   /** Apply a typed min-label value, clamped to [minAllowed, currentMax]. */
   applyMinLabel(rawValue) {
     const { minAllowed = 0, snap = 1, onChange } = this.props;
@@ -336,6 +408,7 @@ export class RangeSlider extends Component {
       label,
       widthScale = 'normal',
       disabled = false,
+      hideInputs = false,
       // consumed props — not forwarded
       min: _min,
       max: _max,
@@ -374,6 +447,7 @@ export class RangeSlider extends Component {
           thumbFill=${thumbFill}
           thumbBorder=${thumbBorder}
           transition=${theme.transitions.fast}
+          onMouseDown=${(e) => this.handleTrackMouseDown(e)}
         >
           <${TrackFill}
             trackBg=${trackBg}
@@ -389,6 +463,7 @@ export class RangeSlider extends Component {
             step=${snap}
             value=${currentMin}
             disabled=${disabled}
+            onInput=${(e) => this.handleMinChange(e)}
             onChange=${(e) => this.handleMinChange(e)}
             style="z-index: ${currentMin === currentMax ? 1 : 2}"
           />
@@ -400,12 +475,14 @@ export class RangeSlider extends Component {
             step=${snap}
             value=${currentMax}
             disabled=${disabled}
+            onInput=${(e) => this.handleMaxChange(e)}
             onChange=${(e) => this.handleMaxChange(e)}
             style="z-index: ${currentMin === currentMax ? 2 : 1}"
           />
         </${TrackContainer}>
 
         <!-- Min / Max bounds inputs -->
+        ${!hideInputs && html`
         <${BoundsRow}>
           <${RangeInput}
             type="number"
@@ -442,6 +519,7 @@ export class RangeSlider extends Component {
             onKeyDown=${(e) => this.handleMaxLabelKeyDown(e)}
           />
         </${BoundsRow}>
+        `}
       </${Wrapper}>
       </${FormGroup}>
     `;

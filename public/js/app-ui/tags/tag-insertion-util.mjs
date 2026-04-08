@@ -6,6 +6,56 @@
  */
 
 /**
+ * Extract the word at the cursor position in a textarea
+ * The word is defined as text from the cursor position to the previous and next
+ * comma, line break, or start/end of text.
+ * 
+ * @param {HTMLTextAreaElement} textarea - The textarea element
+ * @returns {string} The word at the cursor position, or empty string if none
+ * 
+ * @example
+ * // With text "girl, blue_eyes, long hair" and cursor at position 12 (in "blue_eyes")
+ * extractWordAtCursor(textarea) // Returns: "blue_eyes"
+ */
+export function extractWordAtCursor(textarea) {
+  if (!textarea) {
+    return '';
+  }
+  
+  const text = textarea.value;
+  const cursorPos = textarea.selectionStart;
+  
+  if (cursorPos === undefined || cursorPos === null) {
+    return '';
+  }
+  
+  // Find the start of the word (search backwards for comma, newline, or start)
+  let start = cursorPos;
+  while (start > 0) {
+    const char = text[start - 1];
+    if (char === ',' || char === '\n' || char === '\r') {
+      break;
+    }
+    start--;
+  }
+  
+  // Find the end of the word (search forwards for comma, newline, or end)
+  let end = cursorPos;
+  while (end < text.length) {
+    const char = text[end];
+    if (char === ',' || char === '\n' || char === '\r') {
+      break;
+    }
+    end++;
+  }
+  
+  // Extract the word and trim whitespace
+  const word = text.substring(start, end).trim();
+  
+  return word;
+}
+
+/**
  * Insert a tag into a prompt string with proper comma handling
  * 
  * @param {string} existingPrompt - The current prompt text

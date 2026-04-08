@@ -896,6 +896,7 @@ export function BrewEditor() {
         <${Panel} variant="outlined">
           <${DynamicList}
             title="Sound Sources (Global)"
+            showDragButton=${false}
             items=${globalSources}
             renderItem=${(item, i) => html`
               <${SoundSourceForm}

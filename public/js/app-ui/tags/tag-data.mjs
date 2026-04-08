@@ -49,7 +49,7 @@ export async function loadTagDefinitions() {
 
 /**
  * Get the definition for a tag
- * @param {string} tagName - The tag name to look up (with spaces, not underscores)
+ * @param {string} tagName - The tag name to look up (can be with spaces or underscores)
  * @returns {string|null} The definition if found, null otherwise
  */
 export function getTagDefinition(tagName) {
@@ -58,6 +58,12 @@ export function getTagDefinition(tagName) {
   // Try exact match first
   if (definitions[tagName]) {
     return definitions[tagName];
+  }
+  
+  // Try converting spaces to underscores (definitions are stored with underscores)
+  const tagNameWithUnderscores = tagName.replace(/\s+/g, '_');
+  if (definitions[tagNameWithUnderscores]) {
+    return definitions[tagNameWithUnderscores];
   }
   
   return null;

@@ -330,6 +330,7 @@ async function main() {
   console.log('================= END SNIPPET =================\n');
 
   console.log('Done.');
+  process.exit(0);
 }
 
 main();

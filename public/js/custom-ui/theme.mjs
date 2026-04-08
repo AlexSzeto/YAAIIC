@@ -331,7 +331,7 @@ const darkColors = {
   overlay: {
     background: 'rgba(0, 0, 0, 0.5)',
     backgroundStrong: 'rgba(0, 0, 0, 0.8)',
-    glass: 'rgba(40, 40, 40, 0.6)'
+    glass: 'rgba(40, 40, 40, 0.4)'
   },
   focus: {
     shadowPrimary: 'rgba(255, 255, 255, 0.6)',

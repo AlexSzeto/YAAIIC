@@ -415,6 +415,7 @@ export function SoundEditorModal({ item, onClose, onSaved, onSaveTask }) {
         if (item.description != null) formData.append('description', item.description);
         if (item.summary     != null) formData.append('summary',     item.summary);
         if (item.prompt      != null) formData.append('prompt',      item.prompt);
+        formData.append('audioFormat', 'mp3'); // request server-side conversion to mp3 for storage efficiency
         const res  = await fetch('/upload/audio', { method: 'POST', body: formData });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Upload failed');

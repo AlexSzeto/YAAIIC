@@ -30,6 +30,7 @@ const ICON_MAP = {
   'chevron-down': 'keyboard_arrow_down',
   'chevron-up': 'keyboard_arrow_up',
   'menu': 'menu',
+  'swap-vertical': 'swap_vert',
   
   // Actions
   'trash-alt': 'delete',
@@ -153,9 +154,11 @@ const ICON_MAP = {
   'down-arrow': 'arrow_downward',
   'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
+  'arrow-left-stroke': 'arrow_left_alt',
   'cut': 'content_cut',
   'crop': 'crop',
   'repeat': 'repeat',
+  'drag-handle': 'drag_indicator',
 
 };
 
