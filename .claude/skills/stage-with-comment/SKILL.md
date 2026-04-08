@@ -39,10 +39,16 @@ Run:
 git add -A
 ```
 
-### 4. Output Message
+### 4. Copy to Clipboard & Output Message
 
-Output the commit message in this format:
-> Commit message: `<message>`
+Copy the message to the clipboard so the user can paste it directly into VS Code's commit input box:
+
+```
+echo <message> | clip
+```
+
+Then output the commit message in this format:
+> Commit message: `<message>` *(copied to clipboard)*
 
 Do **not** run `git commit`.
 
@@ -58,4 +64,5 @@ Do **not** run `git commit`.
 - Commit message is specific and describes what actually changed
 - User received a one-line message output
 - All changes are staged (`git add -A` was run)
+- Commit message copied to clipboard
 - No `git commit` was run
