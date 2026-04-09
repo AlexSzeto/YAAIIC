@@ -7,7 +7,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { SeedControl } from '../seed-control.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { getThemeValue } from '../../custom-ui/theme.mjs';
-import { createTagSelectionHandler, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
+import { insertTagAtCursorPos, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -54,6 +54,7 @@ export function InpaintForm({
   const [showTagPanel, setShowTagPanel] = useState(false);
   const [initialSearchTerm, setInitialSearchTerm] = useState('');
   const textareaRef = useRef(null);
+  const savedCursorPosRef = useRef(null);
 
   // Set up contextmenu listener for tag selector
   useEffect(() => {
@@ -72,6 +73,9 @@ export function InpaintForm({
       const wordAtCursor = extractWordAtCursor(textarea);
       setInitialSearchTerm(wordAtCursor);
 
+      // Save cursor position for tag insertion
+      savedCursorPosRef.current = textarea.selectionStart;
+
       // Show the tag selector panel
       setShowTagPanel(true);
     });
@@ -85,11 +89,9 @@ export function InpaintForm({
 
   // Handler for tag selection from tag selector panel
   const handleTagSelect = (tagName) => {
-    const handler = createTagSelectionHandler(
-      () => formState.description || '',
-      (newValue) => onFieldChange('description', newValue)
-    );
-    handler(tagName);
+    const currentPrompt = formState.description || '';
+    const newPrompt = insertTagAtCursorPos(currentPrompt, tagName, savedCursorPosRef.current);
+    onFieldChange('description', newPrompt);
   };
 
   // Handler for tag replacement from tag selector panel

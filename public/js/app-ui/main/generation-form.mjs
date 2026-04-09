@@ -8,7 +8,7 @@ import { ImageSelect } from '../../custom-ui/media/image-select.mjs';
 import { AudioSelect } from '../../custom-ui/media/audio-select.mjs';
 import { createExtraInputsRenderer } from '../extra-inputs-renderer.mjs';
 import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { createTagSelectionHandler, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
+import { insertTagAtCursorPos, extractWordAtCursor, replaceTagInPrompt } from '../tags/tag-insertion-util.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
@@ -46,6 +46,7 @@ export function GenerationForm({
   const [showTagPanel, setShowTagPanel] = useState(false);
   const [initialSearchTerm, setInitialSearchTerm] = useState('');
   const textareaRef = useRef(null);
+  const savedCursorPosRef = useRef(null);
 
   // Set up contextmenu listener for tag selector
   useEffect(() => {
@@ -64,6 +65,9 @@ export function GenerationForm({
       const wordAtCursor = extractWordAtCursor(textarea);
       setInitialSearchTerm(wordAtCursor);
 
+      // Save cursor position for tag insertion
+      savedCursorPosRef.current = textarea.selectionStart;
+
       // Show the tag selector panel
       setShowTagPanel(true);
     });
@@ -77,11 +81,9 @@ export function GenerationForm({
 
   // Handler for tag selection from tag selector panel
   const handleTagSelect = (tagName) => {
-    const handler = createTagSelectionHandler(
-      () => formState.description || '',
-      (newValue) => onFieldChange('description', newValue)
-    );
-    handler(tagName);
+    const currentPrompt = formState.description || '';
+    const newPrompt = insertTagAtCursorPos(currentPrompt, tagName, savedCursorPosRef.current);
+    onFieldChange('description', newPrompt);
   };
 
   // Handler for tag replacement from tag selector panel
