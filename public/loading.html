@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Starting services…</title>
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="media/favicon-128.png" />
+    <!-- Local Fonts -->
+    <link rel="stylesheet" href="/css/fonts.css">
+
+    <!-- Local Imports -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "/lib/preact/preact.js",
+          "preact/hooks": "/lib/preact/hooks.js",
+          "preact/compat": "/lib/preact/compat.js",
+          "@preact/signals": "/lib/preact/signals.js",
+          "htm/preact": "/lib/htm/preact.js",
+          "goober": "/lib/goober/goober.js",
+          "goober/prefixer": "/lib/goober/prefixer.js"
+        }
+      }
+    </script>
+
+    <!-- Local Scripts -->
+    <script src="/lib/boxicons/boxicons.js"></script>
+  </head>
+  <body>
+    <!-- Root App Container -->
+    <div id="app"></div>
+
+    <!-- Loading Page Entry Point -->
+    <script type="module" src="/js/app-ui/loading.mjs"></script>
+  </body>
+</html>

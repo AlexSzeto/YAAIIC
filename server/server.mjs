@@ -5,7 +5,7 @@ import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
-import { initializeServices, checkAndStartServices } from './core/service-manager.mjs';
+import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling } from './core/service-manager.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
 
 // Core infrastructure
@@ -62,6 +62,22 @@ try {
 // ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
+
+// Pages that do not require all services to be ready
+const EXEMPT_PAGES = ['/loading.html']; // future: '/config.html'
+
+// Redirect HTML page requests to the loading page when services are not yet ready
+app.use((req, res, next) => {
+  const isHtmlPage = req.path.endsWith('.html') || req.path === '/';
+  if (!isHtmlPage || EXEMPT_PAGES.includes(req.path)) return next();
+  const { ollama, comfyui } = getServiceStatus();
+  if (!ollama || !comfyui) {
+    const redirect = encodeURIComponent(req.originalUrl);
+    return res.redirect(`/loading.html?redirect=${redirect}`);
+  }
+  next();
+});
+
 app.use(express.static(PUBLIC_DIR));
 app.use(express.json());
 
@@ -84,6 +100,11 @@ app.use(soundSourcesRouter);
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)
 // ---------------------------------------------------------------------------
+
+// Service readiness status endpoint
+app.get('/status', (req, res) => {
+  res.json(getServiceStatus());
+});
 
 // Serve textarea-caret-position library from node_modules
 app.get('/lib/textarea-caret-position.js', (req, res) => {
@@ -127,7 +148,8 @@ async function startServer() {
   loadMediaData();
   
   await checkAndStartServices();
-  
+  startReadinessPolling();
+
   const port = config.serverPort || 3000;
   app.listen(port, () => {
     console.log(`🌐 Server running at http://localhost:${port}`);
