@@ -2,6 +2,10 @@ import { spawn } from 'child_process';
 
 let config = null;
 
+// Service readiness state
+let ollamaReady = false;
+let comfyuiReady = false;
+
 // Initialize services module with config
 export function initializeServices(appConfig) {
   config = appConfig;
@@ -85,17 +89,46 @@ export async function checkAndStartServices() {
   
   // Check Ollama
   const ollamaRunning = await checkServiceHealth(config.ollamaAPIPath, 'Ollama');
-  if (!ollamaRunning) {
+  if (ollamaRunning) {
+    ollamaReady = true;
+  } else {
     launchService(config.ollamaLaunchPath, 'Ollama');
   }
   
   // Check ComfyUI using the history endpoint
   const comfyuiRunning = await checkComfyUIHealth(config.comfyuiAPIPath);
-  if (!comfyuiRunning) {
+  if (comfyuiRunning) {
+    comfyuiReady = true;
+  } else {
     launchService(config.comfyuiLaunchPath, 'ComfyUI');
   }
   
   console.log('🎯 Service initialization complete\n');
+}
+
+// Returns the current readiness state of both services
+export function getServiceStatus() {
+  return { ollama: ollamaReady, comfyui: comfyuiReady };
+}
+
+// Polls both services every 15 seconds until both are ready
+export function startReadinessPolling() {
+  if (ollamaReady && comfyuiReady) return;
+
+  const interval = setInterval(async () => {
+    if (!ollamaReady) {
+      ollamaReady = await checkServiceHealth(config.ollamaAPIPath, 'Ollama');
+      if (ollamaReady) console.log('✓ Ollama is now ready');
+    }
+    if (!comfyuiReady) {
+      comfyuiReady = await checkComfyUIHealth(config.comfyuiAPIPath);
+      if (comfyuiReady) console.log('✓ ComfyUI is now ready');
+    }
+    if (ollamaReady && comfyuiReady) {
+      console.log('✓ All services are ready');
+      clearInterval(interval);
+    }
+  }, 15000);
 }
 
 // Getter functions for API paths

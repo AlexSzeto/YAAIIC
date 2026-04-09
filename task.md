@@ -6,11 +6,11 @@ The server tracks whether Ollama and ComfyUI are ready after launch. Any HTML pa
 
 ## Tasks
 
-- [ ] Add service readiness state tracking to `service-manager.mjs`
-- [ ] Add a background polling loop that probes both services every 15 seconds until ready
-- [ ] Add a `GET /status` REST endpoint that returns the readiness of each service as JSON
-- [ ] Add HTML-page redirect middleware to `server.mjs` that redirects to the loading page when either service is not ready
-- [ ] Create the `loading.html` page and its Preact entry module
+- [x] Add service readiness state tracking to `service-manager.mjs`
+- [x] Add a background polling loop that probes both services every 15 seconds until ready
+- [x] Add a `GET /status` REST endpoint that returns the readiness of each service as JSON
+- [x] Add HTML-page redirect middleware to `server.mjs` that redirects to the loading page when either service is not ready
+- [x] Create the `loading.html` page and its Preact entry module
 
 ## Implementation Details
 
