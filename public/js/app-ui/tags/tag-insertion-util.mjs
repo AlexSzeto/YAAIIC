@@ -118,6 +118,46 @@ export function insertTagIntoPrompt(existingPrompt, tag) {
  * @example
  * replaceTagInPrompt('girl, blue_eyes, hair', 'blue eyes', 'red_eyes') // Returns: 'girl, red_eyes, hair'
  */
+/**
+ * Insert a tag into a prompt at a specific cursor position.
+ * The tag is placed before the next comma or end-of-line from the cursor,
+ * so it is appended to the current comma-segment rather than the end.
+ *
+ * @param {string} existingPrompt - The current prompt text
+ * @param {string} tag - The tag to insert
+ * @param {number} cursorPos - The cursor position (selectionStart) in the prompt
+ * @returns {string} The new prompt with the tag inserted
+ *
+ * @example
+ * // cursor (|) at position 6: "swept |bangs, long hair"
+ * insertTagAtCursorPos('swept bangs, long hair', 'red hair', 6)
+ * // Returns: 'swept bangs, red hair, long hair'
+ */
+export function insertTagAtCursorPos(existingPrompt, tag, cursorPos) {
+  if (!existingPrompt) return tag;
+  if (cursorPos === undefined || cursorPos === null) {
+    return insertTagIntoPrompt(existingPrompt, tag);
+  }
+
+  // Find the next comma or newline from the cursor position
+  let insertAt = existingPrompt.length;
+  for (let i = cursorPos; i < existingPrompt.length; i++) {
+    const char = existingPrompt[i];
+    if (char === ',' || char === '\n' || char === '\r') {
+      insertAt = i;
+      break;
+    }
+  }
+
+  const before = existingPrompt.substring(0, insertAt).trimEnd();
+  const after = existingPrompt.substring(insertAt);
+
+  // Choose separator based on what precedes the insertion point
+  const separator = before.endsWith(',') ? ' ' : ', ';
+
+  return before + separator + tag + after;
+}
+
 export function replaceTagInPrompt(existingPrompt, searchTerm, newTag) {
   if (!existingPrompt || !searchTerm) {
     return existingPrompt;
