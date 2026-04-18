@@ -623,7 +623,13 @@ function App() {
         wf.extraInputs.forEach(input => {
           // Check if the image data has a value for this extra input
           if (image[input.id] !== undefined) {
-            newFormState[input.id] = image[input.id];
+            const raw = image[input.id];
+            // Coerce checkbox values: FormData may have stored booleans as strings
+            if (input.type === 'checkbox') {
+              newFormState[input.id] = raw === true || raw === 'true';
+            } else {
+              newFormState[input.id] = raw;
+            }
           } else if (input.default !== undefined) {
             // Use the default value if not present in image data
             newFormState[input.id] = input.default;

@@ -4,15 +4,14 @@
 ## Implementation Details
 
 # Future Features
-- Localize client library files
-- Regen album cover
 - Purge (delete storge items not linked to a database item)
+- Settings page (for updating server config.json)
+- Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Higher Quality Flux Klein (add a field to use 9b param model for generation)
 - Cancel generation (replace generation button)
 - Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)
-- Allow processes to report progress. For workflows, report this using workflow completion percentage; For frame blend, use the current frame being blended to calculate the completion percentage.
-- Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
-- Add status endpoint and allow client to poll it to see if ollama/comfyui is running, and recover progress report from tasks currently in progress
+- Allow (pre/post generation) processes to report progress. For workflows, report this using workflow completion percentage; For frame blend, use the current frame being blended to calculate the completion percentage.
+- Add progress recovery capabilities so clients logging into workflow in progress would properly prevent generation and show the workflow progress.
 - Add watch mode for config files (config.json, comfyui-workflows.json). If any of these files change, reload the config and workflows.
 - Auto download models from Hugging Face
 
