@@ -1,6 +1,22 @@
 # Server API Documentation
 
-This document describes the API endpoints provided by the server.
+This document describes all API endpoints provided by the YAAIIC server.
+
+## Table of Contents
+
+- [Base URL](#base-url)
+- [Core Endpoints](#core-endpoints)
+- [Data & Resources](#data--resources)
+- [Media History](#media-history)
+- [Folder Management](#folder-management)
+- [Generation Endpoints & Workflow](#generation-endpoints--workflow)
+- [Upload Endpoints](#upload-endpoints)
+- [Export Endpoints](#export-endpoints)
+- [Workflow Management API](#workflow-management-api)
+- [Brew API](#brew-api)
+- [Sound Sources API](#sound-sources-api)
+- [LLM API](#llm-api)
+- [SSE Progress Stream](#sse-progress-stream)
 
 ## Base URL
 
@@ -13,6 +29,19 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 - **Use Case**: Serves the main single-page application entry point.
 - **Payload**: None
 - **Output**: HTML content (`index.html`)
+
+### Service Status
+- **Endpoint**: `GET /status`
+- **Use Case**: Check readiness of external services (ComfyUI, Ollama).
+- **Payload**: None
+- **Output**:
+  ```json
+  {
+    "comfyui": true,
+    "ollama": true
+  }
+  ```
+- **Notes**: Used by `loading.html` to poll until all services are available. When services are unavailable, all non-exempt HTML requests redirect to `/loading.html`.
 
 ### Serve Libraries
 - **Endpoint**: `GET /lib/textarea-caret-position.js`
@@ -30,7 +59,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
 
 ### List Tags
 - **Endpoint**: `GET /tags`
-- **Use Case**: Search and filter Danbooru tags for prompt auto-completion.
+- **Use Case**: Search and filter Danbooru tags for prompt auto-completion. Also returns tag category definitions.
 - **Payload**:
   - `noCharacters` (query, boolean): If 'true', excludes character-specific tags. Default: true.
   - `minLength` (query, integer): Minimum tag length. Default: 4.
@@ -50,9 +79,14 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   ```
 - **Error State**: 500 if the source CSV file cannot be read.
 
-### List Workflows
+### Get Tag Definitions (Deprecated)
+- **Endpoint**: `GET /tag-definitions`
+- **Use Case**: Previously returned tag category definitions. Now redirects to `/tags`.
+- **Output**: `307 Temporary Redirect` to `/tags`.
+
+### List Workflows (Public)
 - **Endpoint**: `GET /workflows`
-- **Use Case**: Retrieve the list of available ComfyUI workflows configured on the server. Workflows marked as `hidden: true` are not included in the response.
+- **Use Case**: Retrieve the list of available ComfyUI workflows configured on the server. Workflows marked as `hidden: true` are not included in the response. This is the client-facing endpoint; for the management API see [Workflow Management API](#workflow-management-api).
 - **Payload**: None
 - **Output**: Array of workflow option objects.
   ```json
@@ -402,6 +436,13 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
   - 400 if `workflow` is missing, invalid, or required images not provided.
   - 500 on processing failure.
 
+### Synchronous Generation
+- **Endpoint**: `POST /generate/sync`
+- **Use Case**: Run a generation pipeline synchronously, blocking until complete. Does not create a `media-data.json` entry. Useful for internal or programmatic use (e.g., generating album covers for uploaded audio).
+- **Payload**: Same as `/generate` (see above).
+- **Output**: The full generation result inline (no SSE, no taskId).
+- **Error State**: Same as `/generate`.
+
 ### Inpaint Generation
 - **Endpoint**: `POST /generate/inpaint`
 - **Use Case**: Initiate an image inpainting task.
@@ -622,3 +663,205 @@ The condition checks if `data.orientation === "landscape"`. If false, the task i
 
 For detailed condition syntax and examples, see [Condition Object in workflow.md](workflow.md#condition-object).
 
+## Workflow Management API
+
+These endpoints manage workflow configurations (CRUD). For the client-facing workflow list, see [List Workflows (Public)](#list-workflows-public).
+
+### List All Workflows
+- **Endpoint**: `GET /api/workflows`
+- **Use Case**: List all workflow configurations, including hidden ones, with full metadata. Used by the Workflow Editor.
+- **Payload**: None
+- **Output**: Array of workflow configuration objects (full structure as defined in [workflow.md](workflow.md)).
+- **Error State**: 500 on internal error.
+
+### Get Workflow
+- **Endpoint**: `GET /api/workflows/:name`
+- **Use Case**: Fetch a specific workflow configuration by name.
+- **Payload**: `name` path parameter (URL-encoded workflow name).
+- **Output**: Full workflow configuration object.
+- **Error State**: 404 if workflow not found.
+
+### Save Workflow
+- **Endpoint**: `POST /api/workflows`
+- **Use Case**: Create or update a workflow configuration.
+- **Payload**: JSON body containing a full workflow object (see [workflow.md](workflow.md) for structure).
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 400 if required fields are missing. 500 on save failure.
+
+### Delete Workflow
+- **Endpoint**: `DELETE /api/workflows/:name`
+- **Use Case**: Remove a workflow configuration.
+- **Payload**: `name` path parameter (URL-encoded workflow name).
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 404 if workflow not found. 500 on delete failure.
+
+### Upload ComfyUI Workflow
+- **Endpoint**: `POST /api/workflows/upload`
+- **Use Case**: Upload a raw ComfyUI workflow JSON file. The server analyzes the workflow nodes and auto-detects input/output mappings, generating a pre-configured workflow definition.
+- **Payload**: `multipart/form-data` with a `workflow` file field.
+- **Output**: Auto-detected workflow configuration object with pre-populated `replace`, `upload`, and `extraInputs` fields.
+- **Error State**: 400 if no file provided. 500 on analysis failure.
+
+### List Base Files
+- **Endpoint**: `GET /api/workflows/base-files`
+- **Use Case**: List all raw ComfyUI `.json` workflow files available in the resource directory.
+- **Payload**: None
+- **Output**: Array of filenames.
+  ```json
+  ["example-workflow.json", "video-workflow.json", "audio-generation.json"]
+  ```
+
+### Get Base File
+- **Endpoint**: `GET /api/workflows/base-files/:filename`
+- **Use Case**: Download a raw ComfyUI workflow JSON file.
+- **Payload**: `filename` path parameter.
+- **Output**: Raw ComfyUI workflow JSON.
+- **Error State**: 404 if file not found.
+
+### Get Workflow Base File
+- **Endpoint**: `GET /api/workflows/:name/base`
+- **Use Case**: Download the raw ComfyUI JSON for a specific configured workflow.
+- **Payload**: `name` path parameter (URL-encoded workflow name).
+- **Output**: Raw ComfyUI workflow JSON.
+- **Error State**: 404 if workflow or base file not found.
+
+### Reorder Workflows
+- **Endpoint**: `PUT /api/workflows/reorder`
+- **Use Case**: Persist a new display order for workflows.
+- **Payload**: JSON body.
+  ```json
+  {
+    "order": ["Text to Image", "Image to Video", "Text to Audio"]
+  }
+  ```
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 400 if `order` is missing or not an array. 500 on save failure.
+
+## Brew API
+
+These endpoints manage ambient sound "brew" recipes. Each brew contains channels, tracks, and mixing configuration.
+
+### List Brews
+- **Endpoint**: `GET /api/brews`
+- **Use Case**: Retrieve a summary list of all saved brews.
+- **Payload**: None
+- **Output**: Array of brew summary objects.
+  ```json
+  [
+    { "uid": 1234567890, "name": "Ambient Coffee Shop" },
+    { "uid": 9876543210, "name": "Forest Rain" }
+  ]
+  ```
+
+### Load Brew
+- **Endpoint**: `GET /api/brews/:uid`
+- **Use Case**: Retrieve a full brew recipe by UID.
+- **Payload**: `uid` path parameter (integer).
+- **Output**: Full brew object.
+  ```json
+  {
+    "uid": 1234567890,
+    "name": "Ambient Coffee Shop",
+    "data": {
+      "channels": [...],
+      "tracks": [...],
+      "masterVolume": 0.8
+    }
+  }
+  ```
+- **Error State**: 404 if brew not found.
+
+### Save Brew
+- **Endpoint**: `POST /api/brews`
+- **Use Case**: Create a new brew or update an existing one (matched by UID).
+- **Payload**: JSON body.
+  ```json
+  {
+    "uid": 1234567890,
+    "name": "Ambient Coffee Shop",
+    "data": {
+      "channels": [...],
+      "tracks": [...],
+      "masterVolume": 0.8
+    }
+  }
+  ```
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 400 if required fields are missing. 500 on save failure.
+
+### Delete Brew
+- **Endpoint**: `DELETE /api/brews/:uid`
+- **Use Case**: Delete a brew recipe.
+- **Payload**: `uid` path parameter (integer).
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 404 if brew not found. 500 on delete failure.
+
+## Sound Sources API
+
+These endpoints manage the global audio source library used by the Brew Editor.
+
+### List Sound Sources
+- **Endpoint**: `GET /api/sound-sources`
+- **Use Case**: Retrieve all registered sound source objects.
+- **Payload**: None
+- **Output**: Array of sound source objects.
+  ```json
+  [
+    {
+      "label": "Rain Loop",
+      "url": "/media/rain_loop.mp3",
+      "duration": 120,
+      "clips": [...]
+    }
+  ]
+  ```
+
+### Upsert Sound Source
+- **Endpoint**: `POST /api/sound-sources`
+- **Use Case**: Create or update a sound source (matched by `label`).
+- **Payload**: JSON body containing a sound source object with a `label` field.
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 400 if `label` is missing. 500 on save failure.
+
+### Delete Sound Source
+- **Endpoint**: `DELETE /api/sound-sources/:name`
+- **Use Case**: Delete a sound source by label.
+- **Payload**: `name` path parameter (URL-encoded label).
+- **Output**:
+  ```json
+  { "success": true }
+  ```
+- **Error State**: 404 if source not found. 500 on delete failure.
+
+## LLM API
+
+### List LLM Models
+- **Endpoint**: `GET /api/llm/models`
+- **Use Case**: List installed Ollama models. Used by the Workflow Editor to populate the LLM model selector for post-generation tasks.
+- **Payload**: None
+- **Output**: Array of model objects as returned by the Ollama API.
+  ```json
+  [
+    { "name": "llama3:8b", "size": 4661211136, ... },
+    { "name": "qwen3-vl:8b-instruct", "size": 5368709120, ... }
+  ]
+  ```
+- **Error State**: 500 if Ollama is unreachable.

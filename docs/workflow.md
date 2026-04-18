@@ -723,3 +723,123 @@ Used in the `extraInputs` array to define additional UI input fields for a workf
   ]
 }
 ```
+
+---
+
+## Condition Object
+
+Conditions are used in multiple contexts (value replacements, LLM tasks, export tasks) to control whether an operation executes. All conditions share the same structure.
+
+### Structure
+
+```json
+{
+  "condition": {
+    "where": { "generationData": "fieldName" },
+    "equals": { "value": expectedValue }
+  }
+}
+```
+
+### Properties
+
+- **`where`** (object, required): Identifies the source value to test.
+  - `{ "generationData": "fieldName" }` — reads from the generation data object (e.g., `"orientation"`, `"type"`, `"audioFormat"`).
+  - `{ "data": "fieldName" }` — reads from the export data object (export context only).
+- **`equals`** (object, required): The expected value.
+  - `{ "value": expectedValue }` — the value can be any type (string, number, boolean).
+
+### Behavior
+
+- The condition passes when the resolved source value strictly equals the expected value.
+- If the condition fails, the associated operation (replacement, task, or export step) is skipped silently.
+- Conditions are evaluated at runtime, after all prior pipeline steps have executed.
+
+### Example: Conditional Dimension Setting
+
+```json
+{
+  "condition": {
+    "where": { "generationData": "orientation" },
+    "equals": { "value": "landscape" }
+  },
+  "value": 832,
+  "to": ["64", "inputs", "width"]
+}
+```
+
+This sets the width to 832 only when the user selected landscape orientation.
+
+---
+
+## Template Syntax
+
+Templates are used in LLM task prompts, export filenames, and template tasks. They support placeholder substitution with optional pipe-based transformations.
+
+### Basic Placeholders
+
+```
+{{fieldName}}
+```
+
+Replaced with the value of `fieldName` from the generation data object. If the field is missing or empty, the task will error.
+
+### Pipe Transformations
+
+```
+{{fieldName|pipe1|pipe2|pipe3}}
+```
+
+Pipes are applied left-to-right, transforming the value at each step.
+
+### Available Pipes
+
+| Pipe | Description | Example Input | Example Output |
+|------|-------------|---------------|----------------|
+| `split-by-spaces` | Splits string into word array | `"hello world"` | `["hello", "world"]` |
+| `join-by-spaces` | Joins array into space-separated string | `["hello", "world"]` | `"hello world"` |
+| `snakecase` | Joins words with underscores | `["hello", "world"]` | `"hello_world"` |
+| `kebabcase` | Joins words with hyphens | `["hello", "world"]` | `"hello-world"` |
+| `camelcase` | Joins as camelCase | `["hello", "world"]` | `"helloWorld"` |
+| `titlecase` | Capitalizes each word | `["hello", "world"]` | `"Hello World"` |
+| `lowercase` | Converts to lowercase | `"Hello World"` | `"hello world"` |
+| `uppercase` | Converts to uppercase | `"Hello World"` | `"HELLO WORLD"` |
+
+### Example
+
+```
+{{name|split-by-spaces|kebabcase|lowercase}}
+```
+
+Given `name = "My Cool Image"`:
+1. `split-by-spaces` → `["My", "Cool", "Image"]`
+2. `kebabcase` → `"My-Cool-Image"`
+3. `lowercase` → `"my-cool-image"`
+
+---
+
+## Workflow Auto-Detection
+
+When uploading a ComfyUI workflow JSON via the Workflow Editor, the server analyzes the node graph to automatically generate a workflow configuration. The auto-detection runs 7 passes over the node graph:
+
+### Detection Passes
+
+1. **Output Nodes**: Identifies save nodes (`JWImageSaveToPath`, `JWAudioSaveToPath`, `VHS_VideoCombine`) to determine the media type (image, audio, video) and map output paths.
+2. **Input Nodes**: Detects `LoadImage` and `LoadAudio` nodes to determine `inputImages` and `inputAudios` counts and generate `upload`/`replace` entries.
+3. **Typed Primitives**: Matches `PrimitiveString`, `PrimitiveInt`, `PrimitiveFloat`, `PrimitiveBoolean` nodes to generate `extraInputs` with appropriate types.
+4. **Seed Nodes**: Identifies seed inputs on remaining unmapped nodes.
+5. **Prompt Nodes**: Identifies text prompt inputs on remaining unmapped nodes.
+6. **Extra Inputs**: Any remaining `PrimitiveNode` instances become additional `extraInputs`.
+7. **Post-Generation Tasks**: Detects `SaveText`-style nodes that can be mapped to `extractOutputTexts`.
+
+### Result
+
+The auto-detection returns a pre-populated workflow configuration with:
+- Correct `type` based on output nodes
+- Pre-filled `replace` array mapping detected inputs to node paths
+- Pre-filled `upload` array for file inputs
+- Pre-filled `extraInputs` for custom parameters
+- Suggested `extractOutputTexts` for text file outputs
+
+Users can review and adjust the auto-detected configuration in the Workflow Editor before saving.
+
