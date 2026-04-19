@@ -620,10 +620,11 @@ function App() {
 
       // Add all extra input values from the image data
       if (wf.extraInputs && Array.isArray(wf.extraInputs)) {
+        const extras = image.extraInputs || {};
         wf.extraInputs.forEach(input => {
           // Check if the image data has a value for this extra input
-          if (image[input.id] !== undefined) {
-            const raw = image[input.id];
+          if (extras[input.id] !== undefined) {
+            const raw = extras[input.id];
             // Coerce checkbox values: FormData may have stored booleans as strings
             if (input.type === 'checkbox') {
               newFormState[input.id] = raw === true || raw === 'true';
@@ -646,12 +647,13 @@ function App() {
       // Restore input images if they exist in the generation data
       const newInputImages = [];
       if (wf.inputImages && wf.inputImages > 0) {
+        const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputImages; i++) {
           const uidKey = `image_${i}_uid`;
-          if (image[uidKey]) {
+          if (extras[uidKey]) {
             try {
               // Fetch the media data for this input image
-              const inputImageData = await fetchJson(`/media-data/${image[uidKey]}`);
+              const inputImageData = await fetchJson(`/media-data/${extras[uidKey]}`);
               if (inputImageData && inputImageData.imageUrl) {
                 // Fetch as blob
                 const response = await fetch(inputImageData.imageUrl);
@@ -675,12 +677,13 @@ function App() {
       // Restore input audio if they exist in the generation data
       const newInputAudios = [];
       if (wf.inputAudios && wf.inputAudios > 0) {
+        const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputAudios; i++) {
           const uidKey = `audio_${i}_uid`;
-          if (image[uidKey]) {
+          if (extras[uidKey]) {
             try {
               // Fetch the media data for this input audio
-              const inputAudioData = await fetchJson(`/media-data/${image[uidKey]}`);
+              const inputAudioData = await fetchJson(`/media-data/${extras[uidKey]}`);
               if (inputAudioData && inputAudioData.audioUrl) {
                 // Fetch as blob
                 const response = await fetch(inputAudioData.audioUrl);

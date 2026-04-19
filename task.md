@@ -1,11 +1,11 @@
-ï»¿# Media Data Schema & Cleanup
+# Media Data Schema & Cleanup
 
 ## Goal
 Clean up media-data.json by defining a formal schema that separates core media metadata from dynamic workflow-specific fields. All workflow-specific extra inputs (custom params, input media references) are nested under a single `extraInputs` object. The server validates and sanitizes entries permissively (strip unrecognized fields, fill missing fields with defaults, always save). A migration script transforms existing data to match the new schema, with a backup step since the database is not version-controlled.
 
 ## Tasks
 
-[] Create `server/resource/media-data-schema.json` defining the core media entry schema.
+[x] Create `server/resource/media-data-schema.json` defining the core media entry schema.
    1. Define each core field with its type and default value:
       - `uid` (number, auto-generated)
       - `timestamp` (string, auto-generated)
@@ -44,7 +44,7 @@ Clean up media-data.json by defining a formal schema that separates core media m
    4. Verify the schema file is valid JSON and loadable by Node.js.
    5. Test: `node -e "console.log(JSON.parse(require('fs').readFileSync('server/resource/media-data-schema.json','utf8')))"` should print the schema without errors.
 
-[] Create a media data validation/sanitization module at `server/features/media/sanitizer.mjs`.
+[x] Create a media data validation/sanitization module at `server/features/media/sanitizer.mjs`.
    1. Export a `sanitizeMediaEntry(entry, workflowConfig)` function that:
       - Loads the schema from `server/resource/media-data-schema.json`.
       - Identifies core fields from the schema.
@@ -54,11 +54,11 @@ Clean up media-data.json by defining a formal schema that separates core media m
       - If `workflowConfig` is provided, fills missing extra input fields with their defaults from the workflow config.
       - Fills missing core fields with their schema defaults.
       - Returns the cleaned entry.
-   2. If `workflowConfig` is `null` (unknown workflow), dump all non-core fields into `extraInputs` without filtering â€” best-effort catch-all.
+   2. If `workflowConfig` is `null` (unknown workflow), dump all non-core fields into `extraInputs` without filtering — best-effort catch-all.
    3. Export a `loadWorkflowConfig(workflowName)` helper that finds a workflow by name from `server/resource/comfyui-workflows.json` and returns it (or `null` if not found).
    4. Test: Write a manual test curl or script note demonstrating that a raw generation-style object with flat extra fields gets sanitized into the correct schema shape.
 
-[] Integrate the sanitizer into `server/core/database.mjs`'s `addMediaDataEntry` function.
+[x] Integrate the sanitizer into `server/core/database.mjs`'s `addMediaDataEntry` function.
    1. Import `sanitizeMediaEntry` and `loadWorkflowConfig` from `server/features/media/sanitizer.mjs`.
    2. Before pushing the entry to `globalData.mediaData`, call:
       ```javascript
@@ -71,7 +71,7 @@ Clean up media-data.json by defining a formal schema that separates core media m
       - Working data fields like `saveImagePath`, `storagePath`, `ollamaAPIPath` are stripped.
       - Core fields have correct defaults filled in.
 
-[] Integrate the sanitizer into the media edit flow in `server/features/media/service.mjs`.
+[x] Integrate the sanitizer into the media edit flow in `server/features/media/service.mjs`.
    1. Import `sanitizeMediaEntry` and `loadWorkflowConfig`.
    2. In the `editMedia` function, before calling `repo.replaceAtIndex`, sanitize the updated entry:
       ```javascript
@@ -81,7 +81,7 @@ Clean up media-data.json by defining a formal schema that separates core media m
    3. This prevents edits from re-introducing unrecognized fields.
    4. Test: Use the UI to edit a media entry's name or tags, then verify the saved entry still conforms to schema.
 
-[] Update the client-side reprompt handler in `public/js/app.mjs` to read extra inputs from `extraInputs` nested object.
+[x] Update the client-side reprompt handler in `public/js/app.mjs` to read extra inputs from `extraInputs` nested object.
    1. In the `handleReprompt` function (~line 599), update the extra input population loop to read from `image.extraInputs` instead of flat `image[input.id]`:
       ```javascript
       // Before:
@@ -106,12 +106,12 @@ Clean up media-data.json by defining a formal schema that separates core media m
    3. Apply the same change for input audio UID lookups (`audio_${i}_uid`).
    4. Test: Generate an image, then use the reprompt button on the gallery item. Verify that all form fields (seed, name, description, workflow-specific extras like image format) are correctly repopulated.
 
-[] Update the client-side generation form submission in `public/js/app.mjs` to send extra inputs as flat fields (server-side sanitizer handles nesting).
-   1. Confirm that the form submission code already sends extra input values as flat `formData.append(input.id, value)` calls â€” this is correct because the generation router passes them through to the orchestrator, and the sanitizer nests them on save.
+[x] Update the client-side generation form submission in `public/js/app.mjs` to send extra inputs as flat fields (server-side sanitizer handles nesting).
+   1. Confirm that the form submission code already sends extra input values as flat `formData.append(input.id, value)` calls — this is correct because the generation router passes them through to the orchestrator, and the sanitizer nests them on save.
    2. No code change expected here unless the form is currently reading from `extraInputs` somewhere. Verify and document.
    3. Test: Submit a generation from the UI and confirm the request body contains flat extra input fields as before.
 
-[] Create migration script `scripts/migrate/3-media-data-schema-cleanup.mjs`.
+[x] Create migration script `scripts/migrate/3-media-data-schema-cleanup.mjs`.
    1. At the top of the script, create a timestamped backup of `server/database/media-data.json` into `scripts/migrate/backups/`:
       ```javascript
       const backupDir = path.join(__dirname, 'backups');
@@ -140,23 +140,23 @@ Clean up media-data.json by defining a formal schema that separates core media m
       - Core fields are present with correct defaults.
       - Entries with unknown workflows have their non-core fields preserved in `extraInputs`.
 
-[] Verify end-to-end flow after migration.
+[x] Verify end-to-end flow after migration.
    1. Run the migration script on the actual database.
-   2. Start the server and load the gallery â€” confirm all entries display correctly (images, audio, videos).
-   3. Trigger a new generation â€” confirm the new entry is saved with proper schema structure.
-   4. Use reprompt on an old (migrated) entry â€” confirm all fields repopulate correctly.
-   5. Use reprompt on a new (post-migration) entry â€” confirm all fields repopulate correctly.
-   6. Edit an entry's name/tags via the UI â€” confirm the edit saves correctly and doesn't break schema.
+   2. Start the server and load the gallery — confirm all entries display correctly (images, audio, videos).
+   3. Trigger a new generation — confirm the new entry is saved with proper schema structure.
+   4. Use reprompt on an old (migrated) entry — confirm all fields repopulate correctly.
+   5. Use reprompt on a new (post-migration) entry — confirm all fields repopulate correctly.
+   6. Edit an entry's name/tags via the UI — confirm the edit saves correctly and doesn't break schema.
 
 ## Implementation Details
 
 ### Schema location
-`server/resource/media-data-schema.json` â€” single source of truth for core field definitions. Both the sanitizer module and the migration script reference this file.
+`server/resource/media-data-schema.json` — single source of truth for core field definitions. Both the sanitizer module and the migration script reference this file.
 
 ### Sanitization strategy (permissive)
 - Unrecognized fields are stripped from top-level, not preserved.
 - Missing required fields are filled with defaults from schema or workflow config.
-- Entries always save â€” no rejections.
+- Entries always save — no rejections.
 - If a workflow is unknown (deleted/renamed), all non-core fields are dumped into `extraInputs` without validation.
 
 ### `extraInputs` object

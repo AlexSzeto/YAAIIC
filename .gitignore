@@ -4,3 +4,4 @@ server/temp/
 server/storage/
 server/database/
 server/config.json
+scripts/migrate/backups/
