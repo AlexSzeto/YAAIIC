@@ -12,6 +12,7 @@ import path from 'path';
 import csv from 'csv-parser';
 import { RESOURCE_DIR, STORAGE_DIR } from '../../core/paths.mjs';
 import * as repo from './repository.mjs';
+import { sanitizeMediaEntry, loadWorkflowConfig } from './sanitizer.mjs';
 
 // ---------------------------------------------------------------------------
 // Media search / filter
@@ -139,6 +140,8 @@ export function editMedia(items) {
       notFoundUids.push(updatedData.uid);
       continue;
     }
+    const workflowConfig = loadWorkflowConfig(updatedData.workflow);
+    updatedData = sanitizeMediaEntry(updatedData, workflowConfig);
     repo.replaceAtIndex(idx, updatedData);
     updatedItems.push(updatedData);
   }

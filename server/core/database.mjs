@@ -6,6 +6,7 @@
  */
 import fs from 'fs';
 import { DATABASE_DIR, MEDIA_DATA_PATH } from './paths.mjs';
+import { sanitizeMediaEntry, loadWorkflowConfig } from '../features/media/sanitizer.mjs';
 
 /** In-memory store */
 let globalData = { mediaData: [], folders: [], currentFolder: '' };
@@ -69,6 +70,8 @@ export function addMediaDataEntry(entry) {
   entry.timestamp = now.toISOString();
   entry.uid = now.getTime();
   entry.folder = globalData.currentFolder || '';
+  const workflowConfig = loadWorkflowConfig(entry.workflow);
+  entry = sanitizeMediaEntry(entry, workflowConfig);
   globalData.mediaData.push(entry);
   saveMediaData();
   return entry;

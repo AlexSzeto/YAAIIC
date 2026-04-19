@@ -151,6 +151,15 @@ router.post('/generate', upload.any(), async (req, res) => {
       }
     }
 
+    // --- Coerce checkbox extra input strings to actual booleans (FormData serializes false as "false") ---
+    if (workflowData.options?.extraInputs && Array.isArray(workflowData.options.extraInputs)) {
+      workflowData.options.extraInputs.forEach(input => {
+        if (input.type === 'checkbox' && req.body[input.id] !== undefined) {
+          req.body[input.id] = req.body[input.id] === 'true' || req.body[input.id] === true;
+        }
+      });
+    }
+
     // --- Validate no nested executeWorkflow ---
     const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
     if (!validation.valid) {
