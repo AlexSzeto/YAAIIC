@@ -644,8 +644,14 @@ function App() {
         ...newFormState
       }));
 
+      // Clear existing inputs before restoring, so stale inputs from a previous
+      // workflow don't persist if the restore fails or the source was deleted.
+      setInputImages([]);
+      setInputAudios([]);
+
       // Restore input images if they exist in the generation data
       const newInputImages = [];
+      let missingImages = 0;
       if (wf.inputImages && wf.inputImages > 0) {
         const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputImages; i++) {
@@ -666,6 +672,7 @@ function App() {
               }
             } catch (err) {
               console.error(`Failed to load input image ${i}:`, err);
+              missingImages++;
             }
           }
         }
@@ -676,6 +683,7 @@ function App() {
 
       // Restore input audio if they exist in the generation data
       const newInputAudios = [];
+      let missingAudios = 0;
       if (wf.inputAudios && wf.inputAudios > 0) {
         const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputAudios; i++) {
@@ -696,6 +704,7 @@ function App() {
               }
             } catch (err) {
               console.error(`Failed to load input audio ${i}:`, err);
+              missingAudios++;
             }
           }
         }
@@ -704,7 +713,14 @@ function App() {
         setInputAudios(newInputAudios);
       }
 
-      toast.success('All generation settings loaded from result');
+      if (missingImages > 0 || missingAudios > 0) {
+        const parts = [];
+        if (missingImages > 0) parts.push(`${missingImages} source image${missingImages > 1 ? 's' : ''}`);
+        if (missingAudios > 0) parts.push(`${missingAudios} source audio${missingAudios > 1 ? 's' : ''}`);
+        toast.info(`Settings loaded — ${parts.join(' and ')} could not be restored (may have been deleted). Please re-select.`);
+      } else {
+        toast.success('All generation settings loaded from result');
+      }
     } catch (error) {
       console.error('Failed to load generation settings:', error);
       toast.error('Failed to load generation settings');

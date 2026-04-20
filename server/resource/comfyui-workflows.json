@@ -1958,6 +1958,22 @@
             ]
           },
           {
+            "id": "baseModel",
+            "type": "select",
+            "label": "Base Model",
+            "default": "flux-2-klein-4b-fp8.safetensors",
+            "options": [
+              {
+                "label": "Klein-4b",
+                "value": "flux-2-klein-4b-fp8.safetensors"
+              },
+              {
+                "label": "Klein-9b",
+                "value": "flux-2-klein-9b-fp8.safetensors"
+              }
+            ]
+          },
+          {
             "id": "usePostPrompts",
             "type": "checkbox",
             "label": "Generate Descriptions",
@@ -2118,6 +2134,56 @@
             "inputs",
             "image"
           ]
+        },
+        {
+          "from": "baseModel",
+          "to": [
+            "75:70",
+            "inputs",
+            "unet_name"
+          ]
+        },
+        {
+          "from": "clipModel",
+          "to": [
+            "75:71",
+            "inputs",
+            "clip_name"
+          ]
+        }
+      ],
+      "preGenerationTasks": [
+        {
+          "template": "qwen_3_8b_fp8mixed.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-9b-fp8.safetensors"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "template": "qwen_3_4b.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-4b-fp8.safetensors"
+                }
+              }
+            ]
+          }
         }
       ]
     },
@@ -2144,6 +2210,22 @@
               {
                 "label": "JPG",
                 "value": "jpg"
+              }
+            ]
+          },
+          {
+            "id": "baseModel",
+            "type": "select",
+            "label": "Base Model",
+            "default": "flux-2-klein-4b-fp8.safetensors",
+            "options": [
+              {
+                "label": "Klein-4b",
+                "value": "flux-2-klein-4b-fp8.safetensors"
+              },
+              {
+                "label": "Klein-9b",
+                "value": "flux-2-klein-9b-fp8.safetensors"
               }
             ]
           },
@@ -2316,6 +2398,56 @@
             "inputs",
             "image"
           ]
+        },
+        {
+          "from": "baseModel",
+          "to": [
+            "92:70",
+            "inputs",
+            "unet_name"
+          ]
+        },
+        {
+          "from": "clipModel",
+          "to": [
+            "92:71",
+            "inputs",
+            "clip_name"
+          ]
+        }
+      ],
+      "preGenerationTasks": [
+        {
+          "template": "qwen_3_8b_fp8mixed.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-9b-fp8.safetensors"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "template": "qwen_3_4b.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-4b-fp8.safetensors"
+                }
+              }
+            ]
+          }
         }
       ]
     },
