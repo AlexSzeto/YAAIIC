@@ -443,8 +443,9 @@ function App() {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
 
             imageTextFieldNames.forEach(fieldName => {
-              // Check top-level (legacy/upload) or nested in mediaData (selected)
-              const value = img.mediaData?.[fieldName] || img[fieldName];
+              // Check top-level (legacy/upload), nested extraInputs (post-schema-refactor), or img root
+              const extras = img.mediaData?.extraInputs || {};
+              const value = img.mediaData?.[fieldName] ?? extras[fieldName] ?? img[fieldName];
               if (value) {
                 formData.append(`image_${index}_${fieldName}`, value);
               }

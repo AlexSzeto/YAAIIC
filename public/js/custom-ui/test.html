@@ -60,6 +60,20 @@
     import { TabPanels } from './nav/tab-panels.mjs';
     import { FloatingPanel } from './overlays/floating-panel.mjs';
     import { DynamicList } from './layout/dynamic-list.mjs';
+    // TagInput requires server-side /tags endpoint and autoComplete.js library.
+    // Import it in app pages like so:
+    //   import { TagInput } from './custom-ui/io/tag-input.mjs';
+    //
+    // Usage example:
+    //   <TagInput
+    //     label="Tags"
+    //     value={tagText}
+    //     onInput={(v) => setTagText(v)}
+    //     placeholder="Type to search for tags..."
+    //     rows={3}
+    //   />
+    //
+    // Multiple instances can coexist; each gets a unique autocomplete scope.
 
     
     // =========================================================================

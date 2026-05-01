@@ -19,6 +19,7 @@
     "timeTaken": { "type": "number", "default": 0 },
     "length": { "type": "number", "default": null },
     "framerate": { "type": "number", "default": null },
+    "clips": { "type": "array", "default": null },
     "extraInputs": { "type": "object", "default": {} }
   }
 }

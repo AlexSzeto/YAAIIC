@@ -54,6 +54,12 @@ export function HamburgerMenu() {
       active: currentPath === '/brew-editor.html',
     },
     {
+      label: 'Dress Up',
+      href:  '/dress-up.html',
+      icon:  'tag',
+      active: currentPath === '/dress-up.html',
+    },
+    {
       label: 'Change Theme',
       // icon reflects the theme that WILL be applied after clicking
       icon:  themeName === 'dark' ? 'sun' : 'moon',

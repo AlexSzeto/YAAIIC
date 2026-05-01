@@ -311,9 +311,12 @@ function InpaintApp() {
       if (mediaData.uid) formData.append('origin', String(mediaData.uid));
       
       // Append image field names from the source mediaData
+      // After the media-data schema refactor, extra inputs (e.g. imageFormat) live under
+      // mediaData.extraInputs – fall back there if the flat field is absent.
       const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
+      const extraInputs = mediaData.extraInputs || {};
       imageTextFieldNames.forEach(fieldName => {
-        const value = mediaData[fieldName];
+        const value = mediaData[fieldName] ?? extraInputs[fieldName];
         if (value) {
           formData.append(`image_0_${fieldName}`, value);
         }

@@ -134,7 +134,7 @@ export function editMedia(items) {
   const updatedItems = [];
   const notFoundUids = [];
 
-  for (const updatedData of items) {
+  for (let updatedData of items) {
     const idx = repo.findIndexByUid(updatedData.uid);
     if (idx === -1) {
       notFoundUids.push(updatedData.uid);
