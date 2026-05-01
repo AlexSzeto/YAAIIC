@@ -23,6 +23,8 @@ import { fetchJson } from '../../custom-ui/util.mjs';
 import { backfillMissingProperties } from '../../util.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
+import { openFolderSelect } from '../use-folder-select.mjs';
+import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { DressUpViewer } from './dress-up-viewer.mjs';
 import { DressUpForm } from './dress-up-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
@@ -40,13 +42,14 @@ const TwoColumn = styled('div')`
 TwoColumn.className = 'two-column';
 
 const LeftColumn = styled('div')`
-  flex: 1 1 50%;
+  flex: 6 6;
   min-width: 0;
+  max-height: calc(100vh - 240px); /* Account for header and workflow selector */
 `;
 LeftColumn.className = 'left-column';
 
 const RightColumn = styled('div')`
-  flex: 1 1 50%;
+  flex: 4 4;
   min-width: 0;
 `;
 RightColumn.className = 'right-column';
@@ -71,6 +74,19 @@ export function DressUpPage() {
 
   // Gallery
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  // Folder
+  const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
+
+  const handleOpenFolderSelect = useCallback(() => {
+    openFolderSelect({
+      currentFolder,
+      toast,
+      onFolderChanged: async (selectedFolder) => {
+        setCurrentFolder(selectedFolder);
+      },
+    });
+  }, [currentFolder, toast]);
 
   // Favicon spinner
   useEffect(() => {
@@ -106,20 +122,79 @@ export function DressUpPage() {
     toast.error(data.error?.message || 'Generation failed');
   }, []);
 
-  const handleGenerate = useCallback(async (assembledPrompt) => {
+  const handleDeleteImage = useCallback(async (image) => {
+    if (!image) return;
+    const result = await showDialog(
+      `Are you sure you want to delete "${image.name || 'this image'}"? This action cannot be undone.`,
+      'Confirm Deletion',
+      ['Delete', 'Cancel']
+    );
+    if (result !== 'Delete') return;
+    try {
+      await fetchJson('/media-data/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uids: [image.uid] })
+      });
+      const newHistory = history.filter(item => item.uid !== image.uid);
+      setHistory(newHistory);
+      const deletedIndex = history.findIndex(item => item.uid === image.uid);
+      nav.selectByIndex(Math.min(deletedIndex, newHistory.length - 1));
+      toast.success('Image deleted');
+    } catch (err) {
+      console.error('Failed to delete image:', err);
+      toast.error('Failed to delete image');
+    }
+  }, [history, nav, toast]);
+
+  // Auto-load images matching the restored name on page load
+  const handleStateLoaded = useCallback(async (restoredName) => {
+    if (!restoredName) return;
+    try {
+      const url = new URL('/media-data', window.location.origin);
+      url.searchParams.set('query', restoredName);
+      url.searchParams.set('limit', '50');
+      url.searchParams.set('fileType', 'image');
+      const data = backfillMissingProperties(await fetchJson(url.pathname + url.search));
+      if (Array.isArray(data) && data.length > 0) {
+        setHistory(data);
+        nav.selectByIndex(0);
+      }
+    } catch (err) {
+      console.error('Failed to auto-load images:', err);
+    }
+  }, []);
+
+  const handleGenerate = useCallback(async (assembledPrompt, name) => {
     if (!workflow) {
       toast.error('Please select a workflow first');
       return;
     }
     setIsGenerating(true);
     try {
+      const seed = Math.floor(Math.random() * 4294967295);
+      const payload = {
+        workflow: workflow.name,
+        name: name || '',
+        description: assembledPrompt,
+        prompt: assembledPrompt,
+        seed,
+        orientation: workflow.orientation,
+      };
+
+      // Add extraInputs with their declared defaults
+      if (Array.isArray(workflow.extraInputs)) {
+        workflow.extraInputs.forEach(input => {
+          if (input.default !== undefined) {
+            payload[input.id] = input.default;
+          }
+        });
+      }
+
       const response = await fetchJson('/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: workflow.name,
-          description: assembledPrompt
-        })
+        body: JSON.stringify(payload)
       });
       if (response.taskId) {
         setTaskId(response.taskId);
@@ -138,7 +213,25 @@ export function DressUpPage() {
     <${VerticalLayout}>
       <${AppHeader}>
         <${H1}>Dress Up<//>
-        <${HamburgerMenu} />
+        <${HorizontalLayout} gap="small">
+          <${Button}
+            id="gallery-btn"
+            onClick=${() => setIsGalleryOpen(true)}
+            variant="medium-icon-text"
+            icon="images"
+          >
+            Gallery
+          <//>
+          <${Button}
+            id="folder-btn"
+            onClick=${handleOpenFolderSelect}
+            variant="medium-icon-text"
+            icon="folder"
+          >
+            ${currentFolder.label}
+          <//>
+          <${HamburgerMenu} />
+        <//>
       </${AppHeader}>
 
       <${Panel} variant="outlined">
@@ -160,20 +253,15 @@ export function DressUpPage() {
             onNext=${nav.selectNext}
             currentItem=${nav.currentItem}
           />
-          <${Button}
-            variant="medium-text"
-            icon="image"
-            onClick=${() => setIsGalleryOpen(true)}
-            style=${{ marginTop: '8px' }}
-          >
-            Gallery
-          <//>
         </${LeftColumn}>
 
         <${RightColumn}>
           <${DressUpForm}
             onGenerate=${handleGenerate}
             isGenerating=${isGenerating}
+            onStateLoaded=${handleStateLoaded}
+            onDelete=${() => handleDeleteImage(nav.currentItem)}
+            canDelete=${!!nav.currentItem}
           />
         </${RightColumn}>
       </${TwoColumn}>

@@ -1,7 +1,10 @@
 /**
- * clothing-item.mjs – Single clothing-item row for the Dress-Up form.
+ * clothing-item.mjs – Single clothing-item form for the Dress-Up DynamicList.
  *
- * Fields: Name, Worn, Layer, Body Part, State, Attributes, Related Tags, Delete.
+ * Renders the inner form content only — the outer shell (header, delete,
+ * collapse, drag) is provided by DynamicList.
+ *
+ * Fields: Name, Worn, Layer, Body Part, State, Attributes, Related Tags.
  */
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
@@ -10,9 +13,8 @@ import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
-import { Button } from '../../custom-ui/io/button.mjs';
-import { TagInput } from '../../custom-ui/io/tag-input.mjs';
-import { HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { TagInput } from '../tags/tag-input.mjs';
+import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { getTags } from '../tags/tags.mjs';
 
@@ -31,16 +33,6 @@ const BODY_PART_OPTIONS = [
 ];
 
 // Styled components
-const ItemCard = styled('div')`
-  padding: ${() => currentTheme.value.spacing.medium.padding};
-  border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.primary};
-  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
-  background-color: ${() => currentTheme.value.colors.background.secondary};
-  opacity: ${props => props.dimmed ? '0.5' : '1'};
-  transition: opacity ${() => currentTheme.value.transitions.fast};
-`;
-ItemCard.className = 'clothing-item-card';
-
 const TopRow = styled('div')`
   display: flex;
   align-items: center;
@@ -131,12 +123,16 @@ SuggestionItem.className = 'suggestion-item';
  * @param {Object}   props
  * @param {Object}   props.item       – clothing item data
  * @param {Function} props.onChange    – (updatedItem) => void
- * @param {Function} props.onDelete   – (id) => void
  */
-export function ClothingItem({ item, onChange, onDelete }) {
+export function ClothingItem({ item, onChange }) {
   const [attrQuery, setAttrQuery] = useState('');
   const [attrSuggestions, setAttrSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  const [nameSuggestions, setNameSuggestions] = useState([]);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [nameHighlightedIndex, setNameHighlightedIndex] = useState(-1);
 
   // Build state options from tag data based on item name
   const stateOptions = useMemo(() => {
@@ -163,6 +159,20 @@ export function ClothingItem({ item, onChange, onDelete }) {
     return set;
   }, [stateOptions]);
 
+  // Name autocomplete search — no item-name filter, just prefix/substring match
+  useEffect(() => {
+    const q = item.name.trim().toLowerCase();
+    if (!q) {
+      setNameSuggestions([]);
+      return;
+    }
+    const allTags = getTags();
+    const results = allTags
+      .filter(tag => tag.toLowerCase().startsWith(q))
+      .slice(0, 20);
+    setNameSuggestions(results);
+  }, [item.name]);
+
   // Attribute autocomplete search
   useEffect(() => {
     if (!attrQuery.trim()) {
@@ -171,11 +181,15 @@ export function ClothingItem({ item, onChange, onDelete }) {
     }
     const allTags = getTags();
     const q = attrQuery.trim().toLowerCase();
+    const itemName = item.name.trim().toLowerCase();
     const existing = new Set(item.attributes.map(a => a.toLowerCase()));
     const results = allTags
       .filter(tag => {
         const lower = tag.toLowerCase();
-        return lower.includes(q) && !existing.has(lower) && !stateTags.has(lower);
+        return lower.includes(q)
+          && (!itemName || lower.includes(itemName))
+          && !existing.has(lower)
+          && !stateTags.has(lower);
       })
       .slice(0, 20);
     setAttrSuggestions(results);
@@ -185,12 +199,19 @@ export function ClothingItem({ item, onChange, onDelete }) {
     onChange({ ...item, ...patch });
   }, [item, onChange]);
 
+  const commitName = useCallback((tag) => {
+    update({ name: tag });
+    setShowNameSuggestions(false);
+    setNameHighlightedIndex(-1);
+  }, [update]);
+
   const addAttribute = useCallback((tag) => {
     if (!item.attributes.includes(tag)) {
       update({ attributes: [...item.attributes, tag] });
     }
     setAttrQuery('');
     setShowSuggestions(false);
+    setHighlightedIndex(-1);
   }, [item, update]);
 
   const removeAttribute = useCallback((tag) => {
@@ -198,96 +219,135 @@ export function ClothingItem({ item, onChange, onDelete }) {
   }, [item, update]);
 
   return html`
-    <${ItemCard} dimmed=${!item.worn}>
-      <${VerticalLayout} gap="small">
-        <${TopRow}>
-          <${Checkbox}
-            label="Worn"
-            checked=${item.worn}
-            onChange=${(e) => update({ worn: e.target.checked })}
-          />
-          <div style=${{ flex: 1 }}>
-            <${Input}
-              label="Name"
-              value=${item.name}
-              onInput=${(e) => update({ name: e.target.value })}
-              placeholder="e.g. shirt, skirt, bra"
-              widthScale="full"
-            />
-          </div>
-          <${Button}
-            variant="small-icon"
-            icon="trash"
-            color="danger"
-            onClick=${() => onDelete(item.id)}
-            title="Delete item"
-          />
-        </${TopRow}>
-
-        <${FieldRow}>
-          <${Select}
-            label="Layer"
-            options=${LAYER_OPTIONS}
-            value=${item.layer}
-            onChange=${(e) => update({ layer: e.target.value })}
-          />
-          <${Select}
-            label="Body Part"
-            options=${BODY_PART_OPTIONS}
-            value=${item.bodyPart}
-            onChange=${(e) => update({ bodyPart: e.target.value })}
-          />
-          <${Select}
-            label="State"
-            options=${stateOptions}
-            value=${item.state}
-            onChange=${(e) => update({ state: e.target.value })}
-          />
-        </${FieldRow}>
-
-        <${AttributeSearch}>
+    <${VerticalLayout} gap="small" style=${{ opacity: item.worn ? 1 : 0.5, transition: 'opacity 0.15s' }}>
+      <${TopRow}>
+        <${Checkbox}
+          label="Worn"
+          checked=${item.worn}
+          onChange=${(e) => update({ worn: e.target.checked })}
+        />
+        <div style=${{ flex: 1, position: 'relative' }}>
           <${Input}
-            label="Attributes"
-            value=${attrQuery}
-            onInput=${(e) => { setAttrQuery(e.target.value); setShowSuggestions(true); }}
-            onFocus=${() => setShowSuggestions(true)}
-            onBlur=${() => setTimeout(() => setShowSuggestions(false), 200)}
-            placeholder="Search tags to add..."
+            label="Name"
+            value=${item.name}
+            onInput=${(e) => { update({ name: e.target.value }); setShowNameSuggestions(true); setNameHighlightedIndex(-1); }}
+            onFocus=${() => setShowNameSuggestions(true)}
+            onBlur=${() => setTimeout(() => { setShowNameSuggestions(false); setNameHighlightedIndex(-1); }, 200)}
+            onKeyDown=${(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setNameHighlightedIndex(i => Math.min(i + 1, nameSuggestions.length - 1));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setNameHighlightedIndex(i => Math.max(i - 1, 0));
+              } else if ((e.key === 'Tab' || e.key === 'Enter') && showNameSuggestions && nameSuggestions.length > 0) {
+                e.preventDefault();
+                commitName(nameSuggestions[nameHighlightedIndex >= 0 ? nameHighlightedIndex : 0]);
+              }
+            }}
+            placeholder="e.g. shirt, skirt, bra"
             widthScale="full"
+            heightScale="compact"
           />
-          ${showSuggestions && attrSuggestions.length > 0 ? html`
+          ${showNameSuggestions && nameSuggestions.length > 0 ? html`
             <${SuggestionList}>
-              ${attrSuggestions.map(tag => html`
+              ${nameSuggestions.map((tag, idx) => html`
                 <${SuggestionItem}
                   key=${tag}
-                  onMouseDown=${(e) => { e.preventDefault(); addAttribute(tag); }}
+                  style=${{ backgroundColor: idx === nameHighlightedIndex ? currentTheme.value.colors.background.hover : '' }}
+                  onMouseDown=${(e) => { e.preventDefault(); commitName(tag); }}
                 >${tag}</${SuggestionItem}>
               `)}
             </${SuggestionList}>
           ` : null}
-        </${AttributeSearch}>
+        </div>
+      </${TopRow}>
 
-        ${item.attributes.length > 0 ? html`
-          <${PillContainer}>
-            ${item.attributes.map(attr => html`
-              <${Pill} key=${attr}>
-                ${attr}
-                <${PillRemove} onClick=${() => removeAttribute(attr)} title="Remove">
-                  <${Icon} name="x" size="12px" color="currentColor" />
-                </${PillRemove}>
-              </${Pill}>
-            `)}
-          </${PillContainer}>
-        ` : null}
-
-        <${TagInput}
-          label="Related Tags"
-          value=${item.relatedTags}
-          onInput=${(v) => update({ relatedTags: v })}
-          rows=${2}
-          placeholder="Additional related tags..."
+      <${FieldRow}>
+        <${Select}
+          label="Layer"
+          options=${LAYER_OPTIONS}
+          value=${item.layer}
+          onChange=${(e) => update({ layer: e.target.value })}
+          heightScale="compact"
         />
-      </${VerticalLayout}>
-    </${ItemCard}>
+        <${Select}
+          label="Body Part"
+          options=${BODY_PART_OPTIONS}
+          value=${item.bodyPart}
+          onChange=${(e) => update({ bodyPart: e.target.value })}
+          heightScale="compact"
+        />
+        <${Select}
+          label="State"
+          options=${stateOptions}
+          value=${item.state}
+          onChange=${(e) => update({ state: e.target.value })}
+          heightScale="compact"
+        />
+      </${FieldRow}>
+
+      <${AttributeSearch}>
+        <${Input}
+          label="Attributes"
+          value=${attrQuery}
+          onInput=${(e) => { setAttrQuery(e.target.value); setShowSuggestions(true); setHighlightedIndex(-1); }}
+          onFocus=${() => setShowSuggestions(true)}
+          onBlur=${() => setTimeout(() => { setShowSuggestions(false); setHighlightedIndex(-1); }, 200)}
+          onKeyDown=${(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setHighlightedIndex(i => Math.min(i + 1, attrSuggestions.length - 1));
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setHighlightedIndex(i => Math.max(i - 1, 0));
+            } else if (e.key === 'Tab' || e.key === 'Enter') {
+              if (showSuggestions && attrSuggestions.length > 0) {
+                e.preventDefault();
+                addAttribute(attrSuggestions[highlightedIndex >= 0 ? highlightedIndex : 0]);
+              } else if (attrQuery.trim()) {
+                e.preventDefault();
+                addAttribute(attrQuery.trim());
+              }
+            }
+          }}
+          placeholder="Search tags to add..."
+          widthScale="full"
+          heightScale="compact"
+        />
+        ${showSuggestions && attrSuggestions.length > 0 ? html`
+          <${SuggestionList}>
+            ${attrSuggestions.map((tag, idx) => html`
+              <${SuggestionItem}
+                key=${tag}
+                style=${{ backgroundColor: idx === highlightedIndex ? currentTheme.value.colors.background.hover : '' }}
+                onMouseDown=${(e) => { e.preventDefault(); addAttribute(tag); }}
+              >${tag}</${SuggestionItem}>
+            `)}
+          </${SuggestionList}>
+        ` : null}
+      </${AttributeSearch}>
+
+      ${item.attributes.length > 0 ? html`
+        <${PillContainer}>
+          ${item.attributes.map(attr => html`
+            <${Pill} key=${attr}>
+              ${attr}
+              <${PillRemove} onClick=${() => removeAttribute(attr)} title="Remove">
+                <${Icon} name="x" size="12px" color="currentColor" />
+              </${PillRemove}>
+            </${Pill}>
+          `)}
+        </${PillContainer}>
+      ` : null}
+
+      <${TagInput}
+        label="Related Tags"
+        value=${item.relatedTags}
+        onInput=${(v) => update({ relatedTags: v })}
+        rows=${2}
+        placeholder="Additional related tags..."
+      />
+    </${VerticalLayout}>
   `;
 }

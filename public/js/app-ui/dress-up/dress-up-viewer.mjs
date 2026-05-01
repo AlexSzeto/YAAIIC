@@ -21,11 +21,8 @@ const ViewerContainer = styled('div')`
 ViewerContainer.className = 'viewer-container';
 
 const ImageWrapper = styled('div')`
-  width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 300px;
   background-color: ${() => currentTheme.value.colors.background.card};
   border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
   overflow: hidden;
@@ -33,9 +30,8 @@ const ImageWrapper = styled('div')`
 ImageWrapper.className = 'image-wrapper';
 
 const StyledImage = styled('img')`
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
+  display: block;
+  width: auto;
   cursor: pointer;
   border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
 `;

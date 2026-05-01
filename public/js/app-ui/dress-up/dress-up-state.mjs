@@ -3,7 +3,8 @@
  *
  * State shape:
  * {
- *   additionalPrompts: string,
+ *   name: string,
+ *   additionalPrompts: Array<{ id: string, name: string, text: string, enabled: boolean }>,
  *   clothingItems: Array<{
  *     id: string,
  *     name: string,
@@ -20,7 +21,8 @@
 const STORAGE_KEY = 'dressup-state';
 
 const DEFAULT_STATE = {
-  additionalPrompts: '',
+  name: '',
+  additionalPrompts: [],
   clothingItems: []
 };
 
@@ -33,8 +35,20 @@ export function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE, clothingItems: [] };
     const parsed = JSON.parse(raw);
+
+    // Migrate legacy string additionalPrompts to array shape
+    let additionalPrompts;
+    if (typeof parsed.additionalPrompts === 'string') {
+      additionalPrompts = parsed.additionalPrompts.trim()
+        ? [{ id: 'ap-1', name: '', text: parsed.additionalPrompts, enabled: true }]
+        : [];
+    } else {
+      additionalPrompts = Array.isArray(parsed.additionalPrompts) ? parsed.additionalPrompts : [];
+    }
+
     return {
-      additionalPrompts: parsed.additionalPrompts ?? '',
+      name: parsed.name ?? '',
+      additionalPrompts,
       clothingItems: Array.isArray(parsed.clothingItems) ? parsed.clothingItems : []
     };
   } catch {
@@ -75,5 +89,18 @@ export function createDefaultItem() {
     attributes: [],
     state: '',
     relatedTags: ''
+  };
+}
+
+/**
+ * Create a new default additional prompt item.
+ * @returns {Object}
+ */
+export function createDefaultPromptItem() {
+  return {
+    id: 'ap-' + Date.now(),
+    name: '',
+    text: '',
+    enabled: true
   };
 }

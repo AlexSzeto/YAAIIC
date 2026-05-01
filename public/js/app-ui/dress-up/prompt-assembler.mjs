@@ -12,7 +12,7 @@
  * Assemble a prompt from clothing items and additional prompts.
  *
  * @param {Array}  clothingItems    – Full list of clothing items (worn + unworn)
- * @param {string} additionalPrompts – Freeform extra tags
+ * @param {Array}  additionalPrompts – Array of { id, name, text, enabled } prompt items
  * @param {Array}  outfitRules       – Rules from outfit-rules.json
  * @returns {string} Comma-separated prompt string
  */
@@ -59,13 +59,16 @@ export function assemblePrompt(clothingItems, additionalPrompts, outfitRules) {
     }
   }
 
-  // 4. Append additional prompts
-  if (additionalPrompts && additionalPrompts.trim()) {
-    const extra = additionalPrompts
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-    parts.push(...extra);
+  // 4. Append additional prompts (array of { text, enabled })
+  if (Array.isArray(additionalPrompts)) {
+    for (const item of additionalPrompts) {
+      if (!item.enabled || !item.text || !item.text.trim()) continue;
+      const extra = item.text
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+      parts.push(...extra);
+    }
   }
 
   // 5. Deduplicate and join
