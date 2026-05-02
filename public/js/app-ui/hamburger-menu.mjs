@@ -54,9 +54,9 @@ export function HamburgerMenu() {
       active: currentPath === '/brew-editor.html',
     },
     {
-      label: 'Dress Up',
+      label: 'AnyTale',
       href:  '/dress-up.html',
-      icon:  'tag',
+      icon:  'book',
       active: currentPath === '/dress-up.html',
     },
     {

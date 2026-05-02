@@ -5,7 +5,7 @@ import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider } from './custom-ui/msg/toast.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
-import { DressUpPage } from './app-ui/dress-up/dress-up-page.mjs';
+import { AnyTalePage } from './app-ui/dress-up/anytale.mjs';
 
 document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('app');
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     render(html`
       <${Page}>
         <${ToastProvider}>
-          <${DressUpPage} />
+          <${AnyTalePage} />
         </${ToastProvider}>
       </${Page}>
     `, root);

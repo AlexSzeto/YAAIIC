@@ -1,12 +1,12 @@
 /**
- * dress-up-page.mjs – Top-level page component for the Dress-Up generation mode.
+ * anytale.mjs – Top-level page component for the Dress-Up generation mode.
  *
  * Layout:
  *   - Top strip: WorkflowSelector filtered to Image workflows
  *   - Two-column main area: left = image viewer, right = generation parameters
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { Page } from '../../custom-ui/layout/page.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
@@ -54,7 +54,7 @@ const RightColumn = styled('div')`
 `;
 RightColumn.className = 'right-column';
 
-export function DressUpPage() {
+export function AnyTalePage() {
   const toast = useToast();
 
   // Theme re-render trigger
@@ -71,6 +71,15 @@ export function DressUpPage() {
   // Image history / viewer
   const [history, setHistory] = useState([]);
   const nav = useItemNavigation(history);
+  // Signal that the next history update should navigate to the last item
+  const selectLastOnLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (selectLastOnLoadRef.current && history.length > 0) {
+      selectLastOnLoadRef.current = false;
+      nav.selectLast();
+    }
+  }, [history]);
 
   // Gallery
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -153,12 +162,12 @@ export function DressUpPage() {
     try {
       const url = new URL('/media-data', window.location.origin);
       url.searchParams.set('query', restoredName);
-      url.searchParams.set('limit', '50');
+      url.searchParams.set('limit', '200');
       url.searchParams.set('fileType', 'image');
       const data = backfillMissingProperties(await fetchJson(url.pathname + url.search));
       if (Array.isArray(data) && data.length > 0) {
+        selectLastOnLoadRef.current = true;
         setHistory(data);
-        nav.selectByIndex(0);
       }
     } catch (err) {
       console.error('Failed to auto-load images:', err);
@@ -212,7 +221,7 @@ export function DressUpPage() {
   return html`
     <${VerticalLayout}>
       <${AppHeader}>
-        <${H1}>Dress Up<//>
+        <${H1}>AnyTale<//>
         <${HorizontalLayout} gap="small">
           <${Button}
             id="gallery-btn"
@@ -234,6 +243,7 @@ export function DressUpPage() {
         <//>
       </${AppHeader}>
 
+      <div style="display: none;">
       <${Panel} variant="outlined">
         <${WorkflowSelector}
           value=${workflow}
@@ -242,6 +252,7 @@ export function DressUpPage() {
           typeOptions=${[{ label: 'Image', value: 'image' }]}
         />
       </${Panel}>
+      </div>
 
       <${TwoColumn}>
         <${LeftColumn}>
@@ -251,6 +262,8 @@ export function DressUpPage() {
             onNavigate=${nav.selectByIndex}
             onPrev=${nav.selectPrev}
             onNext=${nav.selectNext}
+            onFirst=${nav.selectFirst}
+            onLast=${nav.selectLast}
             currentItem=${nav.currentItem}
           />
         </${LeftColumn}>
@@ -284,7 +297,7 @@ export function DressUpPage() {
         onLoad=${(items) => {
           if (items && items.length > 0) {
             setHistory(items);
-            nav.selectByIndex(0);
+            nav.selectByIndex(items.length - 1);
           }
         }}
         fileTypeFilter=${['image']}
