@@ -22,7 +22,7 @@ import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 
 // Outfit rules loaded once at module level
 let outfitRules = [];
-fetch('/js/app-ui/dress-up/outfit-rules.json')
+fetch('/js/app-ui/anytale/outfit-rules.json')
   .then(r => r.json())
   .then(data => { outfitRules = data; })
   .catch(err => console.error('Failed to load outfit rules:', err));

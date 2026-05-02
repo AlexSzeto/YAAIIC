@@ -53,6 +53,7 @@ const StyledImage = styled('img')`
   position: relative;
   z-index: 1;
   width: auto;
+  object-fit: contain;
   border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
   animation: viewer-fadein 0.4s ease-in-out;
   @keyframes viewer-fadein {

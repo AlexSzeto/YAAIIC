@@ -45,12 +45,22 @@ const LeftColumn = styled('div')`
   flex: 6 6;
   min-width: 0;
   max-height: calc(100vh - 240px); /* Account for header and workflow selector */
+
+  @media (max-width: 900px) {
+    max-width: 100%;
+    max-height: none;
+  }
+
 `;
 LeftColumn.className = 'left-column';
 
 const RightColumn = styled('div')`
   flex: 4 4;
   min-width: 0;
+
+  @media (max-width: 900px) {
+    width: 100%;
+  }
 `;
 RightColumn.className = 'right-column';
 
