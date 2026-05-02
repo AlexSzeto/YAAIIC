@@ -26,7 +26,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { DressUpViewer } from './dress-up-viewer.mjs';
-import { DressUpForm } from './dress-up-form.mjs';
+import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
 const TwoColumn = styled('div')`
@@ -279,7 +279,7 @@ export function AnyTalePage() {
         </${LeftColumn}>
 
         <${RightColumn}>
-          <${DressUpForm}
+          <${AnyTaleForm}
             onGenerate=${handleGenerate}
             isGenerating=${isGenerating}
             onStateLoaded=${handleStateLoaded}

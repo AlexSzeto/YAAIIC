@@ -155,6 +155,7 @@ function DynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  headerActions,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -177,6 +178,14 @@ function DynamicListItem({
         />
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
         <div onClick=${stopProp} style="display:flex;gap:4px;">
+          ${headerActions && headerActions.map(action => html`
+            <${Button}
+              variant="small-icon"
+              icon=${action.icon}
+              onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
+              title=${action.title}
+            />
+          `)}
           ${showDragButton && html`
             <${Button}
               variant="small-icon"
@@ -238,6 +247,7 @@ function CondensedDynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  headerActions,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -253,6 +263,14 @@ function CondensedDynamicListItem({
         ${renderItem(item, index)}
       </${CondensedItemContent}>
       <div style="display:flex;gap:4px;flex-shrink:0;">
+        ${headerActions && headerActions.map(action => html`
+          <${Button}
+            variant="small-icon"
+            icon=${action.icon}
+            onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
+            title=${action.title}
+          />
+        `)}
         ${showDragButton && html`
           <${Button}
             variant="small-icon"
@@ -320,6 +338,7 @@ function CondensedDynamicListItem({
  * @param {boolean}  [props.condensed=false]     - Use condensed inline layout (no panel, no collapse).
  * @param {boolean}  [props.showDragButton=true] - Show the drag-to-reorder handle button.
  * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
+ * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
  * @returns {preact.VNode}
  *
  * @example
@@ -347,6 +366,7 @@ export function DynamicList({
   onAdd,                      // optional: () => void – replaces default handleAdd when provided
   showDragButton = true,      // show the swap-vertical drag handle
   showMoveUpDownButtons = false, // show the up/down arrow buttons
+  headerActions,               // custom header action buttons
 }) {
   const theme = currentTheme.value;
 
@@ -594,6 +614,7 @@ export function DynamicList({
                 isDragTarget=${false}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                headerActions=${headerActions}
                 theme=${theme}
               />
             `
@@ -612,6 +633,7 @@ export function DynamicList({
                 initialCollapsed=${!isNew}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                headerActions=${headerActions}
                 theme=${theme}
               />
             `
@@ -660,6 +682,7 @@ export function DynamicList({
             isDragTarget=${false}
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
+            headerActions=${headerActions}
             theme=${theme}
           />
         `
@@ -678,6 +701,7 @@ export function DynamicList({
             initialCollapsed=${!isNew}
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
+            headerActions=${headerActions}
             theme=${theme}
           />
         `;

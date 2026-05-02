@@ -1,0 +1,329 @@
+/**
+ * part-item.mjs – Single part form for the AnyTale DynamicList.
+ *
+ * Renders the inner form content only — the outer shell (header, delete,
+ * collapse, drag) is provided by DynamicList.
+ *
+ * Layout:
+ *   Top row: 128×128 preview image (left) | Enabled + Name (right)
+ *   Below:   Type, Preview Baseline, Baseline, Category Attributes, Custom Attributes
+ */
+import { html } from 'htm/preact';
+import { useMemo, useCallback } from 'preact/hooks';
+import { styled } from '../../custom-ui/goober-setup.mjs';
+import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Input } from '../../custom-ui/io/input.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
+import { TagInput } from '../tags/tag-input.mjs';
+import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
+import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
+import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
+import { getCategoryTree } from '../tags/tag-data.mjs';
+import { CategoryInput } from './category-input.mjs';
+
+// ============================================================================
+// Styled Components
+// ============================================================================
+
+const TopRow = styled('div')`
+  display: flex;
+  gap: ${() => currentTheme.value.spacing.medium.gap};
+  align-items: flex-start;
+`;
+TopRow.className = 'part-item-top-row';
+
+const PreviewArea = styled('div')`
+  flex: 0 0 128px;
+  width: 128px;
+  height: 128px;
+  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+  background-color: ${() => currentTheme.value.colors.background.tertiary};
+  border: ${() => `${currentTheme.value.border.width} ${currentTheme.value.border.style} ${currentTheme.value.colors.border.secondary}`};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+`;
+PreviewArea.className = 'part-item-preview-area';
+
+const PreviewImage = styled('img')`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+`;
+PreviewImage.className = 'part-item-preview-image';
+
+const PreviewPlaceholder = styled('div')`
+  color: ${() => currentTheme.value.colors.text.muted};
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  text-align: center;
+  padding: ${() => currentTheme.value.spacing.small.padding};
+`;
+PreviewPlaceholder.className = 'part-item-preview-placeholder';
+
+const RightFields = styled('div')`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+`;
+RightFields.className = 'part-item-right-fields';
+
+const AttrRow = styled('div')`
+  display: flex;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+  align-items: end;
+  flex-wrap: wrap;
+`;
+AttrRow.className = 'part-item-attr-row';
+
+// ============================================================================
+// Helper: Category attribute value dropdown options
+// ============================================================================
+
+/**
+ * Build Select options from a category internal name.
+ * If the name is a key in categoryTree → direct leaf children.
+ * If it's an individual tag → just that tag.
+ * Always starts with (none).
+ */
+function getCategoryOptions(categoryInternal) {
+  if (!categoryInternal) return [{ label: '(none)', value: '' }];
+  const tree = getCategoryTree();
+  const children = tree[categoryInternal];
+  const options = [{ label: '(none)', value: '' }];
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      if (!tree[child]) {
+        const display = child.replace(/_/g, ' ');
+        options.push({ label: display, value: child });
+      }
+    }
+  } else {
+    const display = categoryInternal.replace(/_/g, ' ');
+    options.push({ label: display, value: categoryInternal });
+  }
+  return options;
+}
+
+// ============================================================================
+// Helper: Custom attribute value dropdown options
+// ============================================================================
+
+function getCustomOptions(optionsString) {
+  const options = [{ label: '(none)', value: '' }];
+  if (!optionsString || !optionsString.trim()) return options;
+  const tags = optionsString.split(',').map(t => t.trim()).filter(t => t);
+  for (const tag of tags) {
+    options.push({ label: tag, value: tag });
+  }
+  return options;
+}
+
+// ============================================================================
+// PartItem Component
+// ============================================================================
+
+/**
+ * @param {Object}   props
+ * @param {Object}   props.part      – Full part object { id, config, data }
+ * @param {Function} props.onChange   – (updatedPart) => void
+ */
+export function PartItem({ part, onChange }) {
+  const { config, data } = part;
+
+  // ── Update helpers ──────────────────────────────────────────────────────
+  const updateConfig = useCallback((patch) => {
+    onChange({ ...part, config: { ...config, ...patch } });
+  }, [part, onChange]);
+
+  const updateData = useCallback((patch) => {
+    onChange({ ...part, data: { ...data, ...patch } });
+  }, [part, onChange]);
+
+  // ── Category attributes ─────────────────────────────────────────────────
+  const handleCategoryAttrsChange = useCallback((newAttrs) => {
+    updateConfig({ categoryAttributes: newAttrs });
+  }, [updateConfig]);
+
+  const handleCategoryValueChange = useCallback((index, value) => {
+    updateData({
+      categoryAttributeValues: {
+        ...data.categoryAttributeValues,
+        [index]: value,
+      },
+    });
+  }, [data, updateData]);
+
+  // ── Custom attributes ───────────────────────────────────────────────────
+  const handleCustomAttrsChange = useCallback((newAttrs) => {
+    updateConfig({ customAttributes: newAttrs });
+  }, [updateConfig]);
+
+  const handleCustomValueChange = useCallback((index, value) => {
+    updateData({
+      customAttributeValues: {
+        ...data.customAttributeValues,
+        [index]: value,
+      },
+    });
+  }, [data, updateData]);
+
+  // ── Preview click ───────────────────────────────────────────────────────
+  const handlePreviewClick = useCallback(() => {
+    if (data.previewImageUrl) {
+      createImageModal(data.previewImageUrl);
+    }
+  }, [data.previewImageUrl]);
+
+  return html`
+    <${VerticalLayout} gap="small" style=${{ opacity: data.enabled ? 1 : 0.5, transition: 'opacity 0.15s' }}>
+      <!-- Top row: preview image | enabled + name -->
+      <${TopRow}>
+        <${PreviewArea} onClick=${handlePreviewClick}>
+          ${data.previewImageUrl
+            ? html`<${PreviewImage} src=${data.previewImageUrl} alt="Preview" />`
+            : html`<${PreviewPlaceholder}>No preview</${PreviewPlaceholder}>`
+          }
+        </${PreviewArea}>
+        <${RightFields}>
+          <${Checkbox}
+            label="Enabled"
+            checked=${data.enabled}
+            onChange=${(e) => updateData({ enabled: e.target.checked })}
+          />
+          <${Input}
+            label="Name"
+            value=${config.name}
+            onInput=${(e) => updateConfig({ name: e.target.value })}
+            placeholder="Part name"
+            widthScale="full"
+            heightScale="compact"
+          />
+        </${RightFields}>
+      </${TopRow}>
+
+      <!-- Type -->
+      <${Input}
+        label="Type"
+        value=${config.type}
+        onInput=${(e) => updateConfig({ type: e.target.value })}
+        placeholder="e.g. hair, outfit, accessory"
+        widthScale="full"
+        heightScale="compact"
+      />
+
+      <!-- Preview Baseline Tags -->
+      <${TagInput}
+        label="Preview Baseline Tags"
+        value=${config.previewBaseline}
+        onInput=${(text) => updateConfig({ previewBaseline: text })}
+        rows=${2}
+        placeholder="Tags for preview generation only..."
+      />
+
+      <!-- Baseline Tags -->
+      <${TagInput}
+        label="Baseline Tags"
+        value=${config.baseline}
+        onInput=${(text) => updateConfig({ baseline: text })}
+        rows=${2}
+        placeholder="Tags always included in prompts..."
+      />
+
+      <!-- Category Attributes -->
+      <${DynamicList}
+        title="Category Attributes"
+        items=${config.categoryAttributes}
+        condensed=${true}
+        renderItem=${(attr, i) => html`
+          <${AttrRow}>
+            <${Input}
+              label="Name"
+              value=${attr.name}
+              onInput=${(e) => {
+                const next = [...config.categoryAttributes];
+                next[i] = { ...attr, name: e.target.value };
+                handleCategoryAttrsChange(next);
+              }}
+              placeholder="Label"
+              widthScale="normal"
+              heightScale="compact"
+            />
+            <${CategoryInput}
+              label="Category"
+              value=${attr.category}
+              onSelect=${(internalName) => {
+                const next = [...config.categoryAttributes];
+                next[i] = { ...attr, category: internalName };
+                handleCategoryAttrsChange(next);
+              }}
+              placeholder="tag or category"
+            />
+            <${Select}
+              label="Value"
+              options=${getCategoryOptions(attr.category)}
+              value=${data.categoryAttributeValues?.[i] || ''}
+              onChange=${(e) => handleCategoryValueChange(i, e.target.value)}
+              heightScale="compact"
+            />
+          </${AttrRow}>
+        `}
+        createItem=${createDefaultCategoryAttribute}
+        onChange=${handleCategoryAttrsChange}
+        addLabel="Add Category Attribute"
+        showDragButton=${false}
+      />
+
+      <!-- Custom Attributes -->
+      <${DynamicList}
+        title="Custom Attributes"
+        items=${config.customAttributes}
+        condensed=${true}
+        renderItem=${(attr, i) => html`
+          <${AttrRow}>
+            <${Input}
+              label="Name"
+              value=${attr.name}
+              onInput=${(e) => {
+                const next = [...config.customAttributes];
+                next[i] = { ...attr, name: e.target.value };
+                handleCustomAttrsChange(next);
+              }}
+              placeholder="Label"
+              widthScale="normal"
+              heightScale="compact"
+            />
+            <${TagInput}
+              label="Options"
+              value=${attr.options}
+              onInput=${(text) => {
+                const next = [...config.customAttributes];
+                next[i] = { ...attr, options: text };
+                handleCustomAttrsChange(next);
+              }}
+              rows=${1}
+              placeholder="tag1, tag2, ..."
+            />
+            <${Select}
+              label="Value"
+              options=${getCustomOptions(attr.options)}
+              value=${data.customAttributeValues?.[i] || ''}
+              onChange=${(e) => handleCustomValueChange(i, e.target.value)}
+              heightScale="compact"
+            />
+          </${AttrRow}>
+        `}
+        createItem=${createDefaultCustomAttribute}
+        onChange=${handleCustomAttrsChange}
+        addLabel="Add Custom Attribute"
+        showDragButton=${false}
+      />
+    </${VerticalLayout}>
+  `;
+}
