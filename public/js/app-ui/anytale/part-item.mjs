@@ -9,9 +9,10 @@
  *   Below:   Type, Preview Baseline, Baseline, Category Attributes, Custom Attributes
  */
 import { html } from 'htm/preact';
-import { useMemo, useCallback } from 'preact/hooks';
+import { useState, useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
@@ -21,7 +22,7 @@ import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
 import { getCategoryTree } from '../tags/tag-data.mjs';
-import { CategoryInput } from './category-input.mjs';
+import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 
 // ============================================================================
 // Styled Components
@@ -82,6 +83,22 @@ const AttrRow = styled('div')`
 `;
 AttrRow.className = 'part-item-attr-row';
 
+const CategoryButtonGroup = styled('div')`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+`;
+CategoryButtonGroup.className = 'part-item-category-button-group';
+
+const CategoryButtonLabel = styled('label')`
+  margin-bottom: 5px;
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+`;
+CategoryButtonLabel.className = 'part-item-category-button-label';
+
 // ============================================================================
 // Helper: Category attribute value dropdown options
 // ============================================================================
@@ -99,10 +116,8 @@ function getCategoryOptions(categoryInternal) {
   const options = [{ label: '(none)', value: '' }];
   if (Array.isArray(children)) {
     for (const child of children) {
-      if (!tree[child]) {
-        const display = child.replace(/_/g, ' ');
-        options.push({ label: display, value: child });
-      }
+      const display = child.replace(/_/g, ' ');
+      options.push({ label: display, value: child });
     }
   } else {
     const display = categoryInternal.replace(/_/g, ' ');
@@ -136,6 +151,10 @@ function getCustomOptions(optionsString) {
  */
 export function PartItem({ part, onChange }) {
   const { config, data } = part;
+
+  // ── Category selector panel state ───────────────────────────────────────
+  const [selectorPanelOpen, setSelectorPanelOpen] = useState(false);
+  const [editingCatIndex, setEditingCatIndex] = useState(-1);
 
   // ── Update helpers ──────────────────────────────────────────────────────
   const updateConfig = useCallback((patch) => {
@@ -174,6 +193,24 @@ export function PartItem({ part, onChange }) {
     });
   }, [data, updateData]);
 
+  // ── Category selector panel ─────────────────────────────────────────────
+  const handleCategoryButtonClick = useCallback((index) => {
+    setEditingCatIndex(index);
+    setSelectorPanelOpen(true);
+  }, []);
+
+  const handleCategoryReplace = useCallback((_displayName, internalName) => {
+    const next = [...config.categoryAttributes];
+    const current = next[editingCatIndex];
+    const autoName = current.name
+      ? current.name
+      : internalName.split(/[:/]/).pop().replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+    next[editingCatIndex] = { ...current, category: internalName, name: autoName };
+    handleCategoryAttrsChange(next);
+    setSelectorPanelOpen(false);
+  }, [editingCatIndex, config.categoryAttributes, handleCategoryAttrsChange]);
+
   // ── Preview click ───────────────────────────────────────────────────────
   const handlePreviewClick = useCallback(() => {
     if (data.previewImageUrl) {
@@ -183,7 +220,7 @@ export function PartItem({ part, onChange }) {
 
   return html`
     <${VerticalLayout} gap="small" style=${{ opacity: data.enabled ? 1 : 0.5, transition: 'opacity 0.15s' }}>
-      <!-- Top row: preview image | enabled + name -->
+      <!-- Top row: preview image | enabled + name + type -->
       <${TopRow}>
         <${PreviewArea} onClick=${handlePreviewClick}>
           ${data.previewImageUrl
@@ -205,18 +242,16 @@ export function PartItem({ part, onChange }) {
             widthScale="full"
             heightScale="compact"
           />
+          <${Input}
+            label="Type"
+            value=${config.type}
+            onInput=${(e) => updateConfig({ type: e.target.value })}
+            placeholder="e.g. hair, outfit, accessory"
+            widthScale="full"
+            heightScale="compact"
+          />
         </${RightFields}>
       </${TopRow}>
-
-      <!-- Type -->
-      <${Input}
-        label="Type"
-        value=${config.type}
-        onInput=${(e) => updateConfig({ type: e.target.value })}
-        placeholder="e.g. hair, outfit, accessory"
-        widthScale="full"
-        heightScale="compact"
-      />
 
       <!-- Preview Baseline Tags -->
       <${TagInput}
@@ -255,16 +290,21 @@ export function PartItem({ part, onChange }) {
               widthScale="normal"
               heightScale="compact"
             />
-            <${CategoryInput}
-              label="Category"
-              value=${attr.category}
-              onSelect=${(internalName) => {
-                const next = [...config.categoryAttributes];
-                next[i] = { ...attr, category: internalName };
-                handleCategoryAttrsChange(next);
-              }}
-              placeholder="tag or category"
-            />
+            <${CategoryButtonGroup}>
+              <${CategoryButtonLabel}>Category</${CategoryButtonLabel}>
+              <${Button}
+                variant="small-text"
+                color="secondary"
+                onClick=${() => handleCategoryButtonClick(i)}
+                style=${{ width: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                title=${attr.category || 'Select category'}
+              >
+                ${attr.category
+                  ? attr.category.replace(/^tag_group:/, '').replace(/_/g, ' ')
+                  : 'Select'
+                }
+              </${Button}>
+            </${CategoryButtonGroup}>
             <${Select}
               label="Value"
               options=${getCategoryOptions(attr.category)}
@@ -284,7 +324,7 @@ export function PartItem({ part, onChange }) {
       <${DynamicList}
         title="Custom Attributes"
         items=${config.customAttributes}
-        condensed=${true}
+        getTitle=${(attr) => attr.name || 'Untitled'}
         renderItem=${(attr, i) => html`
           <${AttrRow}>
             <${Input}
@@ -323,6 +363,17 @@ export function PartItem({ part, onChange }) {
         onChange=${handleCustomAttrsChange}
         addLabel="Add Custom Attribute"
         showDragButton=${false}
+      />
+
+      <!-- Category selector panel (opened by category attribute buttons) -->
+      <${TagSelectorPanel}
+        isOpen=${selectorPanelOpen}
+        initialSearchTerm=${editingCatIndex >= 0 ? config.categoryAttributes[editingCatIndex]?.category || '' : ''}
+        onReplace=${handleCategoryReplace}
+        onClose=${() => setSelectorPanelOpen(false)}
+        showInsert=${false}
+        showReplace=${true}
+        replaceRequiresDefinition=${false}
       />
     </${VerticalLayout}>
   `;

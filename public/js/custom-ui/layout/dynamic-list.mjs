@@ -262,7 +262,7 @@ function CondensedDynamicListItem({
       <${CondensedItemContent}>
         ${renderItem(item, index)}
       </${CondensedItemContent}>
-      <div style="display:flex;gap:4px;flex-shrink:0;">
+      <div style="display:flex;gap:4px;flex-shrink:0;align-self:flex-end;">
         ${headerActions && headerActions.map(action => html`
           <${Button}
             variant="small-icon"

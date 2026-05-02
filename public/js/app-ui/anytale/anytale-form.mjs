@@ -138,6 +138,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
           prompt,
           seed: Math.floor(Math.random() * 4294967295),
           orientation: 'square',
+          // extraInputs defaults for 'Text to Image (Illustrious Portrait)'
+          imageFormat: 'png',
+          usePostPrompts: false,
+          removeBackground: false,
         }),
       });
 
