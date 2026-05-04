@@ -6,16 +6,16 @@ Improve the edit panel's scroll behavior so only the parts list scrolls, add a r
 
 ## Tasks
 
-- [ ] Fix edit panel scroll: only the Parts `DynamicList` scrolls; character name input, prompt preview, and button row remain fixed
-- [ ] Add `getEnabled(item, index) => boolean` and `onToggleEnabled(item, index)` props to `DynamicList`; render an unlabelled checkbox between the caret and the title (expanded mode) and to the left of the content (condensed mode); only rendered when props are provided; add usage example to `custom-ui/test.html`
-- [ ] Migrate the `data.enabled` checkbox in `PartItem` to use the new `DynamicList` `getEnabled`/`onToggleEnabled` props and remove the inline enabled checkbox from `PartItem`'s `TopRow`
-- [ ] Add `label` prop to `Button` (custom-ui); when provided, wrap the button in a vertical stack with a label rendered above it (same style as `Input`'s label); layout unchanged when `label` is null/empty; add usage example to `custom-ui/test.html`
-- [ ] Migrate the category attributes category button in `PartItem`: replace `<CategoryButtonLabel>Category</CategoryButtonLabel>` + `<Button>` with a single `<Button label="Category">` and remove all custom wrapper styling (`CategoryButtonGroup`, `CategoryButtonLabel`)
-- [ ] Create `public/js/custom-ui/overlays/tooltip.mjs` — `TooltipContext`, `TooltipProvider` using the same portal/context pattern as `toast.mjs`; tooltip appears after a standard hover delay (~600ms), positioned below-and-right of the cursor at the moment of initial hover (no cursor follow); add `TooltipProvider` to the app's root provider chain; add usage example to `custom-ui/test.html`
-- [ ] Rename `Button`'s `title` prop to `tooltip` and wire it to the custom tooltip system (via context) instead of the native `title` attribute; update all internal usages of `title=` on `<Button>` within `dynamic-list.mjs` and any other custom-ui files
-- [ ] Add `tooltip` prop to the `Select` custom-ui component wired to the same tooltip system; add usage example to `custom-ui/test.html`
-- [ ] In `PartItem`, add a tooltip to the category attribute value `<Select>` and custom attribute value `<Select>`; tooltip text = `definitions[selectedValue]` from the `/tags` response (already available in component state); show nothing if no definition exists for the value
-- [ ] In `PartItem`, when opening `TagSelectorPanel` for a category attribute that has no category selected (`attr.category` is empty/falsy), pass the part's `config.name.toLowerCase()` as the initial search prefill into the panel; the prefill is set only on open and the user may freely edit it from there
+- [x] Fix edit panel scroll: only the Parts `DynamicList` scrolls; character name input, prompt preview, and button row remain fixed
+- [x] Add `getEnabled(item, index) => boolean` and `onToggleEnabled(item, index)` props to `DynamicList`; render an unlabelled checkbox between the caret and the title (expanded mode) and to the left of the content (condensed mode); only rendered when props are provided; add usage example to `custom-ui/test.html`
+- [x] Migrate the `data.enabled` checkbox in `PartItem` to use the new `DynamicList` `getEnabled`/`onToggleEnabled` props and remove the inline enabled checkbox from `PartItem`'s `TopRow`
+- [x] Add `label` prop to `Button` (custom-ui); when provided, wrap the button in a vertical stack with a label rendered above it (same style as `Input`'s label); layout unchanged when `label` is null/empty; add usage example to `custom-ui/test.html`
+- [x] Migrate the category attributes category button in `PartItem`: replace `<CategoryButtonLabel>Category</CategoryButtonLabel>` + `<Button>` with a single `<Button label="Category">` and remove all custom wrapper styling (`CategoryButtonGroup`, `CategoryButtonLabel`)
+- [x] Create `public/js/custom-ui/overlays/tooltip.mjs` — `TooltipContext`, `TooltipProvider` using the same portal/context pattern as `toast.mjs`; tooltip appears after a standard hover delay (~600ms), positioned below-and-right of the cursor at the moment of initial hover (no cursor follow); add `TooltipProvider` to the app's root provider chain; add usage example to `custom-ui/test.html`
+- [x] Rename `Button`'s `title` prop to `tooltip` and wire it to the custom tooltip system (via context) instead of the native `title` attribute; update all internal usages of `title=` on `<Button>` within `dynamic-list.mjs` and any other custom-ui files
+- [x] Add `tooltip` prop to the `Select` custom-ui component wired to the same tooltip system; add usage example to `custom-ui/test.html`
+- [x] In `PartItem`, add a tooltip to the category attribute value `<Select>` and custom attribute value `<Select>`; tooltip text = `definitions[selectedValue]` from the `/tags` response (already available in component state); show nothing if no definition exists for the value
+- [x] In `PartItem`, when opening `TagSelectorPanel` for a category attribute that has no category selected (`attr.category` is empty/falsy), pass the part's `config.name.toLowerCase()` as the initial search prefill into the panel; the prefill is set only on open and the user may freely edit it from there
 
 ## Implementation Details
 

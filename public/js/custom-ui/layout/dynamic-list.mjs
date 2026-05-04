@@ -156,6 +156,8 @@ function DynamicListItem({
   showDragButton,
   showMoveUpDownButtons,
   headerActions,
+  getEnabled,
+  onToggleEnabled,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -168,6 +170,11 @@ function DynamicListItem({
     onDragStart(e, index, title);
   }, [onDragStart, index, title]);
 
+  const handleToggleEnabled = useCallback((e) => {
+    e.stopPropagation();
+    if (onToggleEnabled) onToggleEnabled(item, index);
+  }, [item, index, onToggleEnabled]);
+
   return html`
     <${ItemShell} theme=${theme} style=${isDragTarget ? { opacity: 0.3 } : {}}>
       <${ItemHeader} theme=${theme} onClick=${() => setCollapsed(c => !c)}>
@@ -176,6 +183,15 @@ function DynamicListItem({
           size="16px"
           color=${theme.colors.text.secondary}
         />
+        ${getEnabled != null && html`
+          <input
+            type="checkbox"
+            checked=${getEnabled(item, index)}
+            onClick=${handleToggleEnabled}
+            onChange=${() => {}}
+            style=${{ margin: 0, cursor: 'pointer', flexShrink: 0 }}
+          />
+        `}
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
         <div onClick=${stopProp} style="display:flex;gap:4px;">
           ${headerActions && headerActions.map(action => html`
@@ -183,7 +199,7 @@ function DynamicListItem({
               variant="small-icon"
               icon=${action.icon}
               onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
-              title=${action.title}
+              tooltip=${action.title}
             />
           `)}
           ${showDragButton && html`
@@ -191,7 +207,7 @@ function DynamicListItem({
               variant="small-icon"
               icon="swap-vertical"
               onMouseDown=${handleDragMouseDown}
-              title="Drag to reorder"
+              tooltip="Drag to reorder"
               style=${{ cursor: 'grab' }}
             />
           `}
@@ -201,14 +217,14 @@ function DynamicListItem({
               icon="up-arrow"
               disabled=${index === 0}
               onClick=${onMoveUp}
-              title="Move up"
+              tooltip="Move up"
             />
             <${Button}
               variant="small-icon"
               icon="down-arrow"
               disabled=${index === total - 1}
               onClick=${onMoveDown}
-              title="Move down"
+              tooltip="Move down"
             />
           `}
           <${Button}
@@ -216,7 +232,7 @@ function DynamicListItem({
             icon="trash"
             color="danger"
             onClick=${onDelete}
-            title="Delete"
+            tooltip="Delete"
           />
         </div>
       </${ItemHeader}>
@@ -248,6 +264,8 @@ function CondensedDynamicListItem({
   showDragButton,
   showMoveUpDownButtons,
   headerActions,
+  getEnabled,
+  onToggleEnabled,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -259,6 +277,14 @@ function CondensedDynamicListItem({
 
   return html`
     <${CondensedItemRow} theme=${theme} style=${isDragTarget ? { opacity: 0.3 } : {}}>
+      ${getEnabled != null && html`
+        <input
+          type="checkbox"
+          checked=${getEnabled(item, index)}
+          onChange=${() => { if (onToggleEnabled) onToggleEnabled(item, index); }}
+          style=${{ margin: 0, cursor: 'pointer', flexShrink: 0, alignSelf: 'center' }}
+        />
+      `}
       <${CondensedItemContent}>
         ${renderItem(item, index)}
       </${CondensedItemContent}>
@@ -268,7 +294,7 @@ function CondensedDynamicListItem({
             variant="small-icon"
             icon=${action.icon}
             onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
-            title=${action.title}
+            tooltip=${action.title}
           />
         `)}
         ${showDragButton && html`
@@ -276,7 +302,7 @@ function CondensedDynamicListItem({
             variant="small-icon"
             icon="swap-vertical"
             onMouseDown=${handleDragMouseDown}
-            title="Drag to reorder"
+            tooltip="Drag to reorder"
             style=${{ cursor: 'grab' }}
           />
         `}
@@ -286,14 +312,14 @@ function CondensedDynamicListItem({
             icon="up-arrow"
             disabled=${index === 0}
             onClick=${onMoveUp}
-            title="Move up"
+            tooltip="Move up"
           />
           <${Button}
             variant="small-icon"
             icon="down-arrow"
             disabled=${index === total - 1}
             onClick=${onMoveDown}
-            title="Move down"
+            tooltip="Move down"
           />
         `}
         <${Button}
@@ -301,7 +327,7 @@ function CondensedDynamicListItem({
           icon="trash"
           color="danger"
           onClick=${onDelete}
-          title="Delete"
+          tooltip="Delete"
         />
       </div>
     </${CondensedItemRow}>
@@ -367,6 +393,8 @@ export function DynamicList({
   showDragButton = true,      // show the swap-vertical drag handle
   showMoveUpDownButtons = false, // show the up/down arrow buttons
   headerActions,               // custom header action buttons
+  getEnabled,                  // optional: (item, index) => boolean – enables per-item toggle checkbox
+  onToggleEnabled,             // optional: (item, index) => void – called when enabled checkbox changes
 }) {
   const theme = currentTheme.value;
 
@@ -615,6 +643,8 @@ export function DynamicList({
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
                 headerActions=${headerActions}
+                getEnabled=${getEnabled}
+                onToggleEnabled=${onToggleEnabled}
                 theme=${theme}
               />
             `
@@ -634,6 +664,8 @@ export function DynamicList({
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
                 headerActions=${headerActions}
+                getEnabled=${getEnabled}
+                onToggleEnabled=${onToggleEnabled}
                 theme=${theme}
               />
             `
@@ -683,6 +715,8 @@ export function DynamicList({
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
             headerActions=${headerActions}
+            getEnabled=${getEnabled}
+            onToggleEnabled=${onToggleEnabled}
             theme=${theme}
           />
         `
@@ -702,6 +736,8 @@ export function DynamicList({
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
             headerActions=${headerActions}
+            getEnabled=${getEnabled}
+            onToggleEnabled=${onToggleEnabled}
             theme=${theme}
           />
         `;

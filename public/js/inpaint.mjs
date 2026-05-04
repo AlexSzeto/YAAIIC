@@ -11,6 +11,7 @@ import { AppHeader } from './app-ui/themed-base.mjs';
 
 import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
+import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint/inpaint-canvas.mjs';
 import { InpaintForm } from './app-ui/inpaint/inpaint-form.mjs';
@@ -574,11 +575,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
-      <${Page}>
-        <${ToastProvider}>
-          <${InpaintApp} />
-        </${ToastProvider}>
-      </${Page}>
+      <${TooltipProvider}>
+        <${Page}>
+          <${ToastProvider}>
+            <${InpaintApp} />
+          </${ToastProvider}>
+        </${Page}>
+      </${TooltipProvider}>
     `, root);
     console.log('Inpaint App V3 mounted successfully');
     

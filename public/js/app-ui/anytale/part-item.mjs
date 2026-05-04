@@ -15,13 +15,12 @@ import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
-import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
-import { getCategoryTree } from '../tags/tag-data.mjs';
+import { getCategoryTree, getTagDefinition } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 
 // ============================================================================
@@ -82,22 +81,6 @@ const AttrRow = styled('div')`
   flex-wrap: wrap;
 `;
 AttrRow.className = 'part-item-attr-row';
-
-const CategoryButtonGroup = styled('div')`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-`;
-CategoryButtonGroup.className = 'part-item-category-button-group';
-
-const CategoryButtonLabel = styled('label')`
-  margin-bottom: 5px;
-  color: ${() => currentTheme.value.colors.text.primary};
-  font-size: ${() => currentTheme.value.typography.fontSize.medium};
-  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
-`;
-CategoryButtonLabel.className = 'part-item-category-button-label';
 
 // ============================================================================
 // Helper: Category attribute value dropdown options
@@ -219,8 +202,8 @@ export function PartItem({ part, onChange }) {
   }, [data.previewImageUrl]);
 
   return html`
-    <${VerticalLayout} gap="small" style=${{ opacity: data.enabled ? 1 : 0.5, transition: 'opacity 0.15s' }}>
-      <!-- Top row: preview image | enabled + name + type -->
+    <${VerticalLayout} gap="small">
+      <!-- Top row: preview image | name + type -->
       <${TopRow}>
         <${PreviewArea} onClick=${handlePreviewClick}>
           ${data.previewImageUrl
@@ -229,11 +212,6 @@ export function PartItem({ part, onChange }) {
           }
         </${PreviewArea}>
         <${RightFields}>
-          <${Checkbox}
-            label="Enabled"
-            checked=${data.enabled}
-            onChange=${(e) => updateData({ enabled: e.target.checked })}
-          />
           <${Input}
             label="Name"
             value=${config.name}
@@ -290,27 +268,26 @@ export function PartItem({ part, onChange }) {
               widthScale="normal"
               heightScale="compact"
             />
-            <${CategoryButtonGroup}>
-              <${CategoryButtonLabel}>Category</${CategoryButtonLabel}>
-              <${Button}
-                variant="small-text"
-                color="secondary"
-                onClick=${() => handleCategoryButtonClick(i)}
-                style=${{ width: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                title=${attr.category || 'Select category'}
-              >
-                ${attr.category
-                  ? attr.category.replace(/^tag_group:/, '').replace(/_/g, ' ')
-                  : 'Select'
-                }
-              </${Button}>
-            </${CategoryButtonGroup}>
+            <${Button}
+              label="Category"
+              variant="small-text"
+              color="secondary"
+              onClick=${() => handleCategoryButtonClick(i)}
+              style=${{ width: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              tooltip=${attr.category || 'Select category'}
+            >
+              ${attr.category
+                ? attr.category.replace(/^tag_group:/, '').replace(/_/g, ' ')
+                : 'Select'
+              }
+            </${Button}>
             <${Select}
               label="Value"
               options=${getCategoryOptions(attr.category)}
               value=${data.categoryAttributeValues?.[i] || ''}
               onChange=${(e) => handleCategoryValueChange(i, e.target.value)}
               heightScale="compact"
+              tooltip=${getTagDefinition(data.categoryAttributeValues?.[i] || '') || null}
             />
           </${AttrRow}>
         `}
@@ -356,6 +333,7 @@ export function PartItem({ part, onChange }) {
               value=${data.customAttributeValues?.[i] || ''}
               onChange=${(e) => handleCustomValueChange(i, e.target.value)}
               heightScale="compact"
+              tooltip=${getTagDefinition(data.customAttributeValues?.[i] || '') || null}
             />
           </${AttrRow}>
         `}
@@ -368,7 +346,9 @@ export function PartItem({ part, onChange }) {
       <!-- Category selector panel (opened by category attribute buttons) -->
       <${TagSelectorPanel}
         isOpen=${selectorPanelOpen}
-        initialSearchTerm=${editingCatIndex >= 0 ? config.categoryAttributes[editingCatIndex]?.category || '' : ''}
+        initialSearchTerm=${editingCatIndex >= 0
+          ? (config.categoryAttributes[editingCatIndex]?.category || config.name.toLowerCase())
+          : ''}
         onReplace=${handleCategoryReplace}
         onClose=${() => setSelectorPanelOpen(false)}
         showInsert=${false}

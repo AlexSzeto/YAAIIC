@@ -3,6 +3,7 @@ import { Component } from 'preact';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { getWidthScaleStyle, getHeightScaleStyle } from '../util.mjs';
+import { TooltipContext } from '../overlays/tooltip.mjs';
 
 // =========================================================================
 // Styled Components
@@ -95,6 +96,7 @@ ErrorMessage.className = 'error-message';
  * <Select label="Type" options={[...]} widthScale="full" heightScale="compact" />
  */
 export class Select extends Component {
+  static contextType = TooltipContext;
   constructor(props) {
     super(props);
     this.state = {
@@ -124,9 +126,15 @@ export class Select extends Component {
       heightScale = 'normal',
       disabled = false,
       value,
+      tooltip = null,
       ...rest
     } = this.props;
     const { theme } = this.state;
+    const tooltipCtx = this.context;
+    const tooltipHandlers = tooltip && tooltipCtx ? {
+      onMouseEnter: (e) => tooltipCtx.show(tooltip, e.clientX, e.clientY),
+      onMouseLeave: () => tooltipCtx.hide(),
+    } : {};
     const { width, flex } = getWidthScaleStyle(widthScale);
     const { height, padding } = getHeightScaleStyle(heightScale);
 
@@ -156,6 +164,7 @@ export class Select extends Component {
           fontFamily=${theme.typography.fontFamily}
           transition=${`border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
           focusColor=${error ? theme.colors.danger.border : theme.colors.primary.border}
+          ...${tooltipHandlers}
           ...${rest}
         >
           ${options.map(opt => html`

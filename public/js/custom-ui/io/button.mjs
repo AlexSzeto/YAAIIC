@@ -3,6 +3,7 @@ import { Component } from 'preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Icon } from '../layout/icon.mjs';
+import { TooltipContext } from '../overlays/tooltip.mjs';
 
 // =========================================================================
 // Styled Components
@@ -70,6 +71,21 @@ const TextSpan = styled('span')`
 `;
 TextSpan.className = 'text-span';
 
+const LabelWrapper = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+LabelWrapper.className = 'button-label-wrapper';
+
+const LabelText = styled('span')`
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+  font-family: ${props => props.fontFamily};
+`;
+LabelText.className = 'button-label-text';
+
 /**
  * Button - Themed button with multiple variants and states
  * 
@@ -116,6 +132,8 @@ TextSpan.className = 'text-span';
  * <Button color="transparent">No Background</Button>
  */
 export class Button extends Component {
+  static contextType = TooltipContext;
+
   constructor(props) {
     super(props);
     this.state = {
@@ -141,11 +159,14 @@ export class Button extends Component {
       color = 'secondary',
       loading = false, 
       disabled = false, 
-      icon = null, 
+      icon = null,
+      label = null,
+      tooltip = null,
       children, 
       ...rest 
     } = this.props;
     const { theme } = this.state;
+    const tooltipCtx = this.context;
 
     // Determine sizing based on variant
     const isSmall = variant.startsWith('small');
@@ -237,7 +258,48 @@ export class Button extends Component {
         ? html`<${Icon} name=${icon} size=${size.iconSize} color=${iconColor} />`
         : null;
 
-    return html`
+    const tooltipHandlers = tooltip && tooltipCtx ? {
+      onMouseEnter: (e) => tooltipCtx.show(tooltip, e.clientX, e.clientY),
+      onMouseLeave: () => tooltipCtx.hide(),
+    } : {};
+
+    return label ? html`
+      <${LabelWrapper}>
+        <${LabelText}
+          color=${theme.colors.text.secondary}
+          fontSize=${theme.typography.fontSize.medium}
+          fontWeight=${theme.typography.fontWeight.medium}
+          fontFamily=${theme.typography.fontFamily}
+        >${label}</${LabelText}>
+        <${StyledButton} 
+          disabled=${disabled || loading}
+          gap=${size.gap}
+          height=${size.height}
+          minWidth=${size.minWidth}
+          padding=${size.padding}
+          width=${isIconOnly ? size.height : undefined}
+          fontSize=${size.fontSize}
+          fontWeight=${theme.typography.fontWeight.medium}
+          fontFamily=${theme.typography.fontFamily}
+          textColor=${textColor}
+          borderWidth=${theme.border.width}
+          borderStyle=${theme.border.style}
+          borderColor=${borderColor}
+          borderRadius=${size.borderRadius}
+          bgColor=${bgColor}
+          hoverBg=${colorStyles.hover}
+          hoverBorder=${colorStyles.hoverBorder}
+          activeBg=${colorStyles.active}
+          activeBorder=${colorStyles.activeBorder}
+          transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+          ...${tooltipHandlers}
+          ...${rest}
+        >
+          ${iconElement}
+          ${hasText && html`<${TextSpan}>${children}</${TextSpan}>`}
+        </${StyledButton}>
+      </${LabelWrapper}>
+    ` : html`
       <${StyledButton} 
         disabled=${disabled || loading}
         gap=${size.gap}
@@ -259,6 +321,7 @@ export class Button extends Component {
         activeBg=${colorStyles.active}
         activeBorder=${colorStyles.activeBorder}
         transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+        ...${tooltipHandlers}
         ...${rest}
       >
         ${iconElement}

@@ -11,7 +11,6 @@ import { html } from 'htm/preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
-import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
@@ -32,12 +31,22 @@ const ButtonRow = styled('div')`
 `;
 ButtonRow.className = 'button-row';
 
-const ScrollableContent = styled('div')`
-  padding-right: ${() => currentTheme.value.spacing.small.padding};
+const EditLayout = styled('div')`
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow: hidden;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+  padding-top: ${() => currentTheme.value.spacing.small.padding};
+`;
+EditLayout.className = 'edit-layout';
+
+const PartsScrollArea = styled('div')`
   overflow-y: auto;
   flex: 1 1 auto;
+  padding-right: ${() => currentTheme.value.spacing.small.padding};
 `;
-ScrollableContent.className = 'scrollable-content';
+PartsScrollArea.className = 'parts-scroll-area';
 
 const PromptPreview = styled('div')`
   padding: ${() => currentTheme.value.spacing.small.padding};
@@ -178,16 +187,16 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
 
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
-    <${ScrollableContent}>
-      <${VerticalLayout}>
-        <${Input}
-          label="Character Name"
-          value=${name}
-          onInput=${(e) => setName(e.target.value)}
-          placeholder="Character name"
-          widthScale="full"
-        />
+    <${EditLayout}>
+      <${Input}
+        label="Character Name"
+        value=${name}
+        onInput=${(e) => setName(e.target.value)}
+        placeholder="Character name"
+        widthScale="full"
+      />
 
+      <${PartsScrollArea}>
         <${DynamicList}
           title="Parts"
           items=${parts}
@@ -198,48 +207,50 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
             />
           `}
           getTitle=${(item) => item.config?.name || '(unnamed)'}
+          getEnabled=${(item) => item.data?.enabled ?? true}
+          onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
           createItem=${createDefaultPart}
           onChange=${setParts}
           addLabel="Add Part"
           headerActions=${headerActions}
         />
+      </${PartsScrollArea}>
 
-        ${previewPrompt ? html`
-          <${PromptPreview}>
-            <strong>Prompt preview:</strong> ${previewPrompt}
-          </${PromptPreview}>
-        ` : null}
+      ${previewPrompt ? html`
+        <${PromptPreview}>
+          <strong>Prompt preview:</strong> ${previewPrompt}
+        </${PromptPreview}>
+      ` : null}
 
-        <${ButtonRow}>
-          <${Button}
-            variant="large-text"
-            color="primary"
-            icon="play"
-            onClick=${handleGenerate}
-            disabled=${isGenerating}
-          >
-            ${isGenerating ? 'Generating...' : 'Generate'}
-          <//>
-          <${Button}
-            variant="medium-text"
-            color="danger"
-            icon="trash"
-            onClick=${onDelete}
-            disabled=${!canDelete}
-          >
-            Delete
-          <//>
-          <${Button}
-            variant="medium-text"
-            color="danger"
-            icon="x"
-            onClick=${handleClear}
-          >
-            Clear
-          <//>
-        </${ButtonRow}>
-      </${VerticalLayout}>
-    </${ScrollableContent}>
+      <${ButtonRow}>
+        <${Button}
+          variant="large-text"
+          color="primary"
+          icon="play"
+          onClick=${handleGenerate}
+          disabled=${isGenerating}
+        >
+          ${isGenerating ? 'Generating...' : 'Generate'}
+        <//>
+        <${Button}
+          variant="medium-text"
+          color="danger"
+          icon="trash"
+          onClick=${onDelete}
+          disabled=${!canDelete}
+        >
+          Delete
+        <//>
+        <${Button}
+          variant="medium-text"
+          color="danger"
+          icon="x"
+          onClick=${handleClear}
+        >
+          Clear
+        <//>
+      </${ButtonRow}>
+    </${EditLayout}>
   `;
 
   const playContent = html`

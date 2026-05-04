@@ -30,6 +30,7 @@ import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
+import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
 import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { backfillMissingProperties } from './util.mjs';
@@ -1207,11 +1208,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (root) {
     render(html`
       <${HoverPanelProvider}>
-        <${Page}>
-          <${ToastProvider}>
-            <${App} />
-          </${ToastProvider}>
-        </${Page}>
+        <${TooltipProvider}>
+          <${Page}>
+            <${ToastProvider}>
+              <${App} />
+            </${ToastProvider}>
+          </${Page}>
+        </${TooltipProvider}>
       </${HoverPanelProvider}>
     `, root);
     console.log('App V3 mounted successfully');
