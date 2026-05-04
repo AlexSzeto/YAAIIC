@@ -286,6 +286,7 @@ export function AnyTalePage() {
             onStateLoaded=${handleStateLoaded}
             onDelete=${() => handleDeleteImage(nav.currentItem)}
             canDelete=${!!nav.currentItem}
+            currentItem=${nav.currentItem}
           />
         </${RightColumn}>
       </${TwoColumn}>

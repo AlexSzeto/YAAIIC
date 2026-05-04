@@ -89,7 +89,7 @@ PlayPlaceholder.className = 'play-placeholder';
  * @param {Function} [props.onDelete]      – Called when Delete is clicked
  * @param {boolean}  [props.canDelete]     – Whether the delete button is enabled
  */
-export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete, canDelete }) {
+export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete, canDelete, currentItem = null }) {
   const toast = useToast();
   const [name, setName] = useState('');
   const [parts, setParts] = useState([]);
@@ -228,10 +228,16 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
 
-  // ── Reprompt: reload configs from library ────────────────────────────────
+  // ── Reprompt: restore parts from the currently displayed image ─────────
   const handleReprompt = useCallback(async () => {
+    if (!currentItem?.parts || Object.keys(currentItem.parts).length === 0) {
+      toast.info('No parts data found on the current image');
+      return;
+    }
+
     setIsReprompting(true);
     try {
+      // Fetch the latest library configs so we get up-to-date attribute definitions
       let latestLibrary = libraryParts;
       try {
         const response = await fetch('/anytale/parts');
@@ -246,45 +252,55 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
         console.error('[AnyTaleForm] Reprompt: failed to fetch library parts:', err);
       }
 
-      // Compute updated parts and count actual changes
-      let changedCount = 0;
-      const updatedParts = parts.map(part => {
-        const libraryConfig = latestLibrary.find(p => p.uid === part.config.uid)
-          ?? latestLibrary.find(p => p.name === part.config.name);
-        if (!libraryConfig) return part;
+      // Rebuild the parts list from the image's stored parts data
+      const newParts = [];
+      const skipped = [];
+      for (const [partName, storedData] of Object.entries(currentItem.parts)) {
+        const libraryConfig = latestLibrary.find(p => p.name === partName);
+        if (!libraryConfig) {
+          skipped.push(partName);
+          continue;
+        }
 
-        const newCategoryValues = {};
+        // For each attribute in the latest config, use the stored value if it
+        // exists (attribute name matches), otherwise default to empty string.
+        // Stored values whose key doesn't match any current attribute are ignored.
+        const categoryAttributeValues = {};
         for (const attr of (libraryConfig.categoryAttributes || [])) {
-          newCategoryValues[attr.name] = part.data.categoryAttributeValues?.[attr.name] ?? '';
+          categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
         }
-        const newCustomValues = {};
+        const customAttributeValues = {};
         for (const attr of (libraryConfig.customAttributes || [])) {
-          newCustomValues[attr.name] = part.data.customAttributeValues?.[attr.name] ?? '';
+          customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
         }
 
-        const configChanged = JSON.stringify(libraryConfig) !== JSON.stringify(part.config);
-        const catChanged = JSON.stringify(newCategoryValues) !== JSON.stringify(part.data.categoryAttributeValues ?? {});
-        const customChanged = JSON.stringify(newCustomValues) !== JSON.stringify(part.data.customAttributeValues ?? {});
-        if (configChanged || catChanged || customChanged) changedCount++;
-
-        return {
-          ...part,
-          config: libraryConfig,
-          data: { ...part.data, categoryAttributeValues: newCategoryValues, customAttributeValues: newCustomValues },
+        const newPart = createDefaultPart();
+        newPart.config = { ...libraryConfig };
+        newPart.data = {
+          enabled: storedData.enabled ?? true,
+          categoryAttributeValues,
+          customAttributeValues,
+          previewImageUrl: storedData.previewImageUrl || '',
         };
-      });
+        newParts.push(newPart);
+      }
 
-      setParts(updatedParts);
+      if (newParts.length === 0) {
+        toast.error('None of the image\'s parts were found in the library');
+        return;
+      }
 
-      if (changedCount > 0) {
-        toast.success(`Reprompted: ${changedCount} part(s) updated from library`);
+      setParts(newParts);
+
+      if (skipped.length > 0) {
+        toast.info(`Loaded ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
       } else {
-        toast.info('No library changes found');
+        toast.success(`Reprompted: loaded ${newParts.length} part(s) from image`);
       }
     } finally {
       setIsReprompting(false);
     }
-  }, [libraryParts, parts, toast]);
+  }, [currentItem, libraryParts, toast]);
 
   // Build preview prompt
   const previewPrompt = assemblePrompt(parts);
@@ -351,7 +367,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
           color="secondary"
           icon="refresh"
           onClick=${handleReprompt}
-          disabled=${isGenerating || isReprompting}
+          disabled=${isGenerating || isReprompting || !currentItem?.parts}
         >
           ${isReprompting ? 'Reprompting...' : 'Reprompt'}
         <//>

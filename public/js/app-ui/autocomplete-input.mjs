@@ -48,6 +48,9 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
   const instanceRef = useRef(null);
   const styleIdRef = useRef(null);
   const onSelectRef = useRef(onSelect);
+  // Always holds the latest suggestions array for use in the keydown handler
+  const suggestionsRef = useRef(suggestions || []);
+  suggestionsRef.current = suggestions || [];
 
   // Keep onSelect ref current so the closure inside autoComplete.js always
   // calls the latest prop without needing to tear down and re-initialize.
@@ -136,14 +139,11 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
                 event.keyCode === 40 ? instance.next() : instance.previous();
                 break;
               case 13: // Enter
-                if (instance.cursor >= 0) {
-                  event.preventDefault();
-                  instance.select();
-                }
-                break;
               case 9: // Tab
-                if (instance.cursor >= 0) {
+                if (instance.isOpen) {
                   event.preventDefault();
+                  // If no item is highlighted yet, advance to the first result
+                  if (instance.cursor < 0) instance.next();
                   instance.select();
                 }
                 break;
@@ -165,26 +165,28 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestionsKey]);
 
-  // Handle Tab/Enter on the raw input when the dropdown is NOT open
-  // (i.e. user typed something without selecting from the list)
+  // Handle Tab/Enter on the raw input when the dropdown is NOT open.
+  // When the dropdown IS open, the internal autoComplete keydown handler
+  // takes care of selecting the first/highlighted item.
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' || e.key === 'Tab') {
       const inst = instanceRef.current;
       const isOpen = inst && inst.isOpen;
-      const hasCursor = inst && inst.cursor >= 0;
 
-      // If dropdown is open and has a selection, let the autoComplete keydown handle it
-      if (isOpen && hasCursor) return;
+      // Dropdown is open — let the internal autoComplete keydown handle it
+      if (isOpen) return;
 
-      // Otherwise treat Tab/Enter as "confirm typed value"
+      // Dropdown is closed — complete to the first matching suggestion
       const current = e.target.value.trim();
       if (current) {
+        const firstMatch = suggestionsRef.current.find(
+          s => s.toLowerCase().includes(current.toLowerCase())
+        );
         e.preventDefault();
-        if (isOpen) inst.close();
         // Clear native input
         e.target.value = '';
         e.target.dispatchEvent(new Event('input', { bubbles: true }));
-        onSelectRef.current?.(current);
+        onSelectRef.current?.(firstMatch ?? current);
       }
     }
   }, []);
