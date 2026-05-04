@@ -41,6 +41,9 @@ export const MEDIA_DATA_PATH = path.join(DATABASE_DIR, 'media-data.json');
 /** Path to `server/database/brew-data.json` */
 export const BREW_DATA_PATH = path.join(DATABASE_DIR, 'brew-data.json');
 
+/** Path to `server/database/anytale-data.json` */
+export const ANYTALE_DATA_PATH = path.join(DATABASE_DIR, 'anytale-data.json');
+
 /** Path to `server/database/sound-sources.json` */
 export const SOUND_SOURCES_PATH = path.join(DATABASE_DIR, 'sound-sources.json');
 

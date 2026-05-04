@@ -12,6 +12,7 @@ import { html } from 'htm/preact';
 import { useState, useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
+import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
@@ -83,6 +84,14 @@ const AttrRow = styled('div')`
 AttrRow.className = 'part-item-attr-row';
 
 // ============================================================================
+// Helper: uid derivation
+// ============================================================================
+
+function toPartUid(name) {
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// ============================================================================
 // Helper: Category attribute value dropdown options
 // ============================================================================
 
@@ -134,10 +143,15 @@ function getCustomOptions(optionsString) {
  */
 export function PartItem({ part, onChange }) {
   const { config, data } = part;
+  const toast = useToast();
 
   // ── Category selector panel state ───────────────────────────────────────
   const [selectorPanelOpen, setSelectorPanelOpen] = useState(false);
   const [editingCatIndex, setEditingCatIndex] = useState(-1);
+
+  // ── Library action loading states ───────────────────────────────────────
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ── Update helpers ──────────────────────────────────────────────────────
   const updateConfig = useCallback((patch) => {
@@ -154,13 +168,14 @@ export function PartItem({ part, onChange }) {
   }, [updateConfig]);
 
   const handleCategoryValueChange = useCallback((index, value) => {
+    const attrName = config.categoryAttributes[index]?.name ?? String(index);
     updateData({
       categoryAttributeValues: {
         ...data.categoryAttributeValues,
-        [index]: value,
+        [attrName]: value,
       },
     });
-  }, [data, updateData]);
+  }, [data, config.categoryAttributes, updateData]);
 
   // ── Custom attributes ───────────────────────────────────────────────────
   const handleCustomAttrsChange = useCallback((newAttrs) => {
@@ -168,13 +183,14 @@ export function PartItem({ part, onChange }) {
   }, [updateConfig]);
 
   const handleCustomValueChange = useCallback((index, value) => {
+    const attrName = config.customAttributes[index]?.name ?? String(index);
     updateData({
       customAttributeValues: {
         ...data.customAttributeValues,
-        [index]: value,
+        [attrName]: value,
       },
     });
-  }, [data, updateData]);
+  }, [data, config.customAttributes, updateData]);
 
   // ── Category selector panel ─────────────────────────────────────────────
   const handleCategoryButtonClick = useCallback((index) => {
@@ -193,6 +209,61 @@ export function PartItem({ part, onChange }) {
     handleCategoryAttrsChange(next);
     setSelectorPanelOpen(false);
   }, [editingCatIndex, config.categoryAttributes, handleCategoryAttrsChange]);
+
+  // ── Library: Save to Library ────────────────────────────────────────────
+  const handleSaveToLibrary = useCallback(async () => {
+    if (!config.name || !config.name.trim()) {
+      toast.warning('Part must have a name before saving');
+      return;
+    }
+    const uid = toPartUid(config.name);
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/anytale/parts/${uid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...config, uid }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+      }
+      // Persist derived uid back into config so future deletes work by uid
+      onChange({ ...part, config: { ...config, uid } });
+      toast.success(`Saved ${config.name} to library`);
+    } catch (err) {
+      console.error('[PartItem] Save to library failed:', err);
+      toast.error(`Failed to save: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [config, part, onChange, toast]);
+
+  // ── Library: Delete from Library ────────────────────────────────────────
+  const handleDeleteFromLibrary = useCallback(async () => {
+    if (!config.name || !config.name.trim()) return;
+    const uid = config.uid || toPartUid(config.name);
+    const confirmed = window.confirm(`Delete '${config.name}' from the library? This cannot be undone.`);
+    if (!confirmed) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/anytale/parts/${uid}`, { method: 'DELETE' });
+      if (response.status === 404) {
+        toast.warning(`${config.name} is not in the library`);
+        return;
+      }
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+      }
+      toast.success(`Deleted ${config.name} from library`);
+    } catch (err) {
+      console.error('[PartItem] Delete from library failed:', err);
+      toast.error(`Failed to delete: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [config, toast]);
 
   // ── Preview click ───────────────────────────────────────────────────────
   const handlePreviewClick = useCallback(() => {
@@ -285,10 +356,10 @@ export function PartItem({ part, onChange }) {
             <${Select}
               label="Value"
               options=${getCategoryOptions(attr.category)}
-              value=${data.categoryAttributeValues?.[i] || ''}
+              value=${data.categoryAttributeValues?.[attr.name] || ''}
               onChange=${(e) => handleCategoryValueChange(i, e.target.value)}
               heightScale="compact"
-              tooltip=${getTagDefinition(data.categoryAttributeValues?.[i] || '') || null}
+              tooltip=${getTagDefinition(data.categoryAttributeValues?.[attr.name] || '') || null}
             />
           </${AttrRow}>
         `}
@@ -331,10 +402,10 @@ export function PartItem({ part, onChange }) {
             <${Select}
               label="Value"
               options=${getCustomOptions(attr.options)}
-              value=${data.customAttributeValues?.[i] || ''}
+              value=${data.customAttributeValues?.[attr.name] || ''}
               onChange=${(e) => handleCustomValueChange(i, e.target.value)}
               heightScale="compact"
-              tooltip=${getTagDefinition(data.customAttributeValues?.[i] || '') || null}
+              tooltip=${getTagDefinition(data.customAttributeValues?.[attr.name] || '') || null}
             />
           </${AttrRow}>
         `}
@@ -343,6 +414,28 @@ export function PartItem({ part, onChange }) {
         addLabel="Add Custom Attribute"
         showDragButton=${false}
       />
+
+      <!-- Library Actions -->
+      <${AttrRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
+        <${Button}
+          variant="small-text"
+          color="secondary"
+          icon="save"
+          onClick=${handleSaveToLibrary}
+          disabled=${isSaving || isDeleting}
+        >
+          ${isSaving ? 'Saving...' : 'Save to Library'}
+        </${Button}>
+        <${Button}
+          variant="small-text"
+          color="danger"
+          icon="delete"
+          onClick=${handleDeleteFromLibrary}
+          disabled=${isSaving || isDeleting}
+        >
+          ${isDeleting ? 'Deleting...' : 'Delete from Library'}
+        </${Button}>
+      </${AttrRow}>
 
       <!-- Category selector panel (opened by category attribute buttons) -->
       <${TagSelectorPanel}

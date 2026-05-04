@@ -16,8 +16,8 @@
  *     },
  *     data: {
  *       enabled: boolean,
- *       categoryAttributeValues: { [index: number]: string },
- *       customAttributeValues: { [index: number]: string },
+ *       categoryAttributeValues: { [attributeName: string]: string },
+ *       customAttributeValues: { [attributeName: string]: string },
  *       previewImageUrl: string
  *     }
  *   }>

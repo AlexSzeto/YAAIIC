@@ -184,7 +184,7 @@ export function AnyTalePage() {
     }
   }, []);
 
-  const handleGenerate = useCallback(async (assembledPrompt, name) => {
+  const handleGenerate = useCallback(async (assembledPrompt, name, partsData) => {
     if (!workflow) {
       toast.error('Please select a workflow first');
       return;
@@ -199,6 +199,7 @@ export function AnyTalePage() {
         prompt: assembledPrompt,
         seed,
         orientation: workflow.orientation,
+        parts: partsData && Object.keys(partsData).length > 0 ? partsData : null,
       };
 
       // Add extraInputs with their declared defaults

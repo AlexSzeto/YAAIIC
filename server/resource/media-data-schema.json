@@ -20,6 +20,7 @@
     "length": { "type": "number", "default": null },
     "framerate": { "type": "number", "default": null },
     "clips": { "type": "array", "default": null },
-    "extraInputs": { "type": "object", "default": {} }
+    "extraInputs": { "type": "object", "default": {} },
+    "parts": { "type": "object", "default": null }
   }
 }
