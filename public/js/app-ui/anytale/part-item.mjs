@@ -21,6 +21,7 @@ import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
+import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { getCategoryTree, getTagDefinition } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 
@@ -213,7 +214,7 @@ export function PartItem({ part, onChange }) {
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
     if (!config.name || !config.name.trim()) {
-      toast.warning('Part must have a name before saving');
+      toast.info('Part must have a name before saving');
       return;
     }
     const uid = toPartUid(config.name);
@@ -243,13 +244,13 @@ export function PartItem({ part, onChange }) {
   const handleDeleteFromLibrary = useCallback(async () => {
     if (!config.name || !config.name.trim()) return;
     const uid = config.uid || toPartUid(config.name);
-    const confirmed = window.confirm(`Delete '${config.name}' from the library? This cannot be undone.`);
-    if (!confirmed) return;
+    const result = await showDialog(`Delete '${config.name}' from the library? This cannot be undone.`, 'Delete from Library', ['Delete', 'Cancel']);
+    if (result !== 'Delete') return;
     setIsDeleting(true);
     try {
       const response = await fetch(`/anytale/parts/${uid}`, { method: 'DELETE' });
       if (response.status === 404) {
-        toast.warning(`${config.name} is not in the library`);
+        toast.info(`${config.name} is not in the library`);
         return;
       }
       if (!response.ok) {

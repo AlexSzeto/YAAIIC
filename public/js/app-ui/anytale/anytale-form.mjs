@@ -8,7 +8,7 @@
  * Persists state to localStorage via anytale-state.mjs.
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -20,6 +20,8 @@ import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { AutocompleteInput } from '../autocomplete-input.mjs';
+import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -92,11 +94,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   const [name, setName] = useState('');
   const [parts, setParts] = useState([]);
   const [activeTab, setActiveTab] = useState('edit');
+  const [isReprompting, setIsReprompting] = useState(false);
 
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
-  const [libraryInput, setLibraryInput] = useState('');
-  const libraryListId = useRef('anytale-library-list-' + Math.random().toString(36).slice(2));
 
   // Load persisted state on mount
   useEffect(() => {
@@ -125,13 +126,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
     if (!trimmed) return;
     const match = libraryParts.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
     if (!match) {
-      toast.warning(`No saved part named '${trimmed}' found`);
+      toast.info(`No saved part named '${trimmed}' found`);
       return;
     }
     const newPart = createDefaultPart();
     newPart.config = { ...newPart.config, ...match };
     setParts(prev => [...prev, newPart]);
-    setLibraryInput('');
   }, [libraryParts, toast]);
 
   const handleClear = useCallback(async () => {
@@ -230,40 +230,61 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
 
   // ── Reprompt: reload configs from library ────────────────────────────────
   const handleReprompt = useCallback(async () => {
-    let latestLibrary = libraryParts;
+    setIsReprompting(true);
     try {
-      const response = await fetch('/anytale/parts');
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          latestLibrary = data;
-          setLibraryParts(data);
+      let latestLibrary = libraryParts;
+      try {
+        const response = await fetch('/anytale/parts');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            latestLibrary = data;
+            setLibraryParts(data);
+          }
         }
+      } catch (err) {
+        console.error('[AnyTaleForm] Reprompt: failed to fetch library parts:', err);
       }
-    } catch (err) {
-      console.error('[AnyTaleForm] Reprompt: failed to fetch library parts:', err);
+
+      // Compute updated parts and count actual changes
+      let changedCount = 0;
+      const updatedParts = parts.map(part => {
+        const libraryConfig = latestLibrary.find(p => p.uid === part.config.uid)
+          ?? latestLibrary.find(p => p.name === part.config.name);
+        if (!libraryConfig) return part;
+
+        const newCategoryValues = {};
+        for (const attr of (libraryConfig.categoryAttributes || [])) {
+          newCategoryValues[attr.name] = part.data.categoryAttributeValues?.[attr.name] ?? '';
+        }
+        const newCustomValues = {};
+        for (const attr of (libraryConfig.customAttributes || [])) {
+          newCustomValues[attr.name] = part.data.customAttributeValues?.[attr.name] ?? '';
+        }
+
+        const configChanged = JSON.stringify(libraryConfig) !== JSON.stringify(part.config);
+        const catChanged = JSON.stringify(newCategoryValues) !== JSON.stringify(part.data.categoryAttributeValues ?? {});
+        const customChanged = JSON.stringify(newCustomValues) !== JSON.stringify(part.data.customAttributeValues ?? {});
+        if (configChanged || catChanged || customChanged) changedCount++;
+
+        return {
+          ...part,
+          config: libraryConfig,
+          data: { ...part.data, categoryAttributeValues: newCategoryValues, customAttributeValues: newCustomValues },
+        };
+      });
+
+      setParts(updatedParts);
+
+      if (changedCount > 0) {
+        toast.success(`Reprompted: ${changedCount} part(s) updated from library`);
+      } else {
+        toast.info('No library changes found');
+      }
+    } finally {
+      setIsReprompting(false);
     }
-
-    setParts(prev => prev.map(part => {
-      const libraryConfig = latestLibrary.find(p => p.uid === part.config.uid)
-        ?? latestLibrary.find(p => p.name === part.config.name);
-      if (!libraryConfig) return part;
-
-      const newCategoryValues = {};
-      for (const attr of (libraryConfig.categoryAttributes || [])) {
-        newCategoryValues[attr.name] = part.data.categoryAttributeValues?.[attr.name] ?? '';
-      }
-      const newCustomValues = {};
-      for (const attr of (libraryConfig.customAttributes || [])) {
-        newCustomValues[attr.name] = part.data.customAttributeValues?.[attr.name] ?? '';
-      }
-      return {
-        ...part,
-        config: libraryConfig,
-        data: { ...part.data, categoryAttributeValues: newCategoryValues, customAttributeValues: newCustomValues },
-      };
-    }));
-  }, [libraryParts]);
+  }, [libraryParts, parts, toast]);
 
   // Build preview prompt
   const previewPrompt = assemblePrompt(parts);
@@ -272,49 +293,21 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   const editContent = html`
     <${EditLayout}>
       <div style="flex: none">
-        <${Input}
-          label="Character Name"
-          value=${name}
-          onInput=${(e) => setName(e.target.value)}
-          placeholder="Character name"
-          widthScale="full"
-        />
-        <datalist id=${libraryListId.current}>
-          ${libraryParts.map(p => html`<option value=${p.name} key=${p.uid || p.name} />`)}
-        </datalist>
-        <label style=${{
-          display: 'block',
-          fontSize: currentTheme.value.typography.fontSize.small,
-          color: currentTheme.value.colors.text.secondary,
-          marginTop: currentTheme.value.spacing.small.gap,
-          marginBottom: '2px',
-        }}>Add Part from Library</label>
-        <input
-          list=${libraryListId.current}
-          value=${libraryInput}
-          onInput=${(e) => setLibraryInput(e.target.value)}
-          onKeyDown=${(e) => {
-            if (e.key === 'Tab' || e.key === 'Enter') {
-              e.preventDefault();
-              handleLibrarySelect(libraryInput);
-            }
-          }}
-          onChange=${(e) => {
-            // fires when user selects from datalist dropdown on some browsers
-            handleLibrarySelect(e.target.value);
-          }}
-          placeholder="Type to search saved parts..."
-          style=${{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: currentTheme.value.spacing.small.padding,
-            background: currentTheme.value.colors.background.input,
-            color: currentTheme.value.colors.text.primary,
-            border: `${currentTheme.value.border.width} ${currentTheme.value.border.style} ${currentTheme.value.colors.border.primary}`,
-            borderRadius: currentTheme.value.border.radius,
-            fontSize: currentTheme.value.typography.fontSize.normal,
-          }}
-        />
+        <${VerticalLayout} gap="small">
+          <${Input}
+            label="Character Name"
+            value=${name}
+            onInput=${(e) => setName(e.target.value)}
+            placeholder="Character name"
+            widthScale="full"
+          />
+          <${AutocompleteInput}
+            label="Add Part from Library"
+            placeholder="Type to search saved parts..."
+            suggestions=${libraryParts.map(p => p.name)}
+            onSelect=${handleLibrarySelect}
+          />
+        </${VerticalLayout}>
       </div>
 
       <${PartsScrollArea}>
@@ -358,9 +351,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
           color="secondary"
           icon="refresh"
           onClick=${handleReprompt}
-          disabled=${isGenerating}
+          disabled=${isGenerating || isReprompting}
         >
-          Reprompt
+          ${isReprompting ? 'Reprompting...' : 'Reprompt'}
         <//>
         <${Button}
           variant="medium-text"
