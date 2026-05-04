@@ -1,4 +1,4 @@
-// Dress-Up page entry point
+// AnyTale page entry point
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { Page } from './custom-ui/layout/page.mjs';
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </${Page}>
       </${TooltipProvider}>
     `, root);
-    console.log('Dress-Up page mounted successfully');
+    console.log('AnyTale page mounted successfully');
 
     // Load tags after rendering so DOM elements exist for autocomplete
     setTimeout(async () => {

@@ -28,6 +28,7 @@ const ButtonRow = styled('div')`
   display: flex;
   gap: ${() => currentTheme.value.spacing.small.gap};
   flex-wrap: wrap;
+  flex: none;
 `;
 ButtonRow.className = 'button-row';
 
@@ -42,6 +43,8 @@ const EditLayout = styled('div')`
 EditLayout.className = 'edit-layout';
 
 const PartsScrollArea = styled('div')`
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   flex: 1 1 auto;
   padding-right: ${() => currentTheme.value.spacing.small.padding};
@@ -57,6 +60,7 @@ const PromptPreview = styled('div')`
   word-break: break-word;
   max-height: 80px;
   overflow-y: auto;
+  flex: none;
 `;
 PromptPreview.className = 'prompt-preview';
 
@@ -188,13 +192,15 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
     <${EditLayout}>
-      <${Input}
-        label="Character Name"
-        value=${name}
-        onInput=${(e) => setName(e.target.value)}
-        placeholder="Character name"
-        widthScale="full"
-      />
+      <div style="flex: none">
+        <${Input}
+          label="Character Name"
+          value=${name}
+          onInput=${(e) => setName(e.target.value)}
+          placeholder="Character name"
+          widthScale="full"
+        />
+      </div>
 
       <${PartsScrollArea}>
         <${DynamicList}

@@ -55,9 +55,9 @@ export function HamburgerMenu() {
     },
     {
       label: 'AnyTale',
-      href:  '/dress-up.html',
+      href:  '/anytale.html',
       icon:  'book',
-      active: currentPath === '/dress-up.html',
+      active: currentPath === '/anytale.html',
     },
     {
       label: 'Change Theme',
@@ -80,7 +80,7 @@ export function HamburgerMenu() {
         variant="large-icon"
         icon=${open ? 'x' : 'menu'}
         onClick=${() => setOpen(o => !o)}
-        title="Navigation menu"
+        tooltip="Navigation menu"
         aria-label="Navigation menu"
         aria-expanded=${open}
         aria-haspopup="true"

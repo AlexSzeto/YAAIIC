@@ -154,7 +154,7 @@ export class NavigatorControl extends Component {
               variant="medium-icon"
               color="secondary"
               icon="chevrons-left"
-              title="First page"
+              tooltip="First page"
               aria-label="Go to first page"
               disabled=${!canGoFirst}
               onClick=${onFirst}
@@ -165,7 +165,7 @@ export class NavigatorControl extends Component {
             variant="medium-icon"
             color="secondary"
             icon="chevron-left"
-            title="Previous page"
+            tooltip="Previous page"
             aria-label="Go to previous page"
             disabled=${!canGoPrev}
             onClick=${onPrev}
@@ -182,7 +182,7 @@ export class NavigatorControl extends Component {
             variant="medium-icon"
             color="secondary"
             icon="chevron-right"
-            title="Next page"
+            tooltip="Next page"
             aria-label="Go to next page"
             disabled=${!canGoNext}
             onClick=${onNext}
@@ -193,7 +193,7 @@ export class NavigatorControl extends Component {
               variant="medium-icon"
               color="secondary"
               icon="chevrons-right"
-              title="Last page"
+              tooltip="Last page"
               aria-label="Go to last page"
               disabled=${!canGoLast}
               onClick=${onLast}
@@ -525,7 +525,7 @@ export class NavigatorComponent extends Component {
             variant="medium-icon"
             color="secondary"
             icon="chevron-left"
-            title="Previous page"
+            tooltip="Previous page"
             aria-label="Go to previous page"
             disabled=${!hasMultiplePages || isFirstPage}
             onClick=${this.goToPreviousPage}
@@ -542,7 +542,7 @@ export class NavigatorComponent extends Component {
             variant="medium-icon"
             color="secondary"
             icon="chevron-right"
-            title="Next page"
+            tooltip="Next page"
             aria-label="Go to next page"
             disabled=${!hasMultiplePages || isLastPage}
             onClick=${this.goToNextPage}

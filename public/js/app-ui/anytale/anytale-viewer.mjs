@@ -1,5 +1,5 @@
 /**
- * dress-up-viewer.mjs – Left-column image viewer for the Dress-Up page.
+ * anytale-viewer.mjs – Left-column image viewer for the AnyTale page.
  *
  * Displays the current image at full portrait resolution with prev/next
  * navigation buttons and a {current}/{total} counter.
@@ -98,7 +98,7 @@ SlideshowControls.className = 'slideshow-controls';
  * @param {Function} props.onNext
  * @param {Object|null} props.currentItem
  */
-export function DressUpViewer({ items = [], currentIndex = 0, onNavigate, onPrev, onNext, onFirst, onLast, currentItem }) {
+export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev, onNext, onFirst, onLast, currentItem }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   const timerRef = useRef(null);

@@ -296,7 +296,7 @@ export function GeneratedResult({
                     variant="small-icon"
                     icon="arrow-out-up-right-square"
                     onClick=${() => createImageModal(image.imageUrl, false)}
-                    title="View image"
+                    tooltip="View image"
                   />
                 </${ViewButtonOverlay}>
               ` : null}
@@ -306,7 +306,7 @@ export function GeneratedResult({
                     variant="small-icon"
                     icon="revision"
                     onClick=${() => onRegenerate && onRegenerate(image.uid, 'imageUrl')}
-                    title="Regenerate album art"
+                    tooltip="Regenerate album art"
                     disabled=${isGenerating}
                   />
                 </${RegenerateImageOverlay}>
@@ -414,7 +414,7 @@ export function GeneratedResult({
             icon="broken-arrow-up"
             onClick=${() => onReprompt && onReprompt(image)}
             disabled=${!onReprompt}
-            title="Load all generation settings from this result"
+            tooltip="Load all generation settings from this result"
           >
             Reprompt
           </${Button}>
@@ -423,7 +423,7 @@ export function GeneratedResult({
             icon="check-circle"
             onClick=${() => onSelectAsInput && onSelectAsInput(image)}
             disabled=${!onSelectAsInput || isSelectDisabled}
-            title="Use this image as input"
+            tooltip="Use this image as input"
           >
             Select
           </${Button}>
@@ -433,7 +433,7 @@ export function GeneratedResult({
                 variant="primary"
                 icon="pencil"
                 onClick=${() => onSoundEdit && onSoundEdit(image)}
-                title="Edit this audio"
+                tooltip="Edit this audio"
               >
                 Edit
               </${Button}>`
@@ -442,7 +442,7 @@ export function GeneratedResult({
                 variant="primary"
                 icon="brush"
                 onClick=${() => onInpaint && onInpaint(image)}
-                title="Inpaint this image"
+                tooltip="Inpaint this image"
               >
                 Inpaint
               </${Button}>`
@@ -452,7 +452,7 @@ export function GeneratedResult({
             icon="export"
             onClick=${handleExport}
             disabled=${!image.uid}
-            title="Export this media"
+            tooltip="Export this media"
           >
             Export
           </${Button}>
@@ -461,7 +461,7 @@ export function GeneratedResult({
             icon="trash"
             onClick=${() => onDelete && onDelete(image)}
             disabled=${!image.uid || !onDelete}
-            title="Delete this image"
+            tooltip="Delete this image"
           >
             Delete
           </${Button}>
@@ -558,28 +558,28 @@ class TabbedInfoField extends Component {
                 variant="small-icon"
                 icon="revision"
                 onClick=${() => onRegenerate && onRegenerate(image.uid, activeTab.id)}
-                title="Regenerate ${activeTab.name}"
+                tooltip="Regenerate ${activeTab.name}"
                 disabled=${!canRegenerate || isGenerating}
               />
               <${Button}
                 variant="small-icon"
                 icon="copy"
                 onClick=${() => onCopy(activeTab.value, activeTab.name)}
-                title="Copy ${activeTab.name}"
+                tooltip="Copy ${activeTab.name}"
                 disabled=${!onCopy || !activeTab.value}
               />
               <${Button}
                 variant="small-icon"
                 icon="broken-arrow-up"
                 onClick=${activeTab.onUse}
-                title=${activeTab.useTitle || `Use ${activeTab.name}`}
+                tooltip=${activeTab.useTitle || `Use ${activeTab.name}`}
                 disabled=${!activeTab.onUse}
               />
               <${Button}
                 variant="small-icon"
                 icon="pencil"
                 onClick=${activeTab.canEdit ? this.handleEditClick : null}
-                title="Edit"
+                tooltip="Edit"
                 disabled=${!activeTab.canEdit}
               />
             ` : html`
@@ -588,14 +588,14 @@ class TabbedInfoField extends Component {
                 color="success"
                 icon="check"
                 onClick=${this.handleSaveClick}
-                title="Save"
+                tooltip="Save"
               />
               <${Button}
                 variant="small-icon"
                 color="danger"
                 icon="x"
                 onClick=${onCancel}
-                title="Cancel"
+                tooltip="Cancel"
               />
             `}
           </${InfoButtons}>
@@ -649,21 +649,21 @@ function InfoField({
               variant="small-icon"
               icon="copy"
               onClick=${onCopy}
-              title="Copy ${label}"
+              tooltip="Copy ${label}"
               disabled=${!onCopy}
             />
             <${Button}
               variant="small-icon"
               icon="broken-arrow-up"
               onClick=${onUse}
-              title=${useTitle || `Use ${label}`}
+              tooltip=${useTitle || `Use ${label}`}
               disabled=${!onUse}
             />
             <${Button}
               variant="small-icon"
               icon="pencil"
               onClick=${canEdit ? handleEditClick : null}
-              title="Edit"
+              tooltip="Edit"
               disabled=${!canEdit}
             />
           ` : html`
@@ -672,14 +672,14 @@ function InfoField({
               color="success"
               icon="check"
               onClick=${handleSaveClick}
-              title="Save"
+              tooltip="Save"
             />
             <${Button}
               variant="small-icon"
               color="danger"
               icon="x"
               onClick=${onCancel}
-              title="Cancel"
+              tooltip="Cancel"
             />
           `}
         </${InfoButtons}>

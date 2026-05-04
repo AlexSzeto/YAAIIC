@@ -1,5 +1,5 @@
 /**
- * anytale.mjs – Top-level page component for the Dress-Up generation mode.
+ * anytale.mjs – Top-level page component for the AnyTale generation mode.
  *
  * Layout:
  *   - Top strip: WorkflowSelector filtered to Image workflows
@@ -25,7 +25,7 @@ import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
-import { DressUpViewer } from './dress-up-viewer.mjs';
+import { AnyTaleViewer } from './anytale-viewer.mjs';
 import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 
@@ -266,7 +266,7 @@ export function AnyTalePage() {
 
       <${TwoColumn}>
         <${LeftColumn}>
-          <${DressUpViewer}
+          <${AnyTaleViewer}
             items=${history}
             currentIndex=${nav.currentIndex}
             onNavigate=${nav.selectByIndex}

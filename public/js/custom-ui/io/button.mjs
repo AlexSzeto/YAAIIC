@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 import { Icon } from '../layout/icon.mjs';
 import { TooltipContext } from '../overlays/tooltip.mjs';
 
@@ -22,6 +23,7 @@ const StyledButton = styled('button')`
   min-width: ${props => props.minWidth};
   padding: ${props => props.padding};
   width: ${props => props.width || 'auto'};
+  flex: ${props => props.flex || 'none'};
   
   /* Typography */
   font-size: ${props => props.fontSize};
@@ -75,14 +77,16 @@ const LabelWrapper = styled('div')`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: ${props => props.width || 'auto'};
+  flex: ${props => props.flex || 'none'};
 `;
 LabelWrapper.className = 'button-label-wrapper';
 
 const LabelText = styled('span')`
+  margin-bottom: 5px;
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
   font-weight: ${props => props.fontWeight};
-  font-family: ${props => props.fontFamily};
 `;
 LabelText.className = 'button-label-text';
 
@@ -108,6 +112,7 @@ LabelText.className = 'button-label-text';
  * @param {Function} [props.onClick] - Click handler
  * @param {string} [props.title] - Tooltip text
  * @param {string} [props.type='button'] - Button type attribute
+ * @param {'normal'|'compact'|'full'|'wide'} [props.widthScale='normal'] - Width override: auto | 100px | 100%+flex-grow | 400px
  * @param {preact.ComponentChildren} [props.children] - Button text (for text variants)
  * @returns {preact.VNode}
  * 
@@ -162,6 +167,7 @@ export class Button extends Component {
       icon = null,
       label = null,
       tooltip = null,
+      widthScale = 'normal',
       children, 
       ...rest 
     } = this.props;
@@ -249,6 +255,10 @@ export class Button extends Component {
       textColor = theme.colors.text.disabled;
     }
 
+    const { width: scaleWidth, flex: scaleFlex } = getWidthScaleStyle(widthScale);
+    const buttonWidth = widthScale !== 'normal' ? scaleWidth : (isIconOnly ? size.height : undefined);
+    const buttonFlex = widthScale !== 'normal' ? (scaleFlex || undefined) : undefined;
+
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
     // Use theme spinner color for loading state for better visibility across themes
     const spinnerColor = theme.colors.spinner.color;
@@ -264,7 +274,7 @@ export class Button extends Component {
     } : {};
 
     return label ? html`
-      <${LabelWrapper}>
+      <${LabelWrapper} width=${buttonWidth} flex=${buttonFlex}>
         <${LabelText}
           color=${theme.colors.text.secondary}
           fontSize=${theme.typography.fontSize.medium}
@@ -277,7 +287,8 @@ export class Button extends Component {
           height=${size.height}
           minWidth=${size.minWidth}
           padding=${size.padding}
-          width=${isIconOnly ? size.height : undefined}
+          width=${buttonWidth}
+          flex=${buttonFlex}
           fontSize=${size.fontSize}
           fontWeight=${theme.typography.fontWeight.medium}
           fontFamily=${theme.typography.fontFamily}
@@ -306,7 +317,8 @@ export class Button extends Component {
         height=${size.height}
         minWidth=${size.minWidth}
         padding=${size.padding}
-        width=${isIconOnly ? size.height : undefined}
+        width=${buttonWidth}
+        flex=${buttonFlex}
         fontSize=${size.fontSize}
         fontWeight=${theme.typography.fontWeight.medium}
         fontFamily=${theme.typography.fontFamily}

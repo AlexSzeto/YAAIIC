@@ -16,6 +16,7 @@ import { useState, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
+import { Checkbox } from '../io/checkbox.mjs';
 import { Icon } from '../layout/icon.mjs';
 
 // ============================================================================
@@ -184,12 +185,10 @@ function DynamicListItem({
           color=${theme.colors.text.secondary}
         />
         ${getEnabled != null && html`
-          <input
-            type="checkbox"
+          <${Checkbox}
             checked=${getEnabled(item, index)}
             onClick=${handleToggleEnabled}
             onChange=${() => {}}
-            style=${{ margin: 0, cursor: 'pointer', flexShrink: 0 }}
           />
         `}
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
@@ -278,11 +277,9 @@ function CondensedDynamicListItem({
   return html`
     <${CondensedItemRow} theme=${theme} style=${isDragTarget ? { opacity: 0.3 } : {}}>
       ${getEnabled != null && html`
-        <input
-          type="checkbox"
+        <${Checkbox}
           checked=${getEnabled(item, index)}
           onChange=${() => { if (onToggleEnabled) onToggleEnabled(item, index); }}
-          style=${{ margin: 0, cursor: 'pointer', flexShrink: 0, alignSelf: 'center' }}
         />
       `}
       <${CondensedItemContent}>

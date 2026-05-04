@@ -265,12 +265,13 @@ export function PartItem({ part, onChange }) {
                 handleCategoryAttrsChange(next);
               }}
               placeholder="Label"
-              widthScale="normal"
+              widthScale="compact"
               heightScale="compact"
             />
             <${Button}
               label="Category"
               variant="small-text"
+              widthScale="compact"
               color="secondary"
               onClick=${() => handleCategoryButtonClick(i)}
               style=${{ width: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
