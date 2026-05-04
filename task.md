@@ -4,6 +4,10 @@
 
 Add a server-side parts library to the AnyTale system so part configs can be saved, searched, and reloaded across sessions. Attribute value keys are migrated from index-based to name-based to enable reliable reconstruction from stored generation data. Parts data (the `data` portion keyed by name) is persisted alongside each generation record in `media-data.json`.
 
+## Bugs and Flaws
+1. promote "add part from library" input to a proper reusable component at the app-ui level. compare it to sections of the UI that uses the autocomplete library, reapply the styles for the autocomplete UI that are being used everywhere else, and create a generic solution that fixes the autocomplete style/positioning issue that's already been solved for the tag autocomplete inputs.
+2. the reprompt button currently doesn't do anything, even though both parts config and parts data are being saved properly.
+
 ## Tasks
 
 - [x] **Task 1: Create the `anytale` server feature domain**

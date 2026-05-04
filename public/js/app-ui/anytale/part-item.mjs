@@ -429,7 +429,7 @@ export function PartItem({ part, onChange }) {
         <${Button}
           variant="small-text"
           color="danger"
-          icon="delete"
+          icon="trash"
           onClick=${handleDeleteFromLibrary}
           disabled=${isSaving || isDeleting}
         >

@@ -184,7 +184,7 @@ export class Button extends Component {
     // Size configurations
     const sizes = {
       small: {
-        height: '28px',
+        height: isIconOnly ? '28px' : '34px',
         minWidth: isIconOnly ? '28px' : 'auto',
         padding: isIconOnly ? '0' : theme.spacing.small.buttonPadding,
         fontSize: theme.typography.fontSize.small,
