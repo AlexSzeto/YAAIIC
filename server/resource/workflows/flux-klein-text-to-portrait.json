@@ -1,0 +1,246 @@
+{
+  "76": {
+    "inputs": {
+      "value": "Excessively detailed fantasy painting with thick heavily textured oil brushstrokes in a painterly digital style, with dramatic lighting, character dynamically posed\n"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "114": {
+    "inputs": {
+      "path": "./image.png",
+      "overwrite": "true",
+      "image": [
+        "77:86",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  },
+  "77:84": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "77:85": {
+    "inputs": {
+      "noise": [
+        "77:90",
+        0
+      ],
+      "guider": [
+        "77:94",
+        0
+      ],
+      "sampler": [
+        "77:84",
+        0
+      ],
+      "sigmas": [
+        "77:97",
+        0
+      ],
+      "latent_image": [
+        "77:87",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "77:86": {
+    "inputs": {
+      "samples": [
+        "77:85",
+        0
+      ],
+      "vae": [
+        "77:93",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "77:87": {
+    "inputs": {
+      "width": [
+        "77:88",
+        0
+      ],
+      "height": [
+        "77:89",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "77:88": {
+    "inputs": {
+      "value": 768
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "77:89": {
+    "inputs": {
+      "value": 960
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "77:92": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "77:93": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "77:94": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "77:119",
+        0
+      ],
+      "positive": [
+        "77:96",
+        0
+      ],
+      "negative": [
+        "77:95",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "77:95": {
+    "inputs": {
+      "conditioning": [
+        "77:96",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "77:96": {
+    "inputs": {
+      "text": [
+        "76",
+        0
+      ],
+      "clip": [
+        "77:92",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "77:97": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "77:88",
+        0
+      ],
+      "height": [
+        "77:89",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "77:91": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "77:90": {
+    "inputs": {
+      "noise_seed": 63619861963714
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "77:119": {
+    "inputs": {
+      "lora_name": "ClydeCaldwell_Klein_v1.safetensors",
+      "strength_model": 0.5,
+      "model": [
+        "77:116",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "77:116": {
+    "inputs": {
+      "lora_name": "ModernFantasyPaintArt_f2Klein.safetensors",
+      "strength_model": 0.9,
+      "model": [
+        "77:91",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  }
+}
