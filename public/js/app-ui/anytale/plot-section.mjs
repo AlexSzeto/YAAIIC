@@ -33,12 +33,14 @@ import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 const SectionWrapper = styled('div')`
   display: flex;
   flex-direction: column;
-  gap: ${() => currentTheme.value.spacing.small.gap};
+  gap: ${() => currentTheme.value.spacing.large.gap};
   padding-top: ${() => currentTheme.value.spacing.medium.padding};
 `;
 SectionWrapper.className = 'plot-section-wrapper';
 
-const ButtonRow = styled('div')`\n  display: flex;\n  gap: ${() => currentTheme.value.spacing.small.gap};
+const ButtonRow = styled('div')`
+  display: flex;
+  gap: ${() => currentTheme.value.spacing.small.gap};
   flex-wrap: wrap;
   align-items: center;
 `;
@@ -203,12 +205,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
 
   // ── Page management ───────────────────────────────────────────────────────
   const handleAddPage = useCallback(() => {
-    setPlot(prev => ({
-      ...prev,
-      pages: [...prev.pages, { tags: '', parts: [] }],
-    }));
-    onPageChange && onPageChange(plot.pages.length); // navigate to new page
-  }, [plot.pages.length, onPageChange]);
+    const insertAt = currentPageIndex + 1;
+    const duplicate = JSON.parse(JSON.stringify(currentPage));
+    setPlot(prev => {
+      const newPages = [...prev.pages];
+      newPages.splice(insertAt, 0, duplicate);
+      return { ...prev, pages: newPages };
+    });
+    onPageChange && onPageChange(insertAt);
+  }, [currentPageIndex, currentPage, onPageChange]);
 
   const handleDeletePage = useCallback(async () => {
     if (plot.pages.length <= 1) {
@@ -242,14 +247,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
 
   return html`
     <${SectionWrapper}>
+      <${H2}>Plot</${H2}>
+
       <${AutocompleteInput}
         label="Load Plot by Name"
         placeholder="Type to search saved plots..."
         suggestions=${plotList.map(p => p.name)}
         onSelect=${handleLoadPlot}
       />
-
-      <${H2}>Plot</${H2}>
 
       <${VerticalLayout} gap="small">
         <${Input}
@@ -269,7 +274,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
       </${VerticalLayout}>
 
       <!-- Page outline panel: tags, modifiers, navigation -->
-      <${OutlinePanel}>
+      <${VerticalLayout} gap="medium">
+        <${H2}>Page</${H2}>
+        <${OutlinePanel}>
         <${TagInput}
           label="Page Tags"
           value=${currentPage.tags}
@@ -286,6 +293,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
             <${PartModifierRow}>
               <${Input}
                 value=${mod.identifier}
+                heightScale="compact"
                 onInput=${(e) => {
                   const updatedParts = [...(currentPage.parts || [])];
                   updatedParts[modIdx] = { ...mod, identifier: e.target.value };
@@ -295,7 +303,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
                 widthScale="full"
               />
               <${Checkbox}
-                label="Disable"
+                label="Force Disable"
                 checked=${mod.forceDisable}
                 onChange=${(e) => {
                   const updatedParts = [...(currentPage.parts || [])];
@@ -305,6 +313,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
               />
               <${Input}
                 value=${mod.templateTag}
+                heightScale="compact"
                 onInput=${(e) => {
                   const updatedParts = [...(currentPage.parts || [])];
                   updatedParts[modIdx] = { ...mod, templateTag: e.target.value };
@@ -332,11 +341,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
             onLast=${() => navigateTo(pageCount - 1)}
             showFirstLast=${true}
           />
-          <${Button} variant="small-icon" icon="plus" title="Add page" onClick=${handleAddPage} />
-          <${Button} variant="small-icon" icon="trash" title="Delete page" onClick=${handleDeletePage} disabled=${pageCount <= 1} />
+          <${Button} variant="medium-icon" icon="plus" title="Add page" onClick=${handleAddPage} />
+          <${Button} variant="medium-icon" icon="trash" title="Delete page" onClick=${handleDeletePage} disabled=${pageCount <= 1} />
         </${NavRow}>
       </${OutlinePanel}>
-
+      </${VerticalLayout}>
       <${ButtonRow}>
         <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}

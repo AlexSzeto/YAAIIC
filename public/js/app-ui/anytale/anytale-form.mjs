@@ -41,7 +41,7 @@ const EditLayout = styled('div')`
   flex-direction: column;
   flex: 1 1 auto;
   overflow: hidden;
-  gap: ${() => currentTheme.value.spacing.small.gap};
+  gap: ${() => currentTheme.value.spacing.large.gap};
   padding-top: ${() => currentTheme.value.spacing.small.padding};
 `;
 EditLayout.className = 'edit-layout';
@@ -335,51 +335,59 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
             placeholder="Character name"
             widthScale="full"
           />
-          <${AutocompleteInput}
-            label="Add Part from Library"
-            placeholder="Type to search saved parts..."
-            suggestions=${libraryParts.map(p => p.name)}
-            onSelect=${handleLibrarySelect}
-          />
         </${VerticalLayout}>
       </div>
 
       <${PartsScrollArea}>
-        <${DynamicList}
-          title="Parts"
-          items=${parts}
-          renderItem=${(item, i) => html`
-            <${PartItem}
-              part=${item}
-              onChange=${(updated) => handlePartChange(i, updated)}
-              libraryPart=${libraryParts.find(p =>
-                (item.config?.uid && p.uid === item.config.uid) ||
-                (item.config?.name && p.name === item.config.name)
-              )}
-              onLibraryChanged=${refreshLibraryParts}
+        <${VerticalLayout} gap="medium">
+          <${VerticalLayout} gap="small">
+            <${H2}>Parts</${H2}>
+            <${AutocompleteInput}
+              label="Add Part from Library"
+              placeholder="Type to search saved parts..."
+              suggestions=${libraryParts.map(p => p.name)}
+              onSelect=${handleLibrarySelect}
             />
-          `}
-          getTitle=${(item) => item.config?.name || '(unnamed)'}
-          getEnabled=${(item) => item.data?.enabled ?? true}
-          onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
-          createItem=${createDefaultPart}
-          onChange=${setParts}
-          addLabel="Add Part"
-          headerActions=${headerActions}
-        />
+          </${VerticalLayout}>
 
-        <${PlotSection}
-          parts=${parts}
-          activePage=${activePlotPage}
-          onPageChange=${setActivePlotPage}
-        />
+          <${DynamicList}
+            title="Parts List"
+            items=${parts}
+            renderItem=${(item, i) => html`
+              <${PartItem}
+                part=${item}
+                onChange=${(updated) => handlePartChange(i, updated)}
+                libraryPart=${libraryParts.find(p =>
+                  (item.config?.uid && p.uid === item.config.uid) ||
+                  (item.config?.name && p.name === item.config.name)
+                )}
+                onLibraryChanged=${refreshLibraryParts}
+              />
+            `}
+            getTitle=${(item) => item.config?.name || '(unnamed)'}
+            getEnabled=${(item) => item.data?.enabled ?? true}
+            onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
+            createItem=${createDefaultPart}
+            onChange=${setParts}
+            addLabel="Add Part"
+            headerActions=${headerActions}
+          />
+
+          <${PlotSection}
+            parts=${parts}
+            activePage=${activePlotPage}
+            onPageChange=${setActivePlotPage}
+          />
+        </${VerticalLayout}>
       </${PartsScrollArea}>
 
       ${previewPrompt ? html`
-        <${H2}>Generation</${H2}>
-        <${PromptPreview}>
-          <strong>Prompt preview:</strong> ${previewPrompt}
-        </${PromptPreview}>
+        <${VerticalLayout} gap="medium">
+          <${H2}>Generation</${H2}>
+          <${PromptPreview}>
+            <strong>Prompt preview:</strong> ${previewPrompt}
+          </${PromptPreview}>
+        </${VerticalLayout}>
       ` : null}
 
       <${ButtonRow}>
