@@ -18,9 +18,11 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
+import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
-import { H2, H3, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { TagInput } from '../tags/tag-input.mjs';
+import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 
@@ -36,16 +38,7 @@ const SectionWrapper = styled('div')`
 `;
 SectionWrapper.className = 'plot-section-wrapper';
 
-const SectionTitle = styled('div')`
-  font-size: ${() => currentTheme.value.typography.fontSize.medium};
-  font-weight: ${() => currentTheme.value.typography.fontWeight.bold};
-  color: ${() => currentTheme.value.colors.text.primary};
-`;
-SectionTitle.className = 'plot-section-title';
-
-const ButtonRow = styled('div')`
-  display: flex;
-  gap: ${() => currentTheme.value.spacing.small.gap};
+const ButtonRow = styled('div')`\n  display: flex;\n  gap: ${() => currentTheme.value.spacing.small.gap};
   flex-wrap: wrap;
   align-items: center;
 `;
@@ -67,27 +60,15 @@ const PartModifierRow = styled('div')`
 `;
 PartModifierRow.className = 'plot-part-modifier-row';
 
-const PartModifierList = styled('div')`
+const OutlinePanel = styled('div')`
+  border: ${() => `${currentTheme.value.border.width} ${currentTheme.value.border.style} ${currentTheme.value.colors.border.secondary}`};
+  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
+  padding: ${() => currentTheme.value.spacing.small.padding};
   display: flex;
   flex-direction: column;
   gap: ${() => currentTheme.value.spacing.small.gap};
 `;
-PartModifierList.className = 'plot-part-modifier-list';
-
-const RemoveButton = styled('button')`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: ${() => currentTheme.value.colors.text.muted};
-  padding: 2px 4px;
-  font-size: ${() => currentTheme.value.typography.fontSize.small};
-  flex-shrink: 0;
-
-  &:hover {
-    color: ${() => currentTheme.value.colors.status.error};
-  }
-`;
-RemoveButton.className = 'plot-remove-btn';
+OutlinePanel.className = 'plot-outline-panel';
 
 // ============================================================================
 // Component
@@ -103,6 +84,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
+  // Tracks the last version saved to / loaded from the server for change detection.
+  const [savedPlot, setSavedPlot] = useState(null);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -150,6 +133,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const fullPlot = await response.json();
       setPlot(fullPlot);
+      setSavedPlot(fullPlot);
       onPageChange && onPageChange(0);
       toast.success(`Loaded plot '${fullPlot.name || match.uid}'`);
     } catch (err) {
@@ -165,6 +149,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
     try {
       await savePlot(uid, plotToSave);
       setPlot(plotToSave);
+      setSavedPlot(plotToSave);
       // Refresh autocomplete list
       const list = await fetchPlotList();
       if (Array.isArray(list)) setPlotList(list);
@@ -193,6 +178,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
       if (Array.isArray(list)) setPlotList(list);
       const blank = createBlankPlot();
       setPlot(blank);
+      setSavedPlot(null);
       onPageChange && onPageChange(0);
       toast.success('Plot deleted');
     } catch (err) {
@@ -211,6 +197,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
     if (result !== 'Clear') return;
     const blank = createBlankPlot();
     setPlot(blank);
+    setSavedPlot(null);
     onPageChange && onPageChange(0);
   }, [onPageChange]);
 
@@ -241,22 +228,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
     onPageChange && onPageChange(Math.min(currentPageIndex, plot.pages.length - 2));
   }, [plot.pages.length, currentPageIndex, pageCount, onPageChange, toast]);
 
-  // ── Part modifier helpers ─────────────────────────────────────────────────
-  const updatePartModifier = useCallback((modIdx, field, value) => {
-    const updatedParts = [...(currentPage.parts || [])];
-    updatedParts[modIdx] = { ...updatedParts[modIdx], [field]: value };
-    updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
-  }, [currentPage, currentPageIndex, updatePage]);
+  // ── Part modifier helpers are handled inline by DynamicList ─────────────
 
-  const addPartModifier = useCallback(() => {
-    const updatedParts = [...(currentPage.parts || []), { identifier: '', forceDisable: false, templateTag: '' }];
-    updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
-  }, [currentPage, currentPageIndex, updatePage]);
-
-  const removePartModifier = useCallback((modIdx) => {
-    const updatedParts = (currentPage.parts || []).filter((_, i) => i !== modIdx);
-    updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
-  }, [currentPage, currentPageIndex, updatePage]);
+  // ── Smart button state ────────────────────────────────────────────────────
+  const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
+  const saveLabel = isInLibrary ? 'Update' : 'Save';
+  const isSaveDisabled = isInLibrary && savedPlot !== null && JSON.stringify(plot) === JSON.stringify(savedPlot);
+  const isDeleteDisabled = !isInLibrary;
 
   // ============================================================================
   // Render
@@ -264,6 +242,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
 
   return html`
     <${SectionWrapper}>
+      <${AutocompleteInput}
+        label="Load Plot by Name"
+        placeholder="Type to search saved plots..."
+        suggestions=${plotList.map(p => p.name)}
+        onSelect=${handleLoadPlot}
+      />
+
       <${H2}>Plot</${H2}>
 
       <${VerticalLayout} gap="small">
@@ -281,84 +266,88 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange }) {
           placeholder="e.g. prelude"
           widthScale="full"
         />
-        <${AutocompleteInput}
-          label="Load Plot by Name"
-          placeholder="Type to search saved plots..."
-          suggestions=${plotList.map(p => p.name)}
-          onSelect=${handleLoadPlot}
-        />
       </${VerticalLayout}>
 
+      <!-- Page outline panel: tags, modifiers, navigation -->
+      <${OutlinePanel}>
+        <${TagInput}
+          label="Page Tags"
+          value=${currentPage.tags}
+          onInput=${(text) => updatePage(currentPageIndex, { ...currentPage, tags: text })}
+          rows=${2}
+          placeholder="Comma-separated tags for this page"
+        />
+
+        <${DynamicList}
+          title="Part Modifiers"
+          items=${currentPage.parts || []}
+          condensed=${true}
+          renderItem=${(mod, modIdx) => html`
+            <${PartModifierRow}>
+              <${Input}
+                value=${mod.identifier}
+                onInput=${(e) => {
+                  const updatedParts = [...(currentPage.parts || [])];
+                  updatedParts[modIdx] = { ...mod, identifier: e.target.value };
+                  updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
+                }}
+                placeholder="Part name or type"
+                widthScale="full"
+              />
+              <${Checkbox}
+                label="Disable"
+                checked=${mod.forceDisable}
+                onChange=${(e) => {
+                  const updatedParts = [...(currentPage.parts || [])];
+                  updatedParts[modIdx] = { ...mod, forceDisable: e.target.checked };
+                  updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
+                }}
+              />
+              <${Input}
+                value=${mod.templateTag}
+                onInput=${(e) => {
+                  const updatedParts = [...(currentPage.parts || [])];
+                  updatedParts[modIdx] = { ...mod, templateTag: e.target.value };
+                  updatePage(currentPageIndex, { ...currentPage, parts: updatedParts });
+                }}
+                placeholder="Tag template (use {{name}})"
+                widthScale="full"
+              />
+            </${PartModifierRow}>
+          `}
+          createItem=${() => ({ identifier: '', forceDisable: false, templateTag: '' })}
+          onChange=${(updatedParts) => updatePage(currentPageIndex, { ...currentPage, parts: updatedParts })}
+          addLabel="Add Modifier"
+          showDragButton=${false}
+        />
+
+        <!-- Navigation row -->
+        <${NavRow}>
+          <${NavigatorControl}
+            currentPage=${currentPageIndex}
+            totalPages=${pageCount}
+            onPrev=${() => navigateTo(currentPageIndex - 1)}
+            onNext=${() => navigateTo(currentPageIndex + 1)}
+            onFirst=${() => navigateTo(0)}
+            onLast=${() => navigateTo(pageCount - 1)}
+            showFirstLast=${true}
+          />
+          <${Button} variant="small-icon" icon="plus" title="Add page" onClick=${handleAddPage} />
+          <${Button} variant="small-icon" icon="trash" title="Delete page" onClick=${handleDeletePage} disabled=${pageCount <= 1} />
+        </${NavRow}>
+      </${OutlinePanel}>
+
       <${ButtonRow}>
-        <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave}>
-          Save
+        <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
+          ${saveLabel}
         <//>
-        <${Button} variant="medium-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!plot.uid}>
+        <${Button} variant="medium-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
           Delete
         <//>
         <${Button} variant="medium-text" color="secondary" icon="x" onClick=${handleClear}>
           Clear
         <//>
       </${ButtonRow}>
-
-      <!-- Page navigation row -->
-      <${NavRow}>
-        <${NavigatorControl}
-          currentPage=${currentPageIndex}
-          totalPages=${pageCount}
-          onPrev=${() => navigateTo(currentPageIndex - 1)}
-          onNext=${() => navigateTo(currentPageIndex + 1)}
-          onFirst=${() => navigateTo(0)}
-          onLast=${() => navigateTo(pageCount - 1)}
-          showFirstLast=${true}
-        />
-        <${Button} variant="small-icon" icon="plus" title="Add page" onClick=${handleAddPage} />
-        <${Button} variant="small-icon" icon="trash" title="Delete page" onClick=${handleDeletePage} disabled=${pageCount <= 1} />
-      </${NavRow}>
-
-      <!-- Page editor -->
-      <${VerticalLayout} gap="small">
-        <${Input}
-          label="Page Tags"
-          value=${currentPage.tags}
-          onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, tags: e.target.value })}
-          placeholder="Comma-separated tags for this page"
-          widthScale="full"
-        />
-
-        <div>
-          <div style="font-size: ${currentTheme.value.typography.fontSize.small}; color: ${currentTheme.value.colors.text.secondary}; margin-bottom: 4px;">
-            Part Modifiers
-          </div>
-          <${PartModifierList}>
-            ${(currentPage.parts || []).map((mod, modIdx) => html`
-              <${PartModifierRow} key=${modIdx}>
-                <${Input}
-                  value=${mod.identifier}
-                  onInput=${(e) => updatePartModifier(modIdx, 'identifier', e.target.value)}
-                  placeholder="Part name or type"
-                  widthScale="full"
-                />
-                <${Checkbox}
-                  label="Disable"
-                  checked=${mod.forceDisable}
-                  onChange=${(e) => updatePartModifier(modIdx, 'forceDisable', e.target.checked)}
-                />
-                <${Input}
-                  value=${mod.templateTag}
-                  onInput=${(e) => updatePartModifier(modIdx, 'templateTag', e.target.value)}
-                  placeholder="Tag template (use {{name}})"
-                  widthScale="full"
-                />
-                <${RemoveButton} onClick=${() => removePartModifier(modIdx)} title="Remove modifier">✕</${RemoveButton}>
-              </${PartModifierRow}>
-            `)}
-          </${PartModifierList}>
-          <${Button} variant="small-text" icon="plus" onClick=${addPartModifier} style="margin-top: 4px;">
-            Add Modifier
-          <//>
-        </div>
-      </${VerticalLayout}>
     </${SectionWrapper}>
   `;
 }

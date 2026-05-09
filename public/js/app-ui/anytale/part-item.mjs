@@ -139,10 +139,13 @@ function getCustomOptions(optionsString) {
 
 /**
  * @param {Object}   props
- * @param {Object}   props.part      – Full part object { id, config, data }
- * @param {Function} props.onChange   – (updatedPart) => void
+ * @param {Object}   props.part              – Full part object { id, config, data }
+ * @param {Function} props.onChange           – (updatedPart) => void
+ * @param {Object}   [props.libraryPart]      – The matching saved library config (or undefined)
+ * @param {Function} [props.onLibraryChanged] – Called after a successful save or delete so the
+ *                                              parent can refresh its library list.
  */
-export function PartItem({ part, onChange }) {
+export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
   const { config, data } = part;
   const toast = useToast();
 
@@ -231,6 +234,7 @@ export function PartItem({ part, onChange }) {
       }
       // Persist derived uid back into config so future deletes work by uid
       onChange({ ...part, config: { ...config, uid } });
+      if (onLibraryChanged) onLibraryChanged();
       toast.success(`Saved ${config.name} to library`);
     } catch (err) {
       console.error('[PartItem] Save to library failed:', err);
@@ -257,6 +261,7 @@ export function PartItem({ part, onChange }) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
+      if (onLibraryChanged) onLibraryChanged();
       toast.success(`Deleted ${config.name} from library`);
     } catch (err) {
       console.error('[PartItem] Delete from library failed:', err);
@@ -423,18 +428,28 @@ export function PartItem({ part, onChange }) {
           color="secondary"
           icon="save"
           onClick=${handleSaveToLibrary}
-          disabled=${isSaving || isDeleting}
+          disabled=${isSaving || isDeleting || (!!libraryPart && JSON.stringify({
+            name: config.name, type: config.type, baseline: config.baseline,
+            previewBaseline: config.previewBaseline,
+            categoryAttributes: config.categoryAttributes,
+            customAttributes: config.customAttributes,
+          }) === JSON.stringify({
+            name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
+            previewBaseline: libraryPart.previewBaseline,
+            categoryAttributes: libraryPart.categoryAttributes,
+            customAttributes: libraryPart.customAttributes,
+          }))}
         >
-          ${isSaving ? 'Saving...' : 'Save to Library'}
+          ${isSaving ? 'Saving...' : (libraryPart ? 'Update' : 'Save')}
         </${Button}>
         <${Button}
           variant="small-text"
           color="danger"
           icon="trash"
           onClick=${handleDeleteFromLibrary}
-          disabled=${isSaving || isDeleting}
+          disabled=${isSaving || isDeleting || !libraryPart}
         >
-          ${isDeleting ? 'Deleting...' : 'Delete from Library'}
+          ${isDeleting ? 'Deleting...' : 'Delete'}
         </${Button}>
       </${AttrRow}>
 

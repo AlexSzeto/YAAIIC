@@ -4,8 +4,8 @@
 Add a "plot data" entity to the anytale feature — a named, sequenced list of pages that augment prompt generation with base tags and per-part overrides, enabling image-to-image story progressions. Users manage plot blocks in a dedicated section of the anytale editor below parts.
 
 ## Bugs
-[] Use a tag autocomplete input for page tags
-[] The Part Modifiers section is not using a custom-ui compact dynamic list. When the add modifier button is pressed (which shouldn't exist in its current form), it throws the following error:
+[x] Use a tag autocomplete input for page tags
+[x] The Part Modifiers section is not using a custom-ui compact dynamic list. When the add modifier button is pressed (which shouldn't exist in its current form), it throws the following error:
 ```
 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'error')
     at plot-section.mjs:87:53
@@ -19,7 +19,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'e
     at ee (preact.js:2:1851)
     at ue (preact.js:2:8074)
 ```
-[] Rearrange the plot UI to the following:
+[x] Rearrange the plot UI to the following:
 - Place the "Load Plot by Name" input above the Plot title text
 - Plot title text (keep the modified H2 tag)
 - Plot name and section
@@ -28,9 +28,9 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'e
   - Modifiers
   - navigation
 - Save, delete, clear buttons for the plot
-[] Add a 'Generation' title (use H2) before the prompt preview text
-[] Intelligently update the management buttons for the parts actions. Change the wording from "Save to Library" to just "Save", and change the wording to "Update" if the part already exists in the library. Disable the "Update" button if the deep compare version of the part data is the same as its library counterpart. Similarly, change the wording from "Delete from Library" to just "Delete", and disable the button if the part isn't already in the library.
-[] Make the same modifications for the parts action buttons to the plot action buttons.
+[x] Add a 'Generation' title (use H2) before the prompt preview text
+[x] Intelligently update the management buttons for the parts actions. Change the wording from "Save to Library" to just "Save", and change the wording to "Update" if the part already exists in the library. Disable the "Update" button if the deep compare version of the part data is the same as its library counterpart. Similarly, change the wording from "Delete from Library" to just "Delete", and disable the button if the part isn't already in the library.
+[x] Make the same modifications for the parts action buttons to the plot action buttons.
 
 ## Tasks
 

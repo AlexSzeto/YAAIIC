@@ -21,7 +21,7 @@ import { loadState, saveState, clearState, createDefaultPart, loadPlot } from '.
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
-import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
 
 // ============================================================================
@@ -115,6 +115,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch library parts:', err));
+  }, []);
+
+  const refreshLibraryParts = useCallback(() => {
+    fetch('/anytale/parts')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
+      .catch(err => console.error('[AnyTaleForm] Failed to refresh library parts:', err));
   }, []);
 
   // Persist on every change
@@ -345,6 +352,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
             <${PartItem}
               part=${item}
               onChange=${(updated) => handlePartChange(i, updated)}
+              libraryPart=${libraryParts.find(p =>
+                (item.config?.uid && p.uid === item.config.uid) ||
+                (item.config?.name && p.name === item.config.name)
+              )}
+              onLibraryChanged=${refreshLibraryParts}
             />
           `}
           getTitle=${(item) => item.config?.name || '(unnamed)'}
@@ -364,6 +376,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
       </${PartsScrollArea}>
 
       ${previewPrompt ? html`
+        <${H2}>Generation</${H2}>
         <${PromptPreview}>
           <strong>Prompt preview:</strong> ${previewPrompt}
         </${PromptPreview}>
