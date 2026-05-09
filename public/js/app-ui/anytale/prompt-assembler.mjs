@@ -52,17 +52,54 @@ function deduplicate(tags) {
  * Assemble the final image prompt from all enabled parts.
  *
  * Collects: baseline + categoryAttributeValues + customAttributeValues
+/**
+ * Apply {{name}} substitution in a template tag string.
+ * @param {string} template
+ * @param {string} name
+ * @returns {string}
+ */
+function applyTemplate(template, name) {
+  return template.replace(/\{\{name\}\}/g, name);
+}
+
+/**
+ * Assemble the final image prompt from all enabled parts.
+ *
+ * Collects: baseline + categoryAttributeValues + customAttributeValues
  * Excludes: previewBaseline
  *
- * @param {Array} parts – Array of part objects ({ config, data })
+ * When `activePage` is provided, also:
+ *   1. Appends the page's `tags` to the prompt.
+ *   2. For each enabled part, checks the page's `parts` list for a matching modifier
+ *      (by identifier against part name or type):
+ *      - If `forceDisable` is true, skips that part's tags entirely.
+ *      - If `templateTag` is non-empty, substitutes {{name}} and appends the result.
+ *
+ * @param {Array}  parts      – Array of part objects ({ config, data })
+ * @param {Object} [activePage] – Optional page object from the active plot block
  * @returns {string} Comma-separated prompt string
  */
-export function assemblePrompt(parts) {
+export function assemblePrompt(parts, activePage) {
   const tags = [];
 
   const enabledParts = (parts || []).filter(p => p.data && p.data.enabled);
 
   for (const part of enabledParts) {
+    const partName = part.config?.name || '';
+    const partType = part.config?.type || '';
+
+    // Check for a plot page modifier matching this part
+    let modifier = null;
+    if (activePage && Array.isArray(activePage.parts)) {
+      modifier = activePage.parts.find(m => {
+        const id = (m.identifier || '').toLowerCase();
+        return id === partName.toLowerCase() || id === partType.toLowerCase();
+      });
+    }
+
+    // If the modifier forces this part to be disabled, skip it
+    if (modifier && modifier.forceDisable) continue;
+
     // Baseline tags
     tags.push(...splitTags(part.config.baseline));
 
@@ -71,6 +108,16 @@ export function assemblePrompt(parts) {
 
     // Custom attribute selected values
     tags.push(...collectValues(part.data.customAttributeValues));
+
+    // Append template tag substitution if provided
+    if (modifier && modifier.templateTag && modifier.templateTag.trim()) {
+      tags.push(applyTemplate(modifier.templateTag.trim(), partName));
+    }
+  }
+
+  // Append the page-level base tags
+  if (activePage && activePage.tags) {
+    tags.push(...splitTags(activePage.tags));
   }
 
   return deduplicate(tags).join(', ');

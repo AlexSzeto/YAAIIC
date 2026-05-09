@@ -17,11 +17,12 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
-import { loadState, saveState, clearState, createDefaultPart } from './anytale-state.mjs';
+import { loadState, saveState, clearState, createDefaultPart, loadPlot } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { PlotSection } from './plot-section.mjs';
 
 // ============================================================================
 // Styled Components
@@ -95,6 +96,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   const [parts, setParts] = useState([]);
   const [activeTab, setActiveTab] = useState('edit');
   const [isReprompting, setIsReprompting] = useState(false);
+  const [activePlotPage, setActivePlotPage] = useState(0);
 
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
@@ -143,7 +145,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   }, []);
 
   const handleGenerate = useCallback(() => {
-    const prompt = assemblePrompt(parts);
+    // Retrieve the active plot page from localStorage so PlotSection changes are reflected
+    const currentPlot = loadPlot();
+    const plotPageCount = currentPlot.pages.length;
+    const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
+    const prompt = assemblePrompt(parts, activePage);
     // Build parts data: keyed by part name, only parts with non-empty names
     const partsData = {};
     for (const part of parts) {
@@ -157,7 +163,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
       }
     }
     onGenerate(prompt, name, partsData);
-  }, [parts, name, onGenerate]);
+  }, [parts, name, onGenerate, activePlotPage]);
 
   // Update a single part by index
   const handlePartChange = useCallback((index, updatedPart) => {
@@ -302,8 +308,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
     }
   }, [currentItem, libraryParts, toast]);
 
-  // Build preview prompt
-  const previewPrompt = assemblePrompt(parts);
+  // Build preview prompt (also reflects the active plot page)
+  const previewPrompt = (() => {
+    const currentPlot = loadPlot();
+    const plotPageCount = currentPlot.pages.length;
+    const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
+    return assemblePrompt(parts, activePage);
+  })();
 
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
@@ -343,6 +354,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
           onChange=${setParts}
           addLabel="Add Part"
           headerActions=${headerActions}
+        />
+
+        <${PlotSection}
+          parts=${parts}
+          activePage=${activePlotPage}
+          onPageChange=${setActivePlotPage}
         />
       </${PartsScrollArea}>
 

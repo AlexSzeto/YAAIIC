@@ -113,3 +113,61 @@ export function createDefaultCustomAttribute() {
     options: '',
   };
 }
+
+// ── Plot State ────────────────────────────────────────────────────────────
+
+const PLOT_STORAGE_KEY = 'anytale-plot';
+
+/** @returns {Object} A blank plot block with one empty page. */
+export function createBlankPlot() {
+  return {
+    uid: '',
+    name: '',
+    section: '',
+    pages: [{ tags: '', parts: [] }],
+  };
+}
+
+/**
+ * Load the active plot block from localStorage.
+ * Falls back to a blank plot block if nothing is stored.
+ * @returns {Object}
+ */
+export function loadPlot() {
+  try {
+    const raw = localStorage.getItem(PLOT_STORAGE_KEY);
+    if (!raw) return createBlankPlot();
+    const parsed = JSON.parse(raw);
+    // Ensure at least one page
+    if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
+      parsed.pages = [{ tags: '', parts: [] }];
+    }
+    return {
+      uid: parsed.uid ?? '',
+      name: parsed.name ?? '',
+      section: parsed.section ?? '',
+      pages: parsed.pages,
+    };
+  } catch {
+    return createBlankPlot();
+  }
+}
+
+/**
+ * Persist the active plot block to localStorage.
+ * @param {Object} plot
+ */
+export function savePlotState(plot) {
+  try {
+    localStorage.setItem(PLOT_STORAGE_KEY, JSON.stringify(plot));
+  } catch (err) {
+    console.error('Failed to save anytale plot state:', err);
+  }
+}
+
+/**
+ * Clear the active plot block from localStorage.
+ */
+export function clearPlotState() {
+  localStorage.removeItem(PLOT_STORAGE_KEY);
+}
