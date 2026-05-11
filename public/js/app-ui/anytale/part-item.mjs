@@ -21,7 +21,7 @@ import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
-import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { getCategoryTree, getTagDefinition } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 
@@ -168,8 +168,13 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
 
   // ── Category attributes ─────────────────────────────────────────────────
   const handleCategoryAttrsChange = useCallback((newAttrs) => {
-    updateConfig({ categoryAttributes: newAttrs });
-  }, [updateConfig]);
+    // Remove values for attributes that no longer exist
+    const validNames = new Set(newAttrs.map((a, i) => a.name ?? String(i)));
+    const cleanedValues = Object.fromEntries(
+      Object.entries(data.categoryAttributeValues || {}).filter(([k]) => validNames.has(k))
+    );
+    onChange({ ...part, config: { ...config, categoryAttributes: newAttrs }, data: { ...data, categoryAttributeValues: cleanedValues } });
+  }, [part, config, data, onChange]);
 
   const handleCategoryValueChange = useCallback((index, value) => {
     const attrName = config.categoryAttributes[index]?.name ?? String(index);
@@ -183,8 +188,13 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
 
   // ── Custom attributes ───────────────────────────────────────────────────
   const handleCustomAttrsChange = useCallback((newAttrs) => {
-    updateConfig({ customAttributes: newAttrs });
-  }, [updateConfig]);
+    // Remove values for attributes that no longer exist
+    const validNames = new Set(newAttrs.map((a, i) => a.name ?? String(i)));
+    const cleanedValues = Object.fromEntries(
+      Object.entries(data.customAttributeValues || {}).filter(([k]) => validNames.has(k))
+    );
+    onChange({ ...part, config: { ...config, customAttributes: newAttrs }, data: { ...data, customAttributeValues: cleanedValues } });
+  }, [part, config, data, onChange]);
 
   const handleCustomValueChange = useCallback((index, value) => {
     const attrName = config.customAttributes[index]?.name ?? String(index);
@@ -213,6 +223,28 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
     handleCategoryAttrsChange(next);
     setSelectorPanelOpen(false);
   }, [editingCatIndex, config.categoryAttributes, handleCategoryAttrsChange]);
+
+  // ── Rainbow color options generator ─────────────────────────────────────
+  const RAINBOW_COLORS = ['aqua', 'black', 'blue', 'brown', 'green', 'grey', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
+
+  const handleRainbowAction = useCallback(async (_attr, attrIndex) => {
+    const keyword = await showTextPrompt('Color Keyword', '', 'e.g. eyeshadow');
+    if (!keyword || !keyword.trim()) return;
+    const kw = keyword.trim().toLowerCase();
+    // Build color+keyword tags, keeping only combinations present in the tag database
+    const validTags = RAINBOW_COLORS
+      .map(color => `${color} ${kw}`)
+      .filter(tag => getTagDefinition(tag) !== null);
+    if (validTags.length === 0) {
+      toast.info(`No color variations found for "${kw}"`);
+      return;
+    }
+    const next = [...config.customAttributes];
+    next[attrIndex] = { ...next[attrIndex], options: validTags.join(', ') };
+    handleCustomAttrsChange(next);
+  }, [config.customAttributes, handleCustomAttrsChange, toast]);
+
+  const customAttrHeaderActions = [{ icon: 'palette', title: 'Generate color variations', onClick: handleRainbowAction }];
 
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
@@ -419,6 +451,7 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
         onChange=${handleCustomAttrsChange}
         addLabel="Add Custom Attribute"
         showDragButton=${false}
+        headerActions=${customAttrHeaderActions}
       />
 
       <!-- Library Actions -->
