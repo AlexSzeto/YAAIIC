@@ -97,6 +97,16 @@ export function AnyTalePage() {
   // Folder
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
 
+  // Restore the server-persisted folder on mount
+  useEffect(() => {
+    fetchJson('/folder')
+      .then(folderData => {
+        const folder = folderData.list.find(f => f.uid === folderData.current) || { uid: '', label: 'Unsorted' };
+        setCurrentFolder(folder);
+      })
+      .catch(err => console.error('[AnyTalePage] Failed to load current folder:', err));
+  }, []);
+
   const handleOpenFolderSelect = useCallback(() => {
     openFolderSelect({
       currentFolder,
