@@ -64,8 +64,9 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onPageChange]           – Called when the active page index changes
  * @param {boolean[]} [props.pageLocked=[]]         – Lock state per page index
  * @param {Function} [props.onPageLockedChange]     – Called with updated lock array
+ * @param {Function} [props.onPlotReset]              – Called when the plot is loaded, cleared, or deleted
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -121,6 +122,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       setPlot(fullPlot);
       setSavedPlot(fullPlot);
       onPageChange && onPageChange(0);
+      onPlotReset && onPlotReset();
       toast.success(`Loaded plot '${fullPlot.name || match.uid}'`);
     } catch (err) {
       console.error('[PlotSection] Failed to load plot:', err);
@@ -166,6 +168,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       setPlot(blank);
       setSavedPlot(null);
       onPageChange && onPageChange(0);
+      onPlotReset && onPlotReset();
       toast.success('Plot deleted');
     } catch (err) {
       console.error('[PlotSection] Delete failed:', err);
@@ -185,7 +188,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     setPlot(blank);
     setSavedPlot(null);
     onPageChange && onPageChange(0);
-  }, [onPageChange]);
+    onPlotReset && onPlotReset();
+  }, [onPageChange, onPlotReset]);
 
   // ── Page management ───────────────────────────────────────────────────────
   const handleAddPage = useCallback(() => {

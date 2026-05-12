@@ -227,7 +227,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   }, [editingCatIndex, config.categoryAttributes, handleCategoryAttrsChange]);
 
   // ── Rainbow color options generator ─────────────────────────────────────
-  const RAINBOW_COLORS = ['aqua', 'black', 'blue', 'brown', 'green', 'grey', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
+  const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'green', 'grey', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
 
   const handleRainbowAction = useCallback(async (_attr, attrIndex) => {
     const keyword = await showTextPrompt('Color Keyword', config.name.toLowerCase(), 'e.g. eyeshadow');

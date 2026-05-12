@@ -430,6 +430,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
             onPageChange=${setActivePlotPage}
             pageLocked=${pageLocked}
             onPageLockedChange=${setPageLocked}
+            onPlotReset=${() => setPageLocked([])}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>
