@@ -439,6 +439,17 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
             headerActions=${headerActions}
           />
 
+          <${ButtonRow}>
+            <${Button}
+              variant="medium-text"
+              color="secondary"
+              icon="x"
+              onClick=${handleClear}
+            >
+              Clear Parts
+            <//>
+          </${ButtonRow}>
+
           <${PlotSection}
             parts=${parts}
             activePage=${activePlotPage}
@@ -469,14 +480,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
           disabled=${isGenerating}
         >
           ${isGenerating ? 'Generating...' : 'Generate'}
-        <//>
-        <${Button}
-          variant="medium-text"
-          color="secondary"
-          icon="x"
-          onClick=${handleClear}
-        >
-          Clear
         <//>
       </${ButtonRow}>
     </${EditLayout}>

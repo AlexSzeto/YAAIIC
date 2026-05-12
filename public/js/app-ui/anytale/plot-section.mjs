@@ -392,7 +392,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           Delete
         <//>
         <${Button} variant="medium-text" color="secondary" icon="x" onClick=${handleClear}>
-          Clear
+          Clear Plot
         <//>
       </${ButtonRow}>
     </${SectionWrapper}>
