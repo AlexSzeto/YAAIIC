@@ -21,6 +21,7 @@
     "framerate": { "type": "number", "default": null },
     "clips": { "type": "array", "default": null },
     "extraInputs": { "type": "object", "default": {} },
-    "parts": { "type": "object", "default": null }
+    "parts": { "type": "object", "default": null },
+    "plot": { "type": "object", "default": null }
   }
 }

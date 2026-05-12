@@ -1,98 +1,124 @@
-# Multi-Type Part Values
+# AnyTale Plot Data in Generation Records
 
 ## Goal
 
-Expand the AnyTale part `type` field from a single string to a list of type strings, update all related UI to use a shared chip-based autocomplete component, and update prompt assembly logic so that a part is only hidden if all of its types are explicitly disabled, and template tag matching works against any of a part's types.
+When an AnyTale image is generated, store the active plot's UID, name, and current page number alongside the existing `parts` data. When reprompting from that image, restore the correct plot first (by UID, then by exact name fallback), navigate to the stored page number, and handle gracefully: skip reload if the same plot is already loaded, and skip plot restore entirely if no plot data exists (legacy images).
 
 ## Tasks
 
-- [x] Add `chip` variant to `Button` (`button.mjs`) — mirrors `small-text` sizing and typography but uses fully rounded corners (`border-radius: 9999px`)
-- [x] Add a confirm button (checkmark icon, `small-icon` variant) to `AutocompleteInput` (`autocomplete-input.mjs`) rendered inline to the right of the text input, firing the same Tab/Enter commit logic (first-match suggestion or raw typed value, then clear)
-- [x] Create `ChipAutocompleteInput` component (`public/js/app-ui/chip-autocomplete-input.mjs`) that composes `AutocompleteInput` with a chip row below it; chips use the `chip` Button variant with an `x` icon to remove individual values
-- [x] Migrate `config.type` from `string` to `string[]` in `anytale-state.mjs`: update `createDefaultPart` default to `[]`, and add a migration in `loadState` that coerces any legacy plain-string `type` value to a single-element array (or `[]` if blank)
-- [x] Update `part-item.mjs` to replace the `<Input label="Type">` field with `<ChipAutocompleteInput>`; `PartItem` receives a new `allTypes: string[]` prop for autocomplete suggestions
-- [x] Update `anytale-form.mjs` to compute and pass `allTypes` (all unique type strings across all current parts' `config.type[]` arrays) down to each `PartItem`
-- [x] Replace the inline `AutocompleteInput` + manual chip rendering for Hidden Parts in `plot-section.mjs` with `<ChipAutocompleteInput>`; update `hiddenPartsSuggestions` to expand `config.type[]` per part (instead of a single `config.type` string)
-- [x] Update `assemblePrompt` in `prompt-assembler.mjs` so a part is skipped only when **all** of its `config.type[]` values are present in `hiddenSet` (currently skips if the single type matches)
-- [x] Update `expandPageTags` in `prompt-assembler.mjs` so a `{{typeName}}` token matches a part if **any** of its `config.type[]` values matches the token (case-insensitive)
+- [x] **Add `plot` as a core schema field in `media-data-schema.json`**
+
+  Add a new field `"plot"` to `server/resource/media-data-schema.json`:
+  ```json
+  "plot": { "type": "object", "default": null }
+  ```
+  This mirrors how `parts` is declared. Without this, the sanitizer will demote `plot` into `extraInputs`.
+
+  **Manual test:** Start the server and POST to `/generate` with a `plot` key in the body. Fetch the resulting media entry via `GET /media-data/:uid` and confirm `plot` is a top-level field (not nested under `extraInputs`).
+
+- [x] **Capture and forward plot data through the generate call chain**
+
+  In `anytale-form.mjs` `handleGenerate`, after the existing `loadPlot()` call, build a `plotData` object if the plot has any identifying info:
+  ```js
+  const plotData = (currentPlot.uid || currentPlot.name)
+    ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
+    : null;
+  ```
+  Pass `plotData` as a fourth argument to `onGenerate(prompt, name, partsData, plotData)`.
+
+  In `anytale.mjs` `handleGenerate`, receive `plotData` and include it in the `/generate` payload:
+  ```js
+  plot: plotData ?? null,
+  ```
+
+  **Manual test:** Load a saved plot, generate an image, then fetch the media entry via `GET /media-data/:uid`. Confirm the `plot` field contains the expected `{ uid, name, page }`. Generate without a plot loaded and confirm `plot` is `null`.
+
+- [x] **Expose a reprompt handler from `PlotSection` for external callers**
+
+  Add a new prop `onRepromptHandlerReady` to `PlotSection`. On mount (and when the handler changes), call it with an async function:
+  ```js
+  async function repromptLoadPlot({ uid, name, page }) { ... }
+  ```
+  On unmount, call `onRepromptHandlerReady(null)`.
+
+  The handler logic (inside `PlotSection`, so it has access to `plot`, `plotList`, `onPageChange`, etc.):
+
+  1. **Same plot already loaded** — if `plot.uid` is non-empty and matches `uid`, do not reload the plot (leave any unsaved changes intact), but still call `onPageChange(page)` to navigate to the stored page.
+  2. **Load by UID** — call `GET /anytale/plot/:uid`. If successful, call `setPlot(fullPlot)`, `setSavedPlot(fullPlot)`, and `onPageChange(page)`.
+  3. **UID not found — name fallback** — if the UID fetch fails (404 or error), search `plotList` for an entry where `p.name === name` (exact match). If found, fetch that plot by its UID, then apply the same set/setSaved/navigate steps.
+  4. **Not found** — show a toast: `"Plot from image not found in library; parts were still restored."` and return without modifying the plot state.
+
+  `AnyTaleForm` stores the registered handler in a ref (`plotRepromptFnRef`) via a `useCallback`-based `handlePlotRepromptReady` prop. Wire `PlotSection` to register this in a `useEffect` when the handler function changes.
+
+  **Manual test:** This task has no standalone UI test yet; wire-up is validated in the next task.
+
+- [x] **Call the plot reprompt handler from `AnyTaleForm.handleReprompt`**
+
+  At the end of the existing parts-restore logic in `handleReprompt` (after `setParts(newParts)` succeeds):
+
+  ```js
+  const plotMeta = currentItem?.plot;
+  if (plotMeta && (plotMeta.uid || plotMeta.name) && plotRepromptFnRef.current) {
+    await plotRepromptFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
+  }
+  ```
+
+  If `currentItem.plot` is absent or null, skip this block entirely — parts are restored normally, and the plot section is untouched (backward compatibility for pre-feature images).
+
+  Update the `canReprompt` condition to also check for `currentItem.plot` OR `currentItem.parts` (either is enough to enable the button):
+  ```js
+  const canReprompt = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isReprompting;
+  ```
+
+  **Manual test:**
+  1. Load a saved plot, generate an image, then click Reprompt on that image. Confirm the correct plot is loaded and the page navigator jumps to the stored page.
+  2. Load a *different* plot in the form, then reprompt the same image. Confirm the first plot is re-loaded (UID match triggers a real load).
+  3. Reprompt the same image again without changing anything. Confirm the same plot stays loaded with unsaved changes intact (UID matches, no reload — but page navigation does still fire).
+  4. Delete the plot from the library, then reprompt the image. Confirm the name fallback is attempted and, if the name also doesn't match, the warning toast appears but parts are still restored.
+  5. Reprompt an older image that has `parts` but no `plot` field. Confirm parts are restored and the plot section is unchanged.
 
 ## Implementation Details
 
-### Data Shape Change
+### Data Shape
+
+The `plot` field stored on a media entry:
+```json
+{
+  "plot": {
+    "uid": "my-plot-uid",
+    "name": "My Plot Name",
+    "page": 2
+  }
+}
+```
+`page` is 0-based, matching `activePlotPage`.
+
+### `handleGenerate` Signature Change
+
+`onGenerate` gains a fourth argument:
+```
+onGenerate(assembledPrompt, name, partsData, plotData)
+```
+- `plotData` is `{ uid, name, page }` if a plot with any identifier is active, or `null` otherwise.
+
+### `PlotSection` Props Addition
 
 ```js
-// Before
-config.type = 'hair'
-
-// After
-config.type = ['hair', 'wig']
+PlotSection({ ..., onRepromptHandlerReady })
 ```
+- Called with a function on mount (and whenever the internal handler identity changes).
+- Called with `null` on unmount.
 
-**Migration** (in `loadState`): after parsing, for each part, if `typeof part.config.type === 'string'`, replace it with `part.config.type.trim() ? [part.config.type.trim()] : []`.
-
-### `chip` Button Variant
-
-Add `chip` as a recognised variant in `button.mjs`. It should share the same height, padding, font size, and gap as `small-text`, with the only difference being `border-radius: 9999px`. The size lookup block should treat `chip` the same as `small` for all dimensions, and the `borderRadius` override should be `'9999px'`.
-
-### `AutocompleteInput` Confirm Button
-
-The confirm button sits to the right of the `<Input>` element inside a new flex wrapper row. It uses `variant="small-icon"` and `icon="check"`. Its `onClick` handler replicates the Tab/Enter path: reads the current input value, finds the first matching suggestion (or uses the raw value), fires `onSelect`, then clears the native input element via `document.getElementById(inputIdRef.current)`. The button should be disabled when the `disabled` prop is `true`.
-
-The layout change: wrap the existing `<Input>` in a `display: flex; align-items: flex-end; gap: <small gap>` container, with the `<Input widthScale="full">` taking `flex: 1` and the confirm button sitting beside it.
-
-### `ChipAutocompleteInput` Props
+### `AnyTaleForm` Ref
 
 ```js
-/**
- * @param {string}   props.label
- * @param {string}   [props.placeholder]
- * @param {string[]} props.suggestions   – autocomplete candidates
- * @param {string[]} props.values        – current chip list
- * @param {Function} props.onValuesChange – (newValues: string[]) => void
- * @param {boolean}  [props.disabled]
- */
+const plotRepromptFnRef = useRef(null);
+const handlePlotRepromptReady = useCallback((fn) => {
+  plotRepromptFnRef.current = fn;
+}, []);
 ```
+Passed to `PlotSection` as `onRepromptHandlerReady={handlePlotRepromptReady}`.
 
-`onSelect` from `AutocompleteInput` appends the selected value to `values` if not already present (case-insensitive duplicate check). Each chip is a `<Button variant="chip" icon="x" onClick={removeAtIndex}>` rendered inside a wrapping flex row with `flex-wrap: wrap`.
+### Page Number Mismatch
 
-### Hidden Parts Logic (plot-section.mjs)
-
-- `hiddenPartsSuggestions` currently iterates `[p.config?.name, p.config?.type]`; update to iterate `[p.config?.name, ...(p.config?.type ?? [])]`
-- The `hiddenParts` page field remains `string[]` (unchanged) — the chip input maps directly to it
-
-### Prompt Assembler Changes
-
-**`assemblePrompt` — hidden check (before → after):**
-```js
-// Before
-if (hiddenSet.has(partName) || hiddenSet.has(partType)) continue;
-
-// After
-const types = Array.isArray(part.config?.type) ? part.config.type : [];
-const allTypesHidden = types.length > 0 && types.every(t => hiddenSet.has(t.toLowerCase()));
-if (hiddenSet.has(partName) || allTypesHidden) continue;
-```
-
-**`expandPageTags` — token matching (before → after):**
-```js
-// Before
-.filter(p => (p.config?.type || '').trim().toLowerCase() === tokenType)
-
-// After
-.filter(p => {
-  const types = Array.isArray(p.config?.type) ? p.config.type : [];
-  return types.some(t => t.trim().toLowerCase() === tokenType);
-})
-```
-
-### Manual Testing Checklist
-
-1. Open AnyTale, add a part — confirm the Type field is now a `ChipAutocompleteInput` with no chips by default
-2. Type a type string and press Enter / Tab / the checkmark button — confirm a chip appears
-3. Add a second part, start typing a type in the Type field — confirm the first part's types appear as suggestions
-4. Click `x` on a chip — confirm it is removed
-5. Save the state (navigate away and back) — confirm types persist and reload as an array
-6. Load an older saved state with a plain-string type — confirm it migrates to a single-element array
-7. In the Plot section, confirm Hidden Parts now also has the inline confirm button
-8. In the Plot section, confirm that hiding a type string hides parts that have that type in their array; a part with two types is only hidden if both are in the hidden list
-9. In the Plot section Page Tags, use a `{{typeName}}` template — confirm it matches any part that has that string in its type array
+The stored `page` is applied directly via `onPageChange(page)` with no range clamping at the call site — `PlotSection` already clamps via `Math.min(Math.max(activePage, 0), pageCount - 1)` internally.

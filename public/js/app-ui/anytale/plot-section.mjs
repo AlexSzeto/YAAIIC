@@ -65,8 +65,9 @@ NavRow.className = 'plot-nav-row';
  * @param {boolean[]} [props.pageLocked=[]]         – Lock state per page index
  * @param {Function} [props.onPageLockedChange]     – Called with updated lock array
  * @param {Function} [props.onPlotReset]              – Called when the plot is loaded, cleared, or deleted
+ * @param {Function} [props.onRepromptHandlerReady] – Called with the async reprompt handler on mount; null on unmount
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onRepromptHandlerReady }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -247,6 +248,55 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     }
     return out;
   }, [parts]);
+
+  // ── Reprompt handler: load a plot from a media entry's stored plot data ──
+  const repromptLoadPlot = useCallback(async ({ uid, name, page }) => {
+    // 1. Same plot already loaded — skip reload, just navigate
+    if (plot.uid && plot.uid === uid) {
+      onPageChange && onPageChange(page);
+      return;
+    }
+
+    // 2. Load by UID
+    try {
+      const response = await fetch(`/anytale/plot/${encodeURIComponent(uid)}`);
+      if (response.ok) {
+        const fullPlot = await response.json();
+        setPlot(fullPlot);
+        setSavedPlot(fullPlot);
+        onPageChange && onPageChange(page);
+        return;
+      }
+    } catch (_) {
+      // fall through to name fallback
+    }
+
+    // 3. UID not found — name fallback
+    const nameMatch = plotList.find(p => p.name === name);
+    if (nameMatch) {
+      try {
+        const response = await fetch(`/anytale/plot/${encodeURIComponent(nameMatch.uid)}`);
+        if (response.ok) {
+          const fullPlot = await response.json();
+          setPlot(fullPlot);
+          setSavedPlot(fullPlot);
+          onPageChange && onPageChange(page);
+          return;
+        }
+      } catch (_) {
+        // fall through to not-found
+      }
+    }
+
+    // 4. Not found
+    toast.info('Plot from image not found in library; parts were still restored.');
+  }, [plot.uid, plotList, onPageChange, toast]);
+
+  // Register / deregister the reprompt handler with the parent
+  useEffect(() => {
+    if (onRepromptHandlerReady) onRepromptHandlerReady(repromptLoadPlot);
+    return () => { if (onRepromptHandlerReady) onRepromptHandlerReady(null); };
+  }, [repromptLoadPlot, onRepromptHandlerReady]);
 
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);

@@ -8,7 +8,7 @@
  * Persists state to localStorage via anytale-state.mjs.
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -100,6 +100,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
 
+  // Ref to hold the reprompt handler exposed by PlotSection
+  const plotRepromptFnRef = useRef(null);
+
+  const handlePlotRepromptReady = useCallback((fn) => {
+    plotRepromptFnRef.current = fn;
+  }, []);
+
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
 
@@ -175,7 +182,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
         };
       }
     }
-    onGenerate(prompt, name, partsData);
+    const plotData = (currentPlot.uid || currentPlot.name)
+      ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
+      : null;
+    onGenerate(prompt, name, partsData, plotData);
   }, [parts, name, onGenerate, activePlotPage]);
 
   // Update a single part by index
@@ -316,13 +326,18 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
       } else {
         toast.success(`Reprompted: loaded ${newParts.length} part(s) from image`);
       }
+
+      const plotMeta = currentItem?.plot;
+      if (plotMeta && (plotMeta.uid || plotMeta.name) && plotRepromptFnRef.current) {
+        await plotRepromptFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
+      }
     } finally {
       setIsReprompting(false);
     }
-  }, [currentItem, libraryParts, toast]);
+  }, [currentItem, libraryParts, plotRepromptFnRef, toast]);
 
   // Notify parent when reprompt handler or its enabled state changes
-  const canReprompt = !!currentItem?.parts && !isGenerating && !isReprompting;
+  const canReprompt = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isReprompting;
   useEffect(() => {
     if (onRepromptReady) onRepromptReady(handleReprompt, canReprompt);
     return () => { if (onRepromptReady) onRepromptReady(null, false); };
@@ -431,6 +446,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
             pageLocked=${pageLocked}
             onPageLockedChange=${setPageLocked}
             onPlotReset=${() => setPageLocked([])}
+            onRepromptHandlerReady=${handlePlotRepromptReady}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>

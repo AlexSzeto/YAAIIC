@@ -185,6 +185,17 @@ export function AnyTalePage() {
     }
   }, [history, nav, toast]);
 
+  const handleGalleryDelete = useCallback((deletedUids) => {
+    if (!deletedUids || deletedUids.length === 0) return;
+    const newHistory = history.filter(item => !deletedUids.includes(item.uid));
+    setHistory(newHistory);
+    // If the currently viewed image was deleted, navigate to best available neighbour
+    if (nav.currentItem && deletedUids.includes(nav.currentItem.uid)) {
+      const deletedIndex = history.findIndex(item => item.uid === nav.currentItem.uid);
+      nav.selectByIndex(Math.min(deletedIndex, newHistory.length - 1));
+    }
+  }, [history, nav]);
+
   // Auto-load images matching the restored name on page load
   const handleStateLoaded = useCallback(async (restoredName) => {
     if (!restoredName) return;
@@ -203,7 +214,7 @@ export function AnyTalePage() {
     }
   }, []);
 
-  const handleGenerate = useCallback(async (assembledPrompt, name, partsData) => {
+  const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData) => {
     if (!workflow) {
       toast.error('Please select a workflow first');
       return;
@@ -219,6 +230,7 @@ export function AnyTalePage() {
         seed,
         orientation: workflow.orientation,
         parts: partsData && Object.keys(partsData).length > 0 ? partsData : null,
+        plot: plotData ?? null,
       };
 
       // Add extraInputs with their declared defaults
@@ -334,6 +346,7 @@ export function AnyTalePage() {
             nav.selectByIndex(items.length - 1);
           }
         }}
+        onDelete=${handleGalleryDelete}
         fileTypeFilter=${['image']}
       />
     </${VerticalLayout}>
