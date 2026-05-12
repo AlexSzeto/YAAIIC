@@ -22,8 +22,9 @@ import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
-import { getCategoryTree, getTagDefinition } from '../tags/tag-data.mjs';
+import { getCategoryTree, getTagDefinition, getAllTagNames } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
+import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 
 // ============================================================================
 // Styled Components
@@ -141,11 +142,12 @@ function getCustomOptions(optionsString) {
  * @param {Object}   props
  * @param {Object}   props.part              – Full part object { id, config, data }
  * @param {Function} props.onChange           – (updatedPart) => void
+ * @param {string[]} [props.allTypes=[]]      – All unique type strings across all parts (for autocomplete suggestions)
  * @param {Object}   [props.libraryPart]      – The matching saved library config (or undefined)
  * @param {Function} [props.onLibraryChanged] – Called after a successful save or delete so the
  *                                              parent can refresh its library list.
  */
-export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
+export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibraryChanged }) {
   const { config, data } = part;
   const toast = useToast();
 
@@ -228,7 +230,7 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
   const RAINBOW_COLORS = ['aqua', 'black', 'blue', 'brown', 'green', 'grey', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
 
   const handleRainbowAction = useCallback(async (_attr, attrIndex) => {
-    const keyword = await showTextPrompt('Color Keyword', '', 'e.g. eyeshadow');
+    const keyword = await showTextPrompt('Color Keyword', config.name.toLowerCase(), 'e.g. eyeshadow');
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
     // Build color+keyword tags, keeping only combinations present in the tag database
@@ -244,7 +246,55 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
     handleCustomAttrsChange(next);
   }, [config.customAttributes, handleCustomAttrsChange, toast]);
 
-  const customAttrHeaderActions = [{ icon: 'palette', title: 'Generate color variations', onClick: handleRainbowAction }];
+  const handleVariationsAction = useCallback(async (_attr, attrIndex) => {
+    const keyword = await showTextPrompt('Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
+
+    if (!keyword || !keyword.trim()) return;
+    const kw = keyword.trim().toLowerCase();
+
+    // Build an exclusion set from all other existing attributes so we don't
+    // suggest tags that are already covered elsewhere in this part.
+    const coveredTags = new Set();
+
+    // Custom attributes (other than the one being edited)
+    for (let i = 0; i < config.customAttributes.length; i++) {
+      if (i === attrIndex) continue;
+      const opts = config.customAttributes[i].options || '';
+      for (const tag of opts.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)) {
+        coveredTags.add(tag);
+      }
+    }
+
+    // Category attributes – add every child tag in each referenced category
+    const tree = getCategoryTree();
+    for (const attr of config.categoryAttributes) {
+      const children = tree[attr.category];
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          coveredTags.add(child.replace(/_/g, ' ').toLowerCase());
+        }
+      }
+    }
+
+    // Find all tags that end with " keyword" (space-bounded) but are not covered by other attributes
+    const validTags = getAllTagNames().filter(tag => {
+      const normalised = tag.replace(/_/g, ' ');
+      return (normalised === kw || normalised.endsWith(` ${kw}`)) && !coveredTags.has(normalised);
+    }).map(tag => tag.replace(/_/g, ' '));
+
+    if (validTags.length === 0) {
+      toast.info(`No uncovered variations found for "${kw}"`);
+      return;
+    }
+    const next = [...config.customAttributes];
+    next[attrIndex] = { ...next[attrIndex], options: validTags.join(', ') };
+    handleCustomAttrsChange(next);
+  }, [config.customAttributes, config.categoryAttributes, handleCustomAttrsChange, toast]);
+
+  const customAttrHeaderActions = [
+    { icon: 'palette', title: 'Generate color variations', onClick: handleRainbowAction },
+    { icon: 'tag', title: 'Generate other variations', onClick: handleVariationsAction },
+  ];
 
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
@@ -329,13 +379,12 @@ export function PartItem({ part, onChange, libraryPart, onLibraryChanged }) {
             widthScale="full"
             heightScale="compact"
           />
-          <${Input}
+          <${ChipAutocompleteInput}
             label="Type"
-            value=${config.type}
-            onInput=${(e) => updateConfig({ type: e.target.value })}
             placeholder="e.g. hair, outfit, accessory"
-            widthScale="full"
-            heightScale="compact"
+            suggestions=${allTypes}
+            values=${Array.isArray(config.type) ? config.type : []}
+            onValuesChange=${(v) => updateConfig({ type: v })}
           />
         </${RightFields}>
       </${TopRow}>

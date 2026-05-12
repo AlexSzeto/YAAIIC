@@ -97,13 +97,14 @@ LabelText.className = 'button-label-text';
  * icons, and loading states. All styling is handled via Goober.
  * 
  * @param {Object} props
- * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'large-icon'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
+ * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'large-icon'|'small-text'|'small-icon'|'chip'} [props.variant='medium-text'] - Size/content variant
  *   - 'medium-text': Standard button with text only
  *   - 'medium-icon': Square button with icon only (32x32)
  *   - 'medium-icon-text': Button with icon and text
  *   - 'large-icon': Large square button with icon only (44x44)
  *   - 'small-text': Compact tag-style button with text
  *   - 'small-icon': Small square button with icon only (28x28)
+ *   - 'chip': Pill-shaped compact button (same size as small-text, fully rounded corners)
  * @param {'primary'|'secondary'|'success'|'danger'|'transparent'} [props.color='secondary'] - Color theme
  *   - 'transparent': No background, subtle hover effect, uses primary text color
  * @param {boolean} [props.loading=false] - Shows spinner, disables button
@@ -175,7 +176,7 @@ export class Button extends Component {
     const tooltipCtx = this.context;
 
     // Determine sizing based on variant
-    const isSmall = variant.startsWith('small');
+    const isSmall = variant.startsWith('small') || variant === 'chip';
     const isLarge = variant === 'large-icon';
     const isIconOnly = variant === 'medium-icon' || variant === 'small-icon' || variant === 'large-icon';
     const hasIcon = icon || loading;
@@ -183,6 +184,15 @@ export class Button extends Component {
 
     // Size configurations
     const sizes = {
+      chip: {
+        height: '24px',
+        minWidth: '24px',
+        padding: theme.spacing.small.buttonPadding,
+        fontSize: theme.typography.fontSize.small,
+        iconSize: '16px',
+        borderRadius: '9999px',
+        gap: '4px'
+      },      
       small: {
         height: isIconOnly ? '28px' : '34px',
         minWidth: isIconOnly ? '28px' : 'auto',
@@ -212,7 +222,7 @@ export class Button extends Component {
       }
     };
 
-    const size = isSmall ? sizes.small : (isLarge ? sizes.large : sizes.medium);
+    const size = variant === 'chip' ? sizes.chip : (isSmall ? sizes.small : (isLarge ? sizes.large : sizes.medium));    
 
     // Color configurations
     const getColorStyles = (colorName) => {

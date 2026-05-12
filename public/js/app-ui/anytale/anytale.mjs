@@ -74,6 +74,15 @@ export function AnyTalePage() {
   // Workflow
   const [workflow, setWorkflow] = useState(null);
 
+  // Reprompt handler forwarded from AnyTaleForm
+  const repromptFnRef = useRef(null);
+  const [canReprompt, setCanReprompt] = useState(false);
+
+  const handleRepromptReady = useCallback((fn, enabled) => {
+    repromptFnRef.current = fn;
+    setCanReprompt(!!enabled);
+  }, []);
+
   // Generation state
   const [taskId, setTaskId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -286,6 +295,10 @@ export function AnyTalePage() {
             onFirst=${nav.selectFirst}
             onLast=${nav.selectLast}
             currentItem=${nav.currentItem}
+            onReprompt=${() => repromptFnRef.current && repromptFnRef.current()}
+            canReprompt=${canReprompt}
+            onDelete=${() => handleDeleteImage(nav.currentItem)}
+            canDelete=${!!nav.currentItem}
           />
         </${LeftColumn}>
 
@@ -294,8 +307,7 @@ export function AnyTalePage() {
             onGenerate=${handleGenerate}
             isGenerating=${isGenerating}
             onStateLoaded=${handleStateLoaded}
-            onDelete=${() => handleDeleteImage(nav.currentItem)}
-            canDelete=${!!nav.currentItem}
+            onRepromptReady=${handleRepromptReady}
             currentItem=${nav.currentItem}
           />
         </${RightColumn}>

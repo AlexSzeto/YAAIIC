@@ -8,7 +8,7 @@
  *     id: string,
  *     config: {
  *       name: string,
- *       type: string,
+ *       type: string[],
  *       previewBaseline: string,
  *       baseline: string,
  *       categoryAttributes: Array<{ name: string, category: string }>,
@@ -77,7 +77,7 @@ export function createDefaultPart() {
     id: 'part-' + Date.now(),
     config: {
       name: '',
-      type: '',
+      type: [],
       previewBaseline: '',
       baseline: '',
       categoryAttributes: [],
@@ -124,7 +124,7 @@ export function createBlankPlot() {
     uid: '',
     name: '',
     section: '',
-    pages: [{ tags: '', parts: [] }],
+    pages: [{ tags: '', hiddenParts: [] }],
   };
 }
 
@@ -140,13 +140,18 @@ export function loadPlot() {
     const parsed = JSON.parse(raw);
     // Ensure at least one page
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-      parsed.pages = [{ tags: '', parts: [] }];
+      parsed.pages = [{ tags: '', hiddenParts: [] }];
     }
+    // Defensively default hiddenParts on any page missing the field
+    const pages = parsed.pages.map(p => ({
+      ...p,
+      hiddenParts: Array.isArray(p.hiddenParts) ? p.hiddenParts : [],
+    }));
     return {
       uid: parsed.uid ?? '',
       name: parsed.name ?? '',
       section: parsed.section ?? '',
-      pages: parsed.pages,
+      pages,
     };
   } catch {
     return createBlankPlot();

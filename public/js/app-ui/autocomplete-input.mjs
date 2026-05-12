@@ -13,11 +13,36 @@
 import { html } from 'htm/preact';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { Input } from '../custom-ui/io/input.mjs';
+import { Button } from '../custom-ui/io/button.mjs';
+import { styled } from '../custom-ui/goober-setup.mjs';
 import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
 
 // ============================================================================
-// Module-level instance tracking (one instance per mounted component)
+// Styled Components
 // ============================================================================
+
+import { currentTheme } from '../custom-ui/theme.mjs';
+
+const InputRow = styled('div')`
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+`;
+InputRow.className = 'autocomplete-input-row';
+
+const InputFlex = styled('div')`
+  flex: 1;
+  min-width: 0;
+`;
+InputFlex.className = 'autocomplete-input-flex';
+
+const ButtonWrapper = styled('div')`
+  display: flex;
+  align-items: center;
+  height: 44px;
+`;
+ButtonWrapper.className = 'autocomplete-input-button-wrapper';
 
 /**
  * AutocompleteInput – themed input with autoComplete.js-powered dropdown.
@@ -41,8 +66,9 @@ import { injectAutocompleteStyles } from './autocomplete-styles.mjs';
  *   onInput=${(e) => setInputValue(e.target.value)}
  *   onSelect=${(name) => handleAddPart(name)}
  * />
+ * @param {boolean}  [props.disabled]    – When true, disables the input and suppresses all autocomplete behaviour
  */
-export function AutocompleteInput({ label, placeholder, suggestions, onSelect }) {
+export function AutocompleteInput({ label, placeholder, suggestions, onSelect, disabled = false }) {
   // Stable id – created once per mount, never changes across renders
   const inputIdRef = useRef('autocomplete-input-' + Math.random().toString(36).slice(2));
   const instanceRef = useRef(null);
@@ -55,6 +81,13 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
   // Keep onSelect ref current so the closure inside autoComplete.js always
   // calls the latest prop without needing to tear down and re-initialize.
   onSelectRef.current = onSelect;
+
+  // When disabled, close any open dropdown immediately.
+  useEffect(() => {
+    if (disabled && instanceRef.current?.isOpen) {
+      instanceRef.current.close();
+    }
+  }, [disabled]);
 
   // Stable key derived from suggestion content — only changes when the list actually changes.
   // Using a plain array reference would re-init on every render (new array each call).
@@ -169,6 +202,7 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
   // When the dropdown IS open, the internal autoComplete keydown handler
   // takes care of selecting the first/highlighted item.
   const handleKeyDown = useCallback((e) => {
+    if (disabled) return;
     if (e.key === 'Enter' || e.key === 'Tab') {
       const inst = instanceRef.current;
       const isOpen = inst && inst.isOpen;
@@ -189,15 +223,44 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect })
         onSelectRef.current?.(firstMatch ?? current);
       }
     }
-  }, []);
+  }, [disabled]);
+
+  // Confirm button handler — replicates the Tab/Enter commit logic
+  const handleConfirm = useCallback(() => {
+    if (disabled) return;
+    const el = document.getElementById(inputIdRef.current);
+    if (!el) return;
+    const current = el.value.trim();
+    if (current) {
+      const firstMatch = suggestionsRef.current.find(
+        s => s.toLowerCase().includes(current.toLowerCase())
+      );
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      onSelectRef.current?.(firstMatch ?? current);
+    }
+  }, [disabled]);
 
   return html`
-    <${Input}
-      id=${inputIdRef.current}
-      label=${label}
-      placeholder=${placeholder}
-      onKeyDown=${handleKeyDown}
-      widthScale="full"
-    />
+    <${InputRow}>
+      <${InputFlex}>
+        <${Input}
+          id=${inputIdRef.current}
+          label=${label}
+          placeholder=${placeholder}
+          onKeyDown=${handleKeyDown}
+          disabled=${disabled}
+          widthScale="full"
+        />
+      </${InputFlex}>
+      <${ButtonWrapper}>
+        <${Button}
+          variant="medium-icon"
+          icon="check"
+          disabled=${disabled}
+          onClick=${handleConfirm}
+        />
+      </${ButtonWrapper}>
+    </${InputRow}>
   `;
 }

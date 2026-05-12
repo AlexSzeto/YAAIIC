@@ -49,17 +49,72 @@ function deduplicate(tags) {
 }
 
 /**
- * Assemble the final image prompt from all enabled parts.
+ * Expand template tokens `{{type name}}` in a tags string using enabled parts.
  *
- * Collects: baseline + categoryAttributeValues + customAttributeValues
-/**
- * Apply {{name}} substitution in a template tag string.
- * @param {string} template
- * @param {string} name
- * @returns {string}
+ * Algorithm per comma/newline-separated segment:
+ *  1. Scan for `{{...}}` tokens.
+ *  2. For each token, find enabled parts whose config.type matches (case-insensitive).
+ *  3. If any token has zero matches → drop the segment.
+ *  4. Expand via cartesian product across all matched sets, substituting part names.
+ *  5. Segments without tokens are included verbatim.
+ *
+ * @param {string} tagsString   – Raw tags string (may contain template tokens)
+ * @param {Array}  enabledParts – Enabled part objects ({ config })
+ * @returns {string[]} Fully expanded flat tag array
  */
-function applyTemplate(template, name) {
-  return template.replace(/\{\{name\}\}/g, name);
+export function expandPageTags(tagsString, enabledParts) {
+  if (!tagsString || !tagsString.trim()) return [];
+
+  // Split by comma or newline into segments
+  const segments = tagsString.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
+  const result = [];
+
+  for (const segment of segments) {
+    const tokenMatches = [...segment.matchAll(/\{\{([^}]+)\}\}/g)];
+    if (tokenMatches.length === 0) {
+      // No tokens — include verbatim
+      result.push(segment);
+      continue;
+    }
+
+    // For each token, gather matching part names
+    const matchSets = tokenMatches.map(m => {
+      const tokenType = m[1].trim().toLowerCase();
+      return enabledParts
+        .filter(p => {
+          const types = Array.isArray(p.config?.type) ? p.config.type : [];
+          return types.some(t => t.trim().toLowerCase() === tokenType);
+        })
+        .map(p => p.config?.name || '');
+    });
+
+    // If any token has no matches, drop the segment
+    if (matchSets.some(set => set.length === 0)) continue;
+
+    // Cartesian product across all match sets
+    let combinations = [''];
+    for (let i = 0; i < tokenMatches.length; i++) {
+      const newCombinations = [];
+      for (const prefix of combinations) {
+        for (const name of matchSets[i]) {
+          newCombinations.push(prefix + '\x00' + name);
+        }
+      }
+      combinations = newCombinations;
+    }
+
+    // Substitute tokens back into the segment for each combination
+    for (const combo of combinations) {
+      const names = combo.split('\x00').slice(1); // drop the leading empty prefix
+      let expanded = segment;
+      for (let i = 0; i < tokenMatches.length; i++) {
+        expanded = expanded.replace(tokenMatches[i][0], names[i]);
+      }
+      result.push(expanded.trim());
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -69,11 +124,9 @@ function applyTemplate(template, name) {
  * Excludes: previewBaseline
  *
  * When `activePage` is provided, also:
- *   1. Appends the page's `tags` to the prompt.
- *   2. For each enabled part, checks the page's `parts` list for a matching modifier
- *      (by identifier against part name or type):
- *      - If `forceDisable` is true, skips that part's tags entirely.
- *      - If `templateTag` is non-empty, substitutes {{name}} and appends the result.
+ *   1. Appends the page's `tags` (expanded via expandPageTags) to the prompt.
+ *   2. Skips any enabled part whose config.name or config.type (case-insensitive)
+ *      appears in `activePage.hiddenParts`.
  *
  * @param {Array}  parts      – Array of part objects ({ config, data })
  * @param {Object} [activePage] – Optional page object from the active plot block
@@ -84,21 +137,19 @@ export function assemblePrompt(parts, activePage) {
 
   const enabledParts = (parts || []).filter(p => p.data && p.data.enabled);
 
+  // Build hidden set for fast lookup
+  const hiddenSet = new Set(
+    (activePage?.hiddenParts || []).map(h => h.toLowerCase())
+  );
+
   for (const part of enabledParts) {
-    const partName = part.config?.name || '';
-    const partType = part.config?.type || '';
+    const partName = (part.config?.name || '').toLowerCase();
+    const types = Array.isArray(part.config?.type) ? part.config.type : [];
 
-    // Check for a plot page modifier matching this part
-    let modifier = null;
-    if (activePage && Array.isArray(activePage.parts)) {
-      modifier = activePage.parts.find(m => {
-        const id = (m.identifier || '').toLowerCase();
-        return id === partName.toLowerCase() || id === partType.toLowerCase();
-      });
-    }
-
-    // If the modifier forces this part to be disabled, skip it
-    if (modifier && modifier.forceDisable) continue;
+    // Skip if the part name is listed in hiddenParts
+    // Skip if ALL of the part's types are present in hiddenSet
+    const allTypesHidden = types.length > 0 && types.every(t => hiddenSet.has(t.toLowerCase()));
+    if (hiddenSet.has(partName) || allTypesHidden) continue;
 
     // Baseline tags
     tags.push(...splitTags(part.config.baseline));
@@ -108,16 +159,11 @@ export function assemblePrompt(parts, activePage) {
 
     // Custom attribute selected values
     tags.push(...collectValues(part.data.customAttributeValues));
-
-    // Append template tag substitution if provided
-    if (modifier && modifier.templateTag && modifier.templateTag.trim()) {
-      tags.push(applyTemplate(modifier.templateTag.trim(), partName));
-    }
   }
 
-  // Append the page-level base tags
+  // Append the page-level tags, expanded to resolve {{type}} tokens
   if (activePage && activePage.tags) {
-    tags.push(...splitTags(activePage.tags));
+    tags.push(...expandPageTags(activePage.tags, enabledParts));
   }
 
   return deduplicate(tags).join(', ');

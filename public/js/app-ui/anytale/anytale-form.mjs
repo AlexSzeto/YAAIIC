@@ -8,7 +8,7 @@
  * Persists state to localStorage via anytale-state.mjs.
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -87,26 +87,26 @@ PlayPlaceholder.className = 'play-placeholder';
  * @param {Function} props.onGenerate    – Called with (prompt, name) when Generate is clicked
  * @param {boolean}  props.isGenerating  – True while a generation is in-flight
  * @param {Function} [props.onStateLoaded] – Called with the restored name after localStorage is read
- * @param {Function} [props.onDelete]      – Called when Delete is clicked
- * @param {boolean}  [props.canDelete]     – Whether the delete button is enabled
+ * @param {Function} [props.onRepromptReady] – Called with (fn, enabled) when reprompt handler changes; (null, false) on unmount
  */
-export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete, canDelete, currentItem = null }) {
+export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromptReady, currentItem = null }) {
   const toast = useToast();
-  const [name, setName] = useState('');
-  const [parts, setParts] = useState([]);
+  // Lazy initialization from localStorage so the save effect never runs with empty data
+  // on the first render before loadState has been called.
+  const [name, setName] = useState(() => loadState().name);
+  const [parts, setParts] = useState(() => loadState().parts);
   const [activeTab, setActiveTab] = useState('edit');
   const [isReprompting, setIsReprompting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
+  const [pageLocked, setPageLocked] = useState([]);
 
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
 
-  // Load persisted state on mount
+  // Notify parent of the initial loaded name (state is already seeded above)
   useEffect(() => {
-    const saved = loadState();
-    setName(saved.name);
-    setParts(saved.parts);
-    if (onStateLoaded) onStateLoaded(saved.name);
+    if (onStateLoaded) onStateLoaded(loadState().name);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch library parts on mount
@@ -152,6 +152,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
   }, []);
 
   const handleGenerate = useCallback(() => {
+    // Lock the current page as soon as generation is triggered
+    setPageLocked(prev => {
+      const next = [...prev];
+      next[activePlotPage] = true;
+      return next;
+    });
     // Retrieve the active plot page from localStorage so PlotSection changes are reflected
     const currentPlot = loadPlot();
     const plotPageCount = currentPlot.pages.length;
@@ -315,6 +321,29 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
     }
   }, [currentItem, libraryParts, toast]);
 
+  // Notify parent when reprompt handler or its enabled state changes
+  const canReprompt = !!currentItem?.parts && !isGenerating && !isReprompting;
+  useEffect(() => {
+    if (onRepromptReady) onRepromptReady(handleReprompt, canReprompt);
+    return () => { if (onRepromptReady) onRepromptReady(null, false); };
+  }, [handleReprompt, canReprompt, onRepromptReady]);
+
+  // Compute all unique type strings from the library for autocomplete suggestions
+  const allTypes = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const p of libraryParts) {
+      const types = Array.isArray(p.type) ? p.type : [];
+      for (const t of types) {
+        if (t && t.trim() && !seen.has(t.toLowerCase())) {
+          seen.add(t.toLowerCase());
+          out.push(t.trim());
+        }
+      }
+    }
+    return out;
+  }, [libraryParts]);
+
   // Build preview prompt (also reflects the active plot page)
   const previewPrompt = (() => {
     const currentPlot = loadPlot();
@@ -357,6 +386,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
               <${PartItem}
                 part=${item}
                 onChange=${(updated) => handlePartChange(i, updated)}
+                allTypes=${allTypes}
                 libraryPart=${libraryParts.find(p =>
                   (item.config?.uid && p.uid === item.config.uid) ||
                   (item.config?.name && p.name === item.config.name)
@@ -364,7 +394,28 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
                 onLibraryChanged=${refreshLibraryParts}
               />
             `}
-            getTitle=${(item) => item.config?.name || '(unnamed)'}
+            getTitle=${(item) => {
+              const base = item.config?.name || '(unnamed)';
+              const lib = libraryParts.find(p =>
+                (item.config?.uid && p.uid === item.config.uid) ||
+                (item.config?.name && p.name === item.config.name)
+              );
+              if (!lib) return `${base} (unsaved)`;
+              const configFields = {
+                name: item.config.name, type: item.config.type,
+                baseline: item.config.baseline, previewBaseline: item.config.previewBaseline,
+                categoryAttributes: item.config.categoryAttributes,
+                customAttributes: item.config.customAttributes,
+              };
+              const libFields = {
+                name: lib.name, type: lib.type,
+                baseline: lib.baseline, previewBaseline: lib.previewBaseline,
+                categoryAttributes: lib.categoryAttributes,
+                customAttributes: lib.customAttributes,
+              };
+              const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
+              return isModified ? `${base} (modified)` : base;
+            }}
             getEnabled=${(item) => item.data?.enabled ?? true}
             onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
             createItem=${createDefaultPart}
@@ -377,6 +428,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
             parts=${parts}
             activePage=${activePlotPage}
             onPageChange=${setActivePlotPage}
+            pageLocked=${pageLocked}
+            onPageLockedChange=${setPageLocked}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>
@@ -403,24 +456,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onDelete,
         <${Button}
           variant="medium-text"
           color="secondary"
-          icon="refresh"
-          onClick=${handleReprompt}
-          disabled=${isGenerating || isReprompting || !currentItem?.parts}
-        >
-          ${isReprompting ? 'Reprompting...' : 'Reprompt'}
-        <//>
-        <${Button}
-          variant="medium-text"
-          color="danger"
-          icon="trash"
-          onClick=${onDelete}
-          disabled=${!canDelete}
-        >
-          Delete
-        <//>
-        <${Button}
-          variant="medium-text"
-          color="danger"
           icon="x"
           onClick=${handleClear}
         >

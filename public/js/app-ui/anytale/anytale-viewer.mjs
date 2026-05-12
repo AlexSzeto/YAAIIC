@@ -80,6 +80,13 @@ const NavRow = styled('div')`
 `;
 NavRow.className = 'nav-row';
 
+const LeftNavGroup = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+`;
+LeftNavGroup.className = 'left-nav-group';
+
 const SlideshowControls = styled('div')`
   display: flex;
   align-items: center;
@@ -97,8 +104,12 @@ SlideshowControls.className = 'slideshow-controls';
  * @param {Function} props.onPrev
  * @param {Function} props.onNext
  * @param {Object|null} props.currentItem
+ * @param {Function}   [props.onReprompt]   – Called when reprompt icon is clicked
+ * @param {boolean}    [props.canReprompt]  – Whether reprompt is enabled
+ * @param {Function}   [props.onDelete]     – Called when delete icon is clicked
+ * @param {boolean}    [props.canDelete]    – Whether delete is enabled
  */
-export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev, onNext, onFirst, onLast, currentItem }) {
+export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev, onNext, onFirst, onLast, currentItem, onReprompt, canReprompt = false, onDelete, canDelete = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   const timerRef = useRef(null);
@@ -156,15 +167,31 @@ export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev
           />
         </${ImageWrapper}>
         <${NavRow}>
-          <${NavigatorControl}
-            currentPage=${currentIndex}
-            totalPages=${items.length}
-            onPrev=${onPrev}
-            onNext=${onNext}
-            onFirst=${onFirst}
-            onLast=${onLast}
-            showFirstLast=${true}
-          />
+          <${LeftNavGroup}>
+            <${NavigatorControl}
+              currentPage=${currentIndex}
+              totalPages=${items.length}
+              onPrev=${onPrev}
+              onNext=${onNext}
+              onFirst=${onFirst}
+              onLast=${onLast}
+              showFirstLast=${true}
+            />
+            <${Button}
+              variant="medium-icon"
+              icon="refresh"
+              title="Reprompt"
+              onClick=${onReprompt}
+              disabled=${!canReprompt}
+            />
+            <${Button}
+              variant="medium-icon"
+              icon="trash"
+              title="Delete"
+              onClick=${onDelete}
+              disabled=${!canDelete}
+            />
+          </${LeftNavGroup}>
           <${SlideshowControls}>
             <${Button}
               variant="medium-icon"

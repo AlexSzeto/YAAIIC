@@ -542,30 +542,28 @@ export class TagSelectorPanel extends Component {
     const searchTermWithSpaces = initialSearchTerm.replace(/_/g, ' ').trim();
     const searchTermWithUnderscores = initialSearchTerm.replace(/\s+/g, '_').trim();
     
-    // Check if the term has a definition (getTagDefinition handles both spaces and underscores)
-    const definition = getTagDefinition(searchTermWithSpaces) || getTagDefinition(searchTermWithUnderscores);
+    const autocompleteData = getMergedAutocompleteData();
 
-    if (definition) {
-      // Navigate to the tag
-      // First, look up the tag in autocomplete data to get the internal name
-      const autocompleteData = getMergedAutocompleteData();
-      
-      // Try to find matching item - autocomplete display names use spaces
-      let matchingItem = autocompleteData.find(item => 
+    // Attempt 1: match internal name exactly as a top-level tag group (category: dress)
+    let matchingItem = autocompleteData.find(item =>
+      item.internal.toLowerCase() === `tag_group:${searchTermWithUnderscores.toLowerCase()}`
+    );
+
+    // Attempt 2: raw match against display or internal name
+    if (!matchingItem) {
+      matchingItem = autocompleteData.find(item =>
         item.display.toLowerCase() === searchTermWithSpaces.toLowerCase()
       );
-      
-      // If not found with spaces, try with underscores in the internal name
-      if (!matchingItem) {
-        matchingItem = autocompleteData.find(item => 
-          item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
-        );
-      }
-      
-      if (matchingItem) {
-        // Navigate and set the search value in one call
-        this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
-      }
+    }
+
+    if (!matchingItem) {
+      matchingItem = autocompleteData.find(item =>
+        item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
+      );
+    }
+
+    if (matchingItem) {
+      this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
     }
     
     // Mark as processed
