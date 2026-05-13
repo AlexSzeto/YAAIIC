@@ -413,3 +413,90 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     throw error;
   }
 }
+
+/**
+ * Unified chat interface for interacting with Ollama.
+ * Supports both standard chat interactions and text completions.
+ * @param {Object} config - Configuration object
+ * @param {string} config.model - Model name to use
+ * @param {string} config.mode - Mode ('chat' or 'completion')
+ * @param {Array<Object>} [config.messages] - Array of messages (for 'chat' mode)
+ * @param {string} [config.prompt] - Prompt string (for 'completion' mode)
+ * @param {boolean} [config.stream=false] - Whether to stream the response
+ * @param {Object} [config.options={}] - Model parameters (temperature, top_p, etc.)
+ * @param {number[]} [config.context] - Token context (for 'completion' mode)
+ * @returns {Promise<Object|ReadableStream>} JSON response or ReadableStream
+ */
+export async function chat({ model, mode = 'chat', messages, prompt, stream = false, options = {}, context }) {
+  if (!model) {
+    throw new Error('Model name is required');
+  }
+
+  // Check if model has changed and unload previous model if needed
+  if (lastUsedModel && lastUsedModel !== model) {
+    console.log(`Model changed from ${lastUsedModel} to ${model}. Unloading previous model...`);
+    await unloadOllamaModel(lastUsedModel);
+  }
+  lastUsedModel = model;
+
+  const ollamaAPIPath = getOllamaAPIPath();
+  const useCPU = getOllamaUseCPU();
+  
+  // Base request body
+  const requestBody = {
+    model,
+    stream,
+  };
+
+  // Merge options and handle CPU fallback
+  if (useCPU || Object.keys(options).length > 0) {
+    requestBody.options = { ...options };
+    if (useCPU) {
+      requestBody.options.num_gpu = 0;
+      console.log('Forcing CPU-only mode for Ollama (num_gpu: 0)');
+    }
+  }
+
+  let endpoint = '';
+
+  if (mode === 'completion') {
+    if (!prompt) {
+      throw new Error('Prompt is required in completion mode');
+    }
+    endpoint = `${ollamaAPIPath}/api/generate`;
+    requestBody.prompt = prompt;
+    if (context) {
+      requestBody.context = context;
+    }
+  } else {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      throw new Error('Messages array is required and must not be empty in chat mode');
+    }
+    endpoint = `${ollamaAPIPath}/api/chat`;
+    requestBody.messages = messages;
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`${mode === 'completion' ? 'Generate' : 'Chat'} request failed: ${response.statusText}`);
+    }
+
+    // For streaming responses, return the response body directly
+    if (stream) {
+      return response.body;
+    }
+
+    // For non-streaming, parse and return JSON
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Error in chat (${mode}): ${error.message}`);
+  }
+}
