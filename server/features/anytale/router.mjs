@@ -23,6 +23,11 @@ import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
 const router = Router();
 
+router.get('/anytale/config', (req, res) => {
+  const anytaleConfig = req.app.locals.config?.anytale || {};
+  res.json(anytaleConfig);
+});
+
 router.get('/anytale/parts', (_req, res) => {
   try {
     const parts = getAllParts();

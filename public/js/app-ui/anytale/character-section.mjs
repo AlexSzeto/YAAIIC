@@ -15,7 +15,7 @@
  *   @param {Function} onLibraryPartsChange – Called after a library save to refresh the parent list
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -143,6 +143,34 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
   // ── Preview plot state (local only, not saved to character) ──────────────
   const [previewPlotName, setPreviewPlotName] = useState('');
   const [previewPlotUid, setPreviewPlotUid] = useState('');
+  const [recommendedPartTypes, setRecommendedPartTypes] = useState([]);
+
+  // Fetch recommended part types config on mount
+  useEffect(() => {
+    fetch('/anytale/config')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.recommendedCharacterPartTypes)) {
+          setRecommendedPartTypes(data.recommendedCharacterPartTypes);
+        }
+      })
+      .catch(err => console.error('[CharacterSection] Failed to load AnyTale config:', err));
+  }, []);
+
+  const missingRecommendedTypes = useMemo(() => {
+    if (!recommendedPartTypes.length) return [];
+    
+    // Collect all types from currently added parts
+    const currentTypes = new Set();
+    character.parts.forEach(cp => {
+      const libPart = libraryParts.find(p => p.uid === cp.partUid);
+      if (libPart && Array.isArray(libPart.type)) {
+        libPart.type.forEach(t => currentTypes.add(t.toLowerCase()));
+      }
+    });
+
+    return recommendedPartTypes.filter(rt => !currentTypes.has(rt.toLowerCase()));
+  }, [recommendedPartTypes, character.parts, libraryParts]);
 
   // Persist character to localStorage on every change
   useEffect(() => {
@@ -599,6 +627,11 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
           <!-- Parts -->
           <${VerticalLayout} gap="small">
             <${H2}>Parts</${H2}>
+
+            ${missingRecommendedTypes.length > 0
+              && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Character Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
+            }
+
             <${AutocompleteInput}
               label="Add Part from Library"
               placeholder="Type to search saved parts..."

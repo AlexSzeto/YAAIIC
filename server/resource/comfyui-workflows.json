@@ -4803,7 +4803,7 @@
             }
           },
           "model": "ssfdre38/gemma4-nano:latest",
-          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{vocalProfile}}. Output the dialog ONLY.",
+          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{vocalProfile}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
           "to": "dialog"
         },
         {
