@@ -2,8 +2,8 @@
  * anytale-form.mjs – Right-column form for the AnyTale page.
  *
  * Contains two tabs:
- *   Edit:  Character Name, Parts DynamicList, Prompt Preview, Generate/Delete/Clear buttons.
- *   Play:  "Coming Soon" placeholder.
+ *   Parts & Plot:  Character Name, Parts DynamicList, Prompt Preview, Generate/Delete/Clear buttons.
+ *   Character:     Character database form (CharacterSection).
  *
  * Persists state to localStorage via anytale-state.mjs.
  */
@@ -15,7 +15,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart, loadPlot } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
@@ -23,6 +23,8 @@ import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
+import { CharacterSection } from './character-section.mjs';
+import { fetchPlotList } from './plot-api.mjs';
 
 // ============================================================================
 // Styled Components
@@ -88,6 +90,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
   const [isReprompting, setIsReprompting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
+  const [activeTab, setActiveTab] = useState('parts-plot');
 
   // Ref to hold the reprompt handler exposed by PlotSection
   const plotRepromptFnRef = useRef(null);
@@ -98,6 +101,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
 
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
+  // Plot list shared with CharacterSection for autocomplete hints
+  const [plotList, setPlotList] = useState([]);
 
   // Notify parent of the initial loaded name (state is already seeded above)
   useEffect(() => {
@@ -111,6 +116,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch library parts:', err));
+  }, []);
+
+  // Fetch plot list on mount for CharacterSection autocomplete
+  useEffect(() => {
+    fetchPlotList()
+      .then(list => { if (Array.isArray(list)) setPlotList(list); })
+      .catch(err => console.error('[AnyTaleForm] Failed to fetch plot list:', err));
   }, []);
 
   const refreshLibraryParts = useCallback(() => {
@@ -188,6 +200,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
 
   // Preview generation
   const [generatingPreviews, setGeneratingPreviews] = useState({});
+
+  // Derived: true if any part preview generation is in-flight
+  const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
 
   const handlePreviewGenerate = useCallback(async (item, index) => {
     // Prevent double-click
@@ -466,7 +481,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
           color="primary"
           icon="play"
           onClick=${handleGenerate}
-          disabled=${isGenerating}
+          disabled=${isGenerating || isAnyPreviewGenerating}
         >
           ${isGenerating ? 'Generating...' : 'Generate'}
         <//>
@@ -474,12 +489,34 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
     </${EditLayout}>
   `;
 
+  const tabs = [
+    {
+      id: 'parts-plot',
+      label: 'Parts & Plot',
+      content: editContent,
+    },
+    {
+      id: 'character',
+      label: 'Character',
+      content: html`
+        <${CharacterSection}
+          libraryParts=${libraryParts}
+          onGenerate=${onGenerate}
+          isGenerating=${isGenerating || isAnyPreviewGenerating}
+          onLibraryPartsChange=${refreshLibraryParts}
+          plotList=${plotList}
+        />
+      `,
+    },
+  ];
+
   return html`
-    <${Panel}
+    <${TabPanels}
+      tabs=${tabs}
+      activeTab=${activeTab}
+      onTabChange=${setActiveTab}
       variant="outlined"
       style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    >
-      ${editContent}
-    </${Panel}>
+    />
   `;
 }

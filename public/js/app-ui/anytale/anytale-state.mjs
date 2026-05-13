@@ -181,3 +181,63 @@ export function savePlotState(plot) {
 export function clearPlotState() {
   localStorage.removeItem(PLOT_STORAGE_KEY);
 }
+
+// ── Character State ───────────────────────────────────────────────────────
+
+const CHARACTER_STORAGE_KEY = 'anytale-character';
+
+/** @returns {Object} A blank character with empty fields. */
+export function createBlankCharacter() {
+  return {
+    uid: '',
+    name: '',
+    personality: '',
+    portraitUrl: '',
+    audioUrl: '',
+    introTranscript: '',
+    parts: [],
+  };
+}
+
+/**
+ * Load the active character from localStorage.
+ * Falls back to a blank character if nothing is stored.
+ * @returns {Object}
+ */
+export function loadCharacter() {
+  try {
+    const raw = localStorage.getItem(CHARACTER_STORAGE_KEY);
+    if (!raw) return createBlankCharacter();
+    const parsed = JSON.parse(raw);
+    return {
+      uid: parsed.uid ?? '',
+      name: parsed.name ?? '',
+      personality: parsed.personality ?? '',
+      portraitUrl: parsed.portraitUrl ?? '',
+      audioUrl: parsed.audioUrl ?? '',
+      introTranscript: parsed.introTranscript ?? '',
+      parts: Array.isArray(parsed.parts) ? parsed.parts : [],
+    };
+  } catch {
+    return createBlankCharacter();
+  }
+}
+
+/**
+ * Persist the active character state to localStorage.
+ * @param {Object} character
+ */
+export function saveCharacterState(character) {
+  try {
+    localStorage.setItem(CHARACTER_STORAGE_KEY, JSON.stringify(character));
+  } catch (err) {
+    console.error('Failed to save anytale character state:', err);
+  }
+}
+
+/**
+ * Clear the active character from localStorage.
+ */
+export function clearCharacterState() {
+  localStorage.removeItem(CHARACTER_STORAGE_KEY);
+}

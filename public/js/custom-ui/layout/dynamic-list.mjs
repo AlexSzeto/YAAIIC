@@ -361,6 +361,7 @@ function CondensedDynamicListItem({
  * @param {boolean}  [props.condensed=false]     - Use condensed inline layout (no panel, no collapse).
  * @param {boolean}  [props.showDragButton=true] - Show the drag-to-reorder handle button.
  * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
+ * @param {boolean}  [props.hideAddItem=false]   - Hide the add button entirely.
  * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
  * @returns {preact.VNode}
  *
@@ -389,6 +390,7 @@ export function DynamicList({
   onAdd,                      // optional: () => void – replaces default handleAdd when provided
   showDragButton = true,      // show the swap-vertical drag handle
   showMoveUpDownButtons = false, // show the up/down arrow buttons
+  hideAddItem = false,         // hide the add button entirely
   headerActions,               // custom header action buttons
   getEnabled,                  // optional: (item, index) => boolean – enables per-item toggle checkbox
   onToggleEnabled,             // optional: (item, index) => void – called when enabled checkbox changes
@@ -584,7 +586,7 @@ export function DynamicList({
 
   // ── Add button ────────────────────────────────────────────────────────────
 
-  const addButton = html`
+  const addButton = hideAddItem ? null : html`
     <${Button}
       variant="small-icon"
       icon="plus"

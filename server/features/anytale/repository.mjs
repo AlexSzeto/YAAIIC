@@ -1,11 +1,12 @@
 /**
- * AnyTale Repository – Data access layer for the parts library and plot data.
+ * AnyTale Repository – Data access layer for the parts library, plot data, and characters.
  *
  * Reads and writes a flat JSON object: `server/database/anytale-data.json`
- * Shape: { "parts": [ ...partConfigs ], "plot": [ ...plotBlocks ] }
+ * Shape: { "parts": [ ...partConfigs ], "plot": [ ...plotBlocks ], "characters": [ ...characterObjects ] }
  *
  * Each part config is identified by its `uid` (lower-kebab string derived from name).
  * Each plot block is identified by its `uid`.
+ * Each character is identified by its `uid`.
  */
 import fs from 'fs';
 import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
@@ -17,9 +18,10 @@ function readData() {
     return {
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
       plot: Array.isArray(parsed.plot) ? parsed.plot : [],
+      characters: Array.isArray(parsed.characters) ? parsed.characters : [],
     };
   } catch {
-    return { parts: [], plot: [] };
+    return { parts: [], plot: [], characters: [] };
   }
 }
 
@@ -82,5 +84,35 @@ export function deletePlot(uid) {
     throw err;
   }
   data.plot.splice(idx, 1);
+  writeData(data);
+}
+
+// ── Characters CRUD ────────────────────────────────────────────────────────
+
+export function listCharacters() {
+  return readData().characters;
+}
+
+export function upsertCharacter(uid, character) {
+  const data = readData();
+  const idx = data.characters.findIndex(c => c.uid === uid);
+  if (idx >= 0) {
+    data.characters[idx] = character;
+  } else {
+    data.characters.push(character);
+  }
+  writeData(data);
+  return character;
+}
+
+export function deleteCharacter(uid) {
+  const data = readData();
+  const idx = data.characters.findIndex(c => c.uid === uid);
+  if (idx < 0) {
+    const err = new Error(`Character not found: ${uid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  data.characters.splice(idx, 1);
   writeData(data);
 }

@@ -4744,6 +4744,140 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Personality to Voice Design (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "dialog",
+            "type": "textarea",
+            "label": "Dialog"
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-voice-design.json",
+      "preGenerationTasks": [
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA clear and natural female voice, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nOutput the vocal characteristics as prose ONLY.",
+          "to": "vocalProfile"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "dialog"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "ssfdre38/gemma4-nano:latest",
+          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{vocalProfile}}. Output the dialog ONLY.",
+          "to": "dialog"
+        },
+        {
+          "from": "dialog",
+          "to": "summary"
+        },
+        {
+          "from": "vocalProfile",
+          "to": "description"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "20",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "dialog",
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "4",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "executeWorkflow",
+          "name": " Generating Portrait",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              },
+              {
+                "from": "imageFormat",
+                "to": "imageFormat"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

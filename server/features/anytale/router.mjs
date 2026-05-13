@@ -1,5 +1,5 @@
 /**
- * AnyTale Router – REST endpoints for the parts library and plot data.
+ * AnyTale Router – REST endpoints for the parts library, plot data, and characters.
  *
  * Routes:
  *   GET    /anytale/parts         – returns array of all saved part configs
@@ -9,9 +9,17 @@
  *   GET    /anytale/plot          – returns array of { uid, name } summaries
  *   PUT    /anytale/plot/:uid     – upsert a full plot block by uid
  *   DELETE /anytale/plot/:uid     – remove a plot by uid
+ *
+ *   GET    /anytale/characters             – returns array of all saved characters
+ *   PUT    /anytale/characters/:uid        – upsert a character by uid
+ *   DELETE /anytale/characters/:uid        – remove a character by uid
+ *   POST   /anytale/characters/:uid/generate-portrait – generate a portrait image for a character
+ *   POST   /anytale/characters/:uid/generate-voice    – generate voice audio for a character
  */
 import { Router } from 'express';
-import { getAllParts, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid } from './service.mjs';
+import { getAllParts, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, saveCharacter, removeCharacterByUid } from './service.mjs';
+import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
+import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
 const router = Router();
 
@@ -101,6 +109,176 @@ router.delete('/anytale/plot/:uid', (req, res) => {
     if (error.code === 'ENOENT') return res.status(404).json({ error: 'Plot not found' });
     console.error('Error deleting anytale plot:', error);
     res.status(500).json({ error: 'Failed to delete plot' });
+  }
+});
+
+// ── Character endpoints ───────────────────────────────────────────────────
+
+router.get('/anytale/characters', (_req, res) => {
+  try {
+    const characters = getAllCharacters();
+    res.json(characters);
+  } catch (error) {
+    console.error('Error listing anytale characters:', error);
+    res.status(500).json({ error: 'Failed to list characters' });
+  }
+});
+
+router.put('/anytale/characters/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    const character = req.body;
+    if (!character || typeof character !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a character object' });
+    }
+    const saved = saveCharacter(uid, { ...character, uid });
+    res.json({ saved });
+  } catch (error) {
+    if (error.code === 'EINVAL') return res.status(400).json({ error: error.message });
+    console.error('Error saving anytale character:', error);
+    res.status(500).json({ error: 'Failed to save character' });
+  }
+});
+
+router.delete('/anytale/characters/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    removeCharacterByUid(uid);
+    res.json({ deleted: uid });
+  } catch (error) {
+    if (error.code === 'ENOENT') return res.status(404).json({ error: 'Character not found' });
+    console.error('Error deleting anytale character:', error);
+    res.status(500).json({ error: 'Failed to delete character' });
+  }
+});
+
+// ── Generate portrait for a character ─────────────────────────────────────
+
+router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
+  try {
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+    const anytaleConfig = config.anytale || {};
+    const portraitWorkflow = anytaleConfig.portraitWorkflow || 'Text to Image (Illustrious Portrait)';
+    const portraitBasePrompt = anytaleConfig.portraitBasePrompt || '';
+    const portraitPartMatchers = Array.isArray(anytaleConfig.portraitParts) ? anytaleConfig.portraitParts : [];
+
+    const { parts: requestParts = [] } = req.body;
+
+    // Load all library parts from the repository
+    const libraryParts = getAllParts();
+
+    // Match library parts against portraitParts matchers (case-insensitive)
+    const matchedLibraryParts = libraryParts.filter(libPart => {
+      const partName = (libPart.name || '').toLowerCase();
+      const partTypes = Array.isArray(libPart.type) ? libPart.type.map(t => t.toLowerCase()) : [];
+      return portraitPartMatchers.some(matcher => {
+        const m = matcher.toLowerCase();
+        return partName === m || partTypes.includes(m);
+      });
+    });
+
+    // Assemble prompt tags from matched parts using the character's saved attribute values
+    const tags = [];
+    if (portraitBasePrompt) tags.push(portraitBasePrompt);
+
+    for (const libPart of matchedLibraryParts) {
+      // Find matching entry in request parts array
+      const charPart = requestParts.find(p => p.partUid === libPart.uid);
+
+      // Always include the part's baseline
+      if (libPart.baseline) tags.push(libPart.baseline);
+
+      if (charPart) {
+        // Add category attribute values
+        for (const val of Object.values(charPart.categoryAttributeValues || {})) {
+          if (val && val.trim()) tags.push(val.trim());
+        }
+        // Add custom attribute values
+        for (const val of Object.values(charPart.customAttributeValues || {})) {
+          if (val && val.trim()) tags.push(val.trim());
+        }
+      }
+    }
+
+    const prompt = tags.filter(Boolean).join(', ');
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Portrait workflow '${portraitWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: portraitWorkflow,
+      prompt,
+      seed: Math.floor(Math.random() * 4294967295),
+      orientation: 'square',
+      imageFormat: 'png',
+      tags: '',
+      description: '',
+      summary: '',
+      usePostPrompts: false,
+      removeBackground: false,
+    };
+
+    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
+    const result = await processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI);
+
+    const portraitUrl = result.imageUrl || null;
+    res.json({ portraitUrl });
+  } catch (error) {
+    console.error('Error generating portrait for anytale character:', error);
+    res.status(500).json({ error: 'Failed to generate portrait', details: error.message });
+  }
+});
+
+// ── Generate voice for a character ────────────────────────────────────────
+
+router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
+  try {
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+    const anytaleConfig = config.anytale || {};
+    const voiceWorkflow = anytaleConfig.voiceWorkflow || 'Personality to Voice Design (Qwen3-TTS)';
+
+    const { personality = '', name = '' } = req.body;
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === voiceWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Voice workflow '${voiceWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: voiceWorkflow,
+      name,
+      prompt: personality,
+      seed: Math.floor(Math.random() * 4294967295),
+      tags: '',
+      description: '',
+      summary: '',
+    };
+
+    // Apply defaults from the workflow's extraInputs so required fields like
+    // audioFormat are populated even when not provided in the request body.
+    if (workflowData.options?.extraInputs) {
+      for (const input of workflowData.options.extraInputs) {
+        if (input.default !== undefined && requestData[input.id] === undefined) {
+          requestData[input.id] = input.default;
+        }
+      }
+    }
+
+    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
+    const result = await processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI);
+
+    const audioUrl = result.audioUrl || null;
+    const transcript = result.summary || null;
+    res.json({ audioUrl, transcript });
+  } catch (error) {
+    console.error('Error generating voice for anytale character:', error);
+    res.status(500).json({ error: 'Failed to generate voice', details: error.message });
   }
 });
 

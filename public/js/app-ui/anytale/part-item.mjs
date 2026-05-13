@@ -20,8 +20,8 @@ import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
-import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
+import { ImagePreview } from './image-preview.mjs';
 import { getCategoryTree, getTagDefinition, getAllTagNames } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
@@ -37,36 +37,7 @@ const TopRow = styled('div')`
 `;
 TopRow.className = 'part-item-top-row';
 
-const PreviewArea = styled('div')`
-  flex: 0 0 128px;
-  width: 128px;
-  height: 128px;
-  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
-  background-color: ${() => currentTheme.value.colors.background.tertiary};
-  border: ${() => `${currentTheme.value.border.width} ${currentTheme.value.border.style} ${currentTheme.value.colors.border.secondary}`};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  overflow: hidden;
-`;
-PreviewArea.className = 'part-item-preview-area';
 
-const PreviewImage = styled('img')`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: ${() => currentTheme.value.spacing.small.borderRadius};
-`;
-PreviewImage.className = 'part-item-preview-image';
-
-const PreviewPlaceholder = styled('div')`
-  color: ${() => currentTheme.value.colors.text.muted};
-  font-size: ${() => currentTheme.value.typography.fontSize.small};
-  text-align: center;
-  padding: ${() => currentTheme.value.spacing.small.padding};
-`;
-PreviewPlaceholder.className = 'part-item-preview-placeholder';
 
 const RightFields = styled('div')`
   flex: 1;
@@ -353,23 +324,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     }
   }, [config, toast]);
 
-  // ── Preview click ───────────────────────────────────────────────────────
-  const handlePreviewClick = useCallback(() => {
-    if (data.previewImageUrl) {
-      createImageModal(data.previewImageUrl);
-    }
-  }, [data.previewImageUrl]);
-
   return html`
     <${VerticalLayout} gap="small">
       <!-- Top row: preview image | name + type -->
       <${TopRow}>
-        <${PreviewArea} onClick=${handlePreviewClick}>
-          ${data.previewImageUrl
-            ? html`<${PreviewImage} src=${data.previewImageUrl} alt="Preview" />`
-            : html`<${PreviewPlaceholder}>No preview</${PreviewPlaceholder}>`
-          }
-        </${PreviewArea}>
+        <${ImagePreview} src=${data.previewImageUrl} alt="Part preview" />
         <${RightFields}>
           <${Input}
             label="Name"

@@ -5,6 +5,13 @@
   "ollamaUseCPU": false,
   "comfyuiAPIPath": "http://localhost:8188",
   "comfyuiLaunchPath": "H:\\start_comfyui.bat",
+  "anytale": {
+    "portraitWorkflow": "Text to Image (Illustrious Portrait)",
+    "generationWorkflow": "Text to Image (Illustrious Portrait)",
+    "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",
+    "portraitBasePrompt": "1girl, solo, portrait, looking at viewer, outdoors",
+    "portraitParts": ["head"]
+  },
   "exports": [
     {
       "id": "download",
