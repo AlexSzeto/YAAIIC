@@ -122,8 +122,9 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
  * @param {boolean}  props.isGenerating          – Main generation in-flight
  * @param {Function} [props.onLibraryPartsChange] – Called when library is updated
  * @param {Array}    [props.plotList=[]]          – Plot list provided by parent (AnyTaleForm)
+ * @param {Function} [props.onImportHandlerReady] – Exposes the import handler to the parent
  */
-export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, onLibraryPartsChange, plotList = [] }) {
+export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, onLibraryPartsChange, plotList = [], onImportHandlerReady }) {
   const toast = useToast();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
@@ -424,6 +425,61 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
     setSavedCharacterUid(match.uid);
     setLibraryCharacter(match);
   }, [characterList, toast]);
+
+  // ── Import handler (from AnyTaleForm parent) ───────────────────────────
+  const handleImport = useCallback(async (imageItem) => {
+    // Task: "clear the current character data, replace the character name with the image name, 
+    // and populate the character's parts data using the data from the image generation record."
+    const blank = createBlankCharacter();
+    blank.name = imageItem.name || 'Imported Character';
+    
+    const newParts = [];
+    const skipped = [];
+
+    // Latest library might be needed, but we use the libraryParts prop.
+    if (imageItem.parts) {
+      for (const [partName, storedData] of Object.entries(imageItem.parts)) {
+        const libraryConfig = libraryParts.find(p => p.name === partName);
+        if (!libraryConfig) {
+          skipped.push(partName);
+          continue;
+        }
+
+        const categoryAttributeValues = {};
+        for (const attr of (libraryConfig.categoryAttributes || [])) {
+          categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
+        }
+        const customAttributeValues = {};
+        for (const attr of (libraryConfig.customAttributes || [])) {
+          customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
+        }
+
+        newParts.push({
+          partUid: libraryConfig.uid,
+          categoryAttributeValues,
+          customAttributeValues,
+          previewImageUrl: storedData.previewImageUrl || '',
+        });
+      }
+    }
+    
+    blank.parts = newParts;
+    setCharacter(blank);
+    setSavedCharacterUid(null);
+    setLibraryCharacter(null);
+
+    if (skipped.length > 0) {
+      toast.info(`Imported ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
+    } else {
+      toast.success(`Imported: loaded ${newParts.length} part(s) and character name from image`);
+    }
+
+  }, [libraryParts, toast]);
+
+  useEffect(() => {
+    if (onImportHandlerReady) onImportHandlerReady(handleImport);
+    return () => { if (onImportHandlerReady) onImportHandlerReady(null); };
+  }, [handleImport, onImportHandlerReady]);
 
   // ── Generate: assemble prompt from character parts + preview plot page ───
 

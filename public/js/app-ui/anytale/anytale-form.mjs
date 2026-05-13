@@ -79,24 +79,29 @@ PromptPreview.className = 'prompt-preview';
  * @param {Function} props.onGenerate    – Called with (prompt, name) when Generate is clicked
  * @param {boolean}  props.isGenerating  – True while a generation is in-flight
  * @param {Function} [props.onStateLoaded] – Called with the restored name after localStorage is read
- * @param {Function} [props.onRepromptReady] – Called with (fn, enabled) when reprompt handler changes; (null, false) on unmount
+ * @param {Function} [props.onImportReady] – Called with (fn, enabled) when import handler changes; (null, false) on unmount
  */
-export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromptReady, currentItem = null }) {
+export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportReady, currentItem = null }) {
   const toast = useToast();
   // Lazy initialization from localStorage so the save effect never runs with empty data
   // on the first render before loadState has been called.
   const [name, setName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
-  const [isReprompting, setIsReprompting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState('parts-plot');
 
-  // Ref to hold the reprompt handler exposed by PlotSection
-  const plotRepromptFnRef = useRef(null);
+  // Refs to hold the import handlers exposed by child sections
+  const plotImportFnRef = useRef(null);
+  const characterImportFnRef = useRef(null);
 
-  const handlePlotRepromptReady = useCallback((fn) => {
-    plotRepromptFnRef.current = fn;
+  const handlePlotImportReady = useCallback((fn) => {
+    plotImportFnRef.current = fn;
+  }, []);
+
+  const handleCharacterImportReady = useCallback((fn) => {
+    characterImportFnRef.current = fn;
   }, []);
 
   // ── Library lookup state ─────────────────────────────────────────────────
@@ -261,14 +266,24 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
 
-  // ── Reprompt: restore parts from the currently displayed image ─────────
-  const handleReprompt = useCallback(async () => {
+  // ── Import: restore parts from the currently displayed image ─────────
+  const handleImport = useCallback(async () => {
     if (!currentItem?.parts || Object.keys(currentItem.parts).length === 0) {
       toast.info('No parts data found on the current image');
       return;
     }
 
-    setIsReprompting(true);
+    const result = await showDialog('Importing will clear and overwrite your current data. Are you sure?', 'Confirm Import', ['Import', 'Cancel']);
+    if (result !== 'Import') return;
+
+    if (activeTab === 'character') {
+      if (characterImportFnRef.current) {
+        await characterImportFnRef.current(currentItem);
+      }
+      return;
+    }
+
+    setIsImporting(true);
     try {
       // Fetch the latest library configs so we get up-to-date attribute definitions
       let latestLibrary = libraryParts;
@@ -282,7 +297,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
           }
         }
       } catch (err) {
-        console.error('[AnyTaleForm] Reprompt: failed to fetch library parts:', err);
+        console.error('[AnyTaleForm] Import: failed to fetch library parts:', err);
       }
 
       // Rebuild the parts list from the image's stored parts data
@@ -326,26 +341,26 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
       setParts(newParts);
 
       if (skipped.length > 0) {
-        toast.info(`Loaded ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
+        toast.info(`Imported ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
       } else {
-        toast.success(`Reprompted: loaded ${newParts.length} part(s) from image`);
+        toast.success(`Imported: loaded ${newParts.length} part(s) from image`);
       }
 
       const plotMeta = currentItem?.plot;
-      if (plotMeta && (plotMeta.uid || plotMeta.name) && plotRepromptFnRef.current) {
-        await plotRepromptFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
+      if (plotMeta && (plotMeta.uid || plotMeta.name) && plotImportFnRef.current) {
+        await plotImportFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
       }
     } finally {
-      setIsReprompting(false);
+      setIsImporting(false);
     }
-  }, [currentItem, libraryParts, plotRepromptFnRef, toast]);
+  }, [currentItem, libraryParts, plotImportFnRef, activeTab, characterImportFnRef, toast]);
 
-  // Notify parent when reprompt handler or its enabled state changes
-  const canReprompt = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isReprompting;
+  // Notify parent when import handler or its enabled state changes
+  const canImport = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isImporting;
   useEffect(() => {
-    if (onRepromptReady) onRepromptReady(handleReprompt, canReprompt);
-    return () => { if (onRepromptReady) onRepromptReady(null, false); };
-  }, [handleReprompt, canReprompt, onRepromptReady]);
+    if (onImportReady) onImportReady(handleImport, canImport);
+    return () => { if (onImportReady) onImportReady(null, false); };
+  }, [handleImport, canImport, onImportReady]);
 
   // Compute all unique type strings from the library for autocomplete suggestions
   const allTypes = useMemo(() => {
@@ -461,7 +476,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
             pageLocked=${pageLocked}
             onPageLockedChange=${setPageLocked}
             onPlotReset=${() => setPageLocked([])}
-            onRepromptHandlerReady=${handlePlotRepromptReady}
+            onImportHandlerReady=${handlePlotImportReady}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>
@@ -505,6 +520,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
           isGenerating=${isGenerating || isAnyPreviewGenerating}
           onLibraryPartsChange=${refreshLibraryParts}
           plotList=${plotList}
+          onImportHandlerReady=${handleCharacterImportReady}
         />
       `,
     },

@@ -74,13 +74,13 @@ export function AnyTalePage() {
   // Workflow
   const [workflow, setWorkflow] = useState(null);
 
-  // Reprompt handler forwarded from AnyTaleForm
-  const repromptFnRef = useRef(null);
-  const [canReprompt, setCanReprompt] = useState(false);
+  // Import handler forwarded from AnyTaleForm
+  const importFnRef = useRef(null);
+  const [canImport, setCanImport] = useState(false);
 
-  const handleRepromptReady = useCallback((fn, enabled) => {
-    repromptFnRef.current = fn;
-    setCanReprompt(!!enabled);
+  const handleImportReady = useCallback((fn, enabled) => {
+    importFnRef.current = fn;
+    setCanImport(!!enabled);
   }, []);
 
   // Generation state
@@ -307,8 +307,8 @@ export function AnyTalePage() {
             onFirst=${nav.selectFirst}
             onLast=${nav.selectLast}
             currentItem=${nav.currentItem}
-            onReprompt=${() => repromptFnRef.current && repromptFnRef.current()}
-            canReprompt=${canReprompt}
+            onImport=${() => importFnRef.current && importFnRef.current()}
+            canImport=${canImport}
             onDelete=${() => handleDeleteImage(nav.currentItem)}
             canDelete=${!!nav.currentItem}
           />
@@ -319,7 +319,7 @@ export function AnyTalePage() {
             onGenerate=${handleGenerate}
             isGenerating=${isGenerating}
             onStateLoaded=${handleStateLoaded}
-            onRepromptReady=${handleRepromptReady}
+            onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
           />
         </${RightColumn}>

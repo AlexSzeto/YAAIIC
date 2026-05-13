@@ -65,9 +65,9 @@ NavRow.className = 'plot-nav-row';
  * @param {boolean[]} [props.pageLocked=[]]         – Lock state per page index
  * @param {Function} [props.onPageLockedChange]     – Called with updated lock array
  * @param {Function} [props.onPlotReset]              – Called when the plot is loaded, cleared, or deleted
- * @param {Function} [props.onRepromptHandlerReady] – Called with the async reprompt handler on mount; null on unmount
+ * @param {Function} [props.onImportHandlerReady]   – Called with the async import handler on mount; null on unmount
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onRepromptHandlerReady }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -262,8 +262,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return out;
   }, [plotList]);
 
-  // ── Reprompt handler: load a plot from a media entry's stored plot data ──
-  const repromptLoadPlot = useCallback(async ({ uid, name, page }) => {
+  // ── Import handler: load a plot from a media entry's stored plot data ──
+  const importLoadPlot = useCallback(async ({ uid, name, page }) => {
     // 1. Same plot already loaded — skip reload, just navigate
     if (plot.uid && plot.uid === uid) {
       onPageChange && onPageChange(page);
@@ -305,11 +305,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     toast.info('Plot from image not found in library; parts were still restored.');
   }, [plot.uid, plotList, onPageChange, toast]);
 
-  // Register / deregister the reprompt handler with the parent
+  // Register / deregister the import handler with the parent
   useEffect(() => {
-    if (onRepromptHandlerReady) onRepromptHandlerReady(repromptLoadPlot);
-    return () => { if (onRepromptHandlerReady) onRepromptHandlerReady(null); };
-  }, [repromptLoadPlot, onRepromptHandlerReady]);
+    if (onImportHandlerReady) onImportHandlerReady(importLoadPlot);
+    return () => { if (onImportHandlerReady) onImportHandlerReady(null); };
+  }, [importLoadPlot, onImportHandlerReady]);
 
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
