@@ -1,124 +1,97 @@
-# AnyTale Plot Data in Generation Records
+# Progression Types & Parts Removal Data for Plot
 
 ## Goal
 
-When an AnyTale image is generated, store the active plot's UID, name, and current page number alongside the existing `parts` data. When reprompting from that image, restore the correct plot first (by UID, then by exact name fallback), navigate to the stored page number, and handle gracefully: skip reload if the same plot is already loaded, and skip plot restore entirely if no plot data exists (legacy images).
+Add two global string-array properties — `progressionSections` and `progressionDisabledParts` — to the AnyTale plot data shape, and introduce editing UI for both inside `plot-section.mjs`. Both fields are currently inactive (not consumed by generation logic) and serve as metadata-only placeholders at this stage. The UI uses the existing `ChipAutocompleteInput` component already present in the plot section.
 
 ## Tasks
 
-- [x] **Add `plot` as a core schema field in `media-data-schema.json`**
+- [ ] **Task 1: Extend the plot data shape in `anytale-state.mjs`**
+  Add `progressionSections: []` and `progressionDisabledParts: []` to `createBlankPlot()`. In `loadPlot()`, defensively default both arrays the same way `hiddenParts` is handled — if either field is missing or not an array in the stored data, default to `[]`. No migration logic beyond the defensive default is needed (existing plots simply load the new fields as empty arrays).
 
-  Add a new field `"plot"` to `server/resource/media-data-schema.json`:
-  ```json
-  "plot": { "type": "object", "default": null }
-  ```
-  This mirrors how `parts` is declared. Without this, the sanitizer will demote `plot` into `extraInputs`.
+  **Manual test:** Open the browser console and run `localStorage.removeItem('anytale-plot')`, then reload the page. Confirm `loadPlot()` returns an object with `progressionSections: []` and `progressionDisabledParts: []`. Also load an existing saved plot from the library — confirm the two new fields appear as `[]` without breaking anything.
 
-  **Manual test:** Start the server and POST to `/generate` with a `plot` key in the body. Fetch the resulting media entry via `GET /media-data/:uid` and confirm `plot` is a top-level field (not nested under `extraInputs`).
+- [ ] **Task 2: Add editing UI for both fields in `plot-section.mjs`**
+  Inside the existing `SectionWrapper`, add a new `VerticalLayout gap="medium"` block containing the two new inputs. Position it **below** the Page section block (`VerticalLayout` containing `H2 Page`, `TagInput`, `ChipAutocompleteInput Hidden Parts`, and the nav row) and **above** the existing `ButtonRow` (Save / Delete / Clear Plot buttons). Both inputs use the `ChipAutocompleteInput` component already imported.
 
-- [x] **Capture and forward plot data through the generate call chain**
+  **`progressionSections`:**
+  - `label="Progression Sections"`
+  - `placeholder="Add a section name..."`
+  - `suggestions` — a `useMemo`-derived list of unique, non-empty `section` strings from the already-fetched `plotList`. Compiled as: `plotList.map(p => p.section).filter(s => s && s.trim())` deduplicated (case-insensitive). `plotList` is already fetched and held in state on mount — no new fetch needed.
+  - `values={plot.progressionSections || []}` → `onValuesChange` sets `plot.progressionSections` via `setPlot`
 
-  In `anytale-form.mjs` `handleGenerate`, after the existing `loadPlot()` call, build a `plotData` object if the plot has any identifying info:
-  ```js
-  const plotData = (currentPlot.uid || currentPlot.name)
-    ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
-    : null;
-  ```
-  Pass `plotData` as a fourth argument to `onGenerate(prompt, name, partsData, plotData)`.
+  **`progressionDisabledParts`:**
+  - `label="Disabled Parts"`
+  - `placeholder="Type a part name or type to disable..."`
+  - `suggestions` — reuse the **exact same** `hiddenPartsSuggestions` memo already computed in the component (names + types from the `parts` prop). Do not create a duplicate memo; reference the existing value directly.
+  - `values={plot.progressionDisabledParts || []}` → `onValuesChange` sets `plot.progressionDisabledParts` via `setPlot`
 
-  In `anytale.mjs` `handleGenerate`, receive `plotData` and include it in the `/generate` payload:
-  ```js
-  plot: plotData ?? null,
-  ```
+  Both are always enabled (no `disabled` prop needed at this stage — the page-lock concept applies only to the per-page inputs).
 
-  **Manual test:** Load a saved plot, generate an image, then fetch the media entry via `GET /media-data/:uid`. Confirm the `plot` field contains the expected `{ uid, name, page }`. Generate without a plot loaded and confirm `plot` is `null`.
+  Wrap both inputs in an `H2` labelled `"Progression"` at the top of the new block so the section is visually grouped.
 
-- [x] **Expose a reprompt handler from `PlotSection` for external callers**
-
-  Add a new prop `onRepromptHandlerReady` to `PlotSection`. On mount (and when the handler changes), call it with an async function:
-  ```js
-  async function repromptLoadPlot({ uid, name, page }) { ... }
-  ```
-  On unmount, call `onRepromptHandlerReady(null)`.
-
-  The handler logic (inside `PlotSection`, so it has access to `plot`, `plotList`, `onPageChange`, etc.):
-
-  1. **Same plot already loaded** — if `plot.uid` is non-empty and matches `uid`, do not reload the plot (leave any unsaved changes intact), but still call `onPageChange(page)` to navigate to the stored page.
-  2. **Load by UID** — call `GET /anytale/plot/:uid`. If successful, call `setPlot(fullPlot)`, `setSavedPlot(fullPlot)`, and `onPageChange(page)`.
-  3. **UID not found — name fallback** — if the UID fetch fails (404 or error), search `plotList` for an entry where `p.name === name` (exact match). If found, fetch that plot by its UID, then apply the same set/setSaved/navigate steps.
-  4. **Not found** — show a toast: `"Plot from image not found in library; parts were still restored."` and return without modifying the plot state.
-
-  `AnyTaleForm` stores the registered handler in a ref (`plotRepromptFnRef`) via a `useCallback`-based `handlePlotRepromptReady` prop. Wire `PlotSection` to register this in a `useEffect` when the handler function changes.
-
-  **Manual test:** This task has no standalone UI test yet; wire-up is validated in the next task.
-
-- [x] **Call the plot reprompt handler from `AnyTaleForm.handleReprompt`**
-
-  At the end of the existing parts-restore logic in `handleReprompt` (after `setParts(newParts)` succeeds):
-
-  ```js
-  const plotMeta = currentItem?.plot;
-  if (plotMeta && (plotMeta.uid || plotMeta.name) && plotRepromptFnRef.current) {
-    await plotRepromptFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
-  }
-  ```
-
-  If `currentItem.plot` is absent or null, skip this block entirely — parts are restored normally, and the plot section is untouched (backward compatibility for pre-feature images).
-
-  Update the `canReprompt` condition to also check for `currentItem.plot` OR `currentItem.parts` (either is enough to enable the button):
-  ```js
-  const canReprompt = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isReprompting;
-  ```
-
-  **Manual test:**
-  1. Load a saved plot, generate an image, then click Reprompt on that image. Confirm the correct plot is loaded and the page navigator jumps to the stored page.
-  2. Load a *different* plot in the form, then reprompt the same image. Confirm the first plot is re-loaded (UID match triggers a real load).
-  3. Reprompt the same image again without changing anything. Confirm the same plot stays loaded with unsaved changes intact (UID matches, no reload — but page navigation does still fire).
-  4. Delete the plot from the library, then reprompt the image. Confirm the name fallback is attempted and, if the name also doesn't match, the warning toast appears but parts are still restored.
-  5. Reprompt an older image that has `parts` but no `plot` field. Confirm parts are restored and the plot section is unchanged.
+  **Manual test:** Load or clear a plot. Confirm the "Progression" section appears between the Page nav row and the Save/Delete/Clear buttons. Add chips to both inputs and confirm they persist across a page reload (values are saved to localStorage via the existing `savePlotState` call in the `useEffect`). Save the plot to the server and re-load it — confirm the new fields round-trip correctly.
 
 ## Implementation Details
 
-### Data Shape
+### Updated plot data shape
 
-The `plot` field stored on a media entry:
-```json
+```js
+// createBlankPlot() — updated return value
 {
-  "plot": {
-    "uid": "my-plot-uid",
-    "name": "My Plot Name",
-    "page": 2
-  }
+  uid: '',
+  name: '',
+  section: '',
+  pages: [{ tags: '', hiddenParts: [] }],
+  progressionSections: [],       // NEW — string[]
+  progressionDisabledParts: [],  // NEW — string[]
 }
 ```
-`page` is 0-based, matching `activePlotPage`.
 
-### `handleGenerate` Signature Change
-
-`onGenerate` gains a fourth argument:
-```
-onGenerate(assembledPrompt, name, partsData, plotData)
-```
-- `plotData` is `{ uid, name, page }` if a plot with any identifier is active, or `null` otherwise.
-
-### `PlotSection` Props Addition
+### loadPlot() defensive defaulting pattern (mirrors existing hiddenParts handling)
 
 ```js
-PlotSection({ ..., onRepromptHandlerReady })
+return {
+  uid: parsed.uid ?? '',
+  name: parsed.name ?? '',
+  section: parsed.section ?? '',
+  pages,
+  progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
+  progressionDisabledParts: Array.isArray(parsed.progressionDisabledParts) ? parsed.progressionDisabledParts : [],
+};
 ```
-- Called with a function on mount (and whenever the internal handler identity changes).
-- Called with `null` on unmount.
 
-### `AnyTaleForm` Ref
+### progressionSections suggestions memo
 
 ```js
-const plotRepromptFnRef = useRef(null);
-const handlePlotRepromptReady = useCallback((fn) => {
-  plotRepromptFnRef.current = fn;
-}, []);
+const progressionSectionsSuggestions = useMemo(() => {
+  const seen = new Set();
+  const out = [];
+  for (const p of plotList) {
+    const s = (p.section || '').trim();
+    if (s && !seen.has(s.toLowerCase())) {
+      seen.add(s.toLowerCase());
+      out.push(s);
+    }
+  }
+  return out;
+}, [plotList]);
 ```
-Passed to `PlotSection` as `onRepromptHandlerReady={handlePlotRepromptReady}`.
 
-### Page Number Mismatch
+Note: `plotList` currently stores `{ uid, name }` summary objects from `GET /anytale/plot`. Confirm whether `section` is included in that list response before relying on it. If it is not, the suggestions memo will always be empty at this stage — that is acceptable since the fields are inactive, but it should be noted. The full plot object (fetched per `uid`) does include `section`.
 
-The stored `page` is applied directly via `onPageChange(page)` with no range clamping at the call site — `PlotSection` already clamps via `Math.min(Math.max(activePage, 0), pageCount - 1)` internally.
+### UI layout (within SectionWrapper, order of children)
+
+1. `H2` "Plot"
+2. `AutocompleteInput` — Load Plot by Name
+3. `VerticalLayout gap="small"` — Plot Name + Section inputs
+4. `VerticalLayout gap="medium"` — Page section (H2 "Page", TagInput, Hidden Parts, NavRow)
+5. **`VerticalLayout gap="medium"` — Progression section (H2 "Progression", progressionSections chip input, progressionDisabledParts chip input)** ← NEW
+6. `ButtonRow` — Save / Delete / Clear Plot
+
+### Files to modify
+
+| File | Change |
+|------|--------|
+| `public/js/app-ui/anytale/anytale-state.mjs` | Add new fields to `createBlankPlot()` and `loadPlot()` |
+| `public/js/app-ui/anytale/plot-section.mjs` | Add `progressionSectionsSuggestions` memo + new Progression UI block |
