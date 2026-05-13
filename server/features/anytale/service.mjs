@@ -25,7 +25,7 @@ export function removePartByUid(uid) {
 
 export function getAllPlots() {
   // Return lightweight summary objects for autocomplete
-  return listPlots().map(p => ({ uid: p.uid, name: p.name }));
+  return listPlots().map(p => ({ uid: p.uid, name: p.name, section: p.section ?? '' }));
 }
 
 export function getPlotByUid(uid) {

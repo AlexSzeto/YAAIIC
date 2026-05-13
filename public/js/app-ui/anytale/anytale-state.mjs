@@ -124,7 +124,9 @@ export function createBlankPlot() {
     uid: '',
     name: '',
     section: '',
-    pages: [{ tags: '', hiddenParts: [] }],
+    pages: [{ tags: '', dialogPrompt: '', hiddenParts: [] }],
+    progressionSections: [],
+    progressionDisabledParts: [],
   };
 }
 
@@ -140,11 +142,12 @@ export function loadPlot() {
     const parsed = JSON.parse(raw);
     // Ensure at least one page
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-      parsed.pages = [{ tags: '', hiddenParts: [] }];
+      parsed.pages = [{ tags: '', dialogPrompt: '', hiddenParts: [] }];
     }
-    // Defensively default hiddenParts on any page missing the field
+    // Defensively default per-page fields
     const pages = parsed.pages.map(p => ({
       ...p,
+      dialogPrompt: typeof p.dialogPrompt === 'string' ? p.dialogPrompt : '',
       hiddenParts: Array.isArray(p.hiddenParts) ? p.hiddenParts : [],
     }));
     return {
@@ -152,6 +155,8 @@ export function loadPlot() {
       name: parsed.name ?? '',
       section: parsed.section ?? '',
       pages,
+      progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
+      progressionDisabledParts: Array.isArray(parsed.progressionDisabledParts) ? parsed.progressionDisabledParts : [],
     };
   } catch {
     return createBlankPlot();

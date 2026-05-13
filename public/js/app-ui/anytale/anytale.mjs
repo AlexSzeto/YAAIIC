@@ -263,7 +263,7 @@ export function AnyTalePage() {
   return html`
     <${VerticalLayout}>
       <${AppHeader}>
-        <${H1}>AnyTale<//>
+        <${H1}>AnyTale Editor<//>
         <${HorizontalLayout} gap="small">
           <${Button}
             id="gallery-btn"

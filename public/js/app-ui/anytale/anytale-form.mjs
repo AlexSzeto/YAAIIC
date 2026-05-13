@@ -15,7 +15,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart, loadPlot } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
@@ -68,16 +68,6 @@ const PromptPreview = styled('div')`
 `;
 PromptPreview.className = 'prompt-preview';
 
-const PlayPlaceholder = styled('div')`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  color: ${() => currentTheme.value.colors.text.muted};
-  font-size: ${() => currentTheme.value.typography.fontSize.large};
-`;
-PlayPlaceholder.className = 'play-placeholder';
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -95,7 +85,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
   // on the first render before loadState has been called.
   const [name, setName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
-  const [activeTab, setActiveTab] = useState('edit');
   const [isReprompting, setIsReprompting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
@@ -485,22 +474,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onRepromp
     </${EditLayout}>
   `;
 
-  const playContent = html`
-    <${PlayPlaceholder}>Coming Soon</${PlayPlaceholder}>
-  `;
-
-  const tabs = [
-    { id: 'edit', label: 'Edit', content: editContent },
-    { id: 'play', label: 'Play', content: playContent },
-  ];
-
   return html`
-    <${TabPanels}
-      tabs=${tabs}
-      activeTab=${activeTab}
-      onTabChange=${setActiveTab}
+    <${Panel}
       variant="outlined"
       style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    />
+    >
+      ${editContent}
+    </${Panel}>
   `;
 }

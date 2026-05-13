@@ -249,6 +249,19 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return out;
   }, [parts]);
 
+  const progressionSectionsSuggestions = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const p of plotList) {
+      const s = (p.section || '').trim();
+      if (s && !seen.has(s.toLowerCase())) {
+        seen.add(s.toLowerCase());
+        out.push(s);
+      }
+    }
+    return out;
+  }, [plotList]);
+
   // ── Reprompt handler: load a plot from a media entry's stored plot data ──
   const repromptLoadPlot = useCallback(async ({ uid, name, page }) => {
     // 1. Same plot already loaded — skip reload, just navigate
@@ -348,6 +361,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           disabled=${isCurrentPageLocked}
         />
 
+        <${Input}
+          label="Action Description for Dialog Prompt"
+          value=${currentPage.dialogPrompt || ''}
+          onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
+          placeholder="Describe the action for the dialog prompt"
+          widthScale="full"
+          disabled=${isCurrentPageLocked}
+        />
+
         <${ChipAutocompleteInput}
           label="Hidden Parts"
           placeholder="Type a part name or type to hide..."
@@ -384,6 +406,26 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           >Unlock<//>
         </${NavRow}>
       </${VerticalLayout}>
+
+      <!-- Progression section: progression types and disabled parts -->
+      <${VerticalLayout} gap="medium">
+        <${H2}>Progression</${H2}>
+        <${ChipAutocompleteInput}
+          label="Progression Sections"
+          placeholder="Add a section name..."
+          suggestions=${progressionSectionsSuggestions}
+          values=${plot.progressionSections || []}
+          onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionSections: newValues }))}
+        />
+        <${ChipAutocompleteInput}
+          label="Disabled Parts"
+          placeholder="Type a part name or type to disable..."
+          suggestions=${hiddenPartsSuggestions}
+          values=${plot.progressionDisabledParts || []}
+          onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionDisabledParts: newValues }))}
+        />
+      </${VerticalLayout}>
+
       <${ButtonRow}>
         <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
