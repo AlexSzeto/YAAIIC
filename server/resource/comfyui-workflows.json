@@ -145,7 +145,7 @@
             }
           },
           "model": "ssfdre38/gemma4-nano:latest",
-          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that serves as a self introduction of a character with the given personality profile: {{prompt}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
+          "prompt": "Write a single paragraph of prose consist of exactly 2 lines of sample dialog that serves as a self introduction of a character with the given personality profile: {{prompt}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
           "to": "dialog"
         },
         {

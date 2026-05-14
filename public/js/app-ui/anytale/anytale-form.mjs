@@ -358,13 +358,81 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
 
-  // ── Import: route parts to character or outfit based on library types ─────
+  // ── Import: behaviour depends on which tab is active ─────────────────────
   const handleImport = useCallback(async () => {
     if (!currentItem?.parts || Object.keys(currentItem.parts).length === 0) {
       toast.info('No parts data found on the current image');
       return;
     }
 
+    // ── Parts & Plot tab: restore full parts list + plot ─────────────────
+    if (activeTab === 'parts-plot') {
+      const result = await showDialog('Importing will clear and overwrite your current data. Are you sure?', 'Confirm Import', ['Import', 'Cancel']);
+      if (result !== 'Import') return;
+
+      setIsImporting(true);
+      try {
+        let latestLibrary = libraryParts;
+        try {
+          const response = await fetch('/anytale/parts');
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) { latestLibrary = data; setLibraryParts(data); }
+          }
+        } catch (err) {
+          console.error('[AnyTaleForm] Import: failed to fetch library parts:', err);
+        }
+
+        const newParts = [];
+        const skipped = [];
+        for (const [partName, storedData] of Object.entries(currentItem.parts)) {
+          const libraryConfig = latestLibrary.find(p => p.name === partName);
+          if (!libraryConfig) { skipped.push(partName); continue; }
+
+          const categoryAttributeValues = {};
+          for (const attr of (libraryConfig.categoryAttributes || [])) {
+            categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
+          }
+          const customAttributeValues = {};
+          for (const attr of (libraryConfig.customAttributes || [])) {
+            customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
+          }
+
+          const newPart = createDefaultPart();
+          newPart.config = { ...libraryConfig };
+          newPart.data = {
+            enabled: storedData.enabled ?? true,
+            categoryAttributeValues,
+            customAttributeValues,
+            previewImageUrl: storedData.previewImageUrl || '',
+          };
+          newParts.push(newPart);
+        }
+
+        if (newParts.length === 0) {
+          toast.error('None of the image\'s parts were found in the library');
+          return;
+        }
+
+        setParts(newParts);
+
+        if (skipped.length > 0) {
+          toast.info(`Imported ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
+        } else {
+          toast.success(`Imported: loaded ${newParts.length} part(s) from image`);
+        }
+
+        const plotMeta = currentItem?.plot;
+        if (plotMeta && (plotMeta.uid || plotMeta.name) && plotImportFnRef.current) {
+          await plotImportFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
+        }
+      } finally {
+        setIsImporting(false);
+      }
+      return;
+    }
+
+    // ── Character & Outfits tab: route parts to character or outfit ───────
     const result = await showDialog('Importing will clear and overwrite your current character and outfit data. Are you sure?', 'Confirm Import', ['Import', 'Cancel']);
     if (result !== 'Import') return;
 
@@ -418,11 +486,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
 
         if (isCharType) characterParts.push(partEntry);
         else if (isOutfitType) outfitParts.push({ ...partEntry });
-        // No type match → add to both
         else { characterParts.push(partEntry); outfitParts.push({ ...partEntry }); }
       }
 
-      // Write directly to localStorage; child sections refresh via importRefreshKey
       const blankChar = createBlankCharacter();
       blankChar.name = currentItem.name || 'Imported Character';
       blankChar.parts = characterParts;
@@ -449,7 +515,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     } finally {
       setIsImporting(false);
     }
-  }, [currentItem, libraryParts, recommendedCharacterPartTypes, recommendedOutfitPartTypes, plotImportFnRef, toast]);
+  }, [currentItem, libraryParts, recommendedCharacterPartTypes, recommendedOutfitPartTypes, plotImportFnRef, activeTab, toast]);
 
   // Notify parent when import handler or its enabled state changes
   const canImport = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isImporting;
