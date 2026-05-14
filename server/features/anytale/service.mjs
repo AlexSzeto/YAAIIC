@@ -1,7 +1,7 @@
 /**
  * AnyTale Service – Business logic for the parts library, plot data, and characters.
  */
-import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter } from './repository.mjs';
+import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit } from './repository.mjs';
 
 export function getAllParts() {
   return listParts();
@@ -70,4 +70,24 @@ export function saveCharacter(uid, character) {
 export function removeCharacterByUid(uid) {
   // throws with code ENOENT if not found
   deleteCharacter(uid);
+}
+
+// ── Outfits ────────────────────────────────────────────────────────────────
+
+export function getAllOutfits() {
+  return listOutfits();
+}
+
+export function saveOutfit(uid, outfit) {
+  if (!uid || typeof uid !== 'string') {
+    const err = new Error('uid is required and must be a string');
+    err.code = 'EINVAL';
+    throw err;
+  }
+  return upsertOutfit(uid, outfit);
+}
+
+export function removeOutfitByUid(uid) {
+  // throws with code ENOENT if not found
+  deleteOutfit(uid);
 }

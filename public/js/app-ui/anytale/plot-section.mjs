@@ -347,6 +347,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           placeholder="e.g. prelude"
           widthScale="full"
         />
+        <${Input}
+          label="Description"
+          value=${plot.description || ''}
+          onInput=${(e) => setPlot(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Brief description of this plot..."
+          widthScale="full"
+          multiline
+          rows=${2}
+        />
       </${VerticalLayout}>
 
       <!-- Page section: tags, hidden parts, navigation (no outline wrapper) -->

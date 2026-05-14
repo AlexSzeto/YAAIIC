@@ -1,5 +1,5 @@
 /**
- * AnyTale Router – REST endpoints for the parts library, plot data, and characters.
+ * AnyTale Router – REST endpoints for the parts library, plot data, characters, and outfits.
  *
  * Routes:
  *   GET    /anytale/parts         – returns array of all saved part configs
@@ -15,9 +15,13 @@
  *   DELETE /anytale/characters/:uid        – remove a character by uid
  *   POST   /anytale/characters/:uid/generate-portrait – generate a portrait image for a character
  *   POST   /anytale/characters/:uid/generate-voice    – generate voice audio for a character
+ *
+ *   GET    /anytale/outfits       – returns array of all saved outfits
+ *   PUT    /anytale/outfits/:uid  – upsert an outfit; body is { uid, name, parts }
+ *   DELETE /anytale/outfits/:uid  – delete an outfit
  */
 import { Router } from 'express';
-import { getAllParts, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, saveCharacter, removeCharacterByUid } from './service.mjs';
+import { getAllParts, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, saveCharacter, removeCharacterByUid, getAllOutfits, saveOutfit, removeOutfitByUid } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
@@ -284,6 +288,46 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
   } catch (error) {
     console.error('Error generating voice for anytale character:', error);
     res.status(500).json({ error: 'Failed to generate voice', details: error.message });
+  }
+});
+
+// ── Outfit endpoints ─────────────────────────────────────────────────────
+
+router.get('/anytale/outfits', (_req, res) => {
+  try {
+    const outfits = getAllOutfits();
+    res.json(outfits);
+  } catch (error) {
+    console.error('Error listing anytale outfits:', error);
+    res.status(500).json({ error: 'Failed to list outfits' });
+  }
+});
+
+router.put('/anytale/outfits/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    const outfit = req.body;
+    if (!outfit || typeof outfit !== 'object') {
+      return res.status(400).json({ error: 'Request body must be an outfit object' });
+    }
+    const saved = saveOutfit(uid, { ...outfit, uid });
+    res.json({ saved });
+  } catch (error) {
+    if (error.code === 'EINVAL') return res.status(400).json({ error: error.message });
+    console.error('Error saving anytale outfit:', error);
+    res.status(500).json({ error: 'Failed to save outfit' });
+  }
+});
+
+router.delete('/anytale/outfits/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    removeOutfitByUid(uid);
+    res.json({ deleted: uid });
+  } catch (error) {
+    if (error.code === 'ENOENT') return res.status(404).json({ error: 'Outfit not found' });
+    console.error('Error deleting anytale outfit:', error);
+    res.status(500).json({ error: 'Failed to delete outfit' });
   }
 });
 

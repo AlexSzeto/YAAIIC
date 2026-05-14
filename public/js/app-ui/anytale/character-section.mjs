@@ -28,9 +28,11 @@ import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { loadCharacter, saveCharacterState, createBlankCharacter } from './anytale-state.mjs';
 import { fetchCharacterList, saveCharacter, deleteCharacter, generateCharacterPortrait, generateCharacterVoice } from './character-api.mjs';
-import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
+import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 import { ImagePreview } from './image-preview.mjs';
+import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
+import { fetchOutfitList } from './outfit-api.mjs';
 
 // ============================================================================
 // Styled Components
@@ -77,7 +79,8 @@ function charactersEqual(a, b) {
     (a.portraitUrl || '') === (b.portraitUrl || '') &&
     (a.audioUrl || '') === (b.audioUrl || '') &&
     (a.introTranscript || '') === (b.introTranscript || '') &&
-    JSON.stringify(a.parts || []) === JSON.stringify(b.parts || []);
+    JSON.stringify(a.parts || []) === JSON.stringify(b.parts || []) &&
+    JSON.stringify(a.preferredOutfits || []) === JSON.stringify(b.preferredOutfits || []);
 }
 
 /**
@@ -118,13 +121,11 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
  *
  * @param {Object}   props
  * @param {Array}    props.libraryParts          – Library parts (from server)
- * @param {Function} props.onGenerate            – (prompt, name, partsData, plotData) => void
- * @param {boolean}  props.isGenerating          – Main generation in-flight
  * @param {Function} [props.onLibraryPartsChange] – Called when library is updated
- * @param {Array}    [props.plotList=[]]          – Plot list provided by parent (AnyTaleForm)
  * @param {Function} [props.onImportHandlerReady] – Exposes the import handler to the parent
+ * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, onLibraryPartsChange, plotList = [], onImportHandlerReady }) {
+export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true }) {
   const toast = useToast();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
@@ -134,15 +135,32 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryCharacter, setLibraryCharacter] = useState(null);
 
+  // Reload from localStorage when parent signals an import (refreshKey changes)
+  const refreshKeyRef = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey === refreshKeyRef.current) return;
+    refreshKeyRef.current = refreshKey;
+    const loaded = loadCharacter();
+    setCharacter(loaded);
+    setSavedCharacterUid(loaded.uid || null);
+    setLibraryCharacter(null);
+  }, [refreshKey]);
+
   // ── Generation state ─────────────────────────────────────────────────────
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
 
-  // ── Preview plot state (local only, not saved to character) ──────────────
-  const [previewPlotName, setPreviewPlotName] = useState('');
-  const [previewPlotUid, setPreviewPlotUid] = useState('');
+  // ── Outfit list for preferredOutfits autocomplete ────────────────────────
+  const [outfitList, setOutfitList] = useState([]);
+
+  useEffect(() => {
+    fetchOutfitList()
+      .then(list => { if (Array.isArray(list)) setOutfitList(list); })
+      .catch(err => console.error('[CharacterSection] Failed to fetch outfit list:', err));
+  }, []);
+
   const [recommendedPartTypes, setRecommendedPartTypes] = useState([]);
 
   // Fetch recommended part types config on mount
@@ -198,6 +216,22 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
   const handleFieldChange = useCallback((field, value) => {
     setCharacter(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  // ── PreferredOutfits: resolve uid from outfit name on chip select ─────────
+  const preferredOutfitNames = useMemo(() => {
+    return (character.preferredOutfits || []).map(uid => {
+      const match = outfitList.find(o => o.uid === uid);
+      return match ? match.name : uid;
+    });
+  }, [character.preferredOutfits, outfitList]);
+
+  const handlePreferredOutfitsChange = useCallback((names) => {
+    const uids = names.map(name => {
+      const match = outfitList.find(o => o.name === name);
+      return match ? match.uid : name;
+    });
+    setCharacter(prev => ({ ...prev, preferredOutfits: uids }));
+  }, [outfitList]);
 
   // ── Library autocomplete: add part from library ──────────────────────────
   const handleLibrarySelect = useCallback((inputValue) => {
@@ -352,25 +386,6 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
     }
   }, [character, isGeneratingVoice, toast]);
 
-  // ── Preview plot autocomplete ────────────────────────────────────────────
-
-  const handlePreviewPlotSelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) {
-      setPreviewPlotName('');
-      setPreviewPlotUid('');
-      return;
-    }
-    const match = plotList.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
-    if (match) {
-      setPreviewPlotName(match.name);
-      setPreviewPlotUid(match.uid);
-    } else {
-      setPreviewPlotName(trimmed);
-      setPreviewPlotUid('');
-    }
-  }, [plotList]);
-
   // ── Prompt parts (used by handleGenerate) ───────────────────────────────
 
   const promptParts = characterPartsToPromptParts(character.parts, libraryParts);
@@ -509,56 +524,19 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
     return () => { if (onImportHandlerReady) onImportHandlerReady(null); };
   }, [handleImport, onImportHandlerReady]);
 
-  // ── Generate: assemble prompt from character parts + preview plot page ───
-
-  const handleGenerate = useCallback(async () => {
-    let activePage;
-
-    if (previewPlotUid) {
-      try {
-        const response = await fetch(`/anytale/plot/${encodeURIComponent(previewPlotUid)}`);
-        if (response.ok) {
-          const plotBlock = await response.json();
-          activePage = Array.isArray(plotBlock.pages) && plotBlock.pages.length > 0
-            ? plotBlock.pages[0]
-            : undefined;
-        }
-      } catch (err) {
-        console.error('[CharacterSection] Failed to fetch preview plot:', err);
-      }
-    }
-
-    const prompt = assemblePrompt(promptParts, activePage);
-
-    // Build partsData keyed by part name (matching existing handleGenerate signature)
-    const partsData = {};
-    for (const cp of character.parts) {
-      const lib = libraryParts.find(p => p.uid === cp.partUid);
-      if (lib?.name) {
-        partsData[lib.name] = {
-          enabled: true,
-          categoryAttributeValues: cp.categoryAttributeValues,
-          customAttributeValues: cp.customAttributeValues,
-          previewImageUrl: cp.previewImageUrl || '',
-        };
-      }
-    }
-
-    const plotData = previewPlotUid
-      ? { uid: previewPlotUid, name: previewPlotName, page: 0 }
-      : null;
-
-    onGenerate(prompt, character.name, partsData, plotData);
-  }, [character, libraryParts, promptParts, previewPlotUid, previewPlotName, onGenerate]);
-
   // ============================================================================
   // Render
   // ============================================================================
 
-  return html`
-    <${VerticalLayout} gap="medium" style=${{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', overflow: 'hidden' }}>
+  const outerStyle = scrollable
+    ? { display: 'flex', flexDirection: 'column', flex: '1 1 auto', overflow: 'hidden' }
+    : { display: 'flex', flexDirection: 'column', flex: 'none' };
+  const ContentWrapper = scrollable ? ScrollArea : VerticalLayout;
 
-      <${ScrollArea}>
+  return html`
+    <${VerticalLayout} gap="medium" style=${outerStyle}>
+
+      <${ContentWrapper}>
         <${VerticalLayout} gap="large">
 
           <!-- Load character from library -->
@@ -582,6 +560,7 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
                   fontWeight: currentTheme.value.typography.fontWeight.medium,
                 }}>Voice Preview</label>
                 <${AudioPlayer} audioUrl=${character.audioUrl} widthScale="full" disabled=${!character.audioUrl} />
+                ${character.introTranscript ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}>${character.introTranscript}</div>` : null}
               </div>
             </div>
 
@@ -600,6 +579,14 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
               widthScale="full"
               multiline
               rows=${3}
+            />
+
+            <${ChipAutocompleteInput}
+              label="Preferred Outfits"
+              placeholder="Type to add an outfit..."
+              suggestions=${outfitList.map(o => o.name)}
+              values=${preferredOutfitNames}
+              onValuesChange=${handlePreferredOutfitsChange}
             />
 
             <${ButtonRow}>
@@ -665,63 +652,38 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
             />
           </${VerticalLayout}>
 
+          <!-- Save / Delete / Clear actions -->
+          <${ButtonRow}>
+            <${Button}
+              variant="medium-text"
+              color="primary"
+              icon="save"
+              onClick=${handleSave}
+              disabled=${isInLibrary && !hasChanges}
+            >
+              ${isInLibrary ? 'Update' : 'Save'}
+            <//>
+            <${Button}
+              variant="medium-text"
+              color="secondary"
+              icon="trash"
+              onClick=${handleDelete}
+              disabled=${!isInLibrary}
+            >
+              Delete
+            <//>
+            <${Button}
+              variant="medium-text"
+              color="secondary"
+              icon="x"
+              onClick=${handleClear}
+            >
+              Clear
+            <//>
+          </${ButtonRow}>
+
         </${VerticalLayout}>
-      </${ScrollArea}>
-
-      <!-- Sticky Generation and Actions section -->
-      <${StickySection}>
-        <${H2}>Generation and Actions</${H2}>
-
-        <${AutocompleteInput}
-          label="Preview Plot"
-          placeholder="Type to search saved plots..."
-          suggestions=${plotList.map(p => p.name)}
-          onSelect=${handlePreviewPlotSelect}
-        />
-
-        ${previewPlotName
-          ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${previewPlotName}</div>`
-          : null
-        }
-
-        <${ButtonRow}>
-          <${Button}
-            variant="large-text"
-            color="primary"
-            icon="play"
-            onClick=${handleGenerate}
-            disabled=${isGenerating}
-          >
-            ${isGenerating ? 'Generating...' : 'Generate'}
-          <//>
-          <${Button}
-            variant="medium-text"
-            color="primary"
-            icon="save"
-            onClick=${handleSave}
-            disabled=${isGenerating || (isInLibrary && !hasChanges)}
-          >
-            ${isInLibrary ? 'Update' : 'Save'}
-          <//>
-          <${Button}
-            variant="medium-text"
-            color="secondary"
-            icon="trash"
-            onClick=${handleDelete}
-            disabled=${isGenerating || !isInLibrary}
-          >
-            Delete
-          <//>
-          <${Button}
-            variant="medium-text"
-            color="secondary"
-            icon="x"
-            onClick=${handleClear}
-          >
-            Clear
-          <//>
-        </${ButtonRow}>
-      </${StickySection}>
+      </${ContentWrapper}>
 
     </${VerticalLayout}>
   `;

@@ -19,9 +19,10 @@ function readData() {
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
       plot: Array.isArray(parsed.plot) ? parsed.plot : [],
       characters: Array.isArray(parsed.characters) ? parsed.characters : [],
+      outfits: Array.isArray(parsed.outfits) ? parsed.outfits : [],
     };
   } catch {
-    return { parts: [], plot: [], characters: [] };
+    return { parts: [], plot: [], characters: [], outfits: [] };
   }
 }
 
@@ -114,5 +115,35 @@ export function deleteCharacter(uid) {
     throw err;
   }
   data.characters.splice(idx, 1);
+  writeData(data);
+}
+
+// ── Outfits CRUD ───────────────────────────────────────────────────────────
+
+export function listOutfits() {
+  return readData().outfits;
+}
+
+export function upsertOutfit(uid, outfit) {
+  const data = readData();
+  const idx = data.outfits.findIndex(o => o.uid === uid);
+  if (idx >= 0) {
+    data.outfits[idx] = outfit;
+  } else {
+    data.outfits.push(outfit);
+  }
+  writeData(data);
+  return outfit;
+}
+
+export function deleteOutfit(uid) {
+  const data = readData();
+  const idx = data.outfits.findIndex(o => o.uid === uid);
+  if (idx < 0) {
+    const err = new Error(`Outfit not found: ${uid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  data.outfits.splice(idx, 1);
   writeData(data);
 }

@@ -1,9 +1,9 @@
-/**
- * anytale-form.mjs – Right-column form for the AnyTale page.
+﻿/**
+ * anytale-form.mjs â€“ Right-column form for the AnyTale page.
  *
  * Contains two tabs:
- *   Parts & Plot:  Character Name, Parts DynamicList, Prompt Preview, Generate/Delete/Clear buttons.
- *   Character:     Character database form (CharacterSection).
+ *   Parts & Plot:          Parts DynamicList, Plot Section, Generation section (merged char+outfit parts).
+ *   Character & Outfits:   CharacterSection + OutfitSection stacked vertically, each with its own scroll area.
  *
  * Persists state to localStorage via anytale-state.mjs.
  */
@@ -17,13 +17,14 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
-import { loadState, saveState, clearState, createDefaultPart, loadPlot } from './anytale-state.mjs';
+import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, createBlankCharacter, createBlankOutfit } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
+import { OutfitSection } from './outfit-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 
 // ============================================================================
@@ -76,15 +77,13 @@ PromptPreview.className = 'prompt-preview';
 
 /**
  * @param {Object}   props
- * @param {Function} props.onGenerate    – Called with (prompt, name) when Generate is clicked
- * @param {boolean}  props.isGenerating  – True while a generation is in-flight
- * @param {Function} [props.onStateLoaded] – Called with the restored name after localStorage is read
- * @param {Function} [props.onImportReady] – Called with (fn, enabled) when import handler changes; (null, false) on unmount
+ * @param {Function} props.onGenerate    â€“ Called with (prompt, name, partsData, plotData) when Generate is clicked
+ * @param {boolean}  props.isGenerating  â€“ True while a generation is in-flight
+ * @param {Function} [props.onStateLoaded] â€“ Called with the restored name after localStorage is read
+ * @param {Function} [props.onImportReady] â€“ Called with (fn, enabled) when import handler changes; (null, false) on unmount
  */
 export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportReady, currentItem = null }) {
   const toast = useToast();
-  // Lazy initialization from localStorage so the save effect never runs with empty data
-  // on the first render before loadState has been called.
   const [name, setName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   const [isImporting, setIsImporting] = useState(false);
@@ -92,42 +91,58 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState('parts-plot');
 
-  // Refs to hold the import handlers exposed by child sections
+  // Incremented when import writes character/outfit state to localStorage so child
+  // sections can pick up the new data.
+  const [importRefreshKey, setImportRefreshKey] = useState(0);
+
+  // Plot import handler ref (kept for plot section delegation)
   const plotImportFnRef = useRef(null);
-  const characterImportFnRef = useRef(null);
+  const handlePlotImportReady = useCallback((fn) => { plotImportFnRef.current = fn; }, []);
 
-  const handlePlotImportReady = useCallback((fn) => {
-    plotImportFnRef.current = fn;
+  // â”€â”€ Config for import routing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
+  const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
+
+  useEffect(() => {
+    fetch('/anytale/config')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.recommendedCharacterPartTypes)) setRecommendedCharacterPartTypes(data.recommendedCharacterPartTypes);
+        if (Array.isArray(data.recommendedOutfitPartTypes)) setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
+      })
+      .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
+  }, []);
+  // â"€â"€ Plot list for Character & Outfits tab generate section â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  const [charTabPlotList, setCharTabPlotList] = useState([]);
+  const [charTabPlotName, setCharTabPlotName] = useState('');
+  const [charTabPlotUid, setCharTabPlotUid] = useState('');
+
+  useEffect(() => {
+    fetchPlotList()
+      .then(list => { if (Array.isArray(list)) setCharTabPlotList(list); })
+      .catch(err => console.error('[AnyTaleForm] Failed to fetch plot list:', err));
   }, []);
 
-  const handleCharacterImportReady = useCallback((fn) => {
-    characterImportFnRef.current = fn;
-  }, []);
-
-  // ── Library lookup state ─────────────────────────────────────────────────
+  const handleCharTabPlotSelect = useCallback((inputValue) => {
+    const trimmed = (inputValue || '').trim();
+    if (!trimmed) { setCharTabPlotName(''); setCharTabPlotUid(''); return; }
+    const match = charTabPlotList.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
+    if (match) { setCharTabPlotName(match.name); setCharTabPlotUid(match.uid); }
+    else { setCharTabPlotName(trimmed); setCharTabPlotUid(''); }
+  }, [charTabPlotList]);
+  // â”€â”€ Library lookup state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [libraryParts, setLibraryParts] = useState([]);
-  // Plot list shared with CharacterSection for autocomplete hints
-  const [plotList, setPlotList] = useState([]);
 
-  // Notify parent of the initial loaded name (state is already seeded above)
   useEffect(() => {
     if (onStateLoaded) onStateLoaded(loadState().name);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch library parts on mount
   useEffect(() => {
     fetch('/anytale/parts')
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch library parts:', err));
-  }, []);
-
-  // Fetch plot list on mount for CharacterSection autocomplete
-  useEffect(() => {
-    fetchPlotList()
-      .then(list => { if (Array.isArray(list)) setPlotList(list); })
-      .catch(err => console.error('[AnyTaleForm] Failed to fetch plot list:', err));
   }, []);
 
   const refreshLibraryParts = useCallback(() => {
@@ -142,7 +157,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     saveState({ name, parts });
   }, [name, parts]);
 
-  // ── Library lookup: add part from library ────────────────────────────────
+  // â”€â”€ Library lookup: add part from library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleLibrarySelect = useCallback((inputValue) => {
     const trimmed = (inputValue || '').trim();
     if (!trimmed) return;
@@ -164,35 +179,124 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     clearState();
   }, []);
 
+  // â”€â”€ Generate: merges character + outfit parts from localStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleGenerate = useCallback(() => {
-    // Lock the current page as soon as generation is triggered
     setPageLocked(prev => {
       const next = [...prev];
       next[activePlotPage] = true;
       return next;
     });
-    // Retrieve the active plot page from localStorage so PlotSection changes are reflected
+
     const currentPlot = loadPlot();
+    const currentCharacter = loadCharacter();
+    const currentOutfit = loadOutfit();
+
+    // Outfit parts win on duplicate partUid
+    const mergedMap = {};
+    for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
+    for (const p of (currentOutfit.parts || [])) mergedMap[p.partUid] = p;
+    const mergedParts = Object.values(mergedMap);
+
+    const promptParts = mergedParts.map(cp => {
+      const lib = libraryParts.find(p => p.uid === cp.partUid);
+      if (!lib) return null;
+      return {
+        config: {
+          name: lib.name, type: lib.type,
+          baseline: lib.baseline, previewBaseline: lib.previewBaseline,
+          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
+        },
+        data: {
+          enabled: true,
+          categoryAttributeValues: cp.categoryAttributeValues || {},
+          customAttributeValues: cp.customAttributeValues || {},
+          previewImageUrl: cp.previewImageUrl || '',
+        },
+      };
+    }).filter(Boolean);
+
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const prompt = assemblePrompt(parts, activePage);
-    // Build parts data: keyed by part name, only parts with non-empty names
+    const prompt = assemblePrompt(promptParts, activePage);
+
     const partsData = {};
-    for (const part of parts) {
-      if (part.config?.name?.trim()) {
-        partsData[part.config.name] = {
-          enabled: part.data.enabled,
-          categoryAttributeValues: part.data.categoryAttributeValues,
-          customAttributeValues: part.data.customAttributeValues,
-          previewImageUrl: part.data.previewImageUrl,
+    for (const p of promptParts) {
+      if (p.config.name?.trim()) {
+        partsData[p.config.name] = {
+          enabled: p.data.enabled,
+          categoryAttributeValues: p.data.categoryAttributeValues,
+          customAttributeValues: p.data.customAttributeValues,
+          previewImageUrl: p.data.previewImageUrl,
         };
       }
     }
+
     const plotData = (currentPlot.uid || currentPlot.name)
       ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
       : null;
-    onGenerate(prompt, name, partsData, plotData);
-  }, [parts, name, onGenerate, activePlotPage]);
+
+    onGenerate(prompt, currentCharacter.name || name, partsData, plotData);
+  }, [libraryParts, name, onGenerate, activePlotPage]);
+
+  // â"€â"€ Generate from Character & Outfits tab: uses charTabPlotUid (page 0) â"€â"€
+  const handleCharTabGenerate = useCallback(async () => {
+    const currentCharacter = loadCharacter();
+    const currentOutfit = loadOutfit();
+
+    const mergedMap = {};
+    for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
+    for (const p of (currentOutfit.parts || [])) mergedMap[p.partUid] = p;
+    const mergedParts = Object.values(mergedMap);
+
+    const promptParts = mergedParts.map(cp => {
+      const lib = libraryParts.find(p => p.uid === cp.partUid);
+      if (!lib) return null;
+      return {
+        config: {
+          name: lib.name, type: lib.type,
+          baseline: lib.baseline, previewBaseline: lib.previewBaseline,
+          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
+        },
+        data: {
+          enabled: true,
+          categoryAttributeValues: cp.categoryAttributeValues || {},
+          customAttributeValues: cp.customAttributeValues || {},
+          previewImageUrl: cp.previewImageUrl || '',
+        },
+      };
+    }).filter(Boolean);
+
+    let activePage;
+    if (charTabPlotUid) {
+      try {
+        const res = await fetch(`/anytale/plot/${encodeURIComponent(charTabPlotUid)}`);
+        if (res.ok) {
+          const plotBlock = await res.json();
+          activePage = Array.isArray(plotBlock.pages) && plotBlock.pages.length > 0
+            ? plotBlock.pages[0] : undefined;
+        }
+      } catch (err) {
+        console.error('[AnyTaleForm] Failed to fetch plot for generation:', err);
+      }
+    }
+
+    const prompt = assemblePrompt(promptParts, activePage);
+
+    const partsData = {};
+    for (const p of promptParts) {
+      if (p.config.name?.trim()) {
+        partsData[p.config.name] = {
+          enabled: p.data.enabled,
+          categoryAttributeValues: p.data.categoryAttributeValues,
+          customAttributeValues: p.data.customAttributeValues,
+          previewImageUrl: p.data.previewImageUrl,
+        };
+      }
+    }
+
+    const plotData = charTabPlotUid ? { uid: charTabPlotUid, name: charTabPlotName, page: 0 } : null;
+    onGenerate(prompt, currentCharacter.name || name, partsData, plotData);
+  }, [libraryParts, name, onGenerate, charTabPlotUid, charTabPlotName]);
 
   // Update a single part by index
   const handlePartChange = useCallback((index, updatedPart) => {
@@ -210,7 +314,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
 
   const handlePreviewGenerate = useCallback(async (item, index) => {
-    // Prevent double-click
     if (generatingPreviews[index]) return;
 
     setGeneratingPreviews(prev => ({ ...prev, [index]: true }));
@@ -231,7 +334,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
           prompt,
           seed: Math.floor(Math.random() * 4294967295),
           orientation: 'square',
-          // extraInputs defaults for 'Text to Image (Illustrious Portrait)'
           imageFormat: 'png',
           usePostPrompts: false,
           removeBackground: false,
@@ -266,53 +368,45 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
 
-  // ── Import: restore parts from the currently displayed image ─────────
+  // â”€â”€ Import: route parts to character or outfit based on library types â”€â”€â”€â”€â”€
   const handleImport = useCallback(async () => {
     if (!currentItem?.parts || Object.keys(currentItem.parts).length === 0) {
       toast.info('No parts data found on the current image');
       return;
     }
 
-    const result = await showDialog('Importing will clear and overwrite your current data. Are you sure?', 'Confirm Import', ['Import', 'Cancel']);
+    const result = await showDialog('Importing will clear and overwrite your current character and outfit data. Are you sure?', 'Confirm Import', ['Import', 'Cancel']);
     if (result !== 'Import') return;
-
-    if (activeTab === 'character') {
-      if (characterImportFnRef.current) {
-        await characterImportFnRef.current(currentItem);
-      }
-      return;
-    }
 
     setIsImporting(true);
     try {
-      // Fetch the latest library configs so we get up-to-date attribute definitions
       let latestLibrary = libraryParts;
+      let charTypes = recommendedCharacterPartTypes;
+      let outfitTypes = recommendedOutfitPartTypes;
+
       try {
-        const response = await fetch('/anytale/parts');
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data)) {
-            latestLibrary = data;
-            setLibraryParts(data);
-          }
+        const [libRes, configRes] = await Promise.all([fetch('/anytale/parts'), fetch('/anytale/config')]);
+        if (libRes.ok) {
+          const data = await libRes.json();
+          if (Array.isArray(data)) { latestLibrary = data; setLibraryParts(data); }
+        }
+        if (configRes.ok) {
+          const cfg = await configRes.json();
+          if (Array.isArray(cfg.recommendedCharacterPartTypes)) charTypes = cfg.recommendedCharacterPartTypes;
+          if (Array.isArray(cfg.recommendedOutfitPartTypes)) outfitTypes = cfg.recommendedOutfitPartTypes;
         }
       } catch (err) {
-        console.error('[AnyTaleForm] Import: failed to fetch library parts:', err);
+        console.error('[AnyTaleForm] Import: failed to fetch configs:', err);
       }
 
-      // Rebuild the parts list from the image's stored parts data
-      const newParts = [];
+      const characterParts = [];
+      const outfitParts = [];
       const skipped = [];
+
       for (const [partName, storedData] of Object.entries(currentItem.parts)) {
         const libraryConfig = latestLibrary.find(p => p.name === partName);
-        if (!libraryConfig) {
-          skipped.push(partName);
-          continue;
-        }
+        if (!libraryConfig) { skipped.push(partName); continue; }
 
-        // For each attribute in the latest config, use the stored value if it
-        // exists (attribute name matches), otherwise default to empty string.
-        // Stored values whose key doesn't match any current attribute are ignored.
         const categoryAttributeValues = {};
         for (const attr of (libraryConfig.categoryAttributes || [])) {
           categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
@@ -321,39 +415,51 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
         for (const attr of (libraryConfig.customAttributes || [])) {
           customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
         }
-
-        const newPart = createDefaultPart();
-        newPart.config = { ...libraryConfig };
-        newPart.data = {
-          enabled: storedData.enabled ?? true,
+        const partEntry = {
+          partUid: libraryConfig.uid,
           categoryAttributeValues,
           customAttributeValues,
           previewImageUrl: storedData.previewImageUrl || '',
         };
-        newParts.push(newPart);
+
+        const partTypes = (libraryConfig.type || []).map(t => t.toLowerCase());
+        const isCharType = charTypes.some(t => partTypes.includes(t.toLowerCase()));
+        const isOutfitType = outfitTypes.some(t => partTypes.includes(t.toLowerCase()));
+
+        if (isCharType) characterParts.push(partEntry);
+        else if (isOutfitType) outfitParts.push({ ...partEntry });
+        // No type match â†’ add to both
+        else { characterParts.push(partEntry); outfitParts.push({ ...partEntry }); }
       }
 
-      if (newParts.length === 0) {
-        toast.error('None of the image\'s parts were found in the library');
-        return;
-      }
+      // Write directly to localStorage; child sections refresh via importRefreshKey
+      const blankChar = createBlankCharacter();
+      blankChar.name = currentItem.name || 'Imported Character';
+      blankChar.parts = characterParts;
+      saveCharacterState(blankChar);
 
-      setParts(newParts);
+      const blankOutfit = createBlankOutfit();
+      blankOutfit.parts = outfitParts;
+      saveOutfitState(blankOutfit);
+
+      setImportRefreshKey(k => k + 1);
 
       if (skipped.length > 0) {
-        toast.info(`Imported ${newParts.length} part(s); skipped ${skipped.length} not in library: ${skipped.join(', ')}`);
+        toast.info(`Imported: ${characterParts.length} character part(s), ${outfitParts.length} outfit part(s); skipped ${skipped.length}: ${skipped.join(', ')}`);
       } else {
-        toast.success(`Imported: loaded ${newParts.length} part(s) from image`);
+        toast.success(`Imported: ${characterParts.length} character part(s), ${outfitParts.length} outfit part(s)`);
       }
 
       const plotMeta = currentItem?.plot;
       if (plotMeta && (plotMeta.uid || plotMeta.name) && plotImportFnRef.current) {
         await plotImportFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
       }
+
+      setActiveTab('character-outfits');
     } finally {
       setIsImporting(false);
     }
-  }, [currentItem, libraryParts, plotImportFnRef, activeTab, characterImportFnRef, toast]);
+  }, [currentItem, libraryParts, recommendedCharacterPartTypes, recommendedOutfitPartTypes, plotImportFnRef, toast]);
 
   // Notify parent when import handler or its enabled state changes
   const canImport = (!!currentItem?.parts || !!currentItem?.plot) && !isGenerating && !isImporting;
@@ -378,15 +484,38 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     return out;
   }, [libraryParts]);
 
-  // Build preview prompt (also reflects the active plot page)
-  const previewPrompt = (() => {
+  // Preview prompt based on merged character+outfit parts (re-reads localStorage on render)
+  const previewPrompt = useMemo(() => {
+    const currentCharacter = loadCharacter();
+    const currentOutfit = loadOutfit();
+    const mergedMap = {};
+    for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
+    for (const p of (currentOutfit.parts || [])) mergedMap[p.partUid] = p;
+    const mergedParts = Object.values(mergedMap);
+    const promptParts = mergedParts.map(cp => {
+      const lib = libraryParts.find(p => p.uid === cp.partUid);
+      if (!lib) return null;
+      return {
+        config: {
+          name: lib.name, type: lib.type,
+          baseline: lib.baseline, previewBaseline: lib.previewBaseline,
+          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
+        },
+        data: {
+          enabled: true,
+          categoryAttributeValues: cp.categoryAttributeValues || {},
+          customAttributeValues: cp.customAttributeValues || {},
+          previewImageUrl: cp.previewImageUrl || '',
+        },
+      };
+    }).filter(Boolean);
     const currentPlot = loadPlot();
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    return assemblePrompt(parts, activePage);
-  })();
+    return assemblePrompt(promptParts, activePage);
+  }, [libraryParts, activePlotPage, importRefreshKey]);
 
-  // ── Tab content ─────────────────────────────────────────────────────────
+  // â”€â”€ Tab content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const editContent = html`
     <${EditLayout}>
       <div style="flex: none">
@@ -481,14 +610,15 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
         </${VerticalLayout}>
       </${PartsScrollArea}>
 
-      ${previewPrompt ? html`
-        <${VerticalLayout} gap="medium">
-          <${H2}>Generation</${H2}>
+      <!-- Generation section: prompt preview + merged generate button -->
+      <${VerticalLayout} gap="medium">
+        <${H2}>Generation</${H2}>
+        ${previewPrompt ? html`
           <${PromptPreview}>
             <strong>Prompt preview:</strong> ${previewPrompt}
           </${PromptPreview}>
-        </${VerticalLayout}>
-      ` : null}
+        ` : html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}>No character or outfit parts yet.</div>`}
+      </${VerticalLayout}>
 
       <${ButtonRow}>
         <${Button}
@@ -511,17 +641,47 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
       content: editContent,
     },
     {
-      id: 'character',
-      label: 'Character',
+      id: 'character-outfits',
+      label: 'Character & Outfits',
       content: html`
-        <${CharacterSection}
-          libraryParts=${libraryParts}
-          onGenerate=${onGenerate}
-          isGenerating=${isGenerating || isAnyPreviewGenerating}
-          onLibraryPartsChange=${refreshLibraryParts}
-          plotList=${plotList}
-          onImportHandlerReady=${handleCharacterImportReady}
-        />
+        <div style=${{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', overflow: 'hidden', gap: currentTheme.value.spacing.medium.gap }}>
+          <div style=${{ flex: '1 1 auto', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.large.gap, paddingRight: currentTheme.value.spacing.small.padding }}>
+            <${CharacterSection}
+              libraryParts=${libraryParts}
+              onLibraryPartsChange=${refreshLibraryParts}
+              refreshKey=${importRefreshKey}
+              scrollable=${false}
+            />
+            <${OutfitSection}
+              libraryParts=${libraryParts}
+              onLibraryPartsChange=${refreshLibraryParts}
+              refreshKey=${importRefreshKey}
+              scrollable=${false}
+            />
+          </div>
+          <!-- Sticky Generate section -->
+          <div style=${{ flex: 'none', display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, paddingTop: currentTheme.value.spacing.small.padding }}>
+            <${H2}>Generation</${H2}>
+            <${AutocompleteInput}
+              label="Preview Plot"
+              placeholder="Type to search saved plots..."
+              suggestions=${charTabPlotList.map(p => p.name)}
+              onSelect=${handleCharTabPlotSelect}
+            />
+            ${charTabPlotName ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${charTabPlotName}</div>` : null}
+            <${ButtonRow}>
+              <${Button}
+                variant="large-text"
+                color="primary"
+                icon="play"
+                onClick=${handleCharTabGenerate}
+                disabled=${isGenerating}
+              >
+                ${isGenerating ? 'Generating...' : 'Generate'}
+              <//>
+            </${ButtonRow}>
+          </div>
+        </div>
       `,
     },
   ];
@@ -536,3 +696,4 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     />
   `;
 }
+

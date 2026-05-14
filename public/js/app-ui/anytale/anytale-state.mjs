@@ -124,6 +124,7 @@ export function createBlankPlot() {
     uid: '',
     name: '',
     section: '',
+    description: '',
     pages: [{ tags: '', dialogPrompt: '', hiddenParts: [] }],
     progressionSections: [],
     progressionDisabledParts: [],
@@ -154,6 +155,7 @@ export function loadPlot() {
       uid: parsed.uid ?? '',
       name: parsed.name ?? '',
       section: parsed.section ?? '',
+      description: parsed.description ?? '',
       pages,
       progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
       progressionDisabledParts: Array.isArray(parsed.progressionDisabledParts) ? parsed.progressionDisabledParts : [],
@@ -196,6 +198,7 @@ export function createBlankCharacter() {
     audioUrl: '',
     introTranscript: '',
     parts: [],
+    preferredOutfits: [],
   };
 }
 
@@ -217,6 +220,7 @@ export function loadCharacter() {
       audioUrl: parsed.audioUrl ?? '',
       introTranscript: parsed.introTranscript ?? '',
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
+      preferredOutfits: Array.isArray(parsed.preferredOutfits) ? parsed.preferredOutfits : [],
     };
   } catch {
     return createBlankCharacter();
@@ -240,4 +244,56 @@ export function saveCharacterState(character) {
  */
 export function clearCharacterState() {
   localStorage.removeItem(CHARACTER_STORAGE_KEY);
+}
+
+// ── Outfit State ────────────────────────────────────────────────
+
+const OUTFIT_STORAGE_KEY = 'anytale-outfit';
+
+/** @returns {Object} A blank outfit with empty fields. */
+export function createBlankOutfit() {
+  return {
+    uid: '',
+    name: '',
+    parts: [],
+  };
+}
+
+/**
+ * Load the active outfit from localStorage.
+ * Falls back to a blank outfit if nothing is stored.
+ * @returns {Object}
+ */
+export function loadOutfit() {
+  try {
+    const raw = localStorage.getItem(OUTFIT_STORAGE_KEY);
+    if (!raw) return createBlankOutfit();
+    const parsed = JSON.parse(raw);
+    return {
+      uid: parsed.uid ?? '',
+      name: parsed.name ?? '',
+      parts: Array.isArray(parsed.parts) ? parsed.parts : [],
+    };
+  } catch {
+    return createBlankOutfit();
+  }
+}
+
+/**
+ * Persist the active outfit state to localStorage.
+ * @param {Object} outfit
+ */
+export function saveOutfitState(outfit) {
+  try {
+    localStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfit));
+  } catch (err) {
+    console.error('Failed to save anytale outfit state:', err);
+  }
+}
+
+/**
+ * Clear the active outfit from localStorage.
+ */
+export function clearOutfitState() {
+  localStorage.removeItem(OUTFIT_STORAGE_KEY);
 }
