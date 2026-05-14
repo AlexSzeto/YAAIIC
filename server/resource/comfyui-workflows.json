@@ -88,6 +88,113 @@
       "base": "album-text-to-image.json"
     },
     {
+      "name": "Personality to Voice Design (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "dialog",
+            "type": "textarea",
+            "label": "Dialog"
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-voice-design.json",
+      "preGenerationTasks": [
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA clear and natural female voice, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nOutput the vocal characteristics as prose ONLY.",
+          "to": "vocalProfile"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "dialog"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "ssfdre38/gemma4-nano:latest",
+          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that serves as a self introduction of a character with the given personality profile: {{prompt}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
+          "to": "dialog"
+        },
+        {
+          "from": "dialog",
+          "to": "summary"
+        },
+        {
+          "from": "vocalProfile",
+          "to": "description"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "20",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "dialog",
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "4",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
       "name": "Text to Image (Illustrious Characters)",
       "options": {
         "type": "image",
@@ -3114,151 +3221,6 @@
       ]
     },
     {
-      "name": "Text to Music (ACE-Step 1.3)",
-      "hidden": false,
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudio": 0,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "lyrics",
-            "type": "textarea",
-            "label": "Lyrics"
-          },
-          {
-            "id": "length",
-            "type": "number",
-            "label": "Length (seconds)",
-            "default": 120
-          },
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          },
-          {
-            "id": "test",
-            "type": "text",
-            "label": "Test",
-            "default": "",
-            "options": []
-          }
-        ]
-      },
-      "base": "acestep-text-to-music.json",
-      "preGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "lyrics"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "template": "[inst]",
-          "to": "lyrics"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "75",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "lyrics",
-          "to": [
-            "87",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "52",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "length",
-          "to": [
-            "17",
-            "inputs",
-            "seconds"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "88",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "from": "lyrics",
-          "to": "summary"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Generating Album Cover",
-          "parameters": {
-            "workflow": "Text to Image (Album)",
-            "inputMapping": [
-              {
-                "from": "name",
-                "to": "name"
-              },
-              {
-                "from": "seed",
-                "to": "seed"
-              }
-            ],
-            "outputMapping": [
-              {
-                "from": "imageUrl",
-                "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "Text to Music (ACE-Step 1.5)",
       "options": {
         "type": "audio",
@@ -3467,6 +3429,13 @@
                 "value": "ogg"
               }
             ]
+          },
+          {
+            "id": "enhancePrompt",
+            "type": "checkbox",
+            "label": "Enhance Prompt",
+            "default": "",
+            "options": []
           }
         ]
       },
@@ -3483,11 +3452,33 @@
           },
           "template": "[instrumental]",
           "to": "lyrics"
+        },
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        },
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Expand on the following music generation request: \"{{prompt}}\"\n\nby expanding the prompt in the following dimensions:\nStyle/Genre: ex. pop, rock, jazz, electronic, hip-hop, R&B, folk, classical, lo-fi, synthwave\nEmotion/Atmosphere: ex. melancholic, uplifting, energetic, dreamy, dark, nostalgic, euphoric, intimate\nInstruments: ex. acoustic guitar, piano, synth pads, 808 drums, strings, brass, electric bass\nTimbre Texture: ex. warm, bright, crisp, muddy, airy, punchy, lush, raw, polished\nEra Reference: ex. 80s synth-pop, 90s grunge, 2010s EDM, vintage soul, modern trap\nProduction Style: ex. lo-fi, high-fidelity, live recording, studio-polished, bedroom pop\nVocal Characteristics: ex. female vocal, male vocal, breathy, powerful, falsetto, raspy, choir\nSpeed/Rhythm: ex. slow tempo, mid-tempo, fast-paced, groovy, driving, laid-back\nStructure Hints: ex. building intro, catchy chorus, dramatic bridge, fade-out ending\n\nOnly output the answer as a single paragraph of prose. For example:\n\n\"A mid-tempo Smooth Jazz that is both highly sophisticated and effortlessly laid-back. It is intensely warm and enveloping, feeling both gently nostalgic and luxuriously present. The music is high-fidelity, lush, and deeply polished. Instrumentation should rely on big-sound section capability, utilizing rich brass, soaring synthesized strings, and rich, responsive piano. The rhythmic core needs to be impeccably groovy, always mid-tempo, and possessing a laid-back, swaying quality that encourages a slow, swaying head-nods. Structurally, while the core groove is infectious, the piece should employ a defined, yet relaxed, structure, building from a seamless, swelling intro that gradually reveals its character, before allowing the music to gently ride into a seamless, satisfied fade-out.\"\n\nDo not use visual metaphors in the description. Do not include introductory text, explanations, or concluding remarks.",
+          "to": "enhancedPrompt",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "enhancePrompt"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
+            ]
+          }
         }
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
             "116",
             "inputs",
@@ -3568,6 +3559,382 @@
         }
       ],
       "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        },
+        {
+          "from": "lyrics",
+          "to": "summary"
+        },
+        {
+          "process": "executeWorkflow",
+          "name": "Generating Album Cover",
+          "parameters": {
+            "workflow": "Text to Image (Album)",
+            "inputMapping": [
+              {
+                "from": "name",
+                "to": "name"
+              },
+              {
+                "from": "seed",
+                "to": "seed"
+              }
+            ],
+            "outputMapping": [
+              {
+                "from": "imageUrl",
+                "to": "imageUrl"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Text to Music (ACE-Step 1.5 XL)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "lyrics",
+            "type": "textarea",
+            "label": "Lyrics"
+          },
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
+            "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4"
+              },
+              {
+                "label": "3/4",
+                "value": "3"
+              },
+              {
+                "label": "2/4",
+                "value": "2"
+              },
+              {
+                "label": "6/8",
+                "value": "6"
+              }
+            ],
+            "default": "4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "enhancePrompt",
+            "type": "checkbox",
+            "label": "Enhance Prompt",
+            "default": "",
+            "options": []
+          }
+        ]
+      },
+      "base": "acestep15-xl-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "condition": {
+            "where": {
+              "data": "lyrics"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "template": "[instrumental]",
+          "to": "lyrics"
+        },
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        },
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Expand on the following music generation request: \"{{prompt}}\"\n\nby expanding the prompt in the following dimensions:\nStyle/Genre: ex. pop, rock, jazz, electronic, hip-hop, R&B, folk, classical, lo-fi, synthwave\nEmotion/Atmosphere: ex. melancholic, uplifting, energetic, dreamy, dark, nostalgic, euphoric, intimate\nInstruments: ex. acoustic guitar, piano, synth pads, 808 drums, strings, brass, electric bass\nTimbre Texture: ex. warm, bright, crisp, muddy, airy, punchy, lush, raw, polished\nEra Reference: ex. 80s synth-pop, 90s grunge, 2010s EDM, vintage soul, modern trap\nProduction Style: ex. lo-fi, high-fidelity, live recording, studio-polished, bedroom pop\nVocal Characteristics: ex. female vocal, male vocal, breathy, powerful, falsetto, raspy, choir\nSpeed/Rhythm: ex. slow tempo, mid-tempo, fast-paced, groovy, driving, laid-back\nStructure Hints: ex. building intro, catchy chorus, dramatic bridge, fade-out ending\n\nOnly output the answer as a single paragraph of prose. For example:\n\n\"A mid-tempo Smooth Jazz that is both highly sophisticated and effortlessly laid-back. It is intensely warm and enveloping, feeling both gently nostalgic and luxuriously present. The music is high-fidelity, lush, and deeply polished. Instrumentation should rely on big-sound section capability, utilizing rich brass, soaring synthesized strings, and rich, responsive piano. The rhythmic core needs to be impeccably groovy, always mid-tempo, and possessing a laid-back, swaying quality that encourages a slow, swaying head-nods. Structurally, while the core groove is infectious, the piece should employ a defined, yet relaxed, structure, building from a seamless, swelling intro that gradually reveals its character, before allowing the music to gently ride into a seamless, satisfied fade-out.\"\n\nDo not use visual metaphors in the description. Do not include introductory text, explanations, or concluding remarks.",
+          "to": "enhancedPrompt",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "enhancePrompt"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "110",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "lyrics",
+          "to": [
+            "109",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "94",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "98",
+            "inputs",
+            "seconds"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "94",
+            "inputs",
+            "duration"
+          ]
+        },
+        {
+          "from": "bpm",
+          "to": [
+            "94",
+            "inputs",
+            "bpm"
+          ]
+        },
+        {
+          "from": "timesignature",
+          "to": [
+            "94",
+            "inputs",
+            "timesignature"
+          ]
+        },
+        {
+          "from": "keyscale",
+          "to": [
+            "94",
+            "inputs",
+            "keyscale"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "111",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        },
         {
           "from": "lyrics",
           "to": "summary"
@@ -4742,140 +5109,6 @@
             "inputs",
             "path"
           ]
-        }
-      ]
-    },
-    {
-      "name": "Personality to Voice Design (Qwen3-TTS)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 0,
-        "nameRequired": true,
-        "optionalPrompt": false,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          },
-          {
-            "id": "dialog",
-            "type": "textarea",
-            "label": "Dialog"
-          }
-        ]
-      },
-      "base": "qwen3tts-text-to-voice-design.json",
-      "preGenerationTasks": [
-        {
-          "model": "ssfdre38/gemma4-nano:latest",
-          "imagePath": "",
-          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA clear and natural female voice, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nOutput the vocal characteristics as prose ONLY.",
-          "to": "vocalProfile"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "dialog"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "model": "ssfdre38/gemma4-nano:latest",
-          "prompt": "Write a single paragraph of prose consist of exactly 3 lines of sample dialog that perfectly captures the emotional range of a character with the given voice characteristics: {{vocalProfile}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
-          "to": "dialog"
-        },
-        {
-          "from": "dialog",
-          "to": "summary"
-        },
-        {
-          "from": "vocalProfile",
-          "to": "description"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "20",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "dialog",
-          "to": [
-            "16",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "4",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "36",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "process": "executeWorkflow",
-          "name": " Generating Portrait",
-          "parameters": {
-            "workflow": "Text to Image (Album)",
-            "inputMapping": [
-              {
-                "from": "name",
-                "to": "name"
-              },
-              {
-                "from": "seed",
-                "to": "seed"
-              }
-            ],
-            "outputMapping": [
-              {
-                "from": "imageUrl",
-                "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
-              }
-            ]
-          }
         }
       ]
     }

@@ -378,7 +378,7 @@ export async function modifyDataWithPrompt(promptData, dataObject) {
     
     // Validate model is provided for prompt-based generation
     if (!model) {
-      throw new Error(`Generation task for "${to}": "model" is required when using "prompt"`);
+      throw new Error(`Generation task for "${to}": "model" is required for LLM prompt generation`);
     }
     
     console.log(`Processing prompt for ${to} with model ${model}`);

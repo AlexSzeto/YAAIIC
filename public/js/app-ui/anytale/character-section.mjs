@@ -680,7 +680,7 @@ export function CharacterSection({ libraryParts = [], onGenerate, isGenerating, 
         />
 
         ${previewPlotName
-          ? html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${previewPlotName}</div>`
+          ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${previewPlotName}</div>`
           : null
         }
 

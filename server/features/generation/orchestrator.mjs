@@ -314,9 +314,12 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       return;
     }
 
-    // Initialize logging
-    resetPromptLog();
-    resetProgressLog();
+    // Initialize logging — only reset at the top-level invocation, not for
+    // nested workflows (silent=true) so that parent LLM log entries are preserved.
+    if (!silent) {
+      resetPromptLog();
+      resetProgressLog();
+    }
 
     console.log('Using seed:', seed);
 

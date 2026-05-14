@@ -293,7 +293,8 @@ function ModelTaskForm({ task, onChange }) {
     fetch('/api/llm/models')
       .then(r => r.ok ? r.json() : { models: [] })
       .then(data => {
-        setModelOptions((data.models || []).map(m => ({ label: m, value: m })));
+        const options = [{ label: '— choose model —', value: '' }, ...(data.models || []).map(m => ({ label: m, value: m }))];
+        setModelOptions(options);
       })
       .catch(() => {});
   }, []);
