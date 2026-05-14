@@ -26,7 +26,7 @@ const TooltipBox = styled('div')`
   position: fixed;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
-  z-index: 20000;
+  z-index: 30000;
   pointer-events: none;
   max-width: 300px;
   padding: ${props => props.theme.spacing.small.padding};

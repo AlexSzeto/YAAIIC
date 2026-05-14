@@ -78,6 +78,7 @@ LabelText.className = 'label-text';
  * @param {boolean} [props.checked=false] - Checked state
  * @param {Function} [props.onChange] - Change handler
  * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {boolean} [props.interactive=true] - When false, renders as a visual indicator only
  * @param {'left'|'right'} [props.labelPosition='right'] - Position of label relative to checkbox
  * @param {string} [props.id] - ID for the input element
  * @returns {preact.VNode}
@@ -124,6 +125,7 @@ export class Checkbox extends Component {
       checked = false, 
       onChange, 
       disabled = false, 
+      interactive = true,
       labelPosition = 'right',
       id,
       ...rest 
@@ -131,6 +133,7 @@ export class Checkbox extends Component {
     const { theme } = this.state;
 
     const hasLabel = label != null && String(label).trim() !== '';
+    const inputDisabled = disabled || !interactive;
 
     const checkboxVisual = html`
       <${CheckboxVisual} 
@@ -140,7 +143,7 @@ export class Checkbox extends Component {
         transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
         hoverBackgroundColor=${checked ? theme.colors.primary.hover : theme.colors.background.hover}
         activeBackgroundColor=${checked ? theme.colors.primary.background : theme.colors.background.tertiary}
-        disabled=${disabled}
+        disabled=${inputDisabled}
       >
         ${checked ? html`<${Icon} name='check' size='16px' color='#ffffff' />` : ''}
       </${CheckboxVisual}>
@@ -156,7 +159,7 @@ export class Checkbox extends Component {
 
     return html`
       <${Container} 
-        cursor=${disabled ? 'default' : 'pointer'}
+        cursor=${disabled ? 'default' : (interactive ? 'pointer' : 'inherit')}
         opacity=${disabled ? '0.6' : '1'}
         gap=${hasLabel ? '8px' : '0'}
         minWidth=${hasLabel ? '0' : 'auto'}
@@ -167,8 +170,8 @@ export class Checkbox extends Component {
         <${HiddenInput} 
           type="checkbox" 
           checked=${checked} 
-          disabled=${disabled} 
-          onChange=${onChange}
+          disabled=${inputDisabled} 
+          onChange=${interactive ? onChange : undefined}
           id=${id}
           name=${id}
           ...${rest}

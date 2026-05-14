@@ -90,15 +90,6 @@ export function AnyTalePage() {
   // Image history / viewer
   const [history, setHistory] = useState([]);
   const nav = useItemNavigation(history);
-  // Signal that the next history update should navigate to the last item
-  const selectLastOnLoadRef = useRef(false);
-
-  useEffect(() => {
-    if (selectLastOnLoadRef.current && history.length > 0) {
-      selectLastOnLoadRef.current = false;
-      nav.selectLast();
-    }
-  }, [history]);
 
   // Gallery
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -195,24 +186,6 @@ export function AnyTalePage() {
       nav.selectByIndex(Math.min(deletedIndex, newHistory.length - 1));
     }
   }, [history, nav]);
-
-  // Auto-load images matching the restored name on page load
-  const handleStateLoaded = useCallback(async (restoredName) => {
-    if (!restoredName) return;
-    try {
-      const url = new URL('/media-data', window.location.origin);
-      url.searchParams.set('query', restoredName);
-      url.searchParams.set('limit', '200');
-      url.searchParams.set('fileType', 'image');
-      const data = backfillMissingProperties(await fetchJson(url.pathname + url.search));
-      if (Array.isArray(data) && data.length > 0) {
-        selectLastOnLoadRef.current = true;
-        setHistory(data);
-      }
-    } catch (err) {
-      console.error('Failed to auto-load images:', err);
-    }
-  }, []);
 
   const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData) => {
     if (!workflow) {
@@ -318,7 +291,6 @@ export function AnyTalePage() {
           <${AnyTaleForm}
             onGenerate=${handleGenerate}
             isGenerating=${isGenerating}
-            onStateLoaded=${handleStateLoaded}
             onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
           />

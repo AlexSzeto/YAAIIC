@@ -24,7 +24,7 @@ import { currentTheme } from '../theme.mjs';
  * Styled panel container with glass effect
  */
 const HoverPanelContainer = styled('div')`
-  z-index: 10001;
+  z-index: 20000;
   max-width: 350px;
   max-height: 300px;
   overflow: auto;

@@ -60,6 +60,7 @@
     import { TabPanels } from './nav/tab-panels.mjs';
     import { FloatingPanel } from './overlays/floating-panel.mjs';
     import { DynamicList } from './layout/dynamic-list.mjs';
+    import { SearchSelectModal } from './overlays/search-select.mjs';
 
     
     // =========================================================================
@@ -537,13 +538,11 @@
             { id: 3, title: 'Third Item', description: 'Description for third item' }
           ],
           condensedListItems: ['Apple', 'Banana', 'Cherry', 'Date'],
-          // DynamicList states
-          dynamicListItems: [
-            { id: 1, title: 'First Item', description: 'Description for first item' },
-            { id: 2, title: 'Second Item', description: 'Description for second item' },
-            { id: 3, title: 'Third Item', description: 'Description for third item' }
-          ],
-          condensedListItems: ['Apple', 'Banana', 'Cherry', 'Date'],
+          // SearchSelectModal states
+          searchSelectSingleOpen: false,
+          searchSelectMultiOpen: false,
+          searchSelectSingleResult: null,
+          searchSelectMultiResult: [],
         };
         
         // Mock SSE manager for testing ProgressBanner
@@ -1870,8 +1869,69 @@
               <//>
 
               <!-- More component sections will be added as they are refactored -->
+
+              <!-- SearchSelectModal -->
+              <${Section}>
+                <${SectionTitle}>Search Select Modal</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Generic search-and-select modal with single and multi modes. Supports string arrays and {label, value} arrays.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <!-- Single-select trigger -->
+                  <${Button}
+                    variant="medium-text"
+                    color="primary"
+                    onClick=${() => this.setState({ searchSelectSingleOpen: true })}
+                  >
+                    Open Single-Select Modal
+                  <//>
+                  ${this.state.searchSelectSingleResult != null ? html`<p style="opacity: 0.7; font-size: 14px;">Last selected: <strong>${this.state.searchSelectSingleResult}</strong></p>` : null}
+
+                  <!-- Multi-select trigger -->
+                  <${Button}
+                    variant="medium-text"
+                    color="secondary"
+                    onClick=${() => this.setState({ searchSelectMultiOpen: true })}
+                  >
+                    Open Multi-Select Modal
+                  <//>
+                  ${this.state.searchSelectMultiResult.length > 0 ? html`<p style="opacity: 0.7; font-size: 14px;">Selected: <strong>${this.state.searchSelectMultiResult.join(', ')}</strong></p>` : null}
+                </div>
+
+                <!-- Single-select modal instance -->
+                <${SearchSelectModal}
+                  isOpen=${this.state.searchSelectSingleOpen}
+                  title="Pick a Fruit"
+                  items=${['Apple', 'Banana', 'Cherry', 'Dragonfruit', 'Elderberry', 'Fig', 'Grape', 'Honeydew', 'Kiwi', 'Lemon', 'Mango', 'Nectarine', 'Orange', 'Papaya', 'Quince']}
+                  mode="single"
+                  displayLimit=${10}
+                  onSelect=${(value) => this.setState({ searchSelectSingleResult: value })}
+                  onClose=${() => this.setState({ searchSelectSingleOpen: false })}
+                />
+
+                <!-- Multi-select modal instance -->
+                <${SearchSelectModal}
+                  isOpen=${this.state.searchSelectMultiOpen}
+                  title="Pick Colours"
+                  items=${[
+                    { label: 'Red', value: 'red' },
+                    { label: 'Green', value: 'green' },
+                    { label: 'Blue', value: 'blue' },
+                    { label: 'Yellow', value: 'yellow' },
+                    { label: 'Purple', value: 'purple' },
+                    { label: 'Orange', value: 'orange' },
+                    { label: 'Pink', value: 'pink' },
+                    { label: 'Brown', value: 'brown' },
+                    { label: 'Black', value: 'black' },
+                    { label: 'White', value: 'white' },
+                  ]}
+                  mode="multi"
+                  initialSelected=${this.state.searchSelectMultiResult}
+                  onSelect=${(values) => this.setState({ searchSelectMultiResult: values })}
+                  onClose=${() => this.setState({ searchSelectMultiOpen: false })}
+                />
+              </${Section}>
               
-                <//${Page}>
+                </${Page}>
               <//>
             <//>
           <//>

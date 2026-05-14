@@ -20,6 +20,7 @@ import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, createBlankCharacter, createBlankOutfit } from './anytale-state.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
@@ -27,6 +28,7 @@ import { CharacterSection } from './character-section.mjs';
 import { OutfitSection } from './outfit-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
+import { LibraryPartPicker } from './library-part-picker.mjs';
 
 // ============================================================================
 // Styled Components
@@ -59,6 +61,27 @@ const PartsScrollArea = styled('div')`
 `;
 PartsScrollArea.className = 'parts-scroll-area';
 
+const PickerRow = styled('div')`
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  width: 100%;
+`;
+PickerRow.className = 'anytale-picker-row';
+
+const PickerInputFlex = styled('div')`
+  flex: 1;
+  min-width: 0;
+`;
+PickerInputFlex.className = 'anytale-picker-input-flex';
+
+const SearchButtonWrapper = styled('div')`
+  display: flex;
+  align-items: center;
+  height: 44px;
+`;
+SearchButtonWrapper.className = 'autocomplete-input-button-wrapper';
+
 const PromptPreview = styled('div')`
   padding: ${() => currentTheme.value.spacing.small.padding};
   background-color: ${() => currentTheme.value.colors.background.card};
@@ -80,17 +103,17 @@ PromptPreview.className = 'prompt-preview';
  * @param {Object}   props
  * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
  * @param {boolean}  props.isGenerating  – True while a generation is in-flight
- * @param {Function} [props.onStateLoaded] – Called with the restored name after localStorage is read
  * @param {Function} [props.onImportReady] – Called with (fn, enabled) when import handler changes; (null, false) on unmount
  */
-export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportReady, currentItem = null }) {
+export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentItem = null }) {
   const toast = useToast();
-  const [name, setName] = useState(() => loadState().name);
+  const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   const [isImporting, setIsImporting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
+  const [previewPlotModalOpen, setPreviewPlotModalOpen] = useState(false);
 
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
@@ -132,7 +155,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const handleCharTabPlotSelect = useCallback((inputValue) => {
     const trimmed = (inputValue || '').trim();
     if (!trimmed) { setCharTabPlotName(''); setCharTabPlotUid(''); return; }
-    const match = charTabPlotList.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
+    const match = charTabPlotList.find(p =>
+      p.uid === trimmed || p.name?.toLowerCase() === trimmed.toLowerCase()
+    );
     if (match) { setCharTabPlotName(match.name); setCharTabPlotUid(match.uid); }
     else { setCharTabPlotName(trimmed); setCharTabPlotUid(''); }
   }, [charTabPlotList]);
@@ -150,11 +175,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const [libraryParts, setLibraryParts] = useState([]);
 
   useEffect(() => {
-    if (onStateLoaded) onStateLoaded(loadState().name);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     fetch('/anytale/parts')
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
@@ -170,27 +190,21 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
 
   // Persist on every change
   useEffect(() => {
-    saveState({ name, parts });
-  }, [name, parts]);
+    saveState({ name: previewImageName, parts });
+  }, [previewImageName, parts]);
 
   // ── Library lookup: add part from library ────────────────────────────────
-  const handleLibrarySelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = libraryParts.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
-    if (!match) {
-      toast.info(`No saved part named '${trimmed}' found`);
-      return;
-    }
+  const handleLibrarySelect = useCallback((match) => {
+    if (!match) return;
     const newPart = createDefaultPart();
     newPart.config = { ...newPart.config, ...match };
     setParts(prev => [...prev, newPart]);
-  }, [libraryParts, toast]);
+  }, []);
 
   const handleClear = useCallback(async () => {
-    const result = await showDialog('This will erase all parts and the name. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
+    const result = await showDialog('This will erase all parts and the preview image name. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
     if (result !== 'Clear') return;
-    setName('');
+    setPreviewImageName('');
     setParts([]);
     clearState();
   }, []);
@@ -225,8 +239,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
       ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
       : null;
 
-    onGenerate(prompt, name, partsData, plotData);
-  }, [parts, name, onGenerate, activePlotPage]);
+    onGenerate(prompt, previewImageName, partsData, plotData);
+  }, [parts, previewImageName, onGenerate, activePlotPage]);
 
   // �"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
   const handleCharTabGenerate = useCallback(async () => {
@@ -285,8 +299,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     }
 
     const plotData = charTabPlotUid ? { uid: charTabPlotUid, name: charTabPlotName, page: 0 } : null;
-    onGenerate(prompt, currentCharacter.name || name, partsData, plotData);
-  }, [libraryParts, name, onGenerate, charTabPlotUid, charTabPlotName]);
+    onGenerate(prompt, previewImageName, partsData, plotData);
+  }, [libraryParts, previewImageName, onGenerate, charTabPlotUid, charTabPlotName]);
 
   // Update a single part by index
   const handlePartChange = useCallback((index, updatedPart) => {
@@ -574,27 +588,14 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
     <${EditLayout}>
-      <div style="flex: none">
-        <${VerticalLayout} gap="small">
-          <${Input}
-            label="Character Name"
-            value=${name}
-            onInput=${(e) => setName(e.target.value)}
-            placeholder="Character name"
-            widthScale="full"
-          />
-        </${VerticalLayout}>
-      </div>
-
       <${PartsScrollArea}>
         <${VerticalLayout} gap="medium">
           <${VerticalLayout} gap="small">
             <${H2}>Parts</${H2}>
-            <${AutocompleteInput}
-              label="Add Part from Library"
-              placeholder="Type to search saved parts..."
-              suggestions=${libraryParts.map(p => p.name)}
-              onSelect=${handleLibrarySelect}
+            <${LibraryPartPicker}
+              libraryParts=${libraryParts}
+              onSelectPart=${handleLibrarySelect}
+              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
             />
           </${VerticalLayout}>
 
@@ -669,6 +670,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
       <!-- Generation section: prompt preview + merged generate button -->
       <${VerticalLayout} gap="medium">
         <${H2}>Generation</${H2}>
+        <${Input}
+          label="Preview Image Name"
+          value=${previewImageName}
+          onInput=${(e) => setPreviewImageName(e.target.value)}
+          placeholder="Name for generated preview images"
+          widthScale="full"
+        />
         ${previewPrompt ? html`
           <${PromptPreview}>
             <strong>Prompt preview:</strong> ${previewPrompt}
@@ -720,12 +728,32 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
           <!-- Sticky Generate section -->
           <div style=${{ flex: 'none', display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, paddingTop: currentTheme.value.spacing.small.padding }}>
             <${H2}>Generation</${H2}>
-            <${AutocompleteInput}
-              label="Preview Plot"
-              placeholder="Type to search saved plots..."
-              suggestions=${charTabPlotList.map(p => p.name)}
-              onSelect=${handleCharTabPlotSelect}
+            <${Input}
+              label="Preview Image Name"
+              value=${previewImageName}
+              onInput=${(e) => setPreviewImageName(e.target.value)}
+              placeholder="Name for generated preview images"
+              widthScale="full"
             />
+            <${PickerRow}>
+              <${PickerInputFlex}>
+                <${AutocompleteInput}
+                  label="Preview Plot"
+                  placeholder="Type to search saved plots..."
+                  suggestions=${charTabPlotList.map(p => p.name)}
+                  onSelect=${handleCharTabPlotSelect}
+                />
+              </${PickerInputFlex}>
+              <${SearchButtonWrapper}>
+                <${Button}
+                  variant="medium-icon"
+                  icon="search"
+                  title="Browse saved plots"
+                  disabled=${charTabPlotList.length === 0}
+                  onClick=${() => setPreviewPlotModalOpen(true)}
+                />
+              </${SearchButtonWrapper}>
+            </${PickerRow}>
             ${charTabPlotName ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${charTabPlotName}</div>` : null}
             <${ButtonRow}>
               <${Button}
@@ -738,6 +766,14 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
                 ${isGenerating ? 'Generating...' : 'Generate'}
               <//>
             </${ButtonRow}>
+            <${SearchSelectModal}
+              isOpen=${previewPlotModalOpen}
+              title="Preview Plot"
+              items=${charTabPlotList.map(plot => ({ label: plot.name || plot.uid, value: plot.uid }))}
+              mode="single"
+              onSelect=${handleCharTabPlotSelect}
+              onClose=${() => setPreviewPlotModalOpen(false)}
+            />
           </div>
         </div>
       `,

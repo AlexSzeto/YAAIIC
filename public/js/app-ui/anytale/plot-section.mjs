@@ -18,7 +18,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
-import { AutocompleteInput } from '../autocomplete-input.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
@@ -73,6 +73,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [plotList, setPlotList] = useState([]);
   // Tracks the last version saved to / loaded from the server for change detection.
   const [savedPlot, setSavedPlot] = useState(null);
+  // Load-plot modal state
+  const [loadModalOpen, setLoadModalOpen] = useState(false);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -107,13 +109,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageChange && onPageChange(clamped);
   }, [plot.pages.length, onPageChange]);
 
-  // ── Load a plot by name from autocomplete ─────────────────────────────────
-  const handleLoadPlot = useCallback(async (inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = plotList.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
+  // ── Load a plot by uid from the search-select modal ──────────────────────
+  const handleLoadPlot = useCallback(async (uid) => {
+    if (!uid) return;
+    const match = plotList.find(p => p.uid === uid);
     if (!match) {
-      toast.info(`No saved plot named '${trimmed}' found`);
+      toast.info(`Plot not found`);
       return;
     }
     try {
@@ -129,7 +130,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       console.error('[PlotSection] Failed to load plot:', err);
       toast.error('Failed to load plot');
     }
-  }, [plotList, toast, onPageChange]);
+    setLoadModalOpen(false);
+  }, [plotList, toast, onPageChange, onPlotReset]);
 
   // ── Save ─────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
@@ -325,13 +327,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     <${SectionWrapper}>
       <${H2}>Plot</${H2}>
 
-      <${AutocompleteInput}
-        label="Load Plot by Name"
-        placeholder="Type to search saved plots..."
-        suggestions=${plotList.map(p => p.name)}
-        onSelect=${handleLoadPlot}
-      />
-
       <${VerticalLayout} gap="small">
         <${Input}
           label="Plot Name"
@@ -436,6 +431,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       </${VerticalLayout}>
 
       <${ButtonRow}>
+        <${Button} variant="medium-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>
+          Load
+        <//>
         <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
         <//>
@@ -446,6 +444,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           Clear Plot
         <//>
       </${ButtonRow}>
+
+      <${SearchSelectModal}
+        isOpen=${loadModalOpen}
+        title="Load Plot"
+        items=${plotList.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+        mode="single"
+        onSelect=${handleLoadPlot}
+        onClose=${() => setLoadModalOpen(false)}
+      />
     </${SectionWrapper}>
   `;
 }

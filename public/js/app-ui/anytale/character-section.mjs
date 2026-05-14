@@ -23,7 +23,7 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { AutocompleteInput } from '../autocomplete-input.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { loadCharacter, saveCharacterState, createBlankCharacter } from './anytale-state.mjs';
@@ -33,6 +33,7 @@ import { CharacterPartItem } from './character-part-item.mjs';
 import { ImagePreview } from './image-preview.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
+import { LibraryPartPicker } from './library-part-picker.mjs';
 
 // ============================================================================
 // Styled Components
@@ -134,6 +135,8 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   const [characterList, setCharacterList] = useState([]);
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryCharacter, setLibraryCharacter] = useState(null);
+  // Load-character modal state
+  const [loadCharModalOpen, setLoadCharModalOpen] = useState(false);
 
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
@@ -237,14 +240,8 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   }, [outfitList]);
 
   // ── Library autocomplete: add part from library ──────────────────────────
-  const handleLibrarySelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = libraryParts.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
-    if (!match) {
-      toast.info(`No saved part named '${trimmed}' found`);
-      return;
-    }
+  const handleLibrarySelect = useCallback((match) => {
+    if (!match) return;
     // Avoid duplicates
     if (character.parts.some(cp => cp.partUid === match.uid)) {
       toast.info(`Part '${match.name}' is already added`);
@@ -262,7 +259,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
         },
       ],
     }));
-  }, [libraryParts, character.parts, toast]);
+  }, [character.parts, toast]);
 
   const handlePartChange = useCallback((index, updatedPart) => {
     setCharacter(prev => {
@@ -459,18 +456,14 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
   // ── Load character from library ──────────────────────────────────────────
 
-  const handleCharacterSelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = characterList.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
-    if (!match) {
-      toast.info(`No saved character named '${trimmed}' found`);
-      return;
-    }
+  const handleCharacterSelect = useCallback((uid) => {
+    if (!uid) return;
+    const match = characterList.find(c => c.uid === uid);
+    if (!match) return;
     setCharacter(match);
     setSavedCharacterUid(match.uid);
     setLibraryCharacter(match);
-  }, [characterList, toast]);
+  }, [characterList]);
 
   // ── Import handler (from AnyTaleForm parent) ───────────────────────────
   const handleImport = useCallback(async (imageItem) => {
@@ -542,14 +535,6 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
       <${ContentWrapper}>
         <${VerticalLayout} gap="large">
 
-          <!-- Load character from library -->
-          <${AutocompleteInput}
-            label="Load Character"
-            placeholder="Type to search saved characters..."
-            suggestions=${characterList.map(c => c.name)}
-            onSelect=${handleCharacterSelect}
-          />
-
           <!-- Character details -->
           <${VerticalLayout} gap="small">
             <${H2}>Character</${H2}>
@@ -567,6 +552,27 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               </div>
             </div>
 
+            <${ButtonRow}>
+              <${Button}
+                variant="medium-text"
+                color="primary"
+                icon="image"
+                onClick=${handleGeneratePortrait}
+                disabled=${isGeneratingPortrait || isGeneratingVoice}
+              >
+                ${isGeneratingPortrait ? 'Generating...' : 'Generate Portrait'}
+              <//>
+              <${Button}
+                variant="medium-text"
+                color="secondary"
+                icon="microphone"
+                onClick=${handleGenerateVoice}
+                disabled=${isGeneratingPortrait || isGeneratingVoice}
+              >
+                ${isGeneratingVoice ? 'Generating...' : 'Generate Voice'}
+              <//>
+            </${ButtonRow}>
+                        
             <${Input}
               label="Name"
               value=${character.name}
@@ -592,26 +598,6 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               onValuesChange=${handlePreferredOutfitsChange}
             />
 
-            <${ButtonRow}>
-              <${Button}
-                variant="medium-text"
-                color="primary"
-                icon="image"
-                onClick=${handleGeneratePortrait}
-                disabled=${isGeneratingPortrait || isGeneratingVoice}
-              >
-                ${isGeneratingPortrait ? 'Generating...' : 'Generate Portrait'}
-              <//>
-              <${Button}
-                variant="medium-text"
-                color="secondary"
-                icon="microphone"
-                onClick=${handleGenerateVoice}
-                disabled=${isGeneratingPortrait || isGeneratingVoice}
-              >
-                ${isGeneratingVoice ? 'Generating...' : 'Generate Voice'}
-              <//>
-            </${ButtonRow}>
           </${VerticalLayout}>
 
           <!-- Parts -->
@@ -622,11 +608,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Character Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
             }
 
-            <${AutocompleteInput}
-              label="Add Part from Library"
-              placeholder="Type to search saved parts..."
-              suggestions=${libraryParts.map(p => p.name)}
-              onSelect=${handleLibrarySelect}
+            <${LibraryPartPicker}
+              libraryParts=${libraryParts}
+              onSelectPart=${handleLibrarySelect}
+              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
             />
 
             <${DynamicList}
@@ -659,6 +644,14 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
           <${ButtonRow}>
             <${Button}
               variant="medium-text"
+              color="secondary"
+              icon="folder-open"
+              onClick=${() => setLoadCharModalOpen(true)}
+            >
+              Load
+            <//>
+            <${Button}
+              variant="medium-text"
               color="primary"
               icon="save"
               onClick=${handleSave}
@@ -684,6 +677,15 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               Clear
             <//>
           </${ButtonRow}>
+
+          <${SearchSelectModal}
+            isOpen=${loadCharModalOpen}
+            title="Load Character"
+            items=${characterList.map(c => ({ label: c.name || c.uid, value: c.uid }))}
+            mode="single"
+            onSelect=${handleCharacterSelect}
+            onClose=${() => setLoadCharModalOpen(false)}
+          />
 
         </${VerticalLayout}>
       </${ContentWrapper}>

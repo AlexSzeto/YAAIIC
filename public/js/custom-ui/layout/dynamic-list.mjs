@@ -105,7 +105,7 @@ CondensedItemContent.className = 'dynamic-list-condensed-item-content';
 const DragGhost = styled('div')`
   position: fixed;
   pointer-events: none;
-  z-index: 20000;
+  z-index: 10000;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   width: ${props => props.width}px;

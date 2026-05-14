@@ -24,12 +24,13 @@ import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { H2, H3, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { AutocompleteInput } from '../autocomplete-input.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
 import { fetchOutfitList, saveOutfit, deleteOutfit } from './outfit-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
+import { LibraryPartPicker } from './library-part-picker.mjs';
 
 // ============================================================================
 // Styled Components
@@ -87,6 +88,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const [outfitList, setOutfitList] = useState([]);
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryOutfit, setLibraryOutfit] = useState(null);
+  // Load-outfit modal state
+  const [loadOutfitModalOpen, setLoadOutfitModalOpen] = useState(false);
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -143,14 +146,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   }, []);
 
   // ── Library autocomplete: add part from library ──────────────────────
-  const handleLibrarySelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = libraryParts.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
-    if (!match) {
-      toast.info(`No saved part named '${trimmed}' found`);
-      return;
-    }
+  const handleLibrarySelect = useCallback((match) => {
+    if (!match) return;
     if (outfit.parts.some(op => op.partUid === match.uid)) {
       toast.info(`Part '${match.name}' is already added`);
       return;
@@ -167,7 +164,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         },
       ],
     }));
-  }, [libraryParts, outfit.parts, toast]);
+  }, [outfit.parts, toast]);
 
   const handlePartChange = useCallback((index, updatedPart) => {
     setOutfit(prev => {
@@ -313,17 +310,13 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
   // ── Load outfit from library ─────────────────────────────────────────
 
-  const handleOutfitSelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
-    const match = outfitList.find(o => o.name.toLowerCase() === trimmed.toLowerCase());
-    if (!match) {
-      toast.info(`No saved outfit named '${trimmed}' found`);
-      return;
-    }
+  const handleOutfitSelect = useCallback((uid) => {
+    if (!uid) return;
+    const match = outfitList.find(o => o.uid === uid);
+    if (!match) return;
     setOutfit(match);
     setLibraryOutfit(match);
-  }, [outfitList, toast]);
+  }, [outfitList]);
 
   // ============================================================================
   // Render
@@ -339,14 +332,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
       <${ContentWrapper}>
         <${VerticalLayout} gap="large">
-
-          <!-- Load outfit from library -->
-          <${AutocompleteInput}
-            label="Load Outfit"
-            placeholder="Type to search saved outfits..."
-            suggestions=${outfitList.map(o => o.name)}
-            onSelect=${handleOutfitSelect}
-          />
 
           <!-- Outfit details -->
           <${VerticalLayout} gap="small">
@@ -369,11 +354,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Outfit Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
             }
 
-            <${AutocompleteInput}
-              label="Add Part from Library"
-              placeholder="Type to search saved parts..."
-              suggestions=${libraryParts.map(p => p.name)}
-              onSelect=${handleLibrarySelect}
+            <${LibraryPartPicker}
+              libraryParts=${libraryParts}
+              onSelectPart=${handleLibrarySelect}
+              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
             />
 
             <${DynamicList}
@@ -406,6 +390,14 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
           <${ButtonRow}>
             <${Button}
               variant="medium-text"
+              color="secondary"
+              icon="folder-open"
+              onClick=${() => setLoadOutfitModalOpen(true)}
+            >
+              Load
+            <//>
+            <${Button}
+              variant="medium-text"
               color="primary"
               icon="save"
               onClick=${handleSave}
@@ -431,6 +423,15 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               Clear
             <//>
           </${ButtonRow}>
+
+          <${SearchSelectModal}
+            isOpen=${loadOutfitModalOpen}
+            title="Load Outfit"
+            items=${outfitList.map(o => ({ label: o.name || o.uid, value: o.uid }))}
+            mode="single"
+            onSelect=${handleOutfitSelect}
+            onClose=${() => setLoadOutfitModalOpen(false)}
+          />
 
         </${VerticalLayout}>
       </${ContentWrapper}>

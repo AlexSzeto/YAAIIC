@@ -3,7 +3,7 @@
  *
  * State shape:
  * {
- *   name: string,
+ *   name: string, // preview image name
  *   parts: Array<{
  *     id: string,
  *     config: {

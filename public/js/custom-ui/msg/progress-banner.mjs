@@ -24,7 +24,7 @@ const BannerWrapper = styled('div')`
   position: fixed;
   bottom: 1rem;
   right: 1rem;
-  z-index: 9999;
+  z-index: 5000;
   max-width: 400px;
   min-width: 320px;
   animation: ${slideUp} 0.3s ease-out;
