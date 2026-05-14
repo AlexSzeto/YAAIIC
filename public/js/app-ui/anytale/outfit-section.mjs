@@ -76,7 +76,7 @@ function outfitsEqual(a, b) {
  * @param {Function} [props.onLibraryPartsChange] – Called when library is updated
  * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true }) {
+export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true, onOutfitListChange }) {
   const toast = useToast();
 
   // ── Outfit state (lazy-loaded from localStorage) ─────────────────────
@@ -193,7 +193,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       setOutfit(prev => ({ ...prev, uid }));
       setLibraryOutfit(savedOutfit);
       const list = await fetchOutfitList();
-      if (Array.isArray(list)) setOutfitList(list);
+      if (Array.isArray(list)) { setOutfitList(list); onOutfitListChange?.(list); }
       toast.success('Outfit saved');
     } catch (err) {
       console.error('[OutfitSection] Save failed:', err);
@@ -212,7 +212,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     try {
       await deleteOutfit(outfit.uid);
       const list = await fetchOutfitList();
-      if (Array.isArray(list)) setOutfitList(list);
+      if (Array.isArray(list)) { setOutfitList(list); onOutfitListChange?.(list); }
       toast.success('Outfit deleted');
       const blank = createBlankOutfit();
       setOutfit(blank);

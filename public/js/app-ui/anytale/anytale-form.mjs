@@ -1,5 +1,5 @@
-﻿/**
- * anytale-form.mjs â€“ Right-column form for the AnyTale page.
+/**
+ * anytale-form.mjs – Right-column form for the AnyTale page.
  *
  * Contains two tabs:
  *   Parts & Plot:          Parts DynamicList, Plot Section, Generation section (merged char+outfit parts).
@@ -26,6 +26,7 @@ import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
 import { OutfitSection } from './outfit-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
+import { fetchOutfitList } from './outfit-api.mjs';
 
 // ============================================================================
 // Styled Components
@@ -77,10 +78,10 @@ PromptPreview.className = 'prompt-preview';
 
 /**
  * @param {Object}   props
- * @param {Function} props.onGenerate    â€“ Called with (prompt, name, partsData, plotData) when Generate is clicked
- * @param {boolean}  props.isGenerating  â€“ True while a generation is in-flight
- * @param {Function} [props.onStateLoaded] â€“ Called with the restored name after localStorage is read
- * @param {Function} [props.onImportReady] â€“ Called with (fn, enabled) when import handler changes; (null, false) on unmount
+ * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
+ * @param {boolean}  props.isGenerating  – True while a generation is in-flight
+ * @param {Function} [props.onStateLoaded] – Called with the restored name after localStorage is read
+ * @param {Function} [props.onImportReady] – Called with (fn, enabled) when import handler changes; (null, false) on unmount
  */
 export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportReady, currentItem = null }) {
   const toast = useToast();
@@ -99,7 +100,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const plotImportFnRef = useRef(null);
   const handlePlotImportReady = useCallback((fn) => { plotImportFnRef.current = fn; }, []);
 
-  // â”€â”€ Config for import routing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Config for import routing ────────────────────────────────────────────
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
 
@@ -112,7 +113,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
       })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
   }, []);
-  // â"€â"€ Plot list for Character & Outfits tab generate section â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  // �"��"� Plot list for Character & Outfits tab generate section �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
   const [charTabPlotList, setCharTabPlotList] = useState([]);
   const [charTabPlotName, setCharTabPlotName] = useState('');
   const [charTabPlotUid, setCharTabPlotUid] = useState('');
@@ -130,7 +131,17 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     if (match) { setCharTabPlotName(match.name); setCharTabPlotUid(match.uid); }
     else { setCharTabPlotName(trimmed); setCharTabPlotUid(''); }
   }, [charTabPlotList]);
-  // â”€â”€ Library lookup state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  // ── Shared outfit list (keeps CharacterSection in sync after OutfitSection saves) ─
+  const [sharedOutfitList, setSharedOutfitList] = useState([]);
+
+  useEffect(() => {
+    fetchOutfitList()
+      .then(list => { if (Array.isArray(list)) setSharedOutfitList(list); })
+      .catch(err => console.error('[AnyTaleForm] Failed to fetch outfit list:', err));
+  }, []);
+
+  // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
 
   useEffect(() => {
@@ -157,7 +168,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     saveState({ name, parts });
   }, [name, parts]);
 
-  // â”€â”€ Library lookup: add part from library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Library lookup: add part from library ────────────────────────────────
   const handleLibrarySelect = useCallback((inputValue) => {
     const trimmed = (inputValue || '').trim();
     if (!trimmed) return;
@@ -179,7 +190,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     clearState();
   }, []);
 
-  // â”€â”€ Generate: merges character + outfit parts from localStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Generate: merges character + outfit parts from localStorage ──────────
   const handleGenerate = useCallback(() => {
     setPageLocked(prev => {
       const next = [...prev];
@@ -238,7 +249,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     onGenerate(prompt, currentCharacter.name || name, partsData, plotData);
   }, [libraryParts, name, onGenerate, activePlotPage]);
 
-  // â"€â"€ Generate from Character & Outfits tab: uses charTabPlotUid (page 0) â"€â"€
+  // �"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
   const handleCharTabGenerate = useCallback(async () => {
     const currentCharacter = loadCharacter();
     const currentOutfit = loadOutfit();
@@ -368,7 +379,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
 
-  // â”€â”€ Import: route parts to character or outfit based on library types â”€â”€â”€â”€â”€
+  // ── Import: route parts to character or outfit based on library types ─────
   const handleImport = useCallback(async () => {
     if (!currentItem?.parts || Object.keys(currentItem.parts).length === 0) {
       toast.info('No parts data found on the current image');
@@ -428,7 +439,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
 
         if (isCharType) characterParts.push(partEntry);
         else if (isOutfitType) outfitParts.push({ ...partEntry });
-        // No type match â†’ add to both
+        // No type match → add to both
         else { characterParts.push(partEntry); outfitParts.push({ ...partEntry }); }
       }
 
@@ -515,7 +526,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     return assemblePrompt(promptParts, activePage);
   }, [libraryParts, activePlotPage, importRefreshKey]);
 
-  // â”€â”€ Tab content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
     <${EditLayout}>
       <div style="flex: none">
@@ -650,12 +661,14 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
               libraryParts=${libraryParts}
               onLibraryPartsChange=${refreshLibraryParts}
               refreshKey=${importRefreshKey}
+              outfitList=${sharedOutfitList}
               scrollable=${false}
             />
             <${OutfitSection}
               libraryParts=${libraryParts}
               onLibraryPartsChange=${refreshLibraryParts}
               refreshKey=${importRefreshKey}
+              onOutfitListChange=${setSharedOutfitList}
               scrollable=${false}
             />
           </div>

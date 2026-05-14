@@ -4,10 +4,10 @@
 ## Implementation Details
 
 # Future Features
-- Higher Quality Flux Klein (add a field to use 9b param model for generation)
+- Cancel generation (replace generation button)
+- Progress for one shot generations (ones that doesn't get stored in media DB)
 - Settings page (for updating server config.json)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
-- Cancel generation (replace generation button)
 - Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)
 - Allow (pre/post generation) processes to report progress. For workflows, report this using workflow completion percentage; For frame blend, use the current frame being blended to calculate the completion percentage.
 - Add progress recovery capabilities so clients logging into workflow in progress would properly prevent generation and show the workflow progress.

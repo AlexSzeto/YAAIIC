@@ -125,7 +125,7 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
  * @param {Function} [props.onImportHandlerReady] – Exposes the import handler to the parent
  * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true }) {
+export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true, outfitList: outfitListProp }) {
   const toast = useToast();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
@@ -153,13 +153,16 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   const [generatingPreviews, setGeneratingPreviews] = useState({});
 
   // ── Outfit list for preferredOutfits autocomplete ────────────────────────
-  const [outfitList, setOutfitList] = useState([]);
+  const [outfitListInternal, setOutfitListInternal] = useState([]);
+  // Use prop if provided (kept in sync by parent); fall back to internal fetch.
+  const outfitList = outfitListProp ?? outfitListInternal;
 
   useEffect(() => {
+    if (outfitListProp !== undefined) return; // parent manages this
     fetchOutfitList()
-      .then(list => { if (Array.isArray(list)) setOutfitList(list); })
+      .then(list => { if (Array.isArray(list)) setOutfitListInternal(list); })
       .catch(err => console.error('[CharacterSection] Failed to fetch outfit list:', err));
-  }, []);
+  }, [outfitListProp]);
 
   const [recommendedPartTypes, setRecommendedPartTypes] = useState([]);
 
