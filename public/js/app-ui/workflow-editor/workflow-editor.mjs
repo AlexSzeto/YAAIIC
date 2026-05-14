@@ -144,7 +144,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
     { label: 'Detect', value: 'detect' },
   ];
 
-  const baseFileOptions = (['', ...baseFiles] || []).map(f => ({ label: f || '— choose workflow —', value: f }));
+  const baseFileOptions = (['', ...baseFiles] || []).map(f => ({ label: f || '(choose workflow)', value: f }));
 
   return html`
     <${VerticalLayout} gap="medium">

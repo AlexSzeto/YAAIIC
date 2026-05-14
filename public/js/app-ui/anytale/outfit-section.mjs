@@ -28,6 +28,7 @@ import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
 import { fetchOutfitList, saveOutfit, deleteOutfit } from './outfit-api.mjs';
+import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 
 // ============================================================================
@@ -81,6 +82,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
   // ── Outfit state (lazy-loaded from localStorage) ─────────────────────
   const [outfit, setOutfit] = useState(() => loadOutfit());
+  // Part preview generation: keyed by part index, truthy while in-flight
+  const [generatingPreviews, setGeneratingPreviews] = useState({});
   const [outfitList, setOutfitList] = useState([]);
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryOutfit, setLibraryOutfit] = useState(null);
@@ -173,6 +176,79 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       return { ...prev, parts: newParts };
     });
   }, []);
+
+  // ── Part preview generation (manual, via header action button) ───────
+
+  const handlePreviewGenerate = useCallback(async (item, index) => {
+    if (generatingPreviews[index]) return;
+
+    const libConfig = libraryParts.find(p => p.uid === item.partUid);
+    const partForPrompt = {
+      config: {
+        name: libConfig?.name || item.partUid,
+        previewBaseline: libConfig?.previewBaseline || '',
+        baseline: libConfig?.baseline || '',
+        categoryAttributes: libConfig?.categoryAttributes || [],
+        customAttributes: libConfig?.customAttributes || [],
+      },
+      data: {
+        enabled: true,
+        categoryAttributeValues: item.categoryAttributeValues || {},
+        customAttributeValues: item.customAttributeValues || {},
+        previewImageUrl: item.previewImageUrl || '',
+      },
+    };
+
+    const prompt = assemblePartPreviewPrompt(partForPrompt);
+    if (!prompt) {
+      console.warn('[OutfitSection] No prompt for part preview, index', index);
+      return;
+    }
+
+    setGeneratingPreviews(prev => ({ ...prev, [index]: true }));
+    try {
+      const response = await fetch('/generate/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflow: 'Text to Image (Illustrious Portrait)',
+          name: libConfig?.name || item.partUid || 'preview',
+          prompt,
+          seed: Math.floor(Math.random() * 4294967295),
+          orientation: 'square',
+          imageFormat: 'png',
+          tags: '',
+          description: '',
+          summary: '',
+          usePostPrompts: false,
+          removeBackground: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.imageUrl) {
+        handlePartChange(index, { ...item, previewImageUrl: result.imageUrl });
+      }
+    } catch (err) {
+      console.error('[OutfitSection] Part preview generation failed:', err);
+      toast.error(`Preview failed: ${err.message}`);
+    } finally {
+      setGeneratingPreviews(prev => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
+  }, [generatingPreviews, libraryParts, handlePartChange, toast]);
+
+  const partHeaderActions = [
+    { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
+  ];
 
   // ── Outfit CRUD actions ──────────────────────────────────────────────
 
@@ -303,6 +379,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
             <${DynamicList}
               title="Outfit Parts"
               items=${outfit.parts}
+              headerActions=${partHeaderActions}
               renderItem=${(item, i) => {
                 const libConfig = libraryParts.find(p => p.uid === item.partUid);
                 return html`
@@ -310,7 +387,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                     part=${item}
                     libraryConfig=${libConfig}
                     onPartChange=${(updated) => handlePartChange(i, updated)}
-                    isGenerating=${false}
+                    isGenerating=${!!generatingPreviews[i]}
                   />
                 `;
               }}

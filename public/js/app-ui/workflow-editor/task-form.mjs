@@ -293,7 +293,7 @@ function ModelTaskForm({ task, onChange }) {
     fetch('/api/llm/models')
       .then(r => r.ok ? r.json() : { models: [] })
       .then(data => {
-        const options = [{ label: '— choose model —', value: '' }, ...(data.models || []).map(m => ({ label: m, value: m }))];
+        const options = [{ label: '(choose model)', value: '' }, ...(data.models || []).map(m => ({ label: m, value: m }))];
         setModelOptions(options);
       })
       .catch(() => {});
@@ -446,7 +446,7 @@ function ExecuteWorkflowTaskForm({ task, onChange }) {
     fetch('/api/workflows')
       .then(r => r.ok ? r.json() : { workflows: [] })
       .then(data => {
-        setWorkflowOptions((['', ...data.workflows] || []).map(wf => ({ label: wf.name ?? '— choose workflow —', value: wf.name })));
+        setWorkflowOptions((['', ...data.workflows] || []).map(wf => ({ label: wf.name ?? '(choose workflow)', value: wf.name })));
       })
       .catch(() => {});
   }, []);

@@ -90,7 +90,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
   const [isImporting, setIsImporting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(0);
   const [pageLocked, setPageLocked] = useState([]);
-  const [activeTab, setActiveTab] = useState('parts-plot');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
+
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    localStorage.setItem('anytale-active-tab', tab);
+  }, []);
 
   // Incremented when import writes character/outfit state to localStorage so child
   // sections can pick up the new data.
@@ -190,7 +195,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     clearState();
   }, []);
 
-  // ── Generate: merges character + outfit parts from localStorage ──────────
+  // ── Generate: uses local parts state and plot from localStorage ────────────
   const handleGenerate = useCallback(() => {
     setPageLocked(prev => {
       const next = [...prev];
@@ -199,40 +204,14 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     });
 
     const currentPlot = loadPlot();
-    const currentCharacter = loadCharacter();
-    const currentOutfit = loadOutfit();
-
-    // Outfit parts win on duplicate partUid
-    const mergedMap = {};
-    for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
-    for (const p of (currentOutfit.parts || [])) mergedMap[p.partUid] = p;
-    const mergedParts = Object.values(mergedMap);
-
-    const promptParts = mergedParts.map(cp => {
-      const lib = libraryParts.find(p => p.uid === cp.partUid);
-      if (!lib) return null;
-      return {
-        config: {
-          name: lib.name, type: lib.type,
-          baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
-        },
-        data: {
-          enabled: true,
-          categoryAttributeValues: cp.categoryAttributeValues || {},
-          customAttributeValues: cp.customAttributeValues || {},
-          previewImageUrl: cp.previewImageUrl || '',
-        },
-      };
-    }).filter(Boolean);
 
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const prompt = assemblePrompt(promptParts, activePage);
+    const prompt = assemblePrompt(parts, activePage);
 
     const partsData = {};
-    for (const p of promptParts) {
-      if (p.config.name?.trim()) {
+    for (const p of parts) {
+      if (p.config?.name?.trim()) {
         partsData[p.config.name] = {
           enabled: p.data.enabled,
           categoryAttributeValues: p.data.categoryAttributeValues,
@@ -246,8 +225,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
       ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
       : null;
 
-    onGenerate(prompt, currentCharacter.name || name, partsData, plotData);
-  }, [libraryParts, name, onGenerate, activePlotPage]);
+    onGenerate(prompt, name, partsData, plotData);
+  }, [parts, name, onGenerate, activePlotPage]);
 
   // �"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
   const handleCharTabGenerate = useCallback(async () => {
@@ -466,7 +445,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
         await plotImportFnRef.current({ uid: plotMeta.uid, name: plotMeta.name, page: plotMeta.page ?? 0 });
       }
 
-      setActiveTab('character-outfits');
+      handleTabChange('character-outfits');
     } finally {
       setIsImporting(false);
     }
@@ -703,7 +682,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onStateLoaded, onImportR
     <${TabPanels}
       tabs=${tabs}
       activeTab=${activeTab}
-      onTabChange=${setActiveTab}
+      onTabChange=${handleTabChange}
       variant="outlined"
       style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     />

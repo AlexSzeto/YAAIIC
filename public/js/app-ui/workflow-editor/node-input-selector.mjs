@@ -77,7 +77,7 @@ export function NodeInputSelector({ workflowJson = {}, value = null, onChange })
 
   // Build node options from workflowJson (only nodes with a class_type)
   const nodeOptions = [
-    { label: '— choose node —', value: '' },
+    { label: '(choose node)', value: '' },
     ...Object.entries(workflowJson)
       .filter(([, node]) => node && typeof node === 'object' && node.class_type)
       .map(([nodeId, node]) => ({
@@ -90,7 +90,7 @@ export function NodeInputSelector({ workflowJson = {}, value = null, onChange })
   const activeNode = activeNodeId ? workflowJson[activeNodeId] : null;
   const inputKeys  = activeNode ? getNodeInputKeys(activeNode) : [];
   const inputOptions = [
-    { label: '— choose input —', value: '' },
+    { label: '(choose input)', value: '' },
     ...inputKeys.map(k => ({ label: k, value: k })),
   ];
 
