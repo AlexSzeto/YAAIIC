@@ -31,6 +31,7 @@ const ICON_MAP = {
   'chevron-up': 'keyboard_arrow_up',
   'menu': 'menu',
   'swap-vertical': 'swap_vert',
+  'apps': 'apps',
   
   // Actions
   'trash-alt': 'delete',

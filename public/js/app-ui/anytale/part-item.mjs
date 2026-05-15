@@ -188,29 +188,40 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     setSelectorPanelOpen(false);
   }, [editingAttrIndex, config.attributes, handleAttrsChange, toast]);
 
-  // ── Rainbow color options generator ─────────────────────────────────────
+  // ── Categorized options generator ─────────────────────────────────────
   const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'dark', 'dark aqua', 'dark blonde', 'dark blue', 'dark brown', 'dark green', 'dark grey', 'dark orange', 'dark pink', 'dark purple', 'dark red', 'dark white', 'dark yellow', 'gold', 'green', 'grey', 'light', 'light aqua', 'light blonde', 'light blue', 'light brown', 'light green', 'light grey', 'light orange', 'light pink', 'light purple', 'light red', 'light white', 'light yellow', 'orange', 'pink', 'purple', 'red', 'silver', 'white', 'yellow'];
+  const COMMON_PATTERNS = ['argyle', 'camouflage', 'checkered', 'diagonal-striped', 'floral print', 'frilled', 'pinstripe', 'plaid', 'pleated', 'polka dot', 'print', 'ribbed', 'striped', 'vertical-striped' ];
 
-  const handleRainbowAction = useCallback(async (attr, attrIndex) => {
-    const keyword = await showTextPrompt('Color Keyword', config.name.toLowerCase(), 'e.g. eyeshadow');
+  const generateCategorizedOptions = async (attrIndex, promptTitle, hint, categorizedOptions, defaultName) => {
+    const keyword = await showTextPrompt(promptTitle, config.name.toLowerCase(), hint);
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
-    const validTags = RAINBOW_COLORS
-      .map(color => `${color} ${kw}`)
+    const validTags = categorizedOptions
+      .map(option => `${option} ${kw}`)
       .filter(tag => tagExist(tag));
     if (validTags.length === 0) {
-      toast.info(`No color variations found for "${kw}"`);
+      toast.info(`No ${promptTitle.toLowerCase()} variations found for "${kw}"`);
       return;
     }
     const next = [...config.attributes];
-    // Auto-fill name with "color" if currently empty
-    const autoName = next[attrIndex].name || 'color';
+    // Auto-fill name with defaultName if currently empty
+    const autoName = next[attrIndex].name || defaultName;
     next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
     handleAttrsChange(next);
+  }
+
+  const handleRainbowAction = useCallback(async (attr, attrIndex) => {
+    generateCategorizedOptions(attrIndex, 'Color Keyword', 'e.g. eyeshadow', RAINBOW_COLORS, 'color');
   }, [config.attributes, config.name, handleAttrsChange, toast]);
 
+  const handlePatternAction = useCallback(async (attr, attrIndex) => {
+    generateCategorizedOptions(attrIndex, 'Pattern Keyword', 'e.g. shirt', COMMON_PATTERNS, 'pattern');
+  }, [config.attributes, config.name, handleAttrsChange, toast]);
+
+  const BANNED_VARIATION_KEYWORDS = ['mismatched', 'no', 'removing', 'adjusting', 'torn', 'see-through', 'layered', 'impossible', 'gradient', 'two-tone', 'multicolored', 'unworn', 'wet']
+
   const handleVariationsAction = useCallback(async (attr, attrIndex) => {
-    const keyword = await showTextPrompt('Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
+    const keyword = await showTextPrompt('Leftover Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
 
@@ -222,6 +233,10 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       for (const tag of opts.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)) {
         coveredTags.add(tag);
       }
+    }
+
+    for (const banned of BANNED_VARIATION_KEYWORDS) {
+      coveredTags.add(`${banned} ${kw}`);
     }
 
     const validTags = getAllTagNames().filter(tag => {
@@ -239,12 +254,6 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
     handleAttrsChange(next);
   }, [config.attributes, config.name, handleAttrsChange, toast]);
-
-  const attrHeaderActions = [
-    { icon: 'palette', title: 'Fill with color variations', onClick: handleRainbowAction },
-    { icon: 'menu', title: 'Fill with keyword variations', onClick: handleVariationsAction },
-    { icon: 'tag', title: 'Import tags from category', onClick: handleTagImportClick },
-  ];
 
   // ── Header select: value picker shown inside each attribute item header ──
   const getAttrSelectOptions = useCallback((attr) => getAttrOptions(attr.options), []);
@@ -377,8 +386,9 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <${DynamicList}
         title="Attributes"
         items=${config.attributes}
-        getTitle=${(attr) => attr.name || 'Untitled'}
+        getTitle=${(attr) => attr.name || 'untitled'}
         renderItem=${(attr, i) => html`
+          <${VerticalLayout} gap="small">
           <${AttrRow}>
             <${Input}
               label="Name"
@@ -412,15 +422,21 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             >Colors</${Button}>
             <${Button}
               variant="small-text"
+              icon="apps"
+              onClick=${(e) => { e.stopPropagation(); handlePatternAction(attr, i); }}
+            >Patterns</${Button}>
+            <${Button}
+              variant="small-text"
               icon="menu"
               onClick=${(e) => { e.stopPropagation(); handleVariationsAction(attr, i); }}
-            >Variations</${Button}>
+            >Leftovers</${Button}>
             <${Button}
               variant="small-text"
               icon="tag"
               onClick=${(e) => { e.stopPropagation(); handleTagImportClick(attr, i); }}
-            >Import from Category</${Button}>
+            >Import</${Button}>
           </${AttrRow}>
+          </${VerticalLayout}>
         `}
         createItem=${createDefaultAttribute}
         onChange=${handleAttrsChange}
