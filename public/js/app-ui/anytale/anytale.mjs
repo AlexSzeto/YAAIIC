@@ -74,13 +74,11 @@ export function AnyTalePage() {
   // Workflow
   const [workflow, setWorkflow] = useState(null);
 
-  // Import handler forwarded from AnyTaleForm
-  const importFnRef = useRef(null);
-  const [canImport, setCanImport] = useState(false);
+  // Import handlers forwarded from AnyTaleForm
+  const [importControls, setImportControls] = useState(null);
 
-  const handleImportReady = useCallback((fn, enabled) => {
-    importFnRef.current = fn;
-    setCanImport(!!enabled);
+  const handleImportReady = useCallback((controls) => {
+    setImportControls(controls);
   }, []);
 
   // Generation state
@@ -280,8 +278,11 @@ export function AnyTalePage() {
             onFirst=${nav.selectFirst}
             onLast=${nav.selectLast}
             currentItem=${nav.currentItem}
-            onImport=${() => importFnRef.current && importFnRef.current()}
-            canImport=${canImport}
+            activeTab=${importControls?.activeTab || 'parts-plot'}
+            canImport=${!!importControls?.canImport}
+            onImportPartsPlot=${importControls?.importPartsPlot}
+            onImportCharacter=${importControls?.importCharacter}
+            onImportOutfit=${importControls?.importOutfit}
             onDelete=${() => handleDeleteImage(nav.currentItem)}
             canDelete=${!!nav.currentItem}
           />

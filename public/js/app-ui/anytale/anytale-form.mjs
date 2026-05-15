@@ -17,7 +17,7 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
-import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, savePlotState, createBlankCharacter, createBlankOutfit, createBlankPlot } from './anytale-state.mjs';
+import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { extractImagePrompt, parsePromptTags, processPromptImport } from './prompt-import.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
@@ -106,7 +106,7 @@ PromptPreview.className = 'prompt-preview';
  * @param {Object}   props
  * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
  * @param {boolean}  props.isGenerating  – True while a generation is in-flight
- * @param {Function} [props.onImportReady] – Called with (fn, enabled) when import handler changes; (null, false) on unmount
+ * @param {Function} [props.onImportReady] – Called with import handlers when they change; null on unmount
  */
 export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentItem = null }) {
   const toast = useToast();
@@ -418,105 +418,170 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     }
   }, [currentItem]);
 
-  // ── Import: parse image prompt tags and match against the parts library ──
-  const handleImport = useCallback(async () => {
+  const preparePromptImport = useCallback(() => {
     const rawPrompt = extractImagePrompt(currentItem);
     if (!rawPrompt) {
       toast.info('No prompt found on the current image');
-      return;
+      return null;
     }
 
     const tags = parsePromptTags(rawPrompt);
     if (tags.length === 0) {
       toast.info('The image prompt has no tags to import');
-      return;
+      return null;
     }
 
-    const isPartsPlotTab = activeTab === 'parts-plot';
-    const confirmMessage = isPartsPlotTab
-      ? 'Importing will clear and overwrite your current parts and plot data. Are you sure?'
-      : 'Importing will clear and overwrite your current character and outfit data. Are you sure?';
-    const result = await showDialog(confirmMessage, 'Confirm Import', ['Import', 'Cancel']);
+    return { tags };
+  }, [currentItem, toast]);
+
+  const handleImportPartsPlot = useCallback(async () => {
+    const prepared = preparePromptImport();
+    if (!prepared) return;
+
+    const result = await showDialog(
+      'Importing will clear and overwrite your current parts and plot data. Are you sure?',
+      'Confirm Import',
+      ['Import', 'Cancel']
+    );
     if (result !== 'Import') return;
 
     setIsImporting(true);
     try {
       const { latestLibrary, charTypes, outfitTypes } = await fetchImportConfigs();
-
-      const importResult = processPromptImport({
-        tags,
+      const { parts: importedParts, skipped } = processPromptImport({
+        tags: prepared.tags,
         libraryParts: latestLibrary,
         recommendedCharacterPartTypes: charTypes,
         recommendedOutfitPartTypes: outfitTypes,
-        mode: isPartsPlotTab ? 'parts-plot' : 'character-outfits',
+        mode: 'parts-plot',
         createDefaultPart,
       });
 
-      const { parts: importedParts, characterParts, outfitParts, skipped } = importResult;
-
-      if (isPartsPlotTab) {
-        if (importedParts.length === 0) {
-          toast.error('No tags in the image prompt matched the parts library');
-          return;
-        }
-
-        clearPartsPlotImportState();
-        setParts(importedParts);
-
-        if (skipped.length > 0) {
-          toast.info(`Imported ${importedParts.length} part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`);
-        } else {
-          toast.success(`Imported ${importedParts.length} part(s) from prompt tags`);
-        }
-
-        await restorePlotFromImage();
-        return;
-      }
-
-      if (characterParts.length === 0 && outfitParts.length === 0) {
+      if (importedParts.length === 0) {
         toast.error('No tags in the image prompt matched the parts library');
         return;
       }
 
-      saveCharacterState(createBlankCharacter());
-      saveOutfitState(createBlankOutfit());
+      clearPartsPlotImportState();
+      setParts(importedParts);
 
-      const blankChar = createBlankCharacter();
-      blankChar.name = currentItem?.name || 'Imported Character';
-      blankChar.parts = characterParts;
-      saveCharacterState(blankChar);
+      if (skipped.length > 0) {
+        toast.info(`Imported ${importedParts.length} part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`);
+      } else {
+        toast.success(`Imported ${importedParts.length} part(s) from prompt tags`);
+      }
 
-      const blankOutfit = createBlankOutfit();
-      blankOutfit.parts = outfitParts;
-      saveOutfitState(blankOutfit);
+      await restorePlotFromImage();
+    } finally {
+      setIsImporting(false);
+    }
+  }, [preparePromptImport, fetchImportConfigs, clearPartsPlotImportState, restorePlotFromImage, toast]);
 
+  const handleImportCharacter = useCallback(async () => {
+    const prepared = preparePromptImport();
+    if (!prepared) return;
+
+    const result = await showDialog(
+      'Importing will replace the current character parts list. Other character fields will be kept. Are you sure?',
+      'Confirm Import Character',
+      ['Import', 'Cancel']
+    );
+    if (result !== 'Import') return;
+
+    setIsImporting(true);
+    try {
+      const { latestLibrary, charTypes, outfitTypes } = await fetchImportConfigs();
+      const { characterParts, skipped } = processPromptImport({
+        tags: prepared.tags,
+        libraryParts: latestLibrary,
+        recommendedCharacterPartTypes: charTypes,
+        recommendedOutfitPartTypes: outfitTypes,
+        mode: 'character-only',
+        createDefaultPart,
+      });
+
+      if (characterParts.length === 0) {
+        toast.error('No tags in the image prompt matched character parts in the library');
+        return;
+      }
+
+      const character = loadCharacter();
+      character.parts = characterParts;
+      saveCharacterState(character);
       setImportRefreshKey(k => k + 1);
 
       if (skipped.length > 0) {
-        toast.info(
-          `Imported ${characterParts.length} character part(s), ${outfitParts.length} outfit part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`
-        );
+        toast.info(`Imported ${characterParts.length} character part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`);
       } else {
-        toast.success(`Imported ${characterParts.length} character part(s), ${outfitParts.length} outfit part(s) from prompt tags`);
+        toast.success(`Imported ${characterParts.length} character part(s) from prompt tags`);
       }
     } finally {
       setIsImporting(false);
     }
-  }, [
-    currentItem,
-    activeTab,
-    toast,
-    fetchImportConfigs,
-    clearPartsPlotImportState,
-    restorePlotFromImage,
-  ]);
+  }, [preparePromptImport, fetchImportConfigs, toast]);
 
-  // Notify parent when import handler or its enabled state changes
+  const handleImportOutfit = useCallback(async () => {
+    const prepared = preparePromptImport();
+    if (!prepared) return;
+
+    const result = await showDialog(
+      'Importing will replace the current outfit parts list. Other outfit fields will be kept. Are you sure?',
+      'Confirm Import Outfit',
+      ['Import', 'Cancel']
+    );
+    if (result !== 'Import') return;
+
+    setIsImporting(true);
+    try {
+      const { latestLibrary, charTypes, outfitTypes } = await fetchImportConfigs();
+      const { outfitParts, skipped } = processPromptImport({
+        tags: prepared.tags,
+        libraryParts: latestLibrary,
+        recommendedCharacterPartTypes: charTypes,
+        recommendedOutfitPartTypes: outfitTypes,
+        mode: 'outfit-only',
+        createDefaultPart,
+      });
+
+      if (outfitParts.length === 0) {
+        toast.error('No tags in the image prompt matched outfit parts in the library');
+        return;
+      }
+
+      const outfit = loadOutfit();
+      outfit.parts = outfitParts;
+      saveOutfitState(outfit);
+      setImportRefreshKey(k => k + 1);
+
+      if (skipped.length > 0) {
+        toast.info(`Imported ${outfitParts.length} outfit part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`);
+      } else {
+        toast.success(`Imported ${outfitParts.length} outfit part(s) from prompt tags`);
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  }, [preparePromptImport, fetchImportConfigs, toast]);
+
   const canImport = !!extractImagePrompt(currentItem) && !isGenerating && !isImporting;
   useEffect(() => {
-    if (onImportReady) onImportReady(handleImport, canImport);
-    return () => { if (onImportReady) onImportReady(null, false); };
-  }, [handleImport, canImport, onImportReady]);
+    if (!onImportReady) return;
+    onImportReady({
+      activeTab,
+      canImport,
+      importPartsPlot: handleImportPartsPlot,
+      importCharacter: handleImportCharacter,
+      importOutfit: handleImportOutfit,
+    });
+    return () => { onImportReady(null); };
+  }, [
+    activeTab,
+    canImport,
+    handleImportPartsPlot,
+    handleImportCharacter,
+    handleImportOutfit,
+    onImportReady,
+  ]);
 
   // Compute all unique type strings from the library for autocomplete suggestions
   const allTypes = useMemo(() => {

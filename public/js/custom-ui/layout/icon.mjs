@@ -106,6 +106,9 @@ const ICON_MAP = {
   'user': 'person',
   'user-circle': 'account_circle',
   'group': 'group',
+  't-shirt': 'apparel',
+  'user': 'person',
+
   
   // Miscellaneous
   'home': 'home',

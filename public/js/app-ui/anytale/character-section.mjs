@@ -544,7 +544,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
                 color="primary"
                 icon="microphone"
                 onClick=${handleGenerateVoice}
-                disabled=${isGeneratingPortrait || isGeneratingVoice}
+                disabled=${isGeneratingPortrait || isGeneratingVoice || !character.personality?.trim()}
               >
                 ${isGeneratingVoice ? 'Generating...' : 'Generate Voice'}
               <//>

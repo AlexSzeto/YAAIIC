@@ -108,7 +108,7 @@ export function findTagMatch(tag, libraryParts) {
  * @param {Array} options.libraryParts
  * @param {string[]} [options.recommendedCharacterPartTypes]
  * @param {string[]} [options.recommendedOutfitPartTypes]
- * @param {'parts-plot'|'character-outfits'} options.mode
+ * @param {'parts-plot'|'character-only'|'outfit-only'} options.mode
  * @param {Function} options.createDefaultPart
  * @returns {{ parts: Array, characterParts: Array, outfitParts: Array, skipped: string[] }}
  */
@@ -160,10 +160,10 @@ export function processPromptImport({
     const isCharType = recommendedCharacterPartTypes.some(t => partTypes.includes(t.toLowerCase()));
     const isOutfitType = recommendedOutfitPartTypes.some(t => partTypes.includes(t.toLowerCase()));
     const targetMaps = [];
-    if (isCharType) targetMaps.push(characterMap);
-    if (isOutfitType) targetMaps.push(outfitMap);
-    if (!isCharType && !isOutfitType) {
-      targetMaps.push(characterMap, outfitMap);
+    if (mode === 'character-only') {
+      if (isCharType || (!isCharType && !isOutfitType)) targetMaps.push(characterMap);
+    } else if (mode === 'outfit-only') {
+      if (isOutfitType || (!isCharType && !isOutfitType)) targetMaps.push(outfitMap);
     }
 
     for (const map of targetMaps) {

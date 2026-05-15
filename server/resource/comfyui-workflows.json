@@ -145,7 +145,7 @@
             }
           },
           "model": "ssfdre38/gemma4-nano:latest",
-          "prompt": "Write a single paragraph of prose consist of 2 lines of sample dialog that serves as a self introduction of a character with the name {{name}} and this personality profile: {{prompt}}. When spoken, the entire output should be less than 30 seconds long. Output the dialog ONLY.",
+          "prompt": "Write a single paragraph of prose consist of 2 lines of sample dialog that serves as a self introduction of a character with the name {{name}} and this personality profile: {{prompt}}. When spoken, the entire output should be less than 30 seconds long. Do not add thoughts, emotes, or directions. Everything should fit within two dialog quotes (\"This is a perfect example. Just two lines of dialog\"). Output the dialog ONLY.",
           "to": "dialog"
         },
         {
@@ -159,7 +159,7 @@
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "vocalProfile",
           "to": [
             "20",
             "inputs",

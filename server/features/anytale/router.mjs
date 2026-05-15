@@ -192,24 +192,23 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
     if (portraitBasePrompt) tags.push(portraitBasePrompt);
 
     for (const libPart of matchedLibraryParts) {
-      // Find matching entry in request parts array
+      // Only include parts that the character has actually added
       const charPart = requestParts.find(p => p.partUid === libPart.uid);
+      if (!charPart) continue;
 
-      // Always include the part's baseline
+      // Include the part's baseline
       if (libPart.baseline) tags.push(libPart.baseline);
 
-      if (charPart) {
-        // Add attribute values (new unified format)
-        for (const val of Object.values(charPart.attributeValues || {})) {
-          if (val && val.trim()) tags.push(val.trim());
-        }
-        // Legacy fallback: include old split maps if present
-        for (const val of Object.values(charPart.categoryAttributeValues || {})) {
-          if (val && val.trim()) tags.push(val.trim());
-        }
-        for (const val of Object.values(charPart.customAttributeValues || {})) {
-          if (val && val.trim()) tags.push(val.trim());
-        }
+      // Add attribute values (new unified format)
+      for (const val of Object.values(charPart.attributeValues || {})) {
+        if (val && val.trim()) tags.push(val.trim());
+      }
+      // Legacy fallback: include old split maps if present
+      for (const val of Object.values(charPart.categoryAttributeValues || {})) {
+        if (val && val.trim()) tags.push(val.trim());
+      }
+      for (const val of Object.values(charPart.customAttributeValues || {})) {
+        if (val && val.trim()) tags.push(val.trim());
       }
     }
 

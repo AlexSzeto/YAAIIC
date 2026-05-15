@@ -104,12 +104,31 @@ SlideshowControls.className = 'slideshow-controls';
  * @param {Function} props.onPrev
  * @param {Function} props.onNext
  * @param {Object|null} props.currentItem
- * @param {Function}   [props.onImport]     – Called when import icon is clicked
- * @param {boolean}    [props.canImport]    – Whether import is enabled
+ * @param {string}     [props.activeTab='parts-plot'] – Active AnyTale form tab id
+ * @param {boolean}    [props.canImport]              – Whether import actions are enabled
+ * @param {Function}   [props.onImportPartsPlot]      – Parts & Plot import handler
+ * @param {Function}   [props.onImportCharacter]      – Character parts import handler
+ * @param {Function}   [props.onImportOutfit]         – Outfit parts import handler
  * @param {Function}   [props.onDelete]     – Called when delete icon is clicked
  * @param {boolean}    [props.canDelete]    – Whether delete is enabled
  */
-export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev, onNext, onFirst, onLast, currentItem, onImport, canImport = false, onDelete, canDelete = false }) {
+export function AnyTaleViewer({
+  items = [],
+  currentIndex = 0,
+  onNavigate,
+  onPrev,
+  onNext,
+  onFirst,
+  onLast,
+  currentItem,
+  activeTab = 'parts-plot',
+  canImport = false,
+  onImportPartsPlot,
+  onImportCharacter,
+  onImportOutfit,
+  onDelete,
+  canDelete = false,
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   const timerRef = useRef(null);
@@ -177,13 +196,31 @@ export function AnyTaleViewer({ items = [], currentIndex = 0, onNavigate, onPrev
               onLast=${onLast}
               showFirstLast=${true}
             />
-            <${Button}
-              variant="medium-icon"
-              icon="download"
-              tooltip="Import"
-              onClick=${onImport}
-              disabled=${!canImport}
-            />
+            ${activeTab === 'parts-plot' ? html`
+              <${Button}
+                variant="medium-icon"
+                icon="download"
+                tooltip="Import parts and plot"
+                onClick=${onImportPartsPlot}
+                disabled=${!canImport || !onImportPartsPlot}
+              />
+            ` : null}
+            ${activeTab === 'character-outfits' ? html`
+              <${Button}
+                variant="medium-icon"
+                icon="user"
+                tooltip="Import character parts"
+                onClick=${onImportCharacter}
+                disabled=${!canImport || !onImportCharacter}
+              />
+              <${Button}
+                variant="medium-icon"
+                icon="t-shirt"
+                tooltip="Import outfit parts"
+                onClick=${onImportOutfit}
+                disabled=${!canImport || !onImportOutfit}
+              />
+            ` : null}
             <${Button}
               variant="medium-icon"
               icon="trash"
