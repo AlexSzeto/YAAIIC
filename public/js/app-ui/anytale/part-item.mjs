@@ -21,7 +21,7 @@ import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultAttribute } from './anytale-state.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { ImagePreview } from './image-preview.mjs';
-import { getCategoryTree, getAllTagNames, tagExist } from '../tags/tag-data.mjs';
+import { getCategoryTree, getAllTagNames, tagExist, getTagDefinition } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 
@@ -250,6 +250,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const getAttrSelectOptions = useCallback((attr) => getAttrOptions(attr.options), []);
   const getAttrSelectValue   = useCallback((attr, i) => data.attributeValues?.[attr.name] || '', [data.attributeValues]);
   const handleAttrSelectChange = useCallback((attr, i, value) => handleAttrValueChange(i, value), [handleAttrValueChange]);
+  const getAttrSelectTooltip = useCallback((attr) => getTagDefinition(data.attributeValues?.[attr.name] || '') || null, [data.attributeValues]);
 
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
@@ -427,6 +428,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         getHeaderSelectOptions=${getAttrSelectOptions}
         getHeaderSelectValue=${getAttrSelectValue}
         onHeaderSelectChange=${handleAttrSelectChange}
+        getHeaderSelectTooltip=${getAttrSelectTooltip}
       />
 
       <!-- Library Actions -->

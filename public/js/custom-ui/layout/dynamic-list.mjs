@@ -163,6 +163,7 @@ function DynamicListItem({
   getHeaderSelectOptions,
   getHeaderSelectValue,
   onHeaderSelectChange,
+  getHeaderSelectTooltip,
   deleteIcon = 'trash',
   deleteLabel,
   theme,
@@ -204,6 +205,7 @@ function DynamicListItem({
               options=${getHeaderSelectOptions(item, index)}
               value=${getHeaderSelectValue ? getHeaderSelectValue(item, index) : ''}
               onChange=${(e) => onHeaderSelectChange && onHeaderSelectChange(item, index, e.target.value)}
+              tooltip=${getHeaderSelectTooltip ? getHeaderSelectTooltip(item, index) : null}
               heightScale="compact"
             />
           `}
@@ -381,9 +383,10 @@ function CondensedDynamicListItem({
  * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
  * @param {string}   [props.deleteIcon='trash']  - Icon name for the delete button.
  * @param {string}   [props.deleteLabel]         - Text label for the delete button. When set, renders as `small-text` variant instead of icon-only.
- * @param {Function} [props.getHeaderSelectOptions] - `(item, index) => [{label, value}]` — when provided, renders a compact Select in each item header.
- * @param {Function} [props.getHeaderSelectValue]   - `(item, index) => string` — current value for the header Select.
- * @param {Function} [props.onHeaderSelectChange]   - `(item, index, value) => void` — called when the header Select changes.
+ * @param {Function} [props.getHeaderSelectOptions]  - `(item, index) => [{label, value}]` — when provided, renders a compact Select in each item header.
+ * @param {Function} [props.getHeaderSelectValue]    - `(item, index) => string` — current value for the header Select.
+ * @param {Function} [props.onHeaderSelectChange]    - `(item, index, value) => void` — called when the header Select changes.
+ * @param {Function} [props.getHeaderSelectTooltip]  - `(item, index) => string|null` — optional tooltip for the header Select.
  * @returns {preact.VNode}
  *
  * @example
@@ -420,6 +423,7 @@ export function DynamicList({
   getHeaderSelectOptions,      // optional: (item, index) => [{label, value}] — renders a Select in the item header
   getHeaderSelectValue,        // optional: (item, index) => string
   onHeaderSelectChange,        // optional: (item, index, value) => void
+  getHeaderSelectTooltip,      // optional: (item, index) => string|null — tooltip for the header Select
 }) {
   const theme = currentTheme.value;
 
@@ -696,6 +700,7 @@ export function DynamicList({
                 getHeaderSelectOptions=${getHeaderSelectOptions}
                 getHeaderSelectValue=${getHeaderSelectValue}
                 onHeaderSelectChange=${onHeaderSelectChange}
+                getHeaderSelectTooltip=${getHeaderSelectTooltip}
                 deleteIcon=${deleteIcon}
                 deleteLabel=${deleteLabel}
                 theme=${theme}
@@ -775,6 +780,7 @@ export function DynamicList({
             getHeaderSelectOptions=${getHeaderSelectOptions}
             getHeaderSelectValue=${getHeaderSelectValue}
             onHeaderSelectChange=${onHeaderSelectChange}
+            getHeaderSelectTooltip=${getHeaderSelectTooltip}
             deleteIcon=${deleteIcon}
             deleteLabel=${deleteLabel}
             theme=${theme}

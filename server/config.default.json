@@ -10,11 +10,23 @@
     "generationWorkflow": "Text to Image (Illustrious Portrait)",
     "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",
     "portraitBasePrompt": "1girl, solo, portrait, looking at viewer, outdoors",
-    "previewBasePromptByType": {},
+    "previewBasePromptByType": {
+      "background": "no humans",
+      "head": "1girl, solo, simple background, grey background, cropped head, facing viewer",
+      "outer upper body": "1girl, solo, simple background, grey background, cropped torso, headless, facing viewer",
+      "outer lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",
+      "inner upper body": "1girl, solo, simple background, grey background, cropped torso, headless, facing viewer",
+      "inner lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",
+      "nude upper body": "1girl, solo, simple background, grey background, cropped torso, headless, topless, closeup, facing viewer",
+      "nude lower body": "1girl, solo, simple background, grey background, completely nude, crotch",
+      "arms": "1girl, solo, simple background, grey background, hand focus",
+      "feet": "1girl, solo, simple background, grey background, feet only, facing viewer"
+    },
     "portraitParts": ["head"],
     "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"]
   },
+
   "exports": [
     {
       "id": "download",
