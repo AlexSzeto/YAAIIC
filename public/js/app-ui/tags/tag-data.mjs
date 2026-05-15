@@ -138,6 +138,15 @@ export function getAllTagNames() {
 }
 
 /**
+ * Check if a tag exists in definition. Case-insensitive and treats spaces/underscores as equivalent.
+ */
+export function tagExist(tagName) {
+  if (!tagName) return false;
+  const normalized = tagName.trim().toLowerCase().replace(/\s+/g, '_');
+  return Object.keys(definitions).some(def => def.toLowerCase() === normalized);
+}
+
+/**
  * Get merged and normalized tag and category names for autocomplete
  * 
  * Merges tags from definitions and categories from categoryTree, applying transformations:

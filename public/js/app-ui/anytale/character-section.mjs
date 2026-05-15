@@ -101,13 +101,11 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
           type: lib.type,
           baseline: lib.baseline,
           previewBaseline: lib.previewBaseline,
-          categoryAttributes: lib.categoryAttributes,
-          customAttributes: lib.customAttributes,
+          attributes: lib.attributes,
         },
         data: {
           enabled: true,
-          categoryAttributeValues: cp.categoryAttributeValues || {},
-          customAttributeValues: cp.customAttributeValues || {},
+          attributeValues: cp.attributeValues,
           previewImageUrl: cp.previewImageUrl || '',
         },
       };
@@ -257,8 +255,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
         ...prev.parts,
         {
           partUid: match.uid,
-          categoryAttributeValues: {},
-          customAttributeValues: {},
+          attributeValues: {},
           previewImageUrl: '',
         },
       ],
@@ -287,18 +284,16 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     if (generatingPreviews[index]) return;
 
     const libConfig = libraryParts.find(p => p.uid === item.partUid);
-    const partForPrompt = {
+      const partForPrompt = {
       config: {
         name: libConfig?.name || item.partUid,
         previewBaseline: libConfig?.previewBaseline || '',
         baseline: libConfig?.baseline || '',
-        categoryAttributes: libConfig?.categoryAttributes || [],
-        customAttributes: libConfig?.customAttributes || [],
+        attributes: libConfig?.attributes || [],
       },
       data: {
         enabled: true,
-        categoryAttributeValues: item.categoryAttributeValues || {},
-        customAttributeValues: item.customAttributeValues || {},
+        attributeValues: item.attributeValues,
         previewImageUrl: item.previewImageUrl || '',
       },
     };
@@ -471,19 +466,14 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
           continue;
         }
 
-        const categoryAttributeValues = {};
-        for (const attr of (libraryConfig.categoryAttributes || [])) {
-          categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
-        }
-        const customAttributeValues = {};
-        for (const attr of (libraryConfig.customAttributes || [])) {
-          customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
+        const attributeValues = {};
+        for (const attr of (libraryConfig.attributes || [])) {
+          attributeValues[attr.name] = storedData.attributeValues?.[attr.name] ?? '';
         }
 
         newParts.push({
           partUid: libraryConfig.uid,
-          categoryAttributeValues,
-          customAttributeValues,
+          attributeValues,
           previewImageUrl: storedData.previewImageUrl || '',
         });
       }
@@ -551,7 +541,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               <//>
               <${Button}
                 variant="medium-text"
-                color="secondary"
+                color="primary"
                 icon="microphone"
                 onClick=${handleGenerateVoice}
                 disabled=${isGeneratingPortrait || isGeneratingVoice}
@@ -619,7 +609,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
                 const lib = libraryParts.find(p => p.uid === item.partUid);
                 return lib ? lib.name : (item.partUid || '(unknown part)');
               }}
-              createItem=${() => ({ partUid: '', categoryAttributeValues: {}, customAttributeValues: {}, previewImageUrl: '' })}
+              createItem=${() => ({ partUid: '', attributeValues: {}, previewImageUrl: '' })}
               onChange=${(newParts) => setCharacter(prev => ({ ...prev, parts: newParts }))}
               addLabel="Add Part"
               hideAddItem
@@ -648,7 +638,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
             <//>
             <${Button}
               variant="medium-text"
-              color="secondary"
+              color="danger"
               icon="trash"
               onClick=${handleDelete}
               disabled=${!isInLibrary}
@@ -657,7 +647,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
             <//>
             <${Button}
               variant="medium-text"
-              color="secondary"
+              color="danger"
               icon="x"
               onClick=${handleClear}
             >

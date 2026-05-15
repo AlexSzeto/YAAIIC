@@ -440,6 +440,7 @@ export function GeneratedResult({
             : html`
               <${Button}
                 variant="primary"
+                color="primary"
                 icon="brush"
                 onClick=${() => onInpaint && onInpaint(image)}
                 tooltip="Inpaint this image"

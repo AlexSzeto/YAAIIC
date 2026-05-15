@@ -120,7 +120,7 @@ export function expandPageTags(tagsString, enabledParts) {
 /**
  * Assemble the final image prompt from all enabled parts.
  *
- * Collects: baseline + categoryAttributeValues + customAttributeValues
+ * Collects: baseline + attributeValues
  * Excludes: previewBaseline
  *
  * When `activePage` is provided, also:
@@ -154,11 +154,9 @@ export function assemblePrompt(parts, activePage) {
     // Baseline tags
     tags.push(...splitTags(part.config.baseline));
 
-    // Category attribute selected values
-    tags.push(...collectValues(part.data.categoryAttributeValues));
-
-    // Custom attribute selected values
-    tags.push(...collectValues(part.data.customAttributeValues));
+    // Attribute values
+    const attrValues = part.data.attributeValues || {};
+    tags.push(...collectValues(attrValues));
   }
 
   // Append the page-level tags, expanded to resolve {{type}} tokens
@@ -172,7 +170,7 @@ export function assemblePrompt(parts, activePage) {
 /**
  * Assemble a preview prompt for a single part.
  *
- * Collects: previewBaseline + baseline + categoryAttributeValues + customAttributeValues
+ * Collects: previewBaseline + baseline + attributeValues
  *
  * @param {Object} part – A single part object ({ config, data })
  * @returns {string} Comma-separated prompt string
@@ -188,11 +186,9 @@ export function assemblePartPreviewPrompt(part) {
   // Baseline tags
   tags.push(...splitTags(part.config.baseline));
 
-  // Category attribute selected values
-  tags.push(...collectValues(part.data?.categoryAttributeValues));
-
-  // Custom attribute selected values
-  tags.push(...collectValues(part.data?.customAttributeValues));
+  // Attribute values
+  const attrValues = part.data?.attributeValues || {};
+  tags.push(...collectValues(attrValues));
 
   return deduplicate(tags).join(', ');
 }

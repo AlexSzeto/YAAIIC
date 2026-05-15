@@ -10,6 +10,7 @@
     "generationWorkflow": "Text to Image (Illustrious Portrait)",
     "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",
     "portraitBasePrompt": "1girl, solo, portrait, looking at viewer, outdoors",
+    "previewBasePromptByType": {},
     "portraitParts": ["head"],
     "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"]

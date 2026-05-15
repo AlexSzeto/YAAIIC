@@ -17,6 +17,7 @@ import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Checkbox } from '../io/checkbox.mjs';
+import { Select } from '../io/select.mjs';
 import { Icon } from '../layout/icon.mjs';
 
 // ============================================================================
@@ -159,6 +160,11 @@ function DynamicListItem({
   headerActions,
   getEnabled,
   onToggleEnabled,
+  getHeaderSelectOptions,
+  getHeaderSelectValue,
+  onHeaderSelectChange,
+  deleteIcon = 'trash',
+  deleteLabel,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -192,7 +198,15 @@ function DynamicListItem({
           />
         `}
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
-        <div onClick=${stopProp} style="display:flex;gap:4px;">
+        <div onClick=${stopProp} style="display:flex;gap:4px;align-items:center;">
+          ${getHeaderSelectOptions && html`
+            <${Select}
+              options=${getHeaderSelectOptions(item, index)}
+              value=${getHeaderSelectValue ? getHeaderSelectValue(item, index) : ''}
+              onChange=${(e) => onHeaderSelectChange && onHeaderSelectChange(item, index, e.target.value)}
+              heightScale="compact"
+            />
+          `}
           ${headerActions && headerActions.map(action => html`
             <${Button}
               variant="small-icon"
@@ -206,7 +220,7 @@ function DynamicListItem({
               variant="small-icon"
               icon="swap-vertical"
               onMouseDown=${handleDragMouseDown}
-              tooltip="Drag to reorder"
+              tooltip="Reorder"
               style=${{ cursor: 'grab' }}
             />
           `}
@@ -228,10 +242,10 @@ function DynamicListItem({
           `}
           <${Button}
             variant="small-icon"
-            icon="trash"
+            icon=${deleteIcon}
             color="danger"
             onClick=${onDelete}
-            tooltip="Delete"
+            tooltip=${deleteLabel ?? 'Delete'}
           />
         </div>
       </${ItemHeader}>
@@ -265,6 +279,8 @@ function CondensedDynamicListItem({
   headerActions,
   getEnabled,
   onToggleEnabled,
+  deleteIcon = 'trash',
+  deleteLabel,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -299,7 +315,7 @@ function CondensedDynamicListItem({
             variant="small-icon"
             icon="swap-vertical"
             onMouseDown=${handleDragMouseDown}
-            tooltip="Drag to reorder"
+            tooltip="Reorder"
             style=${{ cursor: 'grab' }}
           />
         `}
@@ -321,10 +337,10 @@ function CondensedDynamicListItem({
         `}
         <${Button}
           variant="small-icon"
-          icon="trash"
+          icon=${deleteIcon}
           color="danger"
           onClick=${onDelete}
-          tooltip="Delete"
+          tooltip=${deleteLabel ?? 'Delete'}
         />
       </div>
     </${CondensedItemRow}>
@@ -363,6 +379,11 @@ function CondensedDynamicListItem({
  * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
  * @param {boolean}  [props.hideAddItem=false]   - Hide the add button entirely.
  * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
+ * @param {string}   [props.deleteIcon='trash']  - Icon name for the delete button.
+ * @param {string}   [props.deleteLabel]         - Text label for the delete button. When set, renders as `small-text` variant instead of icon-only.
+ * @param {Function} [props.getHeaderSelectOptions] - `(item, index) => [{label, value}]` — when provided, renders a compact Select in each item header.
+ * @param {Function} [props.getHeaderSelectValue]   - `(item, index) => string` — current value for the header Select.
+ * @param {Function} [props.onHeaderSelectChange]   - `(item, index, value) => void` — called when the header Select changes.
  * @returns {preact.VNode}
  *
  * @example
@@ -394,6 +415,11 @@ export function DynamicList({
   headerActions,               // custom header action buttons
   getEnabled,                  // optional: (item, index) => boolean – enables per-item toggle checkbox
   onToggleEnabled,             // optional: (item, index) => void – called when enabled checkbox changes
+  deleteIcon = 'trash',        // icon name for the per-item delete button
+  deleteLabel,                 // optional text label; switches button to small-text variant
+  getHeaderSelectOptions,      // optional: (item, index) => [{label, value}] — renders a Select in the item header
+  getHeaderSelectValue,        // optional: (item, index) => string
+  onHeaderSelectChange,        // optional: (item, index, value) => void
 }) {
   const theme = currentTheme.value;
 
@@ -644,6 +670,8 @@ export function DynamicList({
                 headerActions=${headerActions}
                 getEnabled=${getEnabled}
                 onToggleEnabled=${onToggleEnabled}
+                deleteIcon=${deleteIcon}
+                deleteLabel=${deleteLabel}
                 theme=${theme}
               />
             `
@@ -665,6 +693,11 @@ export function DynamicList({
                 headerActions=${headerActions}
                 getEnabled=${getEnabled}
                 onToggleEnabled=${onToggleEnabled}
+                getHeaderSelectOptions=${getHeaderSelectOptions}
+                getHeaderSelectValue=${getHeaderSelectValue}
+                onHeaderSelectChange=${onHeaderSelectChange}
+                deleteIcon=${deleteIcon}
+                deleteLabel=${deleteLabel}
                 theme=${theme}
               />
             `
@@ -716,6 +749,8 @@ export function DynamicList({
             headerActions=${headerActions}
             getEnabled=${getEnabled}
             onToggleEnabled=${onToggleEnabled}
+            deleteIcon=${deleteIcon}
+            deleteLabel=${deleteLabel}
             theme=${theme}
           />
         `
@@ -737,6 +772,11 @@ export function DynamicList({
             headerActions=${headerActions}
             getEnabled=${getEnabled}
             onToggleEnabled=${onToggleEnabled}
+            getHeaderSelectOptions=${getHeaderSelectOptions}
+            getHeaderSelectValue=${getHeaderSelectValue}
+            onHeaderSelectChange=${onHeaderSelectChange}
+            deleteIcon=${deleteIcon}
+            deleteLabel=${deleteLabel}
             theme=${theme}
           />
         `;

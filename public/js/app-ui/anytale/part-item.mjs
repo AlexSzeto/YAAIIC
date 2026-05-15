@@ -1,12 +1,12 @@
 /**
- * part-item.mjs – Single part form for the AnyTale DynamicList.
+ * part-item.mjs - Single part form for the AnyTale DynamicList.
  *
- * Renders the inner form content only — the outer shell (header, delete,
+ * Renders the inner form content only - the outer shell (header, delete,
  * collapse, drag) is provided by DynamicList.
  *
  * Layout:
- *   Top row: 128×128 preview image (left) | Enabled + Name (right)
- *   Below:   Type, Preview Baseline, Baseline, Category Attributes, Custom Attributes
+ *   Top row: 128x128 preview image (left) | Enabled + Name (right)
+ *   Below:   Type, Preview Baseline, Baseline, Attributes
  */
 import { html } from 'htm/preact';
 import { useState, useCallback } from 'preact/hooks';
@@ -15,14 +15,13 @@ import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
-import { Select } from '../../custom-ui/io/select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { createDefaultCategoryAttribute, createDefaultCustomAttribute } from './anytale-state.mjs';
+import { createDefaultAttribute } from './anytale-state.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { ImagePreview } from './image-preview.mjs';
-import { getCategoryTree, getTagDefinition, getAllTagNames } from '../tags/tag-data.mjs';
+import { getCategoryTree, getAllTagNames, tagExist } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 
@@ -36,8 +35,6 @@ const TopRow = styled('div')`
   align-items: flex-start;
 `;
 TopRow.className = 'part-item-top-row';
-
-
 
 const RightFields = styled('div')`
   flex: 1;
@@ -57,45 +54,14 @@ const AttrRow = styled('div')`
 AttrRow.className = 'part-item-attr-row';
 
 // ============================================================================
-// Helper: uid derivation
+// Helpers
 // ============================================================================
 
 function toPartUid(name) {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
-// ============================================================================
-// Helper: Category attribute value dropdown options
-// ============================================================================
-
-/**
- * Build Select options from a category internal name.
- * If the name is a key in categoryTree → direct leaf children.
- * If it's an individual tag → just that tag.
- * Always starts with (none).
- */
-function getCategoryOptions(categoryInternal) {
-  if (!categoryInternal) return [{ label: '(none)', value: '' }];
-  const tree = getCategoryTree();
-  const children = tree[categoryInternal];
-  const options = [{ label: '(none)', value: '' }];
-  if (Array.isArray(children)) {
-    for (const child of children) {
-      const display = child.replace(/_/g, ' ');
-      options.push({ label: display, value: child });
-    }
-  } else {
-    const display = categoryInternal.replace(/_/g, ' ');
-    options.push({ label: display, value: categoryInternal });
-  }
-  return options;
-}
-
-// ============================================================================
-// Helper: Custom attribute value dropdown options
-// ============================================================================
-
-function getCustomOptions(optionsString) {
+function getAttrOptions(optionsString) {
   const options = [{ label: '(none)', value: '' }];
   if (!optionsString || !optionsString.trim()) return options;
   const tags = optionsString.split(',').map(t => t.trim()).filter(t => t);
@@ -111,20 +77,23 @@ function getCustomOptions(optionsString) {
 
 /**
  * @param {Object}   props
- * @param {Object}   props.part              – Full part object { id, config, data }
- * @param {Function} props.onChange           – (updatedPart) => void
- * @param {string[]} [props.allTypes=[]]      – All unique type strings across all parts (for autocomplete suggestions)
- * @param {Object}   [props.libraryPart]      – The matching saved library config (or undefined)
- * @param {Function} [props.onLibraryChanged] – Called after a successful save or delete so the
+ * @param {Object}   props.part              - Full part object { id, config, data }
+ * @param {Function} props.onChange           - (updatedPart) => void
+ * @param {string[]} [props.allTypes=[]]      - All unique type strings across all parts (for autocomplete suggestions)
+ * @param {Object}   [props.libraryPart]      - The matching saved library config (or undefined)
+ * @param {Function} [props.onLibraryChanged] - Called after a successful save or delete so the
  *                                              parent can refresh its library list.
+ * @param {Object}   [props.previewBasePromptByType] - Map of type name to preview base prompt string.
+ *                                                     When a new type is added and previewBaseline is empty,
+ *                                                     the matching entry is used to auto-fill previewBaseline.
  */
-export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibraryChanged }) {
+export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibraryChanged, previewBasePromptByType = {} }) {
   const { config, data } = part;
   const toast = useToast();
 
-  // ── Category selector panel state ───────────────────────────────────────
+  // ── Tag import panel state (for the import-from-category helper) ────────
   const [selectorPanelOpen, setSelectorPanelOpen] = useState(false);
-  const [editingCatIndex, setEditingCatIndex] = useState(-1);
+  const [editingAttrIndex, setEditingAttrIndex] = useState(-1);
 
   // ── Library action loading states ───────────────────────────────────────
   const [isSaving, setIsSaving] = useState(false);
@@ -135,119 +104,126 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     onChange({ ...part, config: { ...config, ...patch } });
   }, [part, onChange]);
 
+  // When a new type is added and previewBaseline is empty, auto-fill from previewBasePromptByType.
+  const handleTypeChange = useCallback((newTypes) => {
+    const oldTypeSet = new Set((Array.isArray(config.type) ? config.type : []).map(t => t.toLowerCase()));
+    const added = newTypes.filter(t => !oldTypeSet.has(t.toLowerCase()));
+    const patch = { type: newTypes };
+    if (added.length > 0 && !config.previewBaseline?.trim()) {
+      for (const t of added) {
+        const entry = Object.entries(previewBasePromptByType).find(
+          ([key]) => key.toLowerCase() === t.toLowerCase()
+        );
+        if (entry) {
+          patch.previewBaseline = entry[1];
+          break;
+        }
+      }
+    }
+    onChange({ ...part, config: { ...config, ...patch } });
+  }, [part, config, previewBasePromptByType, onChange]);
+
   const updateData = useCallback((patch) => {
     onChange({ ...part, data: { ...data, ...patch } });
   }, [part, onChange]);
 
-  // ── Category attributes ─────────────────────────────────────────────────
-  const handleCategoryAttrsChange = useCallback((newAttrs) => {
+  // ── Attributes ──────────────────────────────────────────────────────────
+  const handleAttrsChange = useCallback((newAttrs) => {
     // Remove values for attributes that no longer exist
     const validNames = new Set(newAttrs.map((a, i) => a.name ?? String(i)));
     const cleanedValues = Object.fromEntries(
-      Object.entries(data.categoryAttributeValues || {}).filter(([k]) => validNames.has(k))
+      Object.entries(data.attributeValues || {}).filter(([k]) => validNames.has(k))
     );
-    onChange({ ...part, config: { ...config, categoryAttributes: newAttrs }, data: { ...data, categoryAttributeValues: cleanedValues } });
+    onChange({ ...part, config: { ...config, attributes: newAttrs }, data: { ...data, attributeValues: cleanedValues } });
   }, [part, config, data, onChange]);
 
-  const handleCategoryValueChange = useCallback((index, value) => {
-    const attrName = config.categoryAttributes[index]?.name ?? String(index);
+  const handleAttrValueChange = useCallback((index, value) => {
+    const attrName = config.attributes[index]?.name ?? String(index);
     updateData({
-      categoryAttributeValues: {
-        ...data.categoryAttributeValues,
+      attributeValues: {
+        ...data.attributeValues,
         [attrName]: value,
       },
     });
-  }, [data, config.categoryAttributes, updateData]);
+  }, [data, config.attributes, updateData]);
 
-  // ── Custom attributes ───────────────────────────────────────────────────
-  const handleCustomAttrsChange = useCallback((newAttrs) => {
-    // Remove values for attributes that no longer exist
-    const validNames = new Set(newAttrs.map((a, i) => a.name ?? String(i)));
-    const cleanedValues = Object.fromEntries(
-      Object.entries(data.customAttributeValues || {}).filter(([k]) => validNames.has(k))
-    );
-    onChange({ ...part, config: { ...config, customAttributes: newAttrs }, data: { ...data, customAttributeValues: cleanedValues } });
-  }, [part, config, data, onChange]);
-
-  const handleCustomValueChange = useCallback((index, value) => {
-    const attrName = config.customAttributes[index]?.name ?? String(index);
-    updateData({
-      customAttributeValues: {
-        ...data.customAttributeValues,
-        [attrName]: value,
-      },
-    });
-  }, [data, config.customAttributes, updateData]);
-
-  // ── Category selector panel ─────────────────────────────────────────────
-  const handleCategoryButtonClick = useCallback((index) => {
-    setEditingCatIndex(index);
+  // ── Tag import helper: opens category selector for a specific attribute ─
+  const handleTagImportClick = useCallback((attr, attrIndex) => {
+    setEditingAttrIndex(attrIndex);
     setSelectorPanelOpen(true);
   }, []);
 
-  const handleCategoryReplace = useCallback((_displayName, internalName) => {
-    const next = [...config.categoryAttributes];
-    const current = next[editingCatIndex];
+  const handleTagImport = useCallback((_displayName, internalName) => {
+    const tree = getCategoryTree();
+    const children = tree[internalName];
+
+    let tags = [];
+    if (Array.isArray(children)) {
+      // Filter out intermediate nodes (contain ':' or '/')
+      tags = children
+        .filter(tag => !tag.includes(':') && !tag.includes('/'))
+        .map(tag => tag.replace(/_/g, ' '));
+    } else if (internalName && !internalName.includes(':') && !internalName.includes('/')) {
+      // Direct leaf tag
+      tags = [internalName.replace(/_/g, ' ')];
+    }
+
+    if (tags.length === 0) {
+      toast.info('No leaf tags found for this category');
+      setSelectorPanelOpen(false);
+      return;
+    }
+
+    const next = [...config.attributes];
+    const current = next[editingAttrIndex] || createDefaultAttribute();
+
+    // Auto-fill name from category if currently empty
     const autoName = current.name
       ? current.name
       : internalName.split(/[:/]/).pop().replace(/_/g, ' ')
           .replace(/\b\w/g, c => c.toUpperCase());
-    next[editingCatIndex] = { ...current, category: internalName, name: autoName };
-    handleCategoryAttrsChange(next);
+
+    next[editingAttrIndex] = { ...current, name: autoName, options: tags.join(', ') };
+    handleAttrsChange(next);
     setSelectorPanelOpen(false);
-  }, [editingCatIndex, config.categoryAttributes, handleCategoryAttrsChange]);
+  }, [editingAttrIndex, config.attributes, handleAttrsChange, toast]);
 
   // ── Rainbow color options generator ─────────────────────────────────────
-  const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'green', 'grey', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
+  const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'dark aqua', 'dark blonde', 'dark blue', 'dark brown', 'dark green', 'dark grey', 'dark orange', 'dark pink', 'dark purple', 'dark red', 'dark white', 'dark yellow', 'green', 'grey', 'light aqua', 'light blonde', 'light blue', 'light brown', 'light green', 'light grey', 'light orange', 'light pink', 'light purple', 'light red', 'light white', 'light yellow', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
 
-  const handleRainbowAction = useCallback(async (_attr, attrIndex) => {
+  const handleRainbowAction = useCallback(async (attr, attrIndex) => {
     const keyword = await showTextPrompt('Color Keyword', config.name.toLowerCase(), 'e.g. eyeshadow');
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
-    // Build color+keyword tags, keeping only combinations present in the tag database
     const validTags = RAINBOW_COLORS
       .map(color => `${color} ${kw}`)
-      .filter(tag => getTagDefinition(tag) !== null);
+      .filter(tag => tagExist(tag));
     if (validTags.length === 0) {
       toast.info(`No color variations found for "${kw}"`);
       return;
     }
-    const next = [...config.customAttributes];
-    next[attrIndex] = { ...next[attrIndex], options: validTags.join(', ') };
-    handleCustomAttrsChange(next);
-  }, [config.customAttributes, handleCustomAttrsChange, toast]);
+    const next = [...config.attributes];
+    // Auto-fill name with "Color" if currently empty
+    const autoName = next[attrIndex].name || 'Color';
+    next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
+    handleAttrsChange(next);
+  }, [config.attributes, config.name, handleAttrsChange, toast]);
 
-  const handleVariationsAction = useCallback(async (_attr, attrIndex) => {
+  const handleVariationsAction = useCallback(async (attr, attrIndex) => {
     const keyword = await showTextPrompt('Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
-
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
 
-    // Build an exclusion set from all other existing attributes so we don't
-    // suggest tags that are already covered elsewhere in this part.
+    // Build an exclusion set from all other attributes so we don't suggest duplicates
     const coveredTags = new Set();
-
-    // Custom attributes (other than the one being edited)
-    for (let i = 0; i < config.customAttributes.length; i++) {
+    for (let i = 0; i < config.attributes.length; i++) {
       if (i === attrIndex) continue;
-      const opts = config.customAttributes[i].options || '';
+      const opts = config.attributes[i].options || '';
       for (const tag of opts.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)) {
         coveredTags.add(tag);
       }
     }
 
-    // Category attributes – add every child tag in each referenced category
-    const tree = getCategoryTree();
-    for (const attr of config.categoryAttributes) {
-      const children = tree[attr.category];
-      if (Array.isArray(children)) {
-        for (const child of children) {
-          coveredTags.add(child.replace(/_/g, ' ').toLowerCase());
-        }
-      }
-    }
-
-    // Find all tags that end with " keyword" (space-bounded) but are not covered by other attributes
     const validTags = getAllTagNames().filter(tag => {
       const normalised = tag.replace(/_/g, ' ');
       return (normalised === kw || normalised.endsWith(` ${kw}`)) && !coveredTags.has(normalised);
@@ -257,15 +233,23 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       toast.info(`No uncovered variations found for "${kw}"`);
       return;
     }
-    const next = [...config.customAttributes];
-    next[attrIndex] = { ...next[attrIndex], options: validTags.join(', ') };
-    handleCustomAttrsChange(next);
-  }, [config.customAttributes, config.categoryAttributes, handleCustomAttrsChange, toast]);
+    const next = [...config.attributes];
+    // Auto-fill name with "Variation" if currently empty
+    const autoName = next[attrIndex].name || 'Variation';
+    next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
+    handleAttrsChange(next);
+  }, [config.attributes, config.name, handleAttrsChange, toast]);
 
-  const customAttrHeaderActions = [
-    { icon: 'palette', title: 'Generate color variations', onClick: handleRainbowAction },
-    { icon: 'tag', title: 'Generate other variations', onClick: handleVariationsAction },
+  const attrHeaderActions = [
+    { icon: 'palette', title: 'Fill with color variations', onClick: handleRainbowAction },
+    { icon: 'menu', title: 'Fill with keyword variations', onClick: handleVariationsAction },
+    { icon: 'tag', title: 'Import tags from category', onClick: handleTagImportClick },
   ];
+
+  // ── Header select: value picker shown inside each attribute item header ──
+  const getAttrSelectOptions = useCallback((attr) => getAttrOptions(attr.options), []);
+  const getAttrSelectValue   = useCallback((attr, i) => data.attributeValues?.[attr.name] || '', [data.attributeValues]);
+  const handleAttrSelectChange = useCallback((attr, i, value) => handleAttrValueChange(i, value), [handleAttrValueChange]);
 
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
@@ -285,7 +269,6 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-      // Persist derived uid back into config so future deletes work by uid
       onChange({ ...part, config: { ...config, uid } });
       if (onLibraryChanged) onLibraryChanged();
       toast.success(`Saved ${config.name} to library`);
@@ -324,6 +307,15 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     }
   }, [config, toast]);
 
+  // Library save button is disabled when nothing has changed vs. library
+  const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
+    name: config.name, type: config.type, baseline: config.baseline,
+    previewBaseline: config.previewBaseline, attributes: config.attributes,
+  }) === JSON.stringify({
+    name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
+    previewBaseline: libraryPart.previewBaseline, attributes: libraryPart.attributes,
+  });
+
   return html`
     <${VerticalLayout} gap="small">
       <!-- Top row: preview image | name + type -->
@@ -343,7 +335,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             placeholder="e.g. hair, outfit, accessory"
             suggestions=${allTypes}
             values=${Array.isArray(config.type) ? config.type : []}
-            onValuesChange=${(v) => updateConfig({ type: v })}
+            onValuesChange=${handleTypeChange}
           />
         </${RightFields}>
       </${TopRow}>
@@ -366,59 +358,10 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         placeholder="Tags always included in prompts..."
       />
 
-      <!-- Category Attributes -->
+      <!-- Attributes -->
       <${DynamicList}
-        title="Category Attributes"
-        items=${config.categoryAttributes}
-        condensed=${true}
-        renderItem=${(attr, i) => html`
-          <${AttrRow}>
-            <${Input}
-              label="Name"
-              value=${attr.name}
-              onInput=${(e) => {
-                const next = [...config.categoryAttributes];
-                next[i] = { ...attr, name: e.target.value };
-                handleCategoryAttrsChange(next);
-              }}
-              placeholder="Label"
-              widthScale="compact"
-              heightScale="compact"
-            />
-            <${Button}
-              label="Category"
-              variant="small-text"
-              widthScale="compact"
-              color="secondary"
-              onClick=${() => handleCategoryButtonClick(i)}
-              style=${{ width: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              tooltip=${attr.category || 'Select category'}
-            >
-              ${attr.category
-                ? attr.category.replace(/^tag_group:/, '').replace(/_/g, ' ')
-                : 'Select'
-              }
-            </${Button}>
-            <${Select}
-              label="Value"
-              options=${getCategoryOptions(attr.category)}
-              value=${data.categoryAttributeValues?.[attr.name] || ''}
-              onChange=${(e) => handleCategoryValueChange(i, e.target.value)}
-              heightScale="compact"
-              tooltip=${getTagDefinition(data.categoryAttributeValues?.[attr.name] || '') || null}
-            />
-          </${AttrRow}>
-        `}
-        createItem=${createDefaultCategoryAttribute}
-        onChange=${handleCategoryAttrsChange}
-        addLabel="Add Category Attribute"
-        showDragButton=${false}
-      />
-
-      <!-- Custom Attributes -->
-      <${DynamicList}
-        title="Custom Attributes"
-        items=${config.customAttributes}
+        title="Attributes"
+        items=${config.attributes}
         getTitle=${(attr) => attr.name || 'Untitled'}
         renderItem=${(attr, i) => html`
           <${AttrRow}>
@@ -426,9 +369,9 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
               label="Name"
               value=${attr.name}
               onInput=${(e) => {
-                const next = [...config.customAttributes];
+                const next = [...config.attributes];
                 next[i] = { ...attr, name: e.target.value };
-                handleCustomAttrsChange(next);
+                handleAttrsChange(next);
               }}
               placeholder="Label"
               widthScale="normal"
@@ -438,48 +381,48 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
               label="Options"
               value=${attr.options}
               onInput=${(text) => {
-                const next = [...config.customAttributes];
+                const next = [...config.attributes];
                 next[i] = { ...attr, options: text };
-                handleCustomAttrsChange(next);
+                handleAttrsChange(next);
               }}
               rows=${1}
               placeholder="tag1, tag2, ..."
             />
-            <${Select}
-              label="Value"
-              options=${getCustomOptions(attr.options)}
-              value=${data.customAttributeValues?.[attr.name] || ''}
-              onChange=${(e) => handleCustomValueChange(i, e.target.value)}
-              heightScale="compact"
-              tooltip=${getTagDefinition(data.customAttributeValues?.[attr.name] || '') || null}
-            />
+          </${AttrRow}>
+          <${AttrRow}>
+            <${Button}
+              variant="small-text"
+              icon="palette"
+              onClick=${(e) => { e.stopPropagation(); handleRainbowAction(attr, i); }}
+            >Colors</${Button}>
+            <${Button}
+              variant="small-text"
+              icon="menu"
+              onClick=${(e) => { e.stopPropagation(); handleVariationsAction(attr, i); }}
+            >Variations</${Button}>
+            <${Button}
+              variant="small-text"
+              icon="tag"
+              onClick=${(e) => { e.stopPropagation(); handleTagImportClick(attr, i); }}
+            >Import from Category</${Button}>
           </${AttrRow}>
         `}
-        createItem=${createDefaultCustomAttribute}
-        onChange=${handleCustomAttrsChange}
-        addLabel="Add Custom Attribute"
-        showDragButton=${false}
-        headerActions=${customAttrHeaderActions}
+        createItem=${createDefaultAttribute}
+        onChange=${handleAttrsChange}
+        addLabel="Add Attribute"
+        getHeaderSelectOptions=${getAttrSelectOptions}
+        getHeaderSelectValue=${getAttrSelectValue}
+        onHeaderSelectChange=${handleAttrSelectChange}
       />
 
       <!-- Library Actions -->
       <${AttrRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
         <${Button}
           variant="small-text"
-          color="secondary"
+          color="primary"
           icon="save"
           onClick=${handleSaveToLibrary}
-          disabled=${isSaving || isDeleting || (!!libraryPart && JSON.stringify({
-            name: config.name, type: config.type, baseline: config.baseline,
-            previewBaseline: config.previewBaseline,
-            categoryAttributes: config.categoryAttributes,
-            customAttributes: config.customAttributes,
-          }) === JSON.stringify({
-            name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
-            previewBaseline: libraryPart.previewBaseline,
-            categoryAttributes: libraryPart.categoryAttributes,
-            customAttributes: libraryPart.customAttributes,
-          }))}
+          disabled=${isSaving || isDeleting || isUnchangedFromLibrary}
         >
           ${isSaving ? 'Saving...' : (libraryPart ? 'Update' : 'Save')}
         </${Button}>
@@ -494,13 +437,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         </${Button}>
       </${AttrRow}>
 
-      <!-- Category selector panel (opened by category attribute buttons) -->
+      <!-- Tag import panel (opened by the tag-import helper button) -->
       <${TagSelectorPanel}
         isOpen=${selectorPanelOpen}
-        initialSearchTerm=${editingCatIndex >= 0
-          ? (config.categoryAttributes[editingCatIndex]?.category || config.name.toLowerCase())
-          : ''}
-        onReplace=${handleCategoryReplace}
+        initialSearchTerm=${config.name}
+        onReplace=${handleTagImport}
         onClose=${() => setSelectorPanelOpen(false)}
         showInsert=${false}
         showReplace=${true}

@@ -133,6 +133,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   // ── Config for import routing ────────────────────────────────────────────
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
+  const [previewBasePromptByType, setPreviewBasePromptByType] = useState({});
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -140,6 +141,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       .then(data => {
         if (Array.isArray(data.recommendedCharacterPartTypes)) setRecommendedCharacterPartTypes(data.recommendedCharacterPartTypes);
         if (Array.isArray(data.recommendedOutfitPartTypes)) setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
+        if (data.previewBasePromptByType && typeof data.previewBasePromptByType === 'object') setPreviewBasePromptByType(data.previewBasePromptByType);
       })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
   }, []);
@@ -230,8 +232,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       if (p.config?.name?.trim()) {
         partsData[p.config.name] = {
           enabled: p.data.enabled,
-          categoryAttributeValues: p.data.categoryAttributeValues,
-          customAttributeValues: p.data.customAttributeValues,
+          attributeValues: p.data.attributeValues,
           previewImageUrl: p.data.previewImageUrl,
         };
       }
@@ -261,12 +262,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         config: {
           name: lib.name, type: lib.type,
           baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
+          attributes: lib.attributes,
         },
         data: {
           enabled: true,
-          categoryAttributeValues: cp.categoryAttributeValues || {},
-          customAttributeValues: cp.customAttributeValues || {},
+          attributeValues: cp.attributeValues,
           previewImageUrl: cp.previewImageUrl || '',
         },
       };
@@ -293,8 +293,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       if (p.config.name?.trim()) {
         partsData[p.config.name] = {
           enabled: p.data.enabled,
-          categoryAttributeValues: p.data.categoryAttributeValues,
-          customAttributeValues: p.data.customAttributeValues,
+          attributeValues: p.data.attributeValues,
           previewImageUrl: p.data.previewImageUrl,
         };
       }
@@ -399,21 +398,16 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           const libraryConfig = latestLibrary.find(p => p.name === partName);
           if (!libraryConfig) { skipped.push(partName); continue; }
 
-          const categoryAttributeValues = {};
-          for (const attr of (libraryConfig.categoryAttributes || [])) {
-            categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
-          }
-          const customAttributeValues = {};
-          for (const attr of (libraryConfig.customAttributes || [])) {
-            customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
+          const attributeValues = {};
+          for (const attr of (libraryConfig.attributes || [])) {
+            attributeValues[attr.name] = storedData.attributeValues?.[attr.name] ?? '';
           }
 
           const newPart = createDefaultPart();
           newPart.config = { ...libraryConfig };
           newPart.data = {
             enabled: storedData.enabled ?? true,
-            categoryAttributeValues,
-            customAttributeValues,
+            attributeValues,
             previewImageUrl: storedData.previewImageUrl || '',
           };
           newParts.push(newPart);
@@ -475,18 +469,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         const libraryConfig = latestLibrary.find(p => p.name === partName);
         if (!libraryConfig) { skipped.push(partName); continue; }
 
-        const categoryAttributeValues = {};
-        for (const attr of (libraryConfig.categoryAttributes || [])) {
-          categoryAttributeValues[attr.name] = storedData.categoryAttributeValues?.[attr.name] ?? '';
-        }
-        const customAttributeValues = {};
-        for (const attr of (libraryConfig.customAttributes || [])) {
-          customAttributeValues[attr.name] = storedData.customAttributeValues?.[attr.name] ?? '';
+        const attributeValues = {};
+        for (const attr of (libraryConfig.attributes || [])) {
+          attributeValues[attr.name] = storedData.attributeValues?.[attr.name] ?? '';
         }
         const partEntry = {
           partUid: libraryConfig.uid,
-          categoryAttributeValues,
-          customAttributeValues,
+          attributeValues,
           previewImageUrl: storedData.previewImageUrl || '',
         };
 
@@ -565,12 +554,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         config: {
           name: lib.name, type: lib.type,
           baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-          categoryAttributes: lib.categoryAttributes, customAttributes: lib.customAttributes,
+          attributes: lib.attributes,
         },
         data: {
           enabled: true,
-          categoryAttributeValues: cp.categoryAttributeValues || {},
-          customAttributeValues: cp.customAttributeValues || {},
+          attributeValues: cp.attributeValues,
           previewImageUrl: cp.previewImageUrl || '',
         },
       };
@@ -608,6 +596,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                   (item.config?.name && p.name === item.config.name)
                 )}
                 onLibraryChanged=${refreshLibraryParts}
+                previewBasePromptByType=${previewBasePromptByType}
               />
             `}
             getTitle=${(item) => {
@@ -616,21 +605,19 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                 (item.config?.uid && p.uid === item.config.uid) ||
                 (item.config?.name && p.name === item.config.name)
               );
-              if (!lib) return `${base} (unsaved)`;
+              if (!lib) return `${base} *`;
               const configFields = {
                 name: item.config.name, type: item.config.type,
                 baseline: item.config.baseline, previewBaseline: item.config.previewBaseline,
-                categoryAttributes: item.config.categoryAttributes,
-                customAttributes: item.config.customAttributes,
+                attributes: item.config.attributes,
               };
               const libFields = {
                 name: lib.name, type: lib.type,
                 baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-                categoryAttributes: lib.categoryAttributes,
-                customAttributes: lib.customAttributes,
+                attributes: lib.attributes,
               };
               const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
-              return isModified ? `${base} (modified)` : base;
+              return isModified ? `${base} *` : base;
             }}
             getEnabled=${(item) => item.data?.enabled ?? true}
             onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
@@ -638,12 +625,14 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
             onChange=${setParts}
             addLabel="Add Part"
             headerActions=${headerActions}
+            deleteIcon="x"
+            deleteLabel="Remove"
           />
 
           <${ButtonRow}>
             <${Button}
               variant="medium-text"
-              color="secondary"
+              color="danger"
               icon="x"
               onClick=${handleClear}
             >

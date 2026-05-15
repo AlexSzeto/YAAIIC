@@ -160,8 +160,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         ...prev.parts,
         {
           partUid: match.uid,
-          categoryAttributeValues: {},
-          customAttributeValues: {},
+          attributeValues: {},
           previewImageUrl: '',
         },
       ],
@@ -195,13 +194,11 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         name: libConfig?.name || item.partUid,
         previewBaseline: libConfig?.previewBaseline || '',
         baseline: libConfig?.baseline || '',
-        categoryAttributes: libConfig?.categoryAttributes || [],
-        customAttributes: libConfig?.customAttributes || [],
+        attributes: libConfig?.attributes || [],
       },
       data: {
         enabled: true,
-        categoryAttributeValues: item.categoryAttributeValues || {},
-        customAttributeValues: item.customAttributeValues || {},
+        attributeValues: item.attributeValues,
         previewImageUrl: item.previewImageUrl || '',
       },
     };
@@ -380,7 +377,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                 const lib = libraryParts.find(p => p.uid === item.partUid);
                 return lib ? lib.name : (item.partUid || '(unknown part)');
               }}
-              createItem=${() => ({ partUid: '', categoryAttributeValues: {}, customAttributeValues: {}, previewImageUrl: '' })}
+              createItem=${() => ({ partUid: '', attributeValues: {}, previewImageUrl: '' })}
               onChange=${(newParts) => setOutfit(prev => ({ ...prev, parts: newParts }))}
               addLabel="Add Part"
               hideAddItem
@@ -408,7 +405,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
             <//>
             <${Button}
               variant="medium-text"
-              color="secondary"
+              color="danger"
               icon="trash"
               onClick=${handleDelete}
               disabled=${!isInLibrary}
@@ -417,7 +414,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
             <//>
             <${Button}
               variant="medium-text"
-              color="secondary"
+              color="danger"
               icon="x"
               onClick=${handleClear}
             >

@@ -165,11 +165,20 @@ class TextPromptDialog extends Component {
     this.state = {
       inputValue: props.initialValue || ''
     };
+    this.inputId = 'text-prompt-input-' + Math.random().toString(36).slice(2);
   }
 
   componentDidMount() {
     // Set up keyboard listeners
     document.addEventListener('keydown', this.handleKeyDown);
+    // Focus the input and select-all when there is a prefilled value
+    setTimeout(() => {
+      const el = document.getElementById(this.inputId);
+      if (el) {
+        el.focus();
+        if (this.props.initialValue) el.select();
+      }
+    }, 0);
   }
 
   componentWillUnmount() {
@@ -245,6 +254,7 @@ class TextPromptDialog extends Component {
               marginBottom="20px"
             >
               <${Input}
+                id=${this.inputId}
                 type=${this.props.type || 'text'}
                 value=${inputValue}
                 placeholder=${placeholder || ''}

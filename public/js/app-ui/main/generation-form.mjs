@@ -209,6 +209,7 @@ export function GenerationForm({
       <${HorizontalLayout} gap="small">
         <${Button}
           variant="primary"
+          color="primary"
           icon="play"
           onClick=${onGenerate}
           loading=${isGenerating}

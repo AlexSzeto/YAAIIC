@@ -174,6 +174,7 @@ export function InpaintForm({
       <${FormRow} key="button-row" justifyContent="flex-start">
         <${Button}
           variant="primary"
+          color="primary"
           icon="play"
           onClick=${onGenerate}
           loading=${isGenerating}

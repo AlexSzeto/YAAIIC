@@ -199,11 +199,14 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       if (libPart.baseline) tags.push(libPart.baseline);
 
       if (charPart) {
-        // Add category attribute values
+        // Add attribute values (new unified format)
+        for (const val of Object.values(charPart.attributeValues || {})) {
+          if (val && val.trim()) tags.push(val.trim());
+        }
+        // Legacy fallback: include old split maps if present
         for (const val of Object.values(charPart.categoryAttributeValues || {})) {
           if (val && val.trim()) tags.push(val.trim());
         }
-        // Add custom attribute values
         for (const val of Object.values(charPart.customAttributeValues || {})) {
           if (val && val.trim()) tags.push(val.trim());
         }

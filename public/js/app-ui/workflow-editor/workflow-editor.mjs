@@ -816,6 +816,7 @@ export function WorkflowEditor() {
               <${Button}
                 variant="medium-text"
                 color="primary"
+                icon="save"
                 loading=${isSaving}
                 disabled=${!canSave || isSaving}
                 onClick=${handleSave}
@@ -831,6 +832,7 @@ export function WorkflowEditor() {
             <${Button}
               variant="medium-text"
               color="danger"
+              icon="trash"
               loading=${isDeleting}
               disabled=${isDeleting}
               onClick=${() => handleDelete(workflow.name)}

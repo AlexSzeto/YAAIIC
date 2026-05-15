@@ -437,10 +437,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
         <//>
-        <${Button} variant="medium-text" color="secondary" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
+        <${Button} variant="medium-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
           Delete
         <//>
-        <${Button} variant="medium-text" color="secondary" icon="x" onClick=${handleClear}>
+        <${Button} variant="medium-text" color="danger" icon="x" onClick=${handleClear}>
           Clear Plot
         <//>
       </${ButtonRow}>

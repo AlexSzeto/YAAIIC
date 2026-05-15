@@ -51,7 +51,7 @@ export async function deleteCharacter(uid) {
 /**
  * Generate a portrait image for a character using the configured portrait workflow.
  * @param {string} uid
- * @param {Array<{partUid: string, categoryAttributeValues: Object, customAttributeValues: Object}>} parts
+ * @param {Array<{partUid: string, attributeValues: Object}>} parts
  * @returns {Promise<{portraitUrl: string|null}>}
  */
 export async function generateCharacterPortrait(uid, parts) {

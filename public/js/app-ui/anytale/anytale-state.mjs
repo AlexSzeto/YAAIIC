@@ -11,13 +11,11 @@
  *       type: string[],
  *       previewBaseline: string,
  *       baseline: string,
- *       categoryAttributes: Array<{ name: string, category: string }>,
- *       customAttributes: Array<{ name: string, options: string }>
+ *       attributes: Array<{ name: string, options: string }>
  *     },
  *     data: {
  *       enabled: boolean,
- *       categoryAttributeValues: { [attributeName: string]: string },
- *       customAttributeValues: { [attributeName: string]: string },
+ *       attributeValues: { [attributeName: string]: string },
  *       previewImageUrl: string
  *     }
  *   }>
@@ -80,34 +78,21 @@ export function createDefaultPart() {
       type: [],
       previewBaseline: '',
       baseline: '',
-      categoryAttributes: [],
-      customAttributes: [],
+      attributes: [],
     },
     data: {
       enabled: true,
-      categoryAttributeValues: {},
-      customAttributeValues: {},
+      attributeValues: {},
       previewImageUrl: '',
     },
   };
 }
 
 /**
- * Create a new default category attribute.
+ * Create a new default attribute.
  * @returns {Object}
  */
-export function createDefaultCategoryAttribute() {
-  return {
-    name: '',
-    category: '',
-  };
-}
-
-/**
- * Create a new default custom attribute.
- * @returns {Object}
- */
-export function createDefaultCustomAttribute() {
+export function createDefaultAttribute() {
   return {
     name: '',
     options: '',
