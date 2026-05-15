@@ -126,7 +126,7 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
  * @param {Function} [props.onImportHandlerReady] – Exposes the import handler to the parent
  * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true, outfitList: outfitListProp }) {
+export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true, outfitList: outfitListProp, onEditParts }) {
   const toast = useToast();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
@@ -424,6 +424,15 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     }
   }, [character, toast]);
 
+  const handleRevert = useCallback(() => {
+    if (!libraryCharacter) return;
+    setCharacter(libraryCharacter);
+  }, [libraryCharacter]);
+
+  const handleEditParts = useCallback(() => {
+    if (onEditParts) onEditParts(character.parts);
+  }, [character.parts, onEditParts]);
+
   const handleClear = useCallback(async () => {
     const result = await showDialog(
       'Clear all character data? This will reset the form.',
@@ -435,7 +444,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     setCharacter(blank);
     setSavedCharacterUid(null);
     setLibraryCharacter(null);
-  }, []);
+  }, [])
 
   // ── Load character from library ──────────────────────────────────────────
 
@@ -532,7 +541,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
             <${ButtonRow}>
               <${Button}
-                variant="medium-text"
+                variant="small-text"
                 color="primary"
                 icon="image"
                 onClick=${handleGeneratePortrait}
@@ -541,7 +550,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
                 ${isGeneratingPortrait ? 'Generating...' : 'Generate Portrait'}
               <//>
               <${Button}
-                variant="medium-text"
+                variant="small-text"
                 color="primary"
                 icon="microphone"
                 onClick=${handleGenerateVoice}
@@ -618,10 +627,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
             />
           </${VerticalLayout}>
 
-          <!-- Save / Delete / Clear actions -->
+          <!-- Save / Delete / Clear / Revert / Edit Parts actions -->
           <${ButtonRow}>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="secondary"
               icon="folder-open"
               onClick=${() => setLoadCharModalOpen(true)}
@@ -629,7 +638,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               Load
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="primary"
               icon="save"
               onClick=${handleSave}
@@ -638,7 +647,25 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               ${isInLibrary ? 'Update' : 'Save'}
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
+              color="secondary"
+              icon="undo"
+              onClick=${handleRevert}
+              disabled=${!isInLibrary || !hasChanges}
+            >
+              Revert
+            <//>
+            <${Button}
+              variant="small-text"
+              color="secondary"
+              icon="send-alt"
+              onClick=${handleEditParts}
+              disabled=${!character.parts.length || !onEditParts}
+            >
+              Edit Parts
+            <//>
+            <${Button}
+              variant="small-text"
               color="danger"
               icon="trash"
               onClick=${handleDelete}
@@ -647,7 +674,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               Delete
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="danger"
               icon="x"
               onClick=${handleClear}

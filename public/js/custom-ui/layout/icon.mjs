@@ -48,6 +48,9 @@ const ICON_MAP = {
   'lock-open': 'lock_open',
   'eye': 'visibility',
   'eye-slash': 'visibility_off',
+  'undo': 'undo',
+  'redo': 'redo',
+  'send-alt': 'send',
   
   // Media
   'images': 'image',

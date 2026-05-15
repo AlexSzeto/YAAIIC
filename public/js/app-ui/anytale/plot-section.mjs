@@ -98,10 +98,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const currentPage = plot.pages[currentPageIndex] || { tags: '', hiddenParts: [] };
   const isCurrentPageLocked = pageLocked[currentPageIndex] === true;
 
-  // ── Load plot list for autocomplete ──────────────────────────────────────
+  // ── Load plot list; also sync savedPlot for the active uid on mount ─────
   useEffect(() => {
     fetchPlotList()
-      .then(list => { if (Array.isArray(list)) setPlotList(list); })
+      .then(list => {
+        if (Array.isArray(list)) {
+          setPlotList(list);
+          const uid = loadPlot().uid;
+          if (uid && list.some(p => p.uid === uid)) {
+            fetch(`/anytale/plot/${encodeURIComponent(uid)}`)
+              .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+              .then(full => setSavedPlot(full))
+              .catch(err => console.error('[PlotSection] Failed to sync savedPlot on mount:', err));
+          }
+        }
+      })
       .catch(err => console.error('[PlotSection] Failed to fetch plot list:', err));
   }, []);
 
@@ -359,6 +370,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const saveLabel = isInLibrary ? 'Update' : 'Save';
   const isSaveDisabled = isInLibrary && savedPlot !== null && JSON.stringify(plot) === JSON.stringify(savedPlot);
   const isDeleteDisabled = !isInLibrary;
+  const isRevertDisabled = !isInLibrary || savedPlot === null || isSaveDisabled;
+
+  const handleRevert = useCallback(() => {
+    if (!savedPlot) return;
+    setPlot(savedPlot);
+  }, [savedPlot]);
 
   // ============================================================================
   // Render
@@ -472,16 +489,19 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       </${VerticalLayout}>
 
       <${ButtonRow}>
-        <${Button} variant="medium-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>
+        <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>
           Load
         <//>
-        <${Button} variant="medium-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
+        <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
         <//>
-        <${Button} variant="medium-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
+        <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${isRevertDisabled}>
+          Revert
+        <//>
+        <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
           Delete
         <//>
-        <${Button} variant="medium-text" color="danger" icon="x" onClick=${handleClear}>
+        <${Button} variant="small-text" color="danger" icon="x" onClick=${handleClear}>
           Clear Plot
         <//>
       </${ButtonRow}>

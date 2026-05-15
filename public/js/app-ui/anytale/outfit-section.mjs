@@ -80,7 +80,7 @@ function outfitsEqual(a, b) {
  * @param {Function} [props.onLibraryPartsChange] – Called when library is updated
  * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true, onOutfitListChange }) {
+export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true, onOutfitListChange, onEditParts }) {
   const toast = useToast();
 
   // ── Outfit state (lazy-loaded from localStorage) ─────────────────────
@@ -295,6 +295,15 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }
   }, [outfit, toast]);
 
+  const handleRevert = useCallback(() => {
+    if (!libraryOutfit) return;
+    setOutfit(libraryOutfit);
+  }, [libraryOutfit]);
+
+  const handleEditParts = useCallback(() => {
+    if (onEditParts) onEditParts(outfit.parts);
+  }, [outfit.parts, onEditParts]);
+
   const handleClear = useCallback(async () => {
     const result = await showDialog(
       'Clear all outfit data? This will reset the form.',
@@ -388,7 +397,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
           <!-- Actions -->
           <${ButtonRow}>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="secondary"
               icon="folder-open"
               onClick=${() => setLoadOutfitModalOpen(true)}
@@ -396,7 +405,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               Load
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="primary"
               icon="save"
               onClick=${handleSave}
@@ -405,7 +414,25 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               ${isInLibrary ? 'Update' : 'Save'}
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
+              color="secondary"
+              icon="undo"
+              onClick=${handleRevert}
+              disabled=${!isInLibrary || !hasChanges}
+            >
+              Revert
+            <//>
+            <${Button}
+              variant="small-text"
+              color="secondary"
+              icon="send-alt"
+              onClick=${handleEditParts}
+              disabled=${!outfit.parts.length || !onEditParts}
+            >
+              Edit Parts
+            <//>
+            <${Button}
+              variant="small-text"
               color="danger"
               icon="trash"
               onClick=${handleDelete}
@@ -414,7 +441,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               Delete
             <//>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="danger"
               icon="x"
               onClick=${handleClear}

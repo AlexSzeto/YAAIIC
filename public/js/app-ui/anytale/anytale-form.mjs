@@ -606,6 +606,31 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     onImportReady,
   ]);
 
+  // ── Edit Parts: push character/outfit part attribute values into the parts list ──
+  const handleEditParts = useCallback((sourceParts) => {
+    setParts(prev => {
+      const next = [...prev];
+      for (const sp of sourceParts) {
+        const libConfig = libraryParts.find(p => p.uid === sp.partUid);
+        if (!libConfig) continue;
+        const existingIdx = next.findIndex(p => p.config?.uid === sp.partUid);
+        if (existingIdx >= 0) {
+          next[existingIdx] = {
+            ...next[existingIdx],
+            data: { ...next[existingIdx].data, attributeValues: { ...sp.attributeValues } },
+          };
+        } else {
+          const newPart = createDefaultPart();
+          newPart.config = { ...libConfig };
+          newPart.data = { ...newPart.data, attributeValues: { ...sp.attributeValues } };
+          next.push(newPart);
+        }
+      }
+      return next;
+    });
+    handleTabChange('parts-plot');
+  }, [libraryParts, handleTabChange]);
+
   // Compute all unique type strings from the library for autocomplete suggestions
   const allTypes = useMemo(() => {
     const seen = new Set();
@@ -693,7 +718,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
           <${ButtonRow}>
             <${Button}
-              variant="medium-text"
+              variant="small-text"
               color="danger"
               icon="x"
               onClick=${handleClear}
@@ -766,6 +791,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               refreshKey=${importRefreshKey}
               outfitList=${sharedOutfitList}
               scrollable=${false}
+              onEditParts=${handleEditParts}
             />
             <${OutfitSection}
               libraryParts=${libraryParts}
@@ -773,6 +799,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               refreshKey=${importRefreshKey}
               onOutfitListChange=${setSharedOutfitList}
               scrollable=${false}
+              onEditParts=${handleEditParts}
             />
           </div>
           <!-- Sticky Generate section -->

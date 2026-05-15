@@ -335,6 +335,12 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     }
   }, [config, onLibraryChanged, onDeletedFromLibrary, toast]);
 
+  // ── Library: Revert to Library ────────────────────────────────────────────
+  const handleRevertToLibrary = useCallback(() => {
+    if (!libraryPart) return;
+    onChange({ ...part, config: { ...libraryPart } });
+  }, [libraryPart, part, onChange]);
+
   // Library save button is disabled when nothing has changed vs. library
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
     name: config.name, type: config.type, baseline: config.baseline,
@@ -467,7 +473,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <!-- Library Actions -->
       <${AttrRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
         <${Button}
-          variant="large-text"
+          variant="small-text"
           color="primary"
           icon="save"
           onClick=${handleSaveToLibrary}
@@ -476,7 +482,16 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
           ${isSaving ? 'Saving...' : (libraryPart ? 'Update' : 'Save')}
         </${Button}>
         <${Button}
-          variant="large-text"
+          variant="small-text"
+          color="secondary"
+          icon="undo"
+          onClick=${handleRevertToLibrary}
+          disabled=${isSaving || isDeleting || !libraryPart || isUnchangedFromLibrary}
+        >
+          Revert
+        </${Button}>
+        <${Button}
+          variant="small-text"
           color="danger"
           icon="trash"
           onClick=${handleDeleteFromLibrary}
