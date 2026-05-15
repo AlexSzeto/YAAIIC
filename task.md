@@ -7,20 +7,20 @@ Add SSE progress visibility and cancellation support to all generation types. In
 
 ### Server
 
-- [ ] Rename `POST /generate/sync` to `POST /generate/silent/sync` in `server/features/generation/router.mjs`
-- [ ] Add `interruptGeneration()` to `server/features/generation/comfy-client.mjs` that calls `POST /interrupt` on the ComfyUI API
-- [ ] Add cancellation support to `server/core/sse.mjs`: add a `cancelled` boolean field to the task object, add `cancelTask(taskId)` that sets the flag, and add `emitTaskCancelled(taskId)` that broadcasts `event: cancelled` to all SSE clients for that task
-- [ ] Add cancellation check points in `server/features/generation/orchestrator.mjs` `processGenerationTask`: after each major await (pre-gen tasks, ComfyUI run, post-gen tasks), check `getTask(taskId)?.cancelled` and throw a `CancellationError` if set
-- [ ] Add `POST /generate/cancel` endpoint to `server/features/generation/router.mjs`: validates `taskId`, calls `cancelTask(taskId)` + `interruptGeneration()`, responds 202 immediately; `emitTaskCancelled` is called once the orchestrator's cancellation error propagates
-- [ ] Add `POST /generate/silent/async` endpoint to `server/features/generation/router.mjs`: identical validation logic to `/generate/silent/sync` but returns `{ taskId }` immediately (like `/generate`) and runs `processGenerationTask` with `silent=true` in the background
+- [x] Rename `POST /generate/sync` to `POST /generate/silent/sync` in `server/features/generation/router.mjs`
+- [x] Add `interruptGeneration()` to `server/features/generation/comfy-client.mjs` that calls `POST /interrupt` on the ComfyUI API
+- [x] Add cancellation support to `server/core/sse.mjs`: add a `cancelled` boolean field to the task object, add `cancelTask(taskId)` that sets the flag, and add `emitTaskCancelled(taskId)` that broadcasts `event: cancelled` to all SSE clients for that task
+- [x] Add cancellation check points in `server/features/generation/orchestrator.mjs` `processGenerationTask`: after each major await (pre-gen tasks, ComfyUI run, post-gen tasks), check `getTask(taskId)?.cancelled` and throw a `CancellationError` if set
+- [x] Add `POST /generate/cancel` endpoint to `server/features/generation/router.mjs`: validates `taskId`, calls `cancelTask(taskId)` + `interruptGeneration()`, responds 202 immediately; `emitTaskCancelled` is called once the orchestrator's cancellation error propagates
+- [x] Add `POST /generate/silent/async` endpoint to `server/features/generation/router.mjs`: identical validation logic to `/generate/silent/sync` but returns `{ taskId }` immediately (like `/generate`) and runs `processGenerationTask` with `silent=true` in the background
 
 ### Client
 
-- [ ] Add `onCancelled` callback support to the SSE subscription in `public/js/custom-ui/msg/progress-context.mjs` (listen for `event: cancelled` events alongside existing `complete` and `error`)
-- [ ] Update `ProgressBanner` in `public/js/custom-ui/msg/progress-banner.mjs`: add `onCancel` prop; during `starting`/`in-progress` states replace the X icon button with a trash icon button; on click call `onCancel(taskId)`, disable button and set message to "Cancelling…"; on `cancelled` SSE event dismiss the banner and show a toast "Generation cancelled"
-- [ ] Migrate `public/js/app-ui/anytale/anytale-form.mjs` from `/generate/sync` to `/generate/silent/async`: receive `taskId`, subscribe to SSE progress, show `ProgressBanner` with `onCancel` wired to `POST /generate/cancel`, handle `onComplete` to continue the existing post-generation logic
-- [ ] Migrate `public/js/app-ui/anytale/character-section.mjs` from `/generate/sync` to `/generate/silent/async` following the same pattern as `anytale-form.mjs`
-- [ ] Migrate `public/js/app-ui/anytale/outfit-section.mjs` from `/generate/sync` to `/generate/silent/async` following the same pattern as `anytale-form.mjs`
+- [x] Add `onCancelled` callback support to the SSE subscription in `public/js/custom-ui/msg/progress-context.mjs` (listen for `event: cancelled` events alongside existing `complete` and `error`)
+- [x] Update `ProgressBanner` in `public/js/custom-ui/msg/progress-banner.mjs`: add `onCancel` prop; during `starting`/`in-progress` states replace the X icon button with a trash icon button; on click call `onCancel(taskId)`, disable button and set message to "Cancelling…"; on `cancelled` SSE event dismiss the banner and show a toast "Generation cancelled"
+- [x] Migrate `public/js/app-ui/anytale/anytale-form.mjs` from `/generate/sync` to `/generate/silent/async`: receive `taskId`, subscribe to SSE progress, show `ProgressBanner` with `onCancel` wired to `POST /generate/cancel`, handle `onComplete` to continue the existing post-generation logic
+- [x] Migrate `public/js/app-ui/anytale/character-section.mjs` from `/generate/sync` to `/generate/silent/async` following the same pattern as `anytale-form.mjs`
+- [x] Migrate `public/js/app-ui/anytale/outfit-section.mjs` from `/generate/sync` to `/generate/silent/async` following the same pattern as `anytale-form.mjs`
 
 ## Implementation Details
 

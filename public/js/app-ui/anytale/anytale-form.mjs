@@ -29,6 +29,8 @@ import { OutfitSection } from './outfit-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
+import { sseManager } from '../sse-manager.mjs';
+import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
 
 // ============================================================================
 // Styled Components
@@ -311,17 +313,22 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     });
   }, []);
 
-  // Preview generation
+  // Preview generation – { [index]: taskId } while a preview is in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
 
   // Derived: true if any part preview generation is in-flight
   const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
 
+  const dismissPreviewByIndex = useCallback((index) => {
+    setGeneratingPreviews(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  }, []);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
-
-    setGeneratingPreviews(prev => ({ ...prev, [index]: true }));
-
     try {
       const prompt = assemblePartPreviewPrompt(item);
       if (!prompt) {
@@ -329,7 +336,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         return;
       }
 
-      const response = await fetch('/generate/sync', {
+      const response = await fetch('/generate/silent/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -349,23 +356,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         throw new Error(err.error || `HTTP ${response.status}`);
       }
 
-      const result = await response.json();
-      if (result.imageUrl) {
-        handlePartChange(index, {
-          ...item,
-          data: { ...item.data, previewImageUrl: result.imageUrl },
-        });
-      }
+      const { taskId } = await response.json();
+      setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
     } catch (err) {
       console.error('[AnyTaleForm] Preview generation failed:', err);
-    } finally {
-      setGeneratingPreviews(prev => {
-        const next = { ...prev };
-        delete next[index];
-        return next;
-      });
     }
-  }, [generatingPreviews, handlePartChange]);
+  }, [generatingPreviews]);
 
   // Header actions for DynamicList items
   const headerActions = [
@@ -780,14 +776,45 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     },
   ];
 
-  return html`
-    <${TabPanels}
+  return [
+    html`<${TabPanels}
       tabs=${tabs}
       activeTab=${activeTab}
       onTabChange=${handleTabChange}
       variant="outlined"
       style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    />
-  `;
+    />`,
+    ...Object.entries(generatingPreviews).map(([indexStr, taskId]) => {
+      const idx = parseInt(indexStr);
+      return html`<${ProgressBanner}
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        defaultTitle="Generating preview…"
+        onComplete=${(data) => {
+          if (data.result?.imageUrl) {
+            setParts(prev => {
+              const next = [...prev];
+              if (next[idx]) {
+                next[idx] = { ...next[idx], data: { ...next[idx].data, previewImageUrl: data.result.imageUrl } };
+              }
+              return next;
+            });
+          }
+          dismissPreviewByIndex(idx);
+        }}
+        onCancelled=${() => dismissPreviewByIndex(idx)}
+        onCancel=${async () => {
+          await fetch('/generate/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId }),
+          });
+        }}
+        onError=${() => dismissPreviewByIndex(idx)}
+        onDismiss=${() => dismissPreviewByIndex(idx)}
+      />`;
+    })
+  ];
 }
 

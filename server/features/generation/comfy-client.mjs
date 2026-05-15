@@ -163,6 +163,24 @@ export async function uploadFile(fileBuffer, filename, fileType = 'image', stora
 }
 
 // ---------------------------------------------------------------------------
+// Generation control
+// ---------------------------------------------------------------------------
+
+/**
+ * Send an interrupt signal to ComfyUI, causing it to stop the currently
+ * executing prompt as soon as possible.
+ */
+export async function interruptGeneration() {
+  if (!comfyUIAPIPath) return;
+  try {
+    await fetch(`${comfyUIAPIPath}/interrupt`, { method: 'POST' });
+    console.log('ComfyUI interrupt signal sent');
+  } catch (error) {
+    console.error('Failed to send ComfyUI interrupt:', error);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Memory management
 // ---------------------------------------------------------------------------
 

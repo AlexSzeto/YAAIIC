@@ -497,6 +497,54 @@ export function deleteTask(taskId) {
   activeTasks.delete(taskId);
 }
 
+/**
+ * Mark a task as cancelled so the orchestrator can detect and stop processing.
+ * @param {string} taskId
+ */
+export function cancelTask(taskId) {
+  const task = activeTasks.get(taskId);
+  if (task) {
+    task.cancelled = true;
+    console.log(`Task ${taskId} marked as cancelled`);
+  }
+}
+
+/**
+ * Broadcast a `cancelled` SSE event to all clients subscribed to this task.
+ * @param {string} taskId
+ */
+export function emitTaskCancelled(taskId) {
+  const task = activeTasks.get(taskId);
+  if (!task) return;
+
+  const message = {
+    taskId,
+    status: 'cancelled',
+    message: 'Generation cancelled',
+    timestamp: new Date().toISOString()
+  };
+
+  const data = JSON.stringify(message);
+
+  if (!task.sseClients || task.sseClients.size === 0) {
+    if (!task.messageBuffer) task.messageBuffer = [];
+    task.messageBuffer.push({ eventType: 'cancelled', data, message });
+    return;
+  }
+
+  const disconnectedClients = new Set();
+  task.sseClients.forEach(client => {
+    try {
+      client.write(`event: cancelled\ndata: ${data}\n\n`);
+    } catch (error) {
+      disconnectedClients.add(client);
+    }
+  });
+  disconnectedClients.forEach(client => task.sseClients.delete(client));
+
+  scheduleTaskCleanup(taskId);
+}
+
 export function setTaskPromptId(taskId, promptId) {
   const task = activeTasks.get(taskId);
   if (task) {

@@ -34,6 +34,8 @@ import { ImagePreview } from './image-preview.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
+import { sseManager } from '../sse-manager.mjs';
+import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
 
 // ============================================================================
 // Styled Components
@@ -150,8 +152,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   }, [refreshKey]);
 
   // ── Generation state ─────────────────────────────────────────────────────
-  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
-  const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
+  const [portraitTaskId, setPortraitTaskId] = useState(null);
+  const isGeneratingPortrait = !!portraitTaskId;
+  const [voiceTaskId, setVoiceTaskId] = useState(null);
+  const isGeneratingVoice = !!voiceTaskId;
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
 
@@ -271,6 +275,14 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
   // ── Part preview generation (manual, via header action button) ───────────
 
+  const dismissPreviewByIndex = useCallback((index) => {
+    setGeneratingPreviews(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  }, []);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
 
@@ -297,9 +309,8 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
       return;
     }
 
-    setGeneratingPreviews(prev => ({ ...prev, [index]: true }));
     try {
-      const response = await fetch('/generate/sync', {
+      const response = await fetch('/generate/silent/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,21 +333,13 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
         throw new Error(err.error || `HTTP ${response.status}`);
       }
 
-      const result = await response.json();
-      if (result.imageUrl) {
-        handlePartChange(index, { ...item, previewImageUrl: result.imageUrl });
-      }
+      const { taskId } = await response.json();
+      setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
     } catch (err) {
       console.error('[CharacterSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
-    } finally {
-      setGeneratingPreviews(prev => {
-        const next = { ...prev };
-        delete next[index];
-        return next;
-      });
     }
-  }, [generatingPreviews, libraryParts, handlePartChange, toast]);
+  }, [generatingPreviews, libraryParts, toast]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
@@ -346,20 +349,13 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
   const handleGeneratePortrait = useCallback(async () => {
     if (isGeneratingPortrait) return;
-    // Ensure a uid for the request (use a temp uid if empty)
     const uid = character.uid || 'temp-portrait';
-    setIsGeneratingPortrait(true);
     try {
-      const { portraitUrl } = await generateCharacterPortrait(uid, character.parts);
-      if (portraitUrl) {
-        setCharacter(prev => ({ ...prev, portraitUrl }));
-        toast.success('Portrait generated');
-      }
+      const { taskId } = await generateCharacterPortrait(uid, character.parts);
+      setPortraitTaskId(taskId);
     } catch (err) {
       console.error('[CharacterSection] Portrait generation failed:', err);
       toast.error(`Portrait generation failed: ${err.message}`);
-    } finally {
-      setIsGeneratingPortrait(false);
     }
   }, [character, isGeneratingPortrait, toast]);
 
@@ -368,21 +364,12 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   const handleGenerateVoice = useCallback(async () => {
     if (isGeneratingVoice) return;
     const uid = character.uid || 'temp-voice';
-    setIsGeneratingVoice(true);
     try {
-      const { audioUrl, transcript } = await generateCharacterVoice(uid, character.personality, character.name);
-      const updates = {};
-      if (audioUrl) updates.audioUrl = audioUrl;
-      if (transcript) updates.introTranscript = transcript;
-      if (Object.keys(updates).length > 0) {
-        setCharacter(prev => ({ ...prev, ...updates }));
-        toast.success('Voice generated');
-      }
+      const { taskId } = await generateCharacterVoice(uid, character.personality, character.name);
+      setVoiceTaskId(taskId);
     } catch (err) {
       console.error('[CharacterSection] Voice generation failed:', err);
       toast.error(`Voice generation failed: ${err.message}`);
-    } finally {
-      setIsGeneratingVoice(false);
     }
   }, [character, isGeneratingVoice, toast]);
 
@@ -529,7 +516,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     : { display: 'flex', flexDirection: 'column', flex: 'none' };
   const ContentWrapper = scrollable ? ScrollArea : VerticalLayout;
 
-  return html`
+  const sectionHtml = html`
     <${VerticalLayout} gap="medium" style=${outerStyle}>
 
       <${ContentWrapper}>
@@ -572,7 +559,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
                 ${isGeneratingVoice ? 'Generating...' : 'Generate Voice'}
               <//>
             </${ButtonRow}>
-                        
+
             <${Input}
               label="Name"
               value=${character.name}
@@ -692,4 +679,95 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
     </${VerticalLayout}>
   `;
+  const banners = [
+    sectionHtml,
+    ...Object.entries(generatingPreviews).map(([indexStr, taskId]) => {
+      const idx = parseInt(indexStr);
+      return html`<${ProgressBanner}
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        defaultTitle="Generating preview…"
+        onComplete=${(data) => {
+          if (data.result?.imageUrl) {
+            setCharacter(prev => {
+              const newParts = [...(prev.parts || [])];
+              if (newParts[idx]) {
+                newParts[idx] = { ...newParts[idx], previewImageUrl: data.result.imageUrl };
+              }
+              return { ...prev, parts: newParts };
+            });
+          }
+          dismissPreviewByIndex(idx);
+        }}
+        onCancelled=${() => dismissPreviewByIndex(idx)}
+        onCancel=${async () => {
+          await fetch('/generate/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId }),
+          });
+        }}
+        onError=${() => dismissPreviewByIndex(idx)}
+        onDismiss=${() => dismissPreviewByIndex(idx)}
+      />`;
+    })
+  ];
+
+  if (portraitTaskId) {
+    banners.push(html`<${ProgressBanner}
+      key=${portraitTaskId}
+      taskId=${portraitTaskId}
+      sseManager=${sseManager}
+      defaultTitle="Generating portrait…"
+      onComplete=${(data) => {
+        if (data.result?.imageUrl) {
+          setCharacter(prev => ({ ...prev, portraitUrl: data.result.imageUrl }));
+          toast.success('Portrait generated');
+        }
+        setPortraitTaskId(null);
+      }}
+      onCancelled=${() => setPortraitTaskId(null)}
+      onCancel=${async () => {
+        await fetch('/generate/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: portraitTaskId }),
+        });
+      }}
+      onError=${() => setPortraitTaskId(null)}
+      onDismiss=${() => setPortraitTaskId(null)}
+    />`);
+  }
+
+  if (voiceTaskId) {
+    banners.push(html`<${ProgressBanner}
+      key=${voiceTaskId}
+      taskId=${voiceTaskId}
+      sseManager=${sseManager}
+      defaultTitle="Generating voice…"
+      onComplete=${(data) => {
+        const updates = {};
+        if (data.result?.audioUrl) updates.audioUrl = data.result.audioUrl;
+        if (data.result?.summary) updates.introTranscript = data.result.summary;
+        if (Object.keys(updates).length > 0) {
+          setCharacter(prev => ({ ...prev, ...updates }));
+          toast.success('Voice generated');
+        }
+        setVoiceTaskId(null);
+      }}
+      onCancelled=${() => setVoiceTaskId(null)}
+      onCancel=${async () => {
+        await fetch('/generate/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: voiceTaskId }),
+        });
+      }}
+      onError=${() => setVoiceTaskId(null)}
+      onDismiss=${() => setVoiceTaskId(null)}
+    />`);
+  }
+
+  return banners;
 }

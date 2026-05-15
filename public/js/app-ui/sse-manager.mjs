@@ -42,7 +42,8 @@ class SSEManager {
       callbacks: {
         onProgress: callbacks.onProgress || (() => {}),
         onComplete: callbacks.onComplete || (() => {}),
-        onError: callbacks.onError || (() => {})
+        onError: callbacks.onError || (() => {}),
+        onCancelled: callbacks.onCancelled || (() => {})
       },
       timeoutTimer: null,
       timeoutMs
@@ -59,6 +60,10 @@ class SSEManager {
 
     eventSource.addEventListener('error-event', (event) => {
       this._handleMessage(taskId, event, 'error');
+    });
+
+    eventSource.addEventListener('cancelled', (event) => {
+      this._handleMessage(taskId, event, 'cancelled');
     });
 
     // Handle connection errors
@@ -106,7 +111,7 @@ class SSEManager {
 
     // Clear and restart timeout on each message
     this._clearTimeout(taskId);
-    if (type !== 'complete' && type !== 'error') {
+    if (type !== 'complete' && type !== 'error' && type !== 'cancelled') {
       this._startTimeout(taskId);
     }
 
@@ -129,6 +134,12 @@ class SSEManager {
         case 'error':
           connection.callbacks.onError(data);
           // Auto-cleanup after error
+          this.unsubscribe(taskId);
+          break;
+
+        case 'cancelled':
+          connection.callbacks.onCancelled(data);
+          // Auto-cleanup after cancellation
           this.unsubscribe(taskId);
           break;
 

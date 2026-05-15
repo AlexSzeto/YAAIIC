@@ -16,12 +16,14 @@ import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
   createTask, deleteTask, getTask,
   resetProgressLog,
-  emitProgressUpdate, emitTaskError
+  emitProgressUpdate, emitTaskError,
+  cancelTask, emitTaskCancelled
 } from '../../core/sse.mjs';
 import {
   findMediaByUid, findMediaIndexByUid, getAllMediaData, saveMediaData
 } from '../../core/database.mjs';
 import { SERVER_DIR } from '../../core/paths.mjs';
+import { interruptGeneration } from './comfy-client.mjs';
 
 const router = Router();
 
@@ -185,11 +187,11 @@ router.post('/generate', upload.any(), async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /generate/sync – synchronous generation (blocks until complete)
+// POST /generate/silent/sync – synchronous silent generation (blocks until complete)
 // ---------------------------------------------------------------------------
 
 /**
- * POST /generate/sync
+ * POST /generate/silent/sync
  *
  * Like `POST /generate` but blocks until generation finishes and returns the
  * full result as JSON.  The result is NOT logged to `media-data.json` (silent
@@ -197,7 +199,7 @@ router.post('/generate', upload.any(), async (req, res) => {
  *
  * Intended for programmatic / headless clients that need a single round-trip.
  */
-router.post('/generate/sync', async (req, res) => {
+router.post('/generate/silent/sync', async (req, res) => {
   try {
     const { workflow } = req.body;
 
@@ -404,6 +406,96 @@ router.post('/regenerate', async (req, res) => {
   } catch (error) {
     console.error('Error in regenerate endpoint:', error);
     res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /generate/cancel – interrupt an active generation task
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /generate/cancel
+ *
+ * Marks the specified task as cancelled and sends an interrupt signal to
+ * ComfyUI.  Responds 202 immediately; the `cancelled` SSE event is emitted
+ * once the orchestrator detects the cancellation flag.
+ *
+ * Body: { taskId: string }
+ */
+router.post('/generate/cancel', async (req, res) => {
+  const { taskId } = req.body;
+  if (!taskId) {
+    return res.status(400).json({ error: 'taskId is required' });
+  }
+
+  const task = getTask(taskId);
+  if (!task) {
+    return res.status(404).json({ error: `Task ${taskId} not found` });
+  }
+
+  cancelTask(taskId);
+  interruptGeneration().catch(err => console.error('Failed to interrupt ComfyUI:', err));
+
+  return res.status(202).json({ success: true, message: 'Cancellation requested' });
+});
+
+// ---------------------------------------------------------------------------
+// POST /generate/silent/async – async silent generation (SSE progress, no DB entry)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /generate/silent/async
+ *
+ * Identical validation to `/generate/silent/sync` but returns `{ taskId }`
+ * immediately and runs the pipeline with `silent=true` in the background.
+ * Clients subscribe to SSE at `/progress/:taskId` for progress/completion.
+ */
+router.post('/generate/silent/async', async (req, res) => {
+  try {
+    const { workflow } = req.body;
+
+    if (!workflow) {
+      return res.status(400).json({ error: 'Workflow parameter is required' });
+    }
+
+    const comfyuiWorkflows = loadWorkflows();
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === workflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Workflow '${workflow}' not found` });
+    }
+
+    if (!req.body.seed) {
+      req.body.seed = Math.floor(Math.random() * 4294967295);
+    }
+
+    const requiredImageDataFields = ['tags', 'prompt', 'description', 'summary'];
+    requiredImageDataFields.forEach(field => {
+      if (req.body[field] === undefined || req.body[field] === null) {
+        req.body[field] = '';
+      }
+    });
+
+    const validation = validateNoNestedExecuteWorkflow(workflowData, comfyuiWorkflows.workflows);
+    if (!validation.valid) {
+      return res.status(400).json({ error: 'Workflow validation failed', details: validation.error });
+    }
+
+    const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+
+    // Respond immediately so the client can subscribe to SSE progress
+    res.json({ success: true, taskId, message: 'Generation task created' });
+
+    // Run silently in background; SSE notifies on completion/error/cancellation
+    processGenerationTask(taskId, req.body, workflowData, config, true, uploadFileToComfyUI).catch(error => {
+      console.error(`Error in silent async task ${taskId}:`, error);
+    });
+
+  } catch (error) {
+    console.error('Error in generate/silent/async endpoint:', error);
+    res.status(500).json({ error: 'Failed to process request', details: error.message });
   }
 });
 

@@ -31,6 +31,8 @@ import { fetchOutfitList, saveOutfit, deleteOutfit } from './outfit-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
+import { sseManager } from '../sse-manager.mjs';
+import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
 
 // ============================================================================
 // Styled Components
@@ -176,6 +178,14 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
   // ── Part preview generation (manual, via header action button) ───────
 
+  const dismissPreviewByIndex = useCallback((index) => {
+    setGeneratingPreviews(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  }, []);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
 
@@ -202,9 +212,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       return;
     }
 
-    setGeneratingPreviews(prev => ({ ...prev, [index]: true }));
     try {
-      const response = await fetch('/generate/sync', {
+      const response = await fetch('/generate/silent/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -227,21 +236,13 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         throw new Error(err.error || `HTTP ${response.status}`);
       }
 
-      const result = await response.json();
-      if (result.imageUrl) {
-        handlePartChange(index, { ...item, previewImageUrl: result.imageUrl });
-      }
+      const { taskId } = await response.json();
+      setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
     } catch (err) {
       console.error('[OutfitSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
-    } finally {
-      setGeneratingPreviews(prev => {
-        const next = { ...prev };
-        delete next[index];
-        return next;
-      });
     }
-  }, [generatingPreviews, libraryParts, handlePartChange, toast]);
+  }, [generatingPreviews, libraryParts, toast]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
@@ -327,7 +328,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     : { display: 'flex', flexDirection: 'column', flex: 'none' };
   const ContentWrapper = scrollable ? ScrollArea : VerticalLayout;
 
-  return html`
+  const sectionHtml = html`
     <${VerticalLayout} gap="medium" style=${outerStyle}>
 
       <${ContentWrapper}>
@@ -438,4 +439,38 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
     </${VerticalLayout}>
   `;
+  return [
+    sectionHtml,
+    ...Object.entries(generatingPreviews).map(([indexStr, taskId]) => {
+      const idx = parseInt(indexStr);
+      return html`<${ProgressBanner}
+        key=${taskId}
+        taskId=${taskId}
+        sseManager=${sseManager}
+        defaultTitle="Generating preview…"
+        onComplete=${(data) => {
+          if (data.result?.imageUrl) {
+            setOutfit(prev => {
+              const newParts = [...prev.parts];
+              if (newParts[idx]) {
+                newParts[idx] = { ...newParts[idx], previewImageUrl: data.result.imageUrl };
+              }
+              return { ...prev, parts: newParts };
+            });
+          }
+          dismissPreviewByIndex(idx);
+        }}
+        onCancelled=${() => dismissPreviewByIndex(idx)}
+        onCancel=${async () => {
+          await fetch('/generate/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId }),
+          });
+        }}
+        onError=${() => dismissPreviewByIndex(idx)}
+        onDismiss=${() => dismissPreviewByIndex(idx)}
+      />`;
+    })
+  ];
 }

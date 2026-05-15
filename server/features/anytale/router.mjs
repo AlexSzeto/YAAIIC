@@ -232,13 +232,12 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
     };
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    const result = await processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI);
-
-    const portraitUrl = result.imageUrl || null;
-    res.json({ portraitUrl });
+    res.status(202).json({ taskId });
+    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
+      .catch(err => console.error('Portrait generation task failed:', err));
   } catch (error) {
-    console.error('Error generating portrait for anytale character:', error);
-    res.status(500).json({ error: 'Failed to generate portrait', details: error.message });
+    console.error('Error starting portrait generation for anytale character:', error);
+    res.status(500).json({ error: 'Failed to start portrait generation', details: error.message });
   }
 });
 
@@ -280,14 +279,12 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     }
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    const result = await processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI);
-
-    const audioUrl = result.audioUrl || null;
-    const transcript = result.summary || null;
-    res.json({ audioUrl, transcript });
+    res.status(202).json({ taskId });
+    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
+      .catch(err => console.error('Voice generation task failed:', err));
   } catch (error) {
-    console.error('Error generating voice for anytale character:', error);
-    res.status(500).json({ error: 'Failed to generate voice', details: error.message });
+    console.error('Error starting voice generation for anytale character:', error);
+    res.status(500).json({ error: 'Failed to start voice generation', details: error.message });
   }
 });
 

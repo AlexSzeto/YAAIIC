@@ -21,6 +21,8 @@ import {
   emitProgressUpdate,
   emitTaskCompletion,
   emitTaskErrorByTaskId,
+  emitTaskCancelled,
+  deleteTask,
   resetProgressLog
 } from '../../core/sse.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
@@ -461,6 +463,13 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       updateTask(taskId, { currentStep });
     }
 
+    // Cancellation check after pre-generation tasks
+    if (getTask(taskId)?.cancelled) {
+      emitTaskCancelled(taskId);
+      setTimeout(() => deleteTask(taskId), 5000);
+      return;
+    }
+
     // -----------------------------------------------------------------------
     // CREATE OUTPUT FILE PATHS
     // -----------------------------------------------------------------------
@@ -599,6 +608,13 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
       console.log(`Workflow execution complete. Updated currentStep to ${currentStep}/${taskAfterWorkflow.totalSteps}`);
     }
 
+    // Cancellation check after ComfyUI workflow execution
+    if (getTask(taskId)?.cancelled) {
+      emitTaskCancelled(taskId);
+      setTimeout(() => deleteTask(taskId), 5000);
+      return;
+    }
+
     // -----------------------------------------------------------------------
     // POST-GENERATION TASKS
     // -----------------------------------------------------------------------
@@ -702,6 +718,13 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
           }
         }
       }
+    }
+
+    // Cancellation check after post-generation tasks
+    if (getTask(taskId)?.cancelled) {
+      emitTaskCancelled(taskId);
+      setTimeout(() => deleteTask(taskId), 5000);
+      return;
     }
 
     // -----------------------------------------------------------------------

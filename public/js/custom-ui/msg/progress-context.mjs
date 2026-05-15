@@ -47,6 +47,8 @@ export function ProgressProvider({ sseManager, children }) {
       sseManager,
       onComplete: options.onComplete,
       onError: options.onError,
+      onCancelled: options.onCancelled,
+      onCancel: options.onCancel,
       defaultTitle: options.defaultTitle,
       visible: true
     };
@@ -86,6 +88,8 @@ export function ProgressProvider({ sseManager, children }) {
               sseManager=${progress.sseManager}
               onComplete=${progress.onComplete}
               onError=${progress.onError}
+              onCancelled=${progress.onCancelled}
+              onCancel=${progress.onCancel}
               defaultTitle=${progress.defaultTitle}
               onDismiss=${() => hide(progress.taskId)}
             />
