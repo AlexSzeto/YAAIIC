@@ -122,6 +122,7 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect, d
 
     const instance = new autoComplete({
       selector: `#${inputId}`,
+      wrapper: false, // Disable built-in .autoComplete_wrapper div; InputFlex provides our own container
       placeHolder: placeholder || '',
       data: {
         src: suggestions || [],
@@ -172,6 +173,8 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect, d
                 event.keyCode === 40 ? instance.next() : instance.previous();
                 break;
               case 13: // Enter
+                
+                break;
               case 9: // Tab
                 if (instance.isOpen) {
                   event.preventDefault();
@@ -198,12 +201,28 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect, d
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestionsKey]);
 
-  // Handle Tab/Enter on the raw input when the dropdown is NOT open.
-  // When the dropdown IS open, the internal autoComplete keydown handler
-  // takes care of selecting the first/highlighted item.
+  // Handle Tab/Enter on the raw input.
+  // Enter always commits the raw typed value (ignoring autocomplete suggestions).
+  // Tab completes to the first matching suggestion when the dropdown is closed;
+  // when it is open the internal autoComplete keydown handler takes care of it.
   const handleKeyDown = useCallback((e) => {
     if (disabled) return;
-    if (e.key === 'Enter' || e.key === 'Tab') {
+
+    if (e.key === 'Enter') {
+      // Close any open dropdown, then commit the raw typed value as-is
+      const inst = instanceRef.current;
+      if (inst && inst.isOpen) inst.close();
+      const current = e.target.value.trim();
+      if (current) {
+        e.preventDefault();
+        e.target.value = '';
+        e.target.dispatchEvent(new Event('input', { bubbles: true }));
+        onSelectRef.current?.(current);
+      }
+      return;
+    }
+
+    if (e.key === 'Tab') {
       const inst = instanceRef.current;
       const isOpen = inst && inst.isOpen;
 
@@ -217,7 +236,6 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect, d
           s => s.toLowerCase().includes(current.toLowerCase())
         );
         e.preventDefault();
-        // Clear native input
         e.target.value = '';
         e.target.dispatchEvent(new Event('input', { bubbles: true }));
         onSelectRef.current?.(firstMatch ?? current);
@@ -225,19 +243,18 @@ export function AutocompleteInput({ label, placeholder, suggestions, onSelect, d
     }
   }, [disabled]);
 
-  // Confirm button handler — replicates the Tab/Enter commit logic
+  // Confirm button handler — commits the raw typed value as-is, same as Enter
   const handleConfirm = useCallback(() => {
     if (disabled) return;
     const el = document.getElementById(inputIdRef.current);
     if (!el) return;
     const current = el.value.trim();
     if (current) {
-      const firstMatch = suggestionsRef.current.find(
-        s => s.toLowerCase().includes(current.toLowerCase())
-      );
+      const inst = instanceRef.current;
+      if (inst && inst.isOpen) inst.close();
       el.value = '';
       el.dispatchEvent(new Event('input', { bubbles: true }));
-      onSelectRef.current?.(firstMatch ?? current);
+      onSelectRef.current?.(current);
     }
   }, [disabled]);
 

@@ -195,6 +195,7 @@ export function TagInput({
     try {
         acRef.current = new autoComplete({
         selector: `#${uniqueId}`,
+        wrapper: false, // Disable built-in .autoComplete_wrapper div; the textarea sits in its own container
         placeHolder: placeholder,
         query: () => {
           const [startPos, endPos] = getCurrentTagBounds(textarea);
