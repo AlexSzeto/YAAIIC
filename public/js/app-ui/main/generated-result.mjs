@@ -146,6 +146,7 @@ const InfoTextarea = styled('textarea')`
   font-family: ${() => currentTheme.value.typography.fontFamily};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   resize: vertical;
+  field-sizing: content;
 
   ${props => props.isEditing ? `
     border-color: ${currentTheme.value.colors.primary.background};

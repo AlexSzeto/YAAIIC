@@ -31,7 +31,7 @@ FormGroup.className = 'tag-input-form-group';
 
 const Label = styled('label')`
   margin-bottom: 5px;
-  color: ${() => currentTheme.value.colors.text.primary};
+  color: ${() => currentTheme.value.colors.text.secondary};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
 `;
@@ -42,6 +42,7 @@ const StyledTextarea = styled('textarea')`
   padding: 8px 12px;
   border-radius: 6px;
   resize: vertical;
+  field-sizing: content;
   min-height: 60px;
   border: ${() => currentTheme.value.border.width} ${() => currentTheme.value.border.style} ${() => currentTheme.value.colors.border.primary};
   background-color: ${() => currentTheme.value.colors.background.tertiary};

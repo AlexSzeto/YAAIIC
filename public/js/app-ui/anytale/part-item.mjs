@@ -189,7 +189,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   }, [editingAttrIndex, config.attributes, handleAttrsChange, toast]);
 
   // ── Rainbow color options generator ─────────────────────────────────────
-  const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'dark aqua', 'dark blonde', 'dark blue', 'dark brown', 'dark green', 'dark grey', 'dark orange', 'dark pink', 'dark purple', 'dark red', 'dark white', 'dark yellow', 'green', 'grey', 'light aqua', 'light blonde', 'light blue', 'light brown', 'light green', 'light grey', 'light orange', 'light pink', 'light purple', 'light red', 'light white', 'light yellow', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'];
+  const RAINBOW_COLORS = ['aqua', 'black', 'blonde', 'blue', 'brown', 'dark', 'dark aqua', 'dark blonde', 'dark blue', 'dark brown', 'dark green', 'dark grey', 'dark orange', 'dark pink', 'dark purple', 'dark red', 'dark white', 'dark yellow', 'gold', 'green', 'grey', 'light', 'light aqua', 'light blonde', 'light blue', 'light brown', 'light green', 'light grey', 'light orange', 'light pink', 'light purple', 'light red', 'light white', 'light yellow', 'orange', 'pink', 'purple', 'red', 'silver', 'white', 'yellow'];
 
   const handleRainbowAction = useCallback(async (attr, attrIndex) => {
     const keyword = await showTextPrompt('Color Keyword', config.name.toLowerCase(), 'e.g. eyeshadow');
@@ -226,7 +226,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
 
     const validTags = getAllTagNames().filter(tag => {
       const normalised = tag.replace(/_/g, ' ');
-      return (normalised === kw || normalised.endsWith(` ${kw}`)) && !coveredTags.has(normalised);
+      return (normalised.endsWith(`-${kw}`) || normalised.endsWith(` ${kw}`)) && !coveredTags.has(normalised);
     }).map(tag => tag.replace(/_/g, ' '));
 
     if (validTags.length === 0) {
