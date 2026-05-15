@@ -17,6 +17,7 @@ import { useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { getTagDefinition } from '../tags/tag-data.mjs';
 import { ImagePreview } from './image-preview.mjs';
@@ -67,7 +68,7 @@ AttributesColumn.className = 'char-part-attributes-column';
  * @param {Function} props.onPartChange    - Called with updated part
  * @param {boolean}  [props.isGenerating]  - True while preview generation is in-flight
  */
-export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerating = false }) {
+export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerating = false, onPreviewGenerate }) {
   const attributes = libraryConfig?.attributes || [];
 
   // Resolve attribute value from unified map.
@@ -83,11 +84,24 @@ export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerat
   return html`
     <${VerticalLayout} gap="small">
       <${TopRow}>
-        <${ImagePreview}
-          src=${part.previewImageUrl}
-          alt="Part preview"
-          isGenerating=${isGenerating}
-        />
+        <div style=${{ display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, flexShrink: 0 }}>
+          <${ImagePreview}
+            src=${part.previewImageUrl}
+            alt="Part preview"
+            isGenerating=${isGenerating}
+          />
+          ${onPreviewGenerate ? html`
+            <${Button}
+              variant="small-text"
+              color="primary"
+              icon="play"
+              onClick=${onPreviewGenerate}
+              disabled=${isGenerating}
+            >
+              ${isGenerating ? 'Generating...' : 'Preview'}
+            </${Button}>
+          ` : null}
+        </div>
 
         <${AttributesColumn}>
           ${attributes.map(attr => html`

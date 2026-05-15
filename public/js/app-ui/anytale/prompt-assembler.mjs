@@ -142,6 +142,11 @@ export function assemblePrompt(parts, activePage) {
     (activePage?.hiddenParts || []).map(h => h.toLowerCase())
   );
 
+  // Append the page-level tags, expanded to resolve {{type}} tokens
+  if (activePage && activePage.tags) {
+    tags.push(...expandPageTags(activePage.tags, enabledParts));
+  }
+
   for (const part of enabledParts) {
     const partName = (part.config?.name || '').toLowerCase();
     const types = Array.isArray(part.config?.type) ? part.config.type : [];
@@ -151,17 +156,16 @@ export function assemblePrompt(parts, activePage) {
     const allTypesHidden = types.length > 0 && types.every(t => hiddenSet.has(t.toLowerCase()));
     if (hiddenSet.has(partName) || allTypesHidden) continue;
 
-    // Baseline tags
-    tags.push(...splitTags(part.config.baseline));
-
     // Attribute values
     const attrValues = part.data.attributeValues || {};
-    tags.push(...collectValues(attrValues));
-  }
+    const attrValueList = collectValues(attrValues);
 
-  // Append the page-level tags, expanded to resolve {{type}} tokens
-  if (activePage && activePage.tags) {
-    tags.push(...expandPageTags(activePage.tags, enabledParts));
+    // Baseline tags: only used when all attribute values are empty/null
+    if (attrValueList.length === 0) {
+      tags.push(...splitTags(part.config.baseline));
+    }
+
+    tags.push(...attrValueList);
   }
 
   return deduplicate(tags).join(', ');
@@ -180,15 +184,19 @@ export function assemblePartPreviewPrompt(part) {
 
   const tags = [];
 
-  // Preview baseline tags (preview only)
+  // Preview baseline tags (always included for preview)
   tags.push(...splitTags(part.config.previewBaseline));
-
-  // Baseline tags
-  tags.push(...splitTags(part.config.baseline));
 
   // Attribute values
   const attrValues = part.data?.attributeValues || {};
-  tags.push(...collectValues(attrValues));
+  const attrValueList = collectValues(attrValues);
+
+  // Baseline tags: only used when all attribute values are empty/null
+  if (attrValueList.length === 0) {
+    tags.push(...splitTags(part.config.baseline));
+  }
+
+  tags.push(...attrValueList);
 
   return deduplicate(tags).join(', ');
 }

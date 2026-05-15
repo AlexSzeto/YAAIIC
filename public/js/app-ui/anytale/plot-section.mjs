@@ -66,8 +66,9 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onPageLockedChange]     – Called with updated lock array
  * @param {Function} [props.onPlotReset]              – Called when the plot is loaded, cleared, or deleted
  * @param {Function} [props.onImportHandlerReady]   – Called with the async import handler on mount; null on unmount
+ * @param {Function} [props.onPlotChange]            – Called with the updated plot whenever its content changes
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -92,6 +93,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   // ── Persist on every change ───────────────────────────────────────────────
   useEffect(() => {
     savePlotState(plot);
+    onPlotChange?.(plot);
   }, [plot]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────

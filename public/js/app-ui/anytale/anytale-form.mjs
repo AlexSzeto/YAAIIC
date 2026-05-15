@@ -116,6 +116,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
   const [previewPlotModalOpen, setPreviewPlotModalOpen] = useState(false);
+  // Live plot state mirrored from PlotSection for immediate prompt preview updates
+  const [livePlot, setLivePlot] = useState(() => loadPlot());
 
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
@@ -539,35 +541,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     return out;
   }, [libraryParts]);
 
-  // Preview prompt based on merged character+outfit parts (re-reads localStorage on render)
+  // Preview prompt for the Parts & Plot tab: assembled directly from parts state and live plot
   const previewPrompt = useMemo(() => {
-    const currentCharacter = loadCharacter();
-    const currentOutfit = loadOutfit();
-    const mergedMap = {};
-    for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
-    for (const p of (currentOutfit.parts || [])) mergedMap[p.partUid] = p;
-    const mergedParts = Object.values(mergedMap);
-    const promptParts = mergedParts.map(cp => {
-      const lib = libraryParts.find(p => p.uid === cp.partUid);
-      if (!lib) return null;
-      return {
-        config: {
-          name: lib.name, type: lib.type,
-          baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-          attributes: lib.attributes,
-        },
-        data: {
-          enabled: true,
-          attributeValues: cp.attributeValues,
-          previewImageUrl: cp.previewImageUrl || '',
-        },
-      };
-    }).filter(Boolean);
-    const currentPlot = loadPlot();
-    const plotPageCount = currentPlot.pages.length;
-    const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    return assemblePrompt(promptParts, activePage);
-  }, [libraryParts, activePlotPage, importRefreshKey]);
+    const plotPageCount = livePlot.pages.length;
+    const activePage = plotPageCount > 0 ? livePlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
+    return assemblePrompt(parts, activePage);
+  }, [parts, livePlot, activePlotPage]);
 
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
@@ -596,7 +575,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                   (item.config?.name && p.name === item.config.name)
                 )}
                 onLibraryChanged=${refreshLibraryParts}
+                onDeletedFromLibrary=${() => setParts(prev => prev.filter((_, j) => j !== i))}
                 previewBasePromptByType=${previewBasePromptByType}
+                onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
+                isGeneratingPreview=${!!generatingPreviews[i]}
               />
             `}
             getTitle=${(item) => {
@@ -624,7 +606,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
             createItem=${createDefaultPart}
             onChange=${setParts}
             addLabel="Add Part"
-            headerActions=${headerActions}
             deleteIcon="x"
             deleteLabel="Remove"
           />
@@ -648,6 +629,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
             onPageLockedChange=${setPageLocked}
             onPlotReset=${() => setPageLocked([])}
             onImportHandlerReady=${handlePlotImportReady}
+            onPlotChange=${setLivePlot}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>

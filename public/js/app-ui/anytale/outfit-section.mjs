@@ -361,7 +361,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
             <${DynamicList}
               title="Outfit Parts"
               items=${outfit.parts}
-              headerActions=${partHeaderActions}
               renderItem=${(item, i) => {
                 const libConfig = libraryParts.find(p => p.uid === item.partUid);
                 return html`
@@ -370,6 +369,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                     libraryConfig=${libConfig}
                     onPartChange=${(updated) => handlePartChange(i, updated)}
                     isGenerating=${!!generatingPreviews[i]}
+                    onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
                   />
                 `;
               }}

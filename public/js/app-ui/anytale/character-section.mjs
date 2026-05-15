@@ -602,6 +602,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
                     libraryConfig=${libConfig}
                     onPartChange=${(updated) => handlePartChange(i, updated)}
                     isGenerating=${!!generatingPreviews[i]}
+                    onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
                   />
                 `;
               }}
@@ -613,7 +614,6 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
               onChange=${(newParts) => setCharacter(prev => ({ ...prev, parts: newParts }))}
               addLabel="Add Part"
               hideAddItem
-              headerActions=${partHeaderActions}
             />
           </${VerticalLayout}>
 

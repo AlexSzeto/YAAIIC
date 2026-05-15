@@ -87,7 +87,7 @@ function getAttrOptions(optionsString) {
  *                                                     When a new type is added and previewBaseline is empty,
  *                                                     the matching entry is used to auto-fill previewBaseline.
  */
-export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibraryChanged, previewBasePromptByType = {} }) {
+export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibraryChanged, onDeletedFromLibrary, previewBasePromptByType = {}, onPreviewGenerate, isGeneratingPreview = false }) {
   const { config, data } = part;
   const toast = useToast();
 
@@ -181,7 +181,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     const autoName = current.name
       ? current.name
       : internalName.split(/[:/]/).pop().replace(/_/g, ' ')
-          .replace(/\b\w/g, c => c.toUpperCase());
+          .replace(/\b\w/g, c => c.toLowerCase());
 
     next[editingAttrIndex] = { ...current, name: autoName, options: tags.join(', ') };
     handleAttrsChange(next);
@@ -203,8 +203,8 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       return;
     }
     const next = [...config.attributes];
-    // Auto-fill name with "Color" if currently empty
-    const autoName = next[attrIndex].name || 'Color';
+    // Auto-fill name with "color" if currently empty
+    const autoName = next[attrIndex].name || 'color';
     next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
     handleAttrsChange(next);
   }, [config.attributes, config.name, handleAttrsChange, toast]);
@@ -234,8 +234,8 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       return;
     }
     const next = [...config.attributes];
-    // Auto-fill name with "Variation" if currently empty
-    const autoName = next[attrIndex].name || 'Variation';
+    // Auto-fill name with "style" if currently empty
+    const autoName = next[attrIndex].name || 'style';
     next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
     handleAttrsChange(next);
   }, [config.attributes, config.name, handleAttrsChange, toast]);
@@ -298,6 +298,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         throw new Error(err.error || `HTTP ${response.status}`);
       }
       if (onLibraryChanged) onLibraryChanged();
+      if (onDeletedFromLibrary) onDeletedFromLibrary();
       toast.success(`Deleted ${config.name} from library`);
     } catch (err) {
       console.error('[PartItem] Delete from library failed:', err);
@@ -305,7 +306,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     } finally {
       setIsDeleting(false);
     }
-  }, [config, toast]);
+  }, [config, onLibraryChanged, onDeletedFromLibrary, toast]);
 
   // Library save button is disabled when nothing has changed vs. library
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
@@ -320,7 +321,20 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     <${VerticalLayout} gap="small">
       <!-- Top row: preview image | name + type -->
       <${TopRow}>
-        <${ImagePreview} src=${data.previewImageUrl} alt="Part preview" />
+        <div style=${{ display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, flexShrink: 0 }}>
+          <${ImagePreview} src=${data.previewImageUrl} alt="Part preview" isGenerating=${isGeneratingPreview} />
+          ${onPreviewGenerate ? html`
+            <${Button}
+              variant="small-text"
+              color="primary"
+              icon="play"
+              onClick=${onPreviewGenerate}
+              disabled=${isGeneratingPreview}
+            >
+              ${isGeneratingPreview ? 'Generating...' : 'Preview'}
+            </${Button}>
+          ` : null}
+        </div>
         <${RightFields}>
           <${Input}
             label="Name"
@@ -418,7 +432,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <!-- Library Actions -->
       <${AttrRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
         <${Button}
-          variant="small-text"
+          variant="large-text"
           color="primary"
           icon="save"
           onClick=${handleSaveToLibrary}
@@ -427,7 +441,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
           ${isSaving ? 'Saving...' : (libraryPart ? 'Update' : 'Save')}
         </${Button}>
         <${Button}
-          variant="small-text"
+          variant="large-text"
           color="danger"
           icon="trash"
           onClick=${handleDeleteFromLibrary}
