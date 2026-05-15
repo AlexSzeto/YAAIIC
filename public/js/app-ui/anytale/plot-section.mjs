@@ -68,8 +68,9 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onImportHandlerReady]   – Called with the async import handler on mount; null on unmount
  * @param {Function} [props.onPlotChange]            – Called with the updated plot whenever its content changes
  * @param {number}   [props.refreshKey=0]            – Increment to force reload from localStorage
+ * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0 }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -117,6 +118,20 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       return { ...prev, pages: newPages };
     });
   }, []);
+
+  const applyPageTags = useCallback((pageIndex, tags) => {
+    setPlot(prev => {
+      const clamped = Math.min(Math.max(pageIndex, 0), prev.pages.length - 1);
+      const newPages = [...prev.pages];
+      newPages[clamped] = { ...newPages[clamped], tags: tags ?? '' };
+      return { ...prev, pages: newPages };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (onPageTagsUpdateReady) onPageTagsUpdateReady(applyPageTags);
+    return () => { if (onPageTagsUpdateReady) onPageTagsUpdateReady(null); };
+  }, [applyPageTags, onPageTagsUpdateReady]);
 
   const navigateTo = useCallback((index) => {
     const clamped = Math.min(Math.max(index, 0), plot.pages.length - 1);

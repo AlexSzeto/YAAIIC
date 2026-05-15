@@ -281,6 +281,7 @@ export function AnyTalePage() {
             activeTab=${importControls?.activeTab || 'parts-plot'}
             canImport=${!!importControls?.canImport}
             onImportPartsPlot=${importControls?.importPartsPlot}
+            onImportPlot=${importControls?.importPlot}
             onImportCharacter=${importControls?.importCharacter}
             onImportOutfit=${importControls?.importOutfit}
             onDelete=${() => handleDeleteImage(nav.currentItem)}

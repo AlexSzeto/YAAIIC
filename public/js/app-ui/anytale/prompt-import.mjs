@@ -189,3 +189,28 @@ export function processPromptImport({
     skipped,
   };
 }
+
+/**
+ * Remove prompt tags that match library parts; return the rest for plot page tags.
+ * @param {string[]} tags
+ * @param {Array} libraryParts
+ * @returns {{ pageTags: string, removedCount: number, remainingCount: number }}
+ */
+export function extractRemainingPageTags(tags, libraryParts) {
+  const remaining = [];
+  let removedCount = 0;
+
+  for (const rawTag of tags) {
+    if (findTagMatch(rawTag, libraryParts)) {
+      removedCount++;
+    } else {
+      remaining.push(rawTag.trim());
+    }
+  }
+
+  return {
+    pageTags: remaining.join(', '),
+    removedCount,
+    remainingCount: remaining.length,
+  };
+}

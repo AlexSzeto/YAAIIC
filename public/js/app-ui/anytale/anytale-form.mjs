@@ -17,8 +17,8 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
-import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, savePlotState, createBlankPlot } from './anytale-state.mjs';
-import { extractImagePrompt, parsePromptTags, processPromptImport } from './prompt-import.mjs';
+import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState } from './anytale-state.mjs';
+import { extractImagePrompt, parsePromptTags, processPromptImport, extractRemainingPageTags } from './prompt-import.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
@@ -132,7 +132,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
   // Plot import handler ref (kept for plot section delegation)
   const plotImportFnRef = useRef(null);
+  const plotPageTagsFnRef = useRef(null);
   const handlePlotImportReady = useCallback((fn) => { plotImportFnRef.current = fn; }, []);
+  const handlePlotPageTagsReady = useCallback((fn) => { plotPageTagsFnRef.current = fn; }, []);
 
   // ── Config for import routing ────────────────────────────────────────────
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
@@ -397,27 +399,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     return { latestLibrary, charTypes, outfitTypes };
   }, [libraryParts, recommendedCharacterPartTypes, recommendedOutfitPartTypes]);
 
-  const clearPartsPlotImportState = useCallback(() => {
-    setParts([]);
-    setActivePlotPage(0);
-    setPageLocked([]);
-    const blankPlot = createBlankPlot();
-    savePlotState(blankPlot);
-    setLivePlot(blankPlot);
-    setPlotRefreshKey(k => k + 1);
-  }, []);
-
-  const restorePlotFromImage = useCallback(async () => {
-    const plotMeta = currentItem?.plot;
-    if (plotMeta && (plotMeta.uid || plotMeta.name) && plotImportFnRef.current) {
-      await plotImportFnRef.current({
-        uid: plotMeta.uid,
-        name: plotMeta.name,
-        page: plotMeta.page ?? 0,
-      });
-    }
-  }, [currentItem]);
-
   const preparePromptImport = useCallback(() => {
     const rawPrompt = extractImagePrompt(currentItem);
     if (!rawPrompt) {
@@ -439,8 +420,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     if (!prepared) return;
 
     const result = await showDialog(
-      'Importing will clear and overwrite your current parts and plot data. Are you sure?',
-      'Confirm Import',
+      'Importing will clear and overwrite your current parts list. Plot data will be kept. Are you sure?',
+      'Confirm Import Parts',
       ['Import', 'Cancel']
     );
     if (result !== 'Import') return;
@@ -462,7 +443,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         return;
       }
 
-      clearPartsPlotImportState();
       setParts(importedParts);
 
       if (skipped.length > 0) {
@@ -470,12 +450,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       } else {
         toast.success(`Imported ${importedParts.length} part(s) from prompt tags`);
       }
-
-      await restorePlotFromImage();
     } finally {
       setIsImporting(false);
     }
-  }, [preparePromptImport, fetchImportConfigs, clearPartsPlotImportState, restorePlotFromImage, toast]);
+  }, [preparePromptImport, fetchImportConfigs, toast]);
 
   const handleImportCharacter = useCallback(async () => {
     const prepared = preparePromptImport();
@@ -563,6 +541,49 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     }
   }, [preparePromptImport, fetchImportConfigs, toast]);
 
+  const handleImportPlot = useCallback(async () => {
+    const prepared = preparePromptImport();
+    if (!prepared) return;
+
+    if (pageLocked[activePlotPage] === true) {
+      toast.info('The current plot page is locked — unlock it before importing page tags');
+      return;
+    }
+
+    const result = await showDialog(
+      'Importing will replace the current page tags with prompt tags that do not match any library part. Other plot and page fields will be kept. Are you sure?',
+      'Confirm Import Plot',
+      ['Import', 'Cancel']
+    );
+    if (result !== 'Import') return;
+
+    if (!plotPageTagsFnRef.current) {
+      toast.error('Plot editor is not ready');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const { latestLibrary } = await fetchImportConfigs();
+      const { pageTags, removedCount, remainingCount } = extractRemainingPageTags(
+        prepared.tags,
+        latestLibrary
+      );
+
+      plotPageTagsFnRef.current(activePlotPage, pageTags);
+
+      if (removedCount === 0) {
+        toast.success(`Updated page tags with ${remainingCount} tag(s) from the prompt`);
+      } else {
+        toast.success(
+          `Updated page tags: ${remainingCount} kept, ${removedCount} part-matched tag(s) removed`
+        );
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  }, [preparePromptImport, fetchImportConfigs, activePlotPage, pageLocked, toast]);
+
   const canImport = !!extractImagePrompt(currentItem) && !isGenerating && !isImporting;
   useEffect(() => {
     if (!onImportReady) return;
@@ -570,6 +591,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       activeTab,
       canImport,
       importPartsPlot: handleImportPartsPlot,
+      importPlot: handleImportPlot,
       importCharacter: handleImportCharacter,
       importOutfit: handleImportOutfit,
     });
@@ -578,6 +600,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     activeTab,
     canImport,
     handleImportPartsPlot,
+    handleImportPlot,
     handleImportCharacter,
     handleImportOutfit,
     onImportReady,
@@ -687,6 +710,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
             onPageLockedChange=${setPageLocked}
             onPlotReset=${() => setPageLocked([])}
             onImportHandlerReady=${handlePlotImportReady}
+            onPageTagsUpdateReady=${handlePlotPageTagsReady}
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
           />

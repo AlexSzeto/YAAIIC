@@ -321,7 +321,7 @@ export function Gallery({
       }
 
       // Get all matching data for client-side pagination
-      url.searchParams.set('limit', '320');
+      url.searchParams.set('limit', '1200');
 
       // Add folder filter if provided
       if (folder !== undefined) {

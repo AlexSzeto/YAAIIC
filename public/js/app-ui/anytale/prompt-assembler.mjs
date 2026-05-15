@@ -152,9 +152,9 @@ export function assemblePrompt(parts, activePage) {
     const types = Array.isArray(part.config?.type) ? part.config.type : [];
 
     // Skip if the part name is listed in hiddenParts
-    // Skip if ALL of the part's types are present in hiddenSet
-    const allTypesHidden = types.length > 0 && types.every(t => hiddenSet.has(t.toLowerCase()));
-    if (hiddenSet.has(partName) || allTypesHidden) continue;
+    // Skip if ANY of the part's types are present in hiddenSet
+    const anyTypeHidden = types.length > 0 && types.some(t => hiddenSet.has(t.toLowerCase()));
+    if (hiddenSet.has(partName) || anyTypeHidden) continue;
 
     // Attribute values
     const attrValues = part.data.attributeValues || {};

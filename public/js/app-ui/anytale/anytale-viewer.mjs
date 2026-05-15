@@ -107,6 +107,7 @@ SlideshowControls.className = 'slideshow-controls';
  * @param {string}     [props.activeTab='parts-plot'] – Active AnyTale form tab id
  * @param {boolean}    [props.canImport]              – Whether import actions are enabled
  * @param {Function}   [props.onImportPartsPlot]      – Parts & Plot import handler
+ * @param {Function}   [props.onImportPlot]           – Plot page tags import handler
  * @param {Function}   [props.onImportCharacter]      – Character parts import handler
  * @param {Function}   [props.onImportOutfit]         – Outfit parts import handler
  * @param {Function}   [props.onDelete]     – Called when delete icon is clicked
@@ -124,6 +125,7 @@ export function AnyTaleViewer({
   activeTab = 'parts-plot',
   canImport = false,
   onImportPartsPlot,
+  onImportPlot,
   onImportCharacter,
   onImportOutfit,
   onDelete,
@@ -200,9 +202,16 @@ export function AnyTaleViewer({
               <${Button}
                 variant="medium-icon"
                 icon="download"
-                tooltip="Import parts and plot"
+                tooltip="Import parts"
                 onClick=${onImportPartsPlot}
                 disabled=${!canImport || !onImportPartsPlot}
+              />
+              <${Button}
+                variant="medium-icon"
+                icon="book"
+                tooltip="Import plot page tags"
+                onClick=${onImportPlot}
+                disabled=${!canImport || !onImportPlot}
               />
             ` : null}
             ${activeTab === 'character-outfits' ? html`
