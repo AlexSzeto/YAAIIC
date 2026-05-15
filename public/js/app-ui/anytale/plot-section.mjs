@@ -10,7 +10,7 @@
  *   @param {Function} [onPageChange] – Called with the new active page index
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -67,13 +67,25 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onPlotReset]              – Called when the plot is loaded, cleared, or deleted
  * @param {Function} [props.onImportHandlerReady]   – Called with the async import handler on mount; null on unmount
  * @param {Function} [props.onPlotChange]            – Called with the updated plot whenever its content changes
+ * @param {number}   [props.refreshKey=0]            – Increment to force reload from localStorage
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0 }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
   // Tracks the last version saved to / loaded from the server for change detection.
   const [savedPlot, setSavedPlot] = useState(null);
+
+  const refreshKeyRef = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey === refreshKeyRef.current) return;
+    refreshKeyRef.current = refreshKey;
+    const loaded = loadPlot();
+    setPlot(loaded);
+    setSavedPlot(null);
+    onPageChange && onPageChange(0);
+    onPlotReset && onPlotReset();
+  }, [refreshKey, onPageChange, onPlotReset]);
   // Load-plot modal state
   const [loadModalOpen, setLoadModalOpen] = useState(false);
 

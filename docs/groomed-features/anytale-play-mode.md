@@ -4,6 +4,11 @@
 
 Ship a highly guided, tap-only **AnyTale play** experience on a dedicated page at **`/anytale.html`**, while renaming the existing editor surface to **`/anytale-editor.html`** and updating navigation so both coexist. Folder-style routes (`/anytale`, `/anytale-editor`) are intentionally deferred. Play mode consumes the same AnyTale data as the editor (`server/database/anytale-data.json` shape: `parts`, `plot`, `characters`; see samples in-repo and `public/js/app-ui/anytale/prompt-assembler.mjs` for prompt assembly). Persist a **single** session object in **`localStorage`** and **always restore** it on load; missing or invalid fields are healed with **defaults or fresh random** values (no schema-version work for now).
 
+
+## Items that needs addressing before Implementation
+- Queue strategy for images, chat, music and dialog - generate content ahead of current user position
+- Music generation/storage strategy (database format?) - want Jazz, Lofi, Funk as options. music player needs to gracefully fade in then fade out to loop infinitely
+
 ## Implementation details (design record)
 
 ### Routing and menu
