@@ -3,7 +3,8 @@
  *
  * Routes:
  *   GET    /anytale/parts         – returns array of all saved part configs
- *   PUT    /anytale/parts/:uid    – upsert a part config by uid
+ *   POST   /anytale/parts         – create a new part; server assigns UUID; returns { saved }
+ *   PUT    /anytale/parts/:uid    – update an existing part by uid
  *   DELETE /anytale/parts/:uid    – remove a part by uid
  *
  *   GET    /anytale/plot          – returns array of { uid, name } summaries
@@ -11,17 +12,19 @@
  *   DELETE /anytale/plot/:uid     – remove a plot by uid
  *
  *   GET    /anytale/characters             – returns array of all saved characters
- *   PUT    /anytale/characters/:uid        – upsert a character by uid
+ *   POST   /anytale/characters             – create a new character; server assigns UUID; returns { saved }
+ *   PUT    /anytale/characters/:uid        – update an existing character by uid
  *   DELETE /anytale/characters/:uid        – remove a character by uid
  *   POST   /anytale/characters/:uid/generate-portrait – generate a portrait image for a character
  *   POST   /anytale/characters/:uid/generate-voice    – generate voice audio for a character
  *
  *   GET    /anytale/outfits       – returns array of all saved outfits
- *   PUT    /anytale/outfits/:uid  – upsert an outfit; body is { uid, name, parts }
+ *   POST   /anytale/outfits       – create a new outfit; server assigns UUID; returns { saved }
+ *   PUT    /anytale/outfits/:uid  – update an existing outfit by uid
  *   DELETE /anytale/outfits/:uid  – delete an outfit
  */
 import { Router } from 'express';
-import { getAllParts, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, saveCharacter, removeCharacterByUid, getAllOutfits, saveOutfit, removeOutfitByUid } from './service.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
@@ -39,6 +42,20 @@ router.get('/anytale/parts', (_req, res) => {
   } catch (error) {
     console.error('Error listing anytale parts:', error);
     res.status(500).json({ error: 'Failed to list parts' });
+  }
+});
+
+router.post('/anytale/parts', (req, res) => {
+  try {
+    const config = req.body;
+    if (!config || typeof config !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a part config object' });
+    }
+    const saved = createPart(config);
+    res.status(201).json({ saved });
+  } catch (error) {
+    console.error('Error creating anytale part:', error);
+    res.status(500).json({ error: 'Failed to create part' });
   }
 });
 
@@ -130,6 +147,20 @@ router.get('/anytale/characters', (_req, res) => {
   } catch (error) {
     console.error('Error listing anytale characters:', error);
     res.status(500).json({ error: 'Failed to list characters' });
+  }
+});
+
+router.post('/anytale/characters', (req, res) => {
+  try {
+    const character = req.body;
+    if (!character || typeof character !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a character object' });
+    }
+    const saved = createCharacter(character);
+    res.status(201).json({ saved });
+  } catch (error) {
+    console.error('Error creating anytale character:', error);
+    res.status(500).json({ error: 'Failed to create character' });
   }
 });
 
@@ -299,6 +330,20 @@ router.get('/anytale/outfits', (_req, res) => {
   } catch (error) {
     console.error('Error listing anytale outfits:', error);
     res.status(500).json({ error: 'Failed to list outfits' });
+  }
+});
+
+router.post('/anytale/outfits', (req, res) => {
+  try {
+    const outfit = req.body;
+    if (!outfit || typeof outfit !== 'object') {
+      return res.status(400).json({ error: 'Request body must be an outfit object' });
+    }
+    const saved = createOutfit(outfit);
+    res.status(201).json({ saved });
+  } catch (error) {
+    console.error('Error creating anytale outfit:', error);
+    res.status(500).json({ error: 'Failed to create outfit' });
   }
 });
 

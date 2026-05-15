@@ -7,6 +7,7 @@
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
+import { useTooltip } from '../../custom-ui/overlays/tooltip.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
@@ -169,6 +170,8 @@ export function AnyTaleViewer({
     `;
   }
 
+  const tooltip = useTooltip();
+
   const item = currentItem || items[currentIndex];
   const imageUrl = item?.url || item?.imageUrl || '';
 
@@ -185,6 +188,8 @@ export function AnyTaleViewer({
             key=${imageUrl}
             src=${imageUrl}
             alt=${item?.name || 'Generated image'}
+            onMouseEnter=${(e) => { if (item?.prompt) tooltip.show(item.prompt, e.clientX, e.clientY); }}
+            onMouseLeave=${() => tooltip.hide()}
           />
         </${ImageWrapper}>
         <${NavRow}>

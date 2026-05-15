@@ -132,7 +132,7 @@
         {
           "model": "ssfdre38/gemma4-nano:latest",
           "imagePath": "",
-          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA clear and natural female voice, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nOutput the vocal characteristics as prose ONLY.",
+          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA female voice, clear and natural, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nALWAYS start the output with either \"A female voice\" or \"A male voice\". Output the vocal characteristics as prose ONLY.",
           "to": "vocalProfile"
         },
         {

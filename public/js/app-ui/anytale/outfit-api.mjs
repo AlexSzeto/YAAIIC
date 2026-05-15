@@ -15,10 +15,28 @@ export async function fetchOutfitList() {
 }
 
 /**
- * Save (upsert) a full outfit object.
+ * Create a new outfit. The server assigns a UUID.
+ * @param {Object} outfit
+ * @returns {Promise<{saved: Object}>}
+ */
+export async function createOutfit(outfit) {
+  const response = await fetch('/anytale/outfits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(outfit),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to create outfit: HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Save (update) a full outfit object by its existing uid.
  * @param {string} uid
  * @param {Object} outfit
- * @returns {Promise<Object>} The saved outfit
+ * @returns {Promise<{saved: Object}>} The saved outfit
  */
 export async function saveOutfit(uid, outfit) {
   const response = await fetch(`/anytale/outfits/${encodeURIComponent(uid)}`, {

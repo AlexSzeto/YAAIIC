@@ -15,10 +15,28 @@ export async function fetchCharacterList() {
 }
 
 /**
- * Save (upsert) a full character object.
+ * Create a new character. The server assigns a UUID.
+ * @param {Object} character
+ * @returns {Promise<{saved: Object}>}
+ */
+export async function createCharacter(character) {
+  const response = await fetch('/anytale/characters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(character),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to create character: HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Save (update) a full character object by its existing uid.
  * @param {string} uid
  * @param {Object} character
- * @returns {Promise<Object>} The saved character
+ * @returns {Promise<{saved: Object}>} The saved character
  */
 export async function saveCharacter(uid, character) {
   const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}`, {

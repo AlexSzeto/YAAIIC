@@ -27,7 +27,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { loadCharacter, saveCharacterState, createBlankCharacter } from './anytale-state.mjs';
-import { fetchCharacterList, saveCharacter, deleteCharacter, generateCharacterPortrait, generateCharacterVoice } from './character-api.mjs';
+import { fetchCharacterList, createCharacter, saveCharacter, deleteCharacter, generateCharacterPortrait, generateCharacterVoice } from './character-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 import { ImagePreview } from './image-preview.mjs';
@@ -378,15 +378,16 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   const hasChanges = !isInLibrary || !charactersEqual(character, libraryCharacter);
 
   const handleSave = useCallback(async () => {
-    let uid = character.uid;
-    if (!uid) {
-      // Auto-generate uid from name
-      uid = (character.name || 'character')
-        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ||
-        `character-${Date.now()}`;
-    }
     try {
-      const { saved } = await saveCharacter(uid, { ...character, uid });
+      let saved;
+      if (character.uid) {
+        // Update existing entry by its stable UUID
+        ({ saved } = await saveCharacter(character.uid, character));
+      } else {
+        // Create new – server assigns the UUID
+        ({ saved } = await createCharacter(character));
+      }
+      const uid = saved.uid;
       const savedChar = { ...character, uid };
       setCharacter(prev => ({ ...prev, uid }));
       setSavedCharacterUid(uid);

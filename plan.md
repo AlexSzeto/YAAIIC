@@ -1,9 +1,9 @@
 # Bugs
-- Looping videos workflows go above 100% progress
 
 ## Implementation Details
 
 # Future Features
+- Audit client codebase and migrate all hover actions to use `TooltipProvider`.
 - Cancel generation (replace generation button)
 - Progress for one shot generations (ones that doesn't get stored in media DB)
 - Settings page (for updating server config.json)

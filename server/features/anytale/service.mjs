@@ -1,10 +1,16 @@
 /**
  * AnyTale Service – Business logic for the parts library, plot data, and characters.
  */
+import { randomUUID } from 'crypto';
 import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit } from './repository.mjs';
 
 export function getAllParts() {
   return listParts();
+}
+
+export function createPart(config) {
+  const uid = randomUUID();
+  return upsertPart(uid, { ...config, uid });
 }
 
 export function savePart(uid, config) {
@@ -58,6 +64,11 @@ export function getAllCharacters() {
   return listCharacters();
 }
 
+export function createCharacter(character) {
+  const uid = randomUUID();
+  return upsertCharacter(uid, { ...character, uid });
+}
+
 export function saveCharacter(uid, character) {
   if (!uid || typeof uid !== 'string') {
     const err = new Error('uid is required and must be a string');
@@ -76,6 +87,11 @@ export function removeCharacterByUid(uid) {
 
 export function getAllOutfits() {
   return listOutfits();
+}
+
+export function createOutfit(outfit) {
+  const uid = randomUUID();
+  return upsertOutfit(uid, { ...outfit, uid });
 }
 
 export function saveOutfit(uid, outfit) {

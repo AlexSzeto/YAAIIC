@@ -25,6 +25,7 @@ import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
+import { TooltipProvider } from '../../custom-ui/overlays/tooltip.mjs';
 import { AnyTaleViewer } from './anytale-viewer.mjs';
 import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
@@ -232,6 +233,7 @@ export function AnyTalePage() {
   }, [workflow]);
 
   return html`
+    <${TooltipProvider}>
     <${VerticalLayout}>
       <${AppHeader}>
         <${H1}>AnyTale Editor<//>
@@ -324,5 +326,6 @@ export function AnyTalePage() {
         fileTypeFilter=${['image']}
       />
     </${VerticalLayout}>
+    </${TooltipProvider}>
   `;
 }

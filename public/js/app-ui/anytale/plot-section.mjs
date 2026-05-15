@@ -89,6 +89,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   }, [refreshKey, onPageChange, onPlotReset]);
   // Load-plot modal state
   const [loadModalOpen, setLoadModalOpen] = useState(false);
+  // All library parts — used for hidden-parts autocomplete
+  const [libraryParts, setLibraryParts] = useState([]);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -101,6 +103,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     fetchPlotList()
       .then(list => { if (Array.isArray(list)) setPlotList(list); })
       .catch(err => console.error('[PlotSection] Failed to fetch plot list:', err));
+  }, []);
+
+  // ── Load all library parts for hidden-parts autocomplete ─────────────────
+  useEffect(() => {
+    fetch('/anytale/parts')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
+      .catch(err => console.error('[PlotSection] Failed to fetch library parts:', err));
   }, []);
 
   // ── Persist on every change ───────────────────────────────────────────────
@@ -264,11 +274,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   // ── Part modifier helpers are handled inline by DynamicList ─────────────
 
-  // Build autocomplete suggestions from all part names and types
+  // Build autocomplete suggestions from all library part names and types
   const hiddenPartsSuggestions = useMemo(() => {
     const seen = new Set();
     const out = [];
-    for (const p of parts) {
+    // Use all library parts for a complete suggestion list
+    const allParts = libraryParts.length > 0 ? libraryParts : parts;
+    for (const p of allParts) {
       const types = Array.isArray(p.config?.type) ? p.config.type : [];
       for (const val of [p.config?.name, ...types]) {
         if (val && val.trim() && !seen.has(val.toLowerCase())) {
@@ -278,7 +290,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       }
     }
     return out;
-  }, [parts]);
+  }, [libraryParts, parts]);
 
   const progressionSectionsSuggestions = useMemo(() => {
     const seen = new Set();

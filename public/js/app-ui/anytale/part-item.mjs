@@ -218,7 +218,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     generateCategorizedOptions(attrIndex, 'Pattern Keyword', 'e.g. shirt', COMMON_PATTERNS, 'pattern');
   }, [config.attributes, config.name, handleAttrsChange, toast]);
 
-  const BANNED_VARIATION_KEYWORDS = ['mismatched', 'no', 'removing', 'adjusting', 'torn', 'see-through', 'layered', 'impossible', 'gradient', 'two-tone', 'multicolored', 'unworn', 'wet']
+  const BANNED_VARIATION_KEYWORDS = ['holding', 'holding unworn', 'mismatched', 'no', 'removing', 'adjusting', 'torn', 'see-through', 'layered', 'impossible', 'gradient', 'two-tone', 'multicolored', 'unworn', 'wet']
 
   const handleVariationsAction = useCallback(async (attr, attrIndex) => {
     const keyword = await showTextPrompt('Leftover Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
@@ -267,19 +267,36 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       toast.info('Part must have a name before saving');
       return;
     }
-    const uid = toPartUid(config.name);
     setIsSaving(true);
     try {
-      const response = await fetch(`/anytale/parts/${uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...config, uid }),
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${response.status}`);
+      let savedUid;
+      if (config.uid) {
+        // Update existing entry by its stable UUID
+        const response = await fetch(`/anytale/parts/${config.uid}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        savedUid = config.uid;
+      } else {
+        // Create new – server assigns the UUID
+        const response = await fetch('/anytale/parts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        const { saved } = await response.json();
+        savedUid = saved.uid;
       }
-      onChange({ ...part, config: { ...config, uid } });
+      onChange({ ...part, config: { ...config, uid: savedUid } });
       if (onLibraryChanged) onLibraryChanged();
       toast.success(`Saved ${config.name} to library`);
     } catch (err) {

@@ -27,7 +27,7 @@ import { H2, H3, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
-import { fetchOutfitList, saveOutfit, deleteOutfit } from './outfit-api.mjs';
+import { fetchOutfitList, createOutfit, saveOutfit, deleteOutfit } from './outfit-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
@@ -251,15 +251,16 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const hasChanges = !isInLibrary || !outfitsEqual(outfit, libraryOutfit);
 
   const handleSave = useCallback(async () => {
-    let uid = outfit.uid;
-    if (!uid) {
-      // Auto-generate uid from name
-      uid = (outfit.name || 'outfit')
-        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ||
-        `outfit-${Date.now()}`;
-    }
     try {
-      await saveOutfit(uid, { ...outfit, uid });
+      let saved;
+      if (outfit.uid) {
+        // Update existing entry by its stable UUID
+        ({ saved } = await saveOutfit(outfit.uid, outfit));
+      } else {
+        // Create new – server assigns the UUID
+        ({ saved } = await createOutfit(outfit));
+      }
+      const uid = saved.uid;
       const savedOutfit = { ...outfit, uid };
       setOutfit(prev => ({ ...prev, uid }));
       setLibraryOutfit(savedOutfit);
