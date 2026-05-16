@@ -84,6 +84,8 @@ const ICON_MAP = {
   'x-circle': 'cancel',
   'warning': 'warning',
   'help-circle': 'help',
+  'radio-circle-marked': 'radio_button_checked',
+  'radio-circle': 'radio_button_unchecked',
   
   // Files and folders
   'folder-open': 'folder_open',
@@ -167,6 +169,8 @@ const ICON_MAP = {
   'crop': 'crop',
   'repeat': 'repeat',
   'drag-handle': 'drag_indicator',
+  'expand-right': 'expand_content',
+  'collapse-right': 'collapse_content',
 
 };
 

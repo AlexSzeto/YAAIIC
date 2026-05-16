@@ -137,6 +137,7 @@ export function assemblePrompt(parts, activePage, slotVisibility) {
 
   const visibleParts = (parts || []).filter(p => {
     if (!p.config) return false;
+    if (p.data?.enabled === false) return false;
     if (!slotVisibility) return true;
     const types = Array.isArray(p.config.type) ? p.config.type : [];
     return types.some(t => slotVisibility.get(t.trim().toLowerCase()) === true);

@@ -141,7 +141,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
   const [previewBasePromptByType, setPreviewBasePromptByType] = useState({});
-  const rulesRef = useRef([]);
+  const [parsedRules, setParsedRules] = useState([]);
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -150,7 +150,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         if (Array.isArray(data.recommendedCharacterPartTypes)) setRecommendedCharacterPartTypes(data.recommendedCharacterPartTypes);
         if (Array.isArray(data.recommendedOutfitPartTypes)) setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
         if (data.previewBasePromptByType && typeof data.previewBasePromptByType === 'object') setPreviewBasePromptByType(data.previewBasePromptByType);
-        rulesRef.current = parseRules(typeof data.slotRules === 'string' ? data.slotRules : '');
+        setParsedRules(parseRules(typeof data.slotRules === 'string' ? data.slotRules : ''));
       })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
   }, []);
@@ -223,9 +223,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   }, []);
 
   // ── Slot visibility helper ────────────────────────────────────────────────
-  const computeSlotVisibility = useCallback((plotPages, pageIndex) => {
-    return applyRules(resolveSlotStatuses(libraryParts, plotPages, pageIndex), rulesRef.current);
-  }, [libraryParts]);
+  const computeSlotVisibility = useCallback((activeParts, plotPages, pageIndex) => {
+    return applyRules(resolveSlotStatuses(activeParts, plotPages, pageIndex), parsedRules);
+  }, [parsedRules]);
 
   // ── Generate: uses local parts state and plot from localStorage ────────────
   const handleGenerate = useCallback(() => {
@@ -239,7 +239,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const slotVisibility = computeSlotVisibility(currentPlot.pages, activePlotPage);
+    const enabledParts = parts.filter(p => p.data?.enabled !== false);
+    const slotVisibility = computeSlotVisibility(enabledParts, currentPlot.pages, activePlotPage);
     const prompt = assemblePrompt(parts, activePage, slotVisibility);
 
     const partsData = {};
@@ -300,7 +301,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       }
     }
 
-    const slotVisibility = computeSlotVisibility(plotPages, 0);
+    const slotVisibility = computeSlotVisibility(promptParts, plotPages, 0);
     const prompt = assemblePrompt(promptParts, activePage, slotVisibility);
 
     const partsData = {};
@@ -659,7 +660,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const previewPrompt = useMemo(() => {
     const plotPageCount = livePlot.pages.length;
     const activePage = plotPageCount > 0 ? livePlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const slotVisibility = computeSlotVisibility(livePlot.pages, activePlotPage);
+    const enabledParts = parts.filter(p => p.data?.enabled !== false);
+    const slotVisibility = computeSlotVisibility(enabledParts, livePlot.pages, activePlotPage);
     return assemblePrompt(parts, activePage, slotVisibility);
   }, [parts, livePlot, activePlotPage, computeSlotVisibility]);
 
@@ -716,6 +718,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
               return isModified ? `${base} *` : base;
             }}
+            getEnabled=${(item) => item.data?.enabled ?? true}
+            onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
             createItem=${createDefaultPart}
             onChange=${setParts}
             addLabel="Add Part"

@@ -22,7 +22,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
-import { H2, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, H3, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 
@@ -53,6 +53,14 @@ const NavRow = styled('div')`
   flex-wrap: wrap;
 `;
 NavRow.className = 'plot-nav-row';
+
+const ActionChipRow = styled('div')`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+  align-items: center;
+`;
+ActionChipRow.className = 'plot-action-chip-row';
 
 // ============================================================================
 // Component
@@ -307,23 +315,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('covering');
 
-  // Part name + type suggestions for the Progression disabled-parts chip input
-  const progressionPartSuggestions = useMemo(() => {
-    const seen = new Set();
-    const out = [];
-    for (const p of libraryParts) {
-      const types = Array.isArray(p.config?.type) ? p.config.type : Array.isArray(p.type) ? p.type : [];
-      const name = p.config?.name || p.name || '';
-      for (const val of [name, ...types]) {
-        if (val && val.trim() && !seen.has(val.toLowerCase())) {
-          seen.add(val.toLowerCase());
-          out.push(val.trim());
-        }
-      }
-    }
-    return out;
-  }, [libraryParts]);
-
   const progressionSectionsSuggestions = useMemo(() => {
     const seen = new Set();
     const out = [];
@@ -454,6 +445,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
 
         <${VerticalLayout} gap="small">
+          <${H3}>Actions</${H3}>
           <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
             <${Select}
               label="Slot"
@@ -473,7 +465,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               onChange=${(e) => setSelectedStatus(e.target.value)}
             />
             <${Button}
-              variant="small-text"
+              variant="medium-icon"
+              icon="plus"
+              title="Add action"
               disabled=${isCurrentPageLocked || slotOptions.length === 0}
               onClick=${() => {
                 const slot = selectedSlot || slotOptions[0] || '';
@@ -481,13 +475,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
                 const actions = [...(currentPage.actions || []), { slot, status: selectedStatus }];
                 updatePage(currentPageIndex, { ...currentPage, actions });
               }}
-            >Add</${Button}>
+            />
           </${HorizontalLayout}>
-          <${HorizontalLayout} gap="small" style="flex-wrap: wrap; align-items: center;">
+          <${ActionChipRow}>
             ${(currentPage.actions || []).map((action, i) => html`
               <${Button}
                 key=${i}
                 variant="chip"
+                color="primary"
                 icon="x"
                 disabled=${isCurrentPageLocked}
                 onClick=${() => {
@@ -496,7 +491,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
                 }}
               >${action.slot} → ${action.status}</${Button}>
             `)}
-          </${HorizontalLayout}>
+          </${ActionChipRow}>
         </${VerticalLayout}>
 
         <!-- Navigation row -->
@@ -510,8 +505,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             onLast=${() => navigateTo(pageCount - 1)}
             showFirstLast=${true}
           />
-          <${Button} variant="medium-icon" icon="plus" title="Add page" onClick=${handleAddPage} />
-          <${Button} variant="medium-icon" icon="trash" title="Delete page" onClick=${handleDeletePage} disabled=${pageCount <= 1} />
+          <${Button} variant="small-text" icon="plus" color="danger" onClick=${handleAddPage}>Add Page</${Button}>
+          <${Button} variant="small-text" icon="trash" color="danger" onClick=${handleDeletePage} disabled=${pageCount <= 1}>Delete Page</${Button}>
           <${Button}
             variant="small-text"
             icon="unlock"
@@ -536,13 +531,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           suggestions=${progressionSectionsSuggestions}
           values=${plot.progressionSections || []}
           onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionSections: newValues }))}
-        />
-        <${ChipAutocompleteInput}
-          label="Disabled Parts"
-          placeholder="Type a part name or type to disable..."
-          suggestions=${progressionPartSuggestions}
-          values=${plot.progressionDisabledParts || []}
-          onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionDisabledParts: newValues }))}
         />
       </${VerticalLayout}>
 

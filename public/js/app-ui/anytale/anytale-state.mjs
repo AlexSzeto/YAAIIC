@@ -14,6 +14,7 @@
  *       attributes: Array<{ name: string, options: string }>
  *     },
  *     data: {
+ *       enabled: boolean,
  *       attributeValues: { [attributeName: string]: string },
  *       previewImageUrl: string
  *     }
@@ -80,6 +81,7 @@ export function createDefaultPart() {
       attributes: [],
     },
     data: {
+      enabled: true,
       attributeValues: {},
       previewImageUrl: '',
     },
@@ -108,9 +110,8 @@ export function createBlankPlot() {
     name: '',
     section: '',
     description: '',
-    pages: [{ tags: '', dialogPrompt: '', actions: [] }],
+    pages: [{ tags: '', dialogPrompt: '', actions: [], requirements: [] }],
     progressionSections: [],
-    progressionDisabledParts: [],
   };
 }
 
@@ -133,6 +134,7 @@ export function loadPlot() {
       ...p,
       dialogPrompt: typeof p.dialogPrompt === 'string' ? p.dialogPrompt : '',
       actions: Array.isArray(p.actions) ? p.actions : [],
+      requirements: Array.isArray(p.requirements) ? p.requirements : [],
     }));
     return {
       uid: parsed.uid ?? '',
@@ -141,7 +143,6 @@ export function loadPlot() {
       description: parsed.description ?? '',
       pages,
       progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
-      progressionDisabledParts: Array.isArray(parsed.progressionDisabledParts) ? parsed.progressionDisabledParts : [],
     };
   } catch {
     return createBlankPlot();

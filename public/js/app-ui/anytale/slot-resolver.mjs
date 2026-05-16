@@ -12,23 +12,26 @@
  *     → Map<string, boolean>
  */
 
+const DEBUG_RULES = true;
+
 // ── resolveSlotStatuses ────────────────────────────────────────────────────
 
 /**
  * Build the ground-truth slot status map by:
- *  1. Collecting all unique types from libraryParts as available slots (status: 'covering').
- *  2. Replaying page actions from page 0 through currentPageIndex.
+ *  1. All slots start as 'removed'.
+ *  2. Each type on every active part is set to 'covering' (first occurrence wins).
+ *  3. Page actions are replayed from page 0 through currentPageIndex.
  *
- * @param {Array}  libraryParts     – All parts from the library ({ config: { type: string[] } } or { type: string[] })
+ * @param {Array}  activeParts      – Parts entering the slot system ({ config: { type: string[] } } or { type: string[] })
  * @param {Array}  plotPages        – Array of page objects ({ actions: [{ slot, status }] })
  * @param {number} currentPageIndex – Inclusive upper bound for action replay
  * @returns {Map<string, string>}   – Keys are lowercase slot strings; values are status strings
  */
-export function resolveSlotStatuses(libraryParts, plotPages, currentPageIndex) {
+export function resolveSlotStatuses(activeParts, plotPages, currentPageIndex) {
   const statuses = new Map();
 
-  // Build slot pool from all library parts
-  for (const part of (libraryParts || [])) {
+  // Slots present in active parts start as 'covering'; all others remain absent (treated as 'removed')
+  for (const part of (activeParts || [])) {
     const types = Array.isArray(part.config?.type) ? part.config.type
       : Array.isArray(part.type) ? part.type : [];
     for (const t of types) {
@@ -167,8 +170,11 @@ function evaluateConditions(conditions, slotStatuses, boundSlot) {
     const slotKey = cond.slot === '{slot}' ? boundSlot : cond.slot;
     const actual = slotStatuses.get(slotKey) ?? 'removed';
     const matches = actual === cond.status;
-    if (cond.operator === 'is' && !matches) return false;
-    if (cond.operator === 'is not' && matches) return false;
+    const pass = cond.operator === 'is' ? matches : !matches;
+    if (DEBUG_RULES) {
+      console.log(`  condition: <${slotKey}> ${cond.operator} [${cond.status}] → actual=[${actual}] → ${pass ? 'PASS' : 'FAIL'}`);
+    }
+    if (!pass) return false;
   }
   return true;
 }
@@ -191,18 +197,47 @@ export function applyRules(slotStatuses, rules) {
     visibility.set(slot, true);
   }
 
+  if (DEBUG_RULES) {
+    console.group('[slot-resolver] applyRules');
+    console.log('slot statuses:', Object.fromEntries(slotStatuses));
+    console.log('rules count:', (rules || []).length);
+  }
+
   for (const rule of (rules || [])) {
     if (rule.type === 'standard') {
-      if (!evaluateConditions(rule.conditions, slotStatuses)) continue;
-      if (visibility.has(rule.target)) {
-        visibility.set(rule.target, rule.action === 'show');
+      if (DEBUG_RULES) console.group(`standard rule: ${rule.action} <${rule.target}>`);
+      const passed = evaluateConditions(rule.conditions, slotStatuses);
+      if (passed) {
+        if (visibility.has(rule.target)) {
+          visibility.set(rule.target, rule.action === 'show');
+          if (DEBUG_RULES) console.log(`  → ${rule.action} <${rule.target}>`);
+        } else {
+          if (DEBUG_RULES) console.log(`  → target <${rule.target}> not in visibility map, ignored`);
+        }
+      } else {
+        if (DEBUG_RULES) console.log('  → conditions failed, skipped');
       }
+      if (DEBUG_RULES) console.groupEnd();
     } else if (rule.type === 'forEach') {
+      if (DEBUG_RULES) console.group(`forEach rule: ${rule.action} {slot}`);
       for (const slot of visibility.keys()) {
-        if (!evaluateConditions(rule.conditions, slotStatuses, slot)) continue;
-        visibility.set(slot, rule.action === 'show');
+        if (DEBUG_RULES) console.group(`  iterating slot: <${slot}>`);
+        const passed = evaluateConditions(rule.conditions, slotStatuses, slot);
+        if (passed) {
+          visibility.set(slot, rule.action === 'show');
+          if (DEBUG_RULES) console.log(`  → ${rule.action} <${slot}>`);
+        } else {
+          if (DEBUG_RULES) console.log('  → conditions failed, skipped');
+        }
+        if (DEBUG_RULES) console.groupEnd();
       }
+      if (DEBUG_RULES) console.groupEnd();
     }
+  }
+
+  if (DEBUG_RULES) {
+    console.log('final visibility:', Object.fromEntries(visibility));
+    console.groupEnd();
   }
 
   return visibility;

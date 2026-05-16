@@ -19,6 +19,8 @@ import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { extractWordAtCursor, insertTagAtCursorPos, replaceTagInPrompt } from './tag-insertion-util.mjs';
 import { isTagDefinitionsLoaded } from './tag-data.mjs';
 
+const DEBUG_TAGINPUT = false;
+
 // Global counter to guarantee unique IDs across all TagInput instances
 let instanceCounter = 0;
 
@@ -133,27 +135,27 @@ export function TagInput({
   // Initialise autoComplete.js once the <textarea> is in the DOM
   useEffect(() => {
     const idx = styleIndexRef.current;
-    console.log(`[TagInput:${uniqueId}] useEffect mount — styleIndex=${idx}`);
+    if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] useEffect mount — styleIndex=${idx}`);
 
     const textarea = document.getElementById(uniqueId);
     if (!textarea) {
-      console.warn(`[TagInput:${uniqueId}] textarea element not found in DOM`);
+      if (DEBUG_TAGINPUT) console.warn(`[TagInput:${uniqueId}] textarea element not found in DOM`);
       return;
     }
     textareaRef.current = textarea;
-    console.log(`[TagInput:${uniqueId}] textarea found:`, textarea);
+    if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] textarea found:`, textarea);
 
     let cancelled = false;
 
     loadTags().then(loadedTags => {
       if (cancelled) {
-        console.log(`[TagInput:${uniqueId}] component unmounted before tags loaded — skipping init`);
+        if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] component unmounted before tags loaded — skipping init`);
         return;
       }
       const tags = loadedTags.length > 0 ? loadedTags : getTags();
-      console.log(`[TagInput:${uniqueId}] tags loaded: ${tags.length}`);
+      if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] tags loaded: ${tags.length}`);
       if (tags.length === 0) {
-        console.warn(`[TagInput:${uniqueId}] no tags available — autocomplete not initialised`);
+        if (DEBUG_TAGINPUT) console.warn(`[TagInput:${uniqueId}] no tags available — autocomplete not initialised`);
         return;
       }
       initAutoComplete(textarea, tags, idx);
@@ -168,7 +170,7 @@ export function TagInput({
       // element to match — otherwise the autoComplete.js internal instance counter
       // diverges from ours and styles never apply.
       const listId = `autoComplete_list_${idx}`;
-      console.log(`[TagInput:${uniqueId}] injecting styles with idx=${idx}, listId=${listId}`);
+      if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] injecting styles with idx=${idx}, listId=${listId}`);
       injectAutocompleteStyles(idx);
 
       // Tab handler — stored in ref so sync cleanup can remove it
@@ -189,8 +191,8 @@ export function TagInput({
         setShowTagPanel(true);
       });
 
-    console.log(`[TagInput:${uniqueId}] constructing autoComplete — selector=#${uniqueId}, listId=${listId}`);
-    console.log(`[TagInput:${uniqueId}] typeof autoComplete =`, typeof autoComplete);
+    if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] constructing autoComplete — selector=#${uniqueId}, listId=${listId}`);
+    if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] typeof autoComplete =`, typeof autoComplete);
 
     try {
         acRef.current = new autoComplete({
@@ -200,7 +202,7 @@ export function TagInput({
         query: () => {
           const [startPos, endPos] = getCurrentTagBounds(textarea);
           const q = textarea.value.substring(startPos, endPos).trim();
-          console.log(`[TagInput:${uniqueId}] query() → "${q}"`);
+          if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] query() → "${q}"`);
           return q;
         },
         data: { src: tags, cache: true },
@@ -236,14 +238,14 @@ export function TagInput({
               }
             },
             open: () => {
-              console.log(`[TagInput:${uniqueId}] autocomplete list opened`);
+              if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] autocomplete list opened`);
               if (textarea.getAttribute('autocomplete') === 'off') {
                 acRef.current.close();
                 return;
               }
               const caretPos = getCaretCoordinates(textarea, textarea.selectionStart);
               const list = acRef.current.list;
-              console.log(`[TagInput:${uniqueId}] list element:`, list, `listId in DOM:`, list?.id);
+              if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] list element:`, list, `listId in DOM:`, list?.id);
               const rect = textarea.getBoundingClientRect();
               list.style.position = 'fixed';
               list.style.left = (rect.left + caretPos.left) + 'px';
@@ -251,7 +253,7 @@ export function TagInput({
               list.style.zIndex = '20000';
             },
             selection: (event) => {
-              console.log(`[TagInput:${uniqueId}] selection:`, event.detail.selection.value);
+              if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] selection:`, event.detail.selection.value);
               if (textarea.getAttribute('autocomplete') === 'off') return;
               const selection = event.detail.selection.value;
               const currentText = textarea.value;
@@ -266,9 +268,9 @@ export function TagInput({
           }
         }
       });
-        console.log(`[TagInput:${uniqueId}] autoComplete instance created:`, acRef.current);
-        console.log(`[TagInput:${uniqueId}] internal id (autoComplete.instances counter):`, acRef.current?.id);
-        console.log(`[TagInput:${uniqueId}] actual list DOM id:`, acRef.current?.list?.id);
+        if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] autoComplete instance created:`, acRef.current);
+        if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] internal id (autoComplete.instances counter):`, acRef.current?.id);
+        if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] actual list DOM id:`, acRef.current?.list?.id);
       } catch (err) {
         console.error(`[TagInput:${uniqueId}] autoComplete construction failed:`, err);
       }
@@ -276,7 +278,7 @@ export function TagInput({
 
     return () => {
       cancelled = true;
-      console.log(`[TagInput:${uniqueId}] useEffect cleanup`);
+      if (DEBUG_TAGINPUT) console.log(`[TagInput:${uniqueId}] useEffect cleanup`);
       const ta = textareaRef.current;
       if (ta && handleKeydownRef.current) {
         ta.removeEventListener('keydown', handleKeydownRef.current);
