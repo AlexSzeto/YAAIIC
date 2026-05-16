@@ -295,8 +295,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }
   }, [outfit, toast]);
 
-  const handleRevert = useCallback(() => {
+  const handleRevert = useCallback(async () => {
     if (!libraryOutfit) return;
+    const result = await showDialog('Revert this outfit to the saved library version? Unsaved changes will be lost.', 'Revert Outfit', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
     setOutfit(libraryOutfit);
   }, [libraryOutfit]);
 

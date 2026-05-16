@@ -424,8 +424,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     }
   }, [character, toast]);
 
-  const handleRevert = useCallback(() => {
+  const handleRevert = useCallback(async () => {
     if (!libraryCharacter) return;
+    const result = await showDialog('Revert this character to the saved library version? Unsaved changes will be lost.', 'Revert Character', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
     setCharacter(libraryCharacter);
   }, [libraryCharacter]);
 

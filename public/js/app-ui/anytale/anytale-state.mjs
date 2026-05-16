@@ -3,7 +3,8 @@
  *
  * State shape:
  * {
- *   name: string, // preview image name
+ *   name: string,        // preview image name
+ *   activePlotPage: number,
  *   parts: Array<{
  *     id: string,
  *     config: {
@@ -11,7 +12,8 @@
  *       type: string[],
  *       previewBaseline: string,
  *       baseline: string,
- *       attributes: Array<{ name: string, options: string }>
+ *       attributes: Array<{ name: string, options: string }>,
+ *       isRevealing: boolean
  *     },
  *     data: {
  *       enabled: boolean,
@@ -26,6 +28,7 @@ const STORAGE_KEY = 'anytale-state';
 
 const DEFAULT_STATE = {
   name: '',
+  activePlotPage: 0,
   parts: []
 };
 
@@ -40,7 +43,14 @@ export function loadState() {
     const parsed = JSON.parse(raw);
     return {
       name: parsed.name ?? '',
-      parts: Array.isArray(parsed.parts) ? parsed.parts : []
+      activePlotPage: typeof parsed.activePlotPage === 'number' ? parsed.activePlotPage : 0,
+      parts: Array.isArray(parsed.parts) ? parsed.parts.map(p => ({
+        ...p,
+        config: {
+          ...p.config,
+          isRevealing: typeof p.config?.isRevealing === 'boolean' ? p.config.isRevealing : false,
+        },
+      })) : []
     };
   } catch {
     return { ...DEFAULT_STATE, parts: [] };
@@ -79,6 +89,7 @@ export function createDefaultPart() {
       previewBaseline: '',
       baseline: '',
       attributes: [],
+      isRevealing: false,
     },
     data: {
       enabled: true,

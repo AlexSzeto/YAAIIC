@@ -12,17 +12,23 @@
  *     → Map<string, boolean>
  */
 
-const DEBUG_RULES = true;
+const DEBUG_RULES = false;
 
 // ── resolveSlotStatuses ────────────────────────────────────────────────────
+
+// Rank used to determine which base status wins when multiple parts share a slot type.
+// covering (2) > revealing (1) > removed (0)
+const STATUS_RANK = { covering: 2, revealing: 1, removed: 0 };
 
 /**
  * Build the ground-truth slot status map by:
  *  1. All slots start as 'removed'.
- *  2. Each type on every active part is set to 'covering' (first occurrence wins).
+ *  2. Each enabled part has a base status: 'revealing' if config.isRevealing is true, else 'covering'.
+ *     For each slot type on the part, upgrade the slot's status if the part's base status ranks higher
+ *     (covering > revealing > removed). Covering wins over revealing when both share a slot.
  *  3. Page actions are replayed from page 0 through currentPageIndex.
  *
- * @param {Array}  activeParts      – Parts entering the slot system ({ config: { type: string[] } } or { type: string[] })
+ * @param {Array}  activeParts      – Parts entering the slot system ({ config: { type: string[], isRevealing?: boolean } })
  * @param {Array}  plotPages        – Array of page objects ({ actions: [{ slot, status }] })
  * @param {number} currentPageIndex – Inclusive upper bound for action replay
  * @returns {Map<string, string>}   – Keys are lowercase slot strings; values are status strings
@@ -30,13 +36,18 @@ const DEBUG_RULES = true;
 export function resolveSlotStatuses(activeParts, plotPages, currentPageIndex) {
   const statuses = new Map();
 
-  // Slots present in active parts start as 'covering'; all others remain absent (treated as 'removed')
+  // Build initial slot statuses from active parts using upgrade logic
   for (const part of (activeParts || [])) {
     const types = Array.isArray(part.config?.type) ? part.config.type
       : Array.isArray(part.type) ? part.type : [];
+    const baseStatus = part.config?.isRevealing === true ? 'revealing' : 'covering';
     for (const t of types) {
       const key = t.trim().toLowerCase();
-      if (key && !statuses.has(key)) statuses.set(key, 'covering');
+      if (!key) continue;
+      const current = statuses.get(key) ?? 'removed';
+      if (STATUS_RANK[baseStatus] > STATUS_RANK[current]) {
+        statuses.set(key, baseStatus);
+      }
     }
   }
 
@@ -146,7 +157,7 @@ function parseCondition(fragment, isForEach) {
 export function parseRules(rulesText) {
   const rules = [];
   if (!rulesText) {
-    throw new Error('No rules text provided - DEBUG IMMEDIATELY');
+    console.warn('No rules text provided - DEBUG IMMEDIATELY');
   }
   if (!rulesText) return rules;
 
@@ -248,7 +259,7 @@ export function applyRules(slotStatuses, rules) {
     console.log('rules count:', (rules || []).length);
   }
   if(!rules || rules.length === 0) {
-    console.error('No rules provided - DEBUG IMMEDIATELY');
+    console.warn('No rules provided - DEBUG IMMEDIATELY');
   }
 
   for (const rule of (rules || [])) {

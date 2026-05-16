@@ -467,8 +467,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const isDeleteDisabled = !isInLibrary;
   const isRevertDisabled = !isInLibrary || savedPlot === null || isSaveDisabled;
 
-  const handleRevert = useCallback(() => {
+  const handleRevert = useCallback(async () => {
     if (!savedPlot) return;
+    const result = await showDialog('Revert this plot to the saved library version? Unsaved changes will be lost.', 'Revert Plot', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
     setPlot(savedPlot);
   }, [savedPlot]);
 

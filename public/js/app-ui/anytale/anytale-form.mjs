@@ -114,7 +114,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   const [isImporting, setIsImporting] = useState(false);
-  const [activePlotPage, setActivePlotPage] = useState(0);
+  const [activePlotPage, setActivePlotPage] = useState(() => loadState().activePlotPage);
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
   const [previewPlotModalOpen, setPreviewPlotModalOpen] = useState(false);
@@ -203,8 +203,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
   // Persist on every change
   useEffect(() => {
-    saveState({ name: previewImageName, parts });
-  }, [previewImageName, parts]);
+    saveState({ name: previewImageName, activePlotPage, parts });
+  }, [previewImageName, activePlotPage, parts]);
 
   // ── Library lookup: add part from library ────────────────────────────────
   const handleLibrarySelect = useCallback((match) => {
@@ -258,7 +258,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       : null;
 
     onGenerate(prompt, previewImageName, partsData, plotData);
-  }, [parts, previewImageName, onGenerate, activePlotPage]);
+  }, [parts, previewImageName, onGenerate, activePlotPage, computeSlotVisibility]);
 
   // �"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
   const handleCharTabGenerate = useCallback(async () => {

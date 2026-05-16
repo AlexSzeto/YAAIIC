@@ -24,6 +24,7 @@ import { ImagePreview } from './image-preview.mjs';
 import { getCategoryTree, getAllTagNames, tagExist, getTagDefinition } from '../tags/tag-data.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 
 // ============================================================================
 // Styled Components
@@ -336,8 +337,10 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   }, [config, onLibraryChanged, onDeletedFromLibrary, toast]);
 
   // ── Library: Revert to Library ────────────────────────────────────────────
-  const handleRevertToLibrary = useCallback(() => {
+  const handleRevertToLibrary = useCallback(async () => {
     if (!libraryPart) return;
+    const result = await showDialog('Revert this part to the saved library version? Unsaved changes will be lost.', 'Revert Part', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
     onChange({ ...part, config: { ...libraryPart } });
   }, [libraryPart, part, onChange]);
 
@@ -345,9 +348,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
     name: config.name, type: config.type, baseline: config.baseline,
     previewBaseline: config.previewBaseline, attributes: config.attributes,
+    isRevealing: config.isRevealing,
   }) === JSON.stringify({
     name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
     previewBaseline: libraryPart.previewBaseline, attributes: libraryPart.attributes,
+    isRevealing: libraryPart.isRevealing ?? false,
   });
 
   return html`
@@ -383,6 +388,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             suggestions=${allTypes}
             values=${Array.isArray(config.type) ? config.type : []}
             onValuesChange=${handleTypeChange}
+          />
+          <${Checkbox}
+            label="Reveals Parts Underneath"
+            checked=${config.isRevealing === true}
+            onChange=${() => updateConfig({ isRevealing: !config.isRevealing })}
           />
         </${RightFields}>
       </${TopRow}>
