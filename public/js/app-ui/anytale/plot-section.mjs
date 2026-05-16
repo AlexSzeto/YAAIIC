@@ -22,9 +22,11 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
-import { H2, H3, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, H3, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
+import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 
 // ============================================================================
 // Styled Components
@@ -61,6 +63,31 @@ const ActionChipRow = styled('div')`
   align-items: center;
 `;
 ActionChipRow.className = 'plot-action-chip-row';
+
+const SlotPillRow = styled('div')`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+  align-items: center;
+`;
+SlotPillRow.className = 'slot-pill-row';
+
+const SlotPill = styled('div')`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  white-space: nowrap;
+`;
+SlotPill.className = 'slot-pill';
+
+const RequirementsHeader = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+RequirementsHeader.className = 'requirements-header';
 
 // ============================================================================
 // Component
@@ -100,6 +127,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [loadModalOpen, setLoadModalOpen] = useState(false);
   // All library parts — used for slot action editor
   const [libraryParts, setLibraryParts] = useState([]);
+  const [characterSlotTypes, setCharacterSlotTypes] = useState([]);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -125,12 +153,20 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       .catch(err => console.error('[PlotSection] Failed to fetch plot list:', err));
   }, []);
 
-  // ── Load all library parts for slot action editor ─────────────────────────
+  // ── Load library parts and character slot types ───────────────────────────
   useEffect(() => {
     fetch('/anytale/parts')
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
       .catch(err => console.error('[PlotSection] Failed to fetch library parts:', err));
+    fetch('/anytale/config')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then(data => {
+        if (Array.isArray(data.recommendedCharacterPartTypes)) {
+          setCharacterSlotTypes(data.recommendedCharacterPartTypes.map(t => t.toLowerCase()));
+        }
+      })
+      .catch(err => console.error('[PlotSection] Failed to fetch anytale config:', err));
   }, []);
 
   // ── Persist on every change ───────────────────────────────────────────────
@@ -294,26 +330,73 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   // ── Part modifier helpers are handled inline by DynamicList ─────────────
 
-  // Build sorted slot options from all library part types
+  // Build sorted slot options from all library part types, excluding character slot types
   const slotOptions = useMemo(() => {
     const seen = new Set();
     const out = [];
     for (const p of libraryParts) {
       const types = Array.isArray(p.config?.type) ? p.config.type : Array.isArray(p.type) ? p.type : [];
       for (const t of types) {
-        if (t && t.trim() && !seen.has(t.toLowerCase())) {
-          seen.add(t.toLowerCase());
+        const lower = t?.trim().toLowerCase();
+        if (lower && !seen.has(lower) && !characterSlotTypes.includes(lower)) {
+          seen.add(lower);
           out.push(t.trim());
         }
       }
     }
     return out.sort((a, b) => a.localeCompare(b));
-  }, [libraryParts]);
+  }, [libraryParts, characterSlotTypes]);
 
   const STATUS_OPTIONS = ['covering', 'revealing', 'removed'];
 
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('covering');
+  const [slotTrackerExpanded, setSlotTrackerExpanded] = useState(false);
+
+  // ── Pre-page slot statuses (before current page's actions) ────────────────
+  const priorSlotStatuses = useMemo(() => {
+    const enabledParts = parts.filter(p => p.data?.enabled !== false);
+    return resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1);
+  }, [parts, plot.pages, currentPageIndex]);
+
+  // ── Slot tracker: sorted [name, status] pairs, excluding character slot types
+  const trackerSlots = useMemo(() => {
+    const entries = [...priorSlotStatuses.entries()].filter(([slot]) => !characterSlotTypes.includes(slot));
+    return entries.sort((a, b) => a[0].localeCompare(b[0]));
+  }, [priorSlotStatuses, characterSlotTypes]);
+
+  // ── Whether current page's requirements are all satisfied ─────────────────
+  const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
+  const requirementsMet = useMemo(
+    () => checkPageRequirements(currentPage, priorSlotStatuses, enabledParts),
+    [currentPage, priorSlotStatuses, enabledParts]
+  );
+
+  // ── Requirement suggestions: all part names + slot types ──────────────────
+  const requirementsSuggestions = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const p of libraryParts) {
+      const name = (p.config?.name || '').trim();
+      if (name && !seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase());
+        out.push(name);
+      }
+    }
+    for (const slot of slotOptions) {
+      if (!seen.has(slot.toLowerCase())) {
+        seen.add(slot.toLowerCase());
+        out.push(slot);
+      }
+    }
+    return out;
+  }, [libraryParts, slotOptions]);
+
+  const STATUS_PILL_COLOR = {
+    covering: () => currentTheme.value.colors.secondary.backgroundLight,
+    revealing: () => currentTheme.value.colors.warning.backgroundLight,
+    removed: () => currentTheme.value.colors.danger.backgroundLight,
+  };
 
   const progressionSectionsSuggestions = useMemo(() => {
     const seen = new Set();
@@ -395,7 +478,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   return html`
     <${SectionWrapper}>
-      <${H2}>Plot</${H2}>
+      <${HorizontalEdgesLayout}>
+        <${H2}>Plot</${H2}>
+        <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>Load<//>
+      </${HorizontalEdgesLayout}>
 
       <${VerticalLayout} gap="small">
         <${Input}
@@ -423,30 +509,64 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
       </${VerticalLayout}>
 
-      <!-- Page section: tags, hidden parts, navigation (no outline wrapper) -->
+      <!-- Page section -->
       <${VerticalLayout} gap="medium">
         <${H2}>Page</${H2}>
-        <${TagInput}
-          label="Page Tags"
-          value=${currentPage.tags}
-          onInput=${(text) => updatePage(currentPageIndex, { ...currentPage, tags: text })}
-          rows=${2}
-          placeholder="Comma-separated tags for this page"
-          disabled=${isCurrentPageLocked}
-        />
 
-        <${Input}
-          label="Action Description for Dialog Prompt"
-          value=${currentPage.dialogPrompt || ''}
-          onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
-          placeholder="Describe the action for the dialog prompt"
-          widthScale="full"
-          disabled=${isCurrentPageLocked}
-        />
+        <!-- Slot tracker panel -->
+        <${Panel} variant="outlined" padding="small">
+          <div style=${{ overflow: 'hidden', maxHeight: slotTrackerExpanded ? 'none' : '36px', transition: 'max-height 0.2s ease' }}>
+            <${Button}
+              variant="small-icon"
+              icon=${slotTrackerExpanded ? 'collapse-right' : 'expand-right'}
+              style=${{ float: 'right' }}
+              onClick=${() => setSlotTrackerExpanded(v => !v)}
+            />
+            <${SlotPillRow}>
+              ${trackerSlots.map(([slot, status]) => html`
+                <${SlotPill}
+                  key=${slot}
+                  style=${{ backgroundColor: (STATUS_PILL_COLOR[status] || STATUS_PILL_COLOR.covering)() }}
+                >
+                  ${slot}
+                </${SlotPill}>
+              `)}
+            </${SlotPillRow}>
+          </div>
+        </${Panel}>
 
+        <!-- Page Requirements -->
+        <${VerticalLayout} gap="small">
+          <${RequirementsHeader}>
+            <${H3}>Page Requirements</${H3}>
+            <${SlotPill} style=${{ backgroundColor: requirementsMet
+              ? currentTheme.value.colors.secondary.backgroundLight
+              : currentTheme.value.colors.danger.backgroundLight
+            }}>
+              ${requirementsMet ? 'pass' : 'fail'}
+            </${SlotPill}>
+          </${RequirementsHeader}>
+          <${ChipAutocompleteInput}
+            placeholder="Add a part name or slot type..."
+            suggestions=${requirementsSuggestions}
+            values=${currentPage.requirements || []}
+            onValuesChange=${(newValues) => updatePage(currentPageIndex, { ...currentPage, requirements: newValues })}
+            disabled=${isCurrentPageLocked}
+          />
+        </${VerticalLayout}>
+
+        <!-- Actions -->
         <${VerticalLayout} gap="small">
           <${H3}>Actions</${H3}>
           <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
+            <${Select}
+              label="Status"
+              heightScale="compact"
+              disabled=${isCurrentPageLocked}
+              value=${selectedStatus}
+              options=${STATUS_OPTIONS.map(s => ({ label: s, value: s }))}
+              onChange=${(e) => setSelectedStatus(e.target.value)}
+            />
             <${Select}
               label="Slot"
               widthScale="full"
@@ -455,14 +575,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               value=${selectedSlot || slotOptions[0] || ''}
               options=${slotOptions.map(s => ({ label: s, value: s }))}
               onChange=${(e) => setSelectedSlot(e.target.value)}
-            />
-            <${Select}
-              label="Status"
-              heightScale="compact"
-              disabled=${isCurrentPageLocked}
-              value=${selectedStatus}
-              options=${STATUS_OPTIONS.map(s => ({ label: s, value: s }))}
-              onChange=${(e) => setSelectedStatus(e.target.value)}
             />
             <${Button}
               variant="medium-icon"
@@ -494,6 +606,26 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           </${ActionChipRow}>
         </${VerticalLayout}>
 
+        <!-- Action Description -->
+        <${Input}
+          label="Action Description for Dialog Prompt"
+          value=${currentPage.dialogPrompt || ''}
+          onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
+          placeholder="Describe the action for the dialog prompt"
+          widthScale="full"
+          disabled=${isCurrentPageLocked}
+        />
+
+        <!-- Page Tags -->
+        <${TagInput}
+          label="Page Tags"
+          value=${currentPage.tags}
+          onInput=${(text) => updatePage(currentPageIndex, { ...currentPage, tags: text })}
+          rows=${2}
+          placeholder="Comma-separated tags for this page"
+          disabled=${isCurrentPageLocked}
+        />
+
         <!-- Navigation row -->
         <${NavRow}>
           <${NavigatorControl}
@@ -505,7 +637,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             onLast=${() => navigateTo(pageCount - 1)}
             showFirstLast=${true}
           />
-          <${Button} variant="small-text" icon="plus" color="danger" onClick=${handleAddPage}>Add Page</${Button}>
+          <${Button} variant="small-text" icon="plus" color="secondary" onClick=${handleAddPage}>Add Page</${Button}>
           <${Button} variant="small-text" icon="trash" color="danger" onClick=${handleDeletePage} disabled=${pageCount <= 1}>Delete Page</${Button}>
           <${Button}
             variant="small-text"
@@ -522,7 +654,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         </${NavRow}>
       </${VerticalLayout}>
 
-      <!-- Progression section: progression types and disabled parts -->
+      <!-- TODO (AnyTale play mode): Revisit whether progressionSections is the right
+           data model before surfacing this UI. The field may need to be redesigned once
+           the play mode flow (how plots are sequenced and navigated by the player) is
+           specced out. Uncomment when that work begins.
       <${VerticalLayout} gap="medium">
         <${H2}>Progression</${H2}>
         <${ChipAutocompleteInput}
@@ -533,11 +668,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionSections: newValues }))}
         />
       </${VerticalLayout}>
+      -->
 
       <${ButtonRow}>
-        <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>
-          Load
-        <//>
         <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
         <//>

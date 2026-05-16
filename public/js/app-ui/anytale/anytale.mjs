@@ -10,8 +10,7 @@ import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { Page } from '../../custom-ui/layout/page.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
-import { H1, HorizontalLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
-import { AppHeader } from '../themed-base.mjs';
+import { H1, HorizontalLayout, HorizontalEdgesLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { WorkflowSelector } from '../workflow-selector.mjs';
@@ -81,6 +80,7 @@ export function AnyTalePage() {
   const handleImportReady = useCallback((controls) => {
     setImportControls(controls);
   }, []);
+
 
   // Generation state
   const [taskId, setTaskId] = useState(null);
@@ -235,7 +235,7 @@ export function AnyTalePage() {
   return html`
     <${TooltipProvider}>
     <${VerticalLayout}>
-      <${AppHeader}>
+      <${HorizontalEdgesLayout}>
         <${H1}>AnyTale Editor<//>
         <${HorizontalLayout} gap="small">
           <${Button}
@@ -256,7 +256,7 @@ export function AnyTalePage() {
           <//>
           <${HamburgerMenu} />
         <//>
-      </${AppHeader}>
+      </${HorizontalEdgesLayout}>
 
       <div style="display: none;">
       <${Panel} variant="outlined">

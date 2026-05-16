@@ -5,12 +5,12 @@ Rearrange the plot page edit UI into a new vertical order, introduce a collapsib
 
 ## Tasks
 
-- [ ] Task 1: Schema — Add `requirements` field to page data
+- [x] Task 1: Schema — Add `requirements` field to page data
   - In `anytale-state.mjs`, update `createBlankPlot()`: add `requirements: []` to each blank page object (alongside `tags`, `dialogPrompt`, `actions`).
   - In `loadPlot()`, add a defensive default in the `pages.map()`: `requirements: Array.isArray(p.requirements) ? p.requirements : []`.
   - **Manual test:** Open AnyTale, create a new plot or clear the existing one. Inspect `localStorage.getItem('anytale-plot')` in the browser console and confirm each page object has a `requirements` array field.
 
-- [ ] Task 2: Core — Update `resolveSlotStatuses` to support conditional page skipping
+- [x] Task 2: Core — Update `resolveSlotStatuses` to support conditional page skipping
   - In `slot-resolver.mjs`, add a module-level helper `checkPageRequirements(page, statuses, activeParts)`:
     - If `page.requirements` is empty or missing, return `true` (no requirements = always active).
     - For each requirement string `req` in `page.requirements`:
@@ -21,7 +21,7 @@ Rearrange the plot page edit UI into a new vertical order, introduce a collapsib
   - Update the action-replay loop in `resolveSlotStatuses`: before applying a page's actions, call `checkPageRequirements(pages[i], statuses, activeParts)`. If it returns `false`, skip that page's actions via `continue`.
   - **Manual test:** Add a requirement to a page via browser console: `const p = JSON.parse(localStorage.getItem('anytale-plot')); p.pages[1].requirements = ['some slot name']; localStorage.setItem('anytale-plot', JSON.stringify(p));`. Reload AnyTale and add a `console.log` temporarily in `slot-resolver.mjs` to verify the page is skipped when the slot is removed. Restore after testing.
 
-- [ ] Task 3: UI — Rearrange the plot page edit layout
+- [x] Task 3: UI — Rearrange the plot page edit layout
   - In `plot-section.mjs`, reorder the JSX inside the Page `<VerticalLayout>` to match this new vertical order:
     1. `<H2>Page</H2>` — page title
     2. Slot tracker panel (placeholder `<div>` for now — will be implemented in Task 5)
@@ -34,7 +34,7 @@ Rearrange the plot page edit UI into a new vertical order, introduce a collapsib
   - Do not change the outer Progression section or the save/load button row — those remain below the Page section.
   - **Manual test:** Open AnyTale → Plot section. Confirm the new visual order matches the spec. Confirm all existing interactions (tags, actions, navigation, lock) still work correctly.
 
-- [ ] Task 4: UI — Add Page Requirements chip input with unmet-requirements danger indicator
+- [x] Task 4: UI — Add Page Requirements chip input with unmet-requirements danger indicator
   - In `plot-section.mjs`, compute `priorSlotStatuses` via a `useMemo`:
     - Filter `parts` (the prop) to enabled parts: `parts.filter(p => p.data?.enabled !== false)`.
     - Call `resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1)`.
@@ -48,7 +48,7 @@ Rearrange the plot page edit UI into a new vertical order, introduce a collapsib
   - Import `Icon` from `../../custom-ui/layout/icon.mjs`. Access the current theme color via `currentTheme.value.colors.danger.text`.
   - **Manual test:** Add a requirement that matches an existing part's name or slot. Confirm no danger icon appears. Add a requirement for a non-existent slot/name. Confirm the danger icon (`radio_button_checked` in Material Symbols or the equivalent box-icon) appears next to the header. Confirm chips appear, can be added and removed, and persist in localStorage.
 
-- [ ] Task 5: UI — Add Part Slots Tracker panel
+- [x] Task 5: UI — Add Part Slots Tracker panel
   - In `plot-section.mjs`, add a `slotTrackerExpanded` boolean state (default `false`).
   - Compute `trackerSlots` via `useMemo`: from `priorSlotStatuses` (computed in Task 4), produce an array of `[slotName, status]` pairs sorted alphabetically by slot name.
   - Render the tracker panel in position 2 of the page section (below the `<H2>Page</H2>` title). Use `<Panel variant="outlined" padding="small">` from `../../custom-ui/layout/panel.mjs`.

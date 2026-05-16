@@ -55,6 +55,48 @@ export function resolveSlotStatuses(activeParts, plotPages, currentPageIndex) {
   return statuses;
 }
 
+// ── checkPageRequirements ──────────────────────────────────────────────────
+
+/**
+ * Returns true if all of the page's requirements are satisfied by the current
+ * slot statuses. A requirement string is satisfied when at least one part in
+ * activeParts matches by name OR slot type, and has at least one slot type
+ * present in statuses at a non-'removed' value.
+ *
+ * @param {Object} page        – Page object with optional `requirements: string[]`
+ * @param {Map}    statuses    – Current slot status map
+ * @param {Array}  activeParts – Parts to match requirements against
+ * @returns {boolean}
+ */
+export function checkPageRequirements(page, statuses, activeParts) {
+  const reqs = page?.requirements;
+  if (!Array.isArray(reqs) || reqs.length === 0) return true;
+
+  for (const req of reqs) {
+    const reqLower = req.trim().toLowerCase();
+    if (!reqLower) continue;
+
+    const matchedParts = (activeParts || []).filter(part => {
+      const name = (part.config?.name || '').toLowerCase();
+      const types = Array.isArray(part.config?.type) ? part.config.type : [];
+      return name === reqLower || types.some(t => t.trim().toLowerCase() === reqLower);
+    });
+
+    const satisfied = matchedParts.some(part => {
+      const types = Array.isArray(part.config?.type) ? part.config.type : [];
+      return types.some(t => {
+        const key = t.trim().toLowerCase();
+        const s = statuses.get(key);
+        return s !== undefined && s !== 'removed';
+      });
+    });
+
+    if (!satisfied) return false;
+  }
+
+  return true;
+}
+
 // ── parseRules ─────────────────────────────────────────────────────────────
 
 const SLOT_RE = /<([^>]+)>/g;
@@ -103,6 +145,9 @@ function parseCondition(fragment, isForEach) {
  */
 export function parseRules(rulesText) {
   const rules = [];
+  if (!rulesText) {
+    throw new Error('No rules text provided - DEBUG IMMEDIATELY');
+  }
   if (!rulesText) return rules;
 
   for (const rawLine of rulesText.split('\n')) {
@@ -201,6 +246,9 @@ export function applyRules(slotStatuses, rules) {
     console.group('[slot-resolver] applyRules');
     console.log('slot statuses:', Object.fromEntries(slotStatuses));
     console.log('rules count:', (rules || []).length);
+  }
+  if(!rules || rules.length === 0) {
+    console.error('No rules provided - DEBUG IMMEDIATELY');
   }
 
   for (const rule of (rules || [])) {

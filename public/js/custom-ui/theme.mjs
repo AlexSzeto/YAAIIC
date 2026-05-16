@@ -200,6 +200,16 @@ const lightColors = {
     border: '#9fdfb0',
     text: '#ffffff'
   },
+  // Warning Color Theme
+  warning: {
+    background: '#ffc107',
+    hover: '#e0a800',
+    active: '#c69500',
+    focus: 'rgba(255, 193, 7, 0.5)',
+    backgroundLight: '#fff3cd',
+    border: '#ffeeba',
+    text: '#212529'
+  },
   // Danger Color Theme
   danger: {
     background: '#dc3545',
@@ -288,6 +298,16 @@ const darkColors = {
     focus: 'rgba(40, 167, 69, 0.5)',
     backgroundLight: '#1e4d2b',
     border: '#2d7a3f',
+    text: '#ffffff'
+  },
+  // Warning Color Theme
+  warning: {
+    background: '#e0a800',
+    hover: '#c69500',
+    active: '#a07800',
+    focus: 'rgba(255, 193, 7, 0.5)',
+    backgroundLight: '#4a3800',
+    border: '#7a5f00',
     text: '#ffffff'
   },
   // Danger Color Theme

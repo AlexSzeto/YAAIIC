@@ -23,7 +23,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { H2, H3, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, H3, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
@@ -343,7 +343,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
           <!-- Outfit details -->
           <${VerticalLayout} gap="small">
-            <${H2}>Outfit</${H2}>
+            <${HorizontalEdgesLayout}>
+              <${H2}>Outfit</${H2}>
+              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadOutfitModalOpen(true)}>Load<//>
+            </${HorizontalEdgesLayout}>
 
             <${Input}
               label="Name"
@@ -396,14 +399,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
           <!-- Actions -->
           <${ButtonRow}>
-            <${Button}
-              variant="small-text"
-              color="secondary"
-              icon="folder-open"
-              onClick=${() => setLoadOutfitModalOpen(true)}
-            >
-              Load
-            <//>
             <${Button}
               variant="small-text"
               color="primary"

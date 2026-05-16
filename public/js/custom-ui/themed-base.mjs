@@ -56,6 +56,19 @@ export const H3 = styled('h3')`
 H3.className = 'themed-h3';
 
 /**
+ * HorizontalEdgesLayout - A horizontal flex container that split two children to the left and right edges
+ * Usage: Commonly used for headers with a title on the left and actions on the right
+ * @param {Object} props
+ */
+export const HorizontalEdgesLayout = styled('div')`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+`;
+HorizontalEdgesLayout.className = 'horizontal-edges-layout';
+
+/**
  * HorizontalLayout - A horizontal flex container with themed gap
  * Usage: Layout elements in a row with consistent spacing
  * @param {Object} props

@@ -22,7 +22,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
@@ -524,7 +524,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
           <!-- Character details -->
           <${VerticalLayout} gap="small">
-            <${H2}>Character</${H2}>
+            <${HorizontalEdgesLayout}>
+              <${H2}>Character</${H2}>
+              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadCharModalOpen(true)}>Load<//>
+            </${HorizontalEdgesLayout}>
             <!-- Portrait preview row -->
             <div style=${{ display: 'flex', gap: currentTheme.value.spacing.medium.gap, alignItems: 'flex-start' }}>
               <${ImagePreview} src=${character.portraitUrl} alt="Character portrait" />
@@ -629,14 +632,6 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
           <!-- Save / Delete / Clear / Revert / Edit Parts actions -->
           <${ButtonRow}>
-            <${Button}
-              variant="small-text"
-              color="secondary"
-              icon="folder-open"
-              onClick=${() => setLoadCharModalOpen(true)}
-            >
-              Load
-            <//>
             <${Button}
               variant="small-text"
               color="primary"
