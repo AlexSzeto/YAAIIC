@@ -24,15 +24,27 @@
  *   DELETE /anytale/outfits/:uid  – delete an outfit
  */
 import { Router } from 'express';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
 const router = Router();
 
+const RULES_PATH = join(process.cwd(), 'server', 'resource', 'anytale-rules.txt');
+
+function loadSlotRules() {
+  try {
+    return readFileSync(RULES_PATH, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
 router.get('/anytale/config', (req, res) => {
   const anytaleConfig = req.app.locals.config?.anytale || {};
-  res.json(anytaleConfig);
+  res.json({ ...anytaleConfig, slotRules: loadSlotRules() });
 });
 
 router.get('/anytale/parts', (_req, res) => {

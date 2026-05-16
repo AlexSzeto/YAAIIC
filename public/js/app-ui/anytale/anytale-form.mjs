@@ -20,6 +20,7 @@ import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState } from './anytale-state.mjs';
 import { extractImagePrompt, parsePromptTags, processPromptImport, extractRemainingPageTags } from './prompt-import.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
+import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
@@ -140,6 +141,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
   const [previewBasePromptByType, setPreviewBasePromptByType] = useState({});
+  const rulesRef = useRef([]);
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -148,6 +150,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         if (Array.isArray(data.recommendedCharacterPartTypes)) setRecommendedCharacterPartTypes(data.recommendedCharacterPartTypes);
         if (Array.isArray(data.recommendedOutfitPartTypes)) setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
         if (data.previewBasePromptByType && typeof data.previewBasePromptByType === 'object') setPreviewBasePromptByType(data.previewBasePromptByType);
+        rulesRef.current = parseRules(typeof data.slotRules === 'string' ? data.slotRules : '');
       })
       .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
   }, []);
@@ -219,6 +222,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     clearState();
   }, []);
 
+  // ── Slot visibility helper ────────────────────────────────────────────────
+  const computeSlotVisibility = useCallback((plotPages, pageIndex) => {
+    return applyRules(resolveSlotStatuses(libraryParts, plotPages, pageIndex), rulesRef.current);
+  }, [libraryParts]);
+
   // ── Generate: uses local parts state and plot from localStorage ────────────
   const handleGenerate = useCallback(() => {
     setPageLocked(prev => {
@@ -231,13 +239,13 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const prompt = assemblePrompt(parts, activePage);
+    const slotVisibility = computeSlotVisibility(currentPlot.pages, activePlotPage);
+    const prompt = assemblePrompt(parts, activePage, slotVisibility);
 
     const partsData = {};
     for (const p of parts) {
       if (p.config?.name?.trim()) {
         partsData[p.config.name] = {
-          enabled: p.data.enabled,
           attributeValues: p.data.attributeValues,
           previewImageUrl: p.data.previewImageUrl,
         };
@@ -271,7 +279,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           attributes: lib.attributes,
         },
         data: {
-          enabled: true,
           attributeValues: cp.attributeValues,
           previewImageUrl: cp.previewImageUrl || '',
         },
@@ -279,26 +286,27 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     }).filter(Boolean);
 
     let activePage;
+    let plotPages = [];
     if (charTabPlotUid) {
       try {
         const res = await fetch(`/anytale/plot/${encodeURIComponent(charTabPlotUid)}`);
         if (res.ok) {
           const plotBlock = await res.json();
-          activePage = Array.isArray(plotBlock.pages) && plotBlock.pages.length > 0
-            ? plotBlock.pages[0] : undefined;
+          plotPages = Array.isArray(plotBlock.pages) ? plotBlock.pages : [];
+          activePage = plotPages.length > 0 ? plotPages[0] : undefined;
         }
       } catch (err) {
         console.error('[AnyTaleForm] Failed to fetch plot for generation:', err);
       }
     }
 
-    const prompt = assemblePrompt(promptParts, activePage);
+    const slotVisibility = computeSlotVisibility(plotPages, 0);
+    const prompt = assemblePrompt(promptParts, activePage, slotVisibility);
 
     const partsData = {};
     for (const p of promptParts) {
       if (p.config.name?.trim()) {
         partsData[p.config.name] = {
-          enabled: p.data.enabled,
           attributeValues: p.data.attributeValues,
           previewImageUrl: p.data.previewImageUrl,
         };
@@ -307,7 +315,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
     const plotData = charTabPlotUid ? { uid: charTabPlotUid, name: charTabPlotName, page: 0 } : null;
     onGenerate(prompt, previewImageName, partsData, plotData);
-  }, [libraryParts, previewImageName, onGenerate, charTabPlotUid, charTabPlotName]);
+  }, [libraryParts, previewImageName, onGenerate, charTabPlotUid, charTabPlotName, computeSlotVisibility]);
 
   // Update a single part by index
   const handlePartChange = useCallback((index, updatedPart) => {
@@ -651,8 +659,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const previewPrompt = useMemo(() => {
     const plotPageCount = livePlot.pages.length;
     const activePage = plotPageCount > 0 ? livePlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    return assemblePrompt(parts, activePage);
-  }, [parts, livePlot, activePlotPage]);
+    const slotVisibility = computeSlotVisibility(livePlot.pages, activePlotPage);
+    return assemblePrompt(parts, activePage, slotVisibility);
+  }, [parts, livePlot, activePlotPage, computeSlotVisibility]);
 
   // ── Tab content ─────────────────────────────────────────────────────────
   const editContent = html`
@@ -707,8 +716,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
               return isModified ? `${base} *` : base;
             }}
-            getEnabled=${(item) => item.data?.enabled ?? true}
-            onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
             createItem=${createDefaultPart}
             onChange=${setParts}
             addLabel="Add Part"

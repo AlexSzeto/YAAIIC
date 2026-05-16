@@ -144,7 +144,6 @@ export function processPromptImport({
         part = createDefaultPart();
         part.config = { ...libraryPart };
         part.data = {
-          enabled: true,
           attributeValues: buildEmptyAttributeValues(libraryPart),
           previewImageUrl: '',
         };

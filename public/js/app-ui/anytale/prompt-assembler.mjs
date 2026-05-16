@@ -2,8 +2,8 @@
  * prompt-assembler.mjs – Assembles prompt strings from Parts data.
  *
  * Two modes:
- *   1. assemblePrompt(parts) – Final image prompt from all enabled parts.
- *      Collects baseline + category/custom attribute values. Excludes previewBaseline.
+ *   1. assemblePrompt(parts, activePage, slotVisibility) – Final image prompt from visible parts.
+ *      Collects baseline + attribute values. Excludes previewBaseline.
  *   2. assemblePartPreviewPrompt(part) – Per-part preview prompt.
  *      Collects previewBaseline + baseline + attribute values from a single part.
  *
@@ -118,46 +118,38 @@ export function expandPageTags(tagsString, enabledParts) {
 }
 
 /**
- * Assemble the final image prompt from all enabled parts.
+ * Assemble the final image prompt from visible parts.
  *
  * Collects: baseline + attributeValues
  * Excludes: previewBaseline
  *
- * When `activePage` is provided, also:
- *   1. Appends the page's `tags` (expanded via expandPageTags) to the prompt.
- *   2. Skips any enabled part whose config.name or config.type (case-insensitive)
- *      appears in `activePage.hiddenParts`.
+ * When `activePage` is provided, appends the page's `tags` (expanded via expandPageTags).
+ * When `slotVisibility` is provided, only parts whose config.type includes at least one
+ * visible slot are included. If `slotVisibility` is omitted, all parts are included.
  *
- * @param {Array}  parts      – Array of part objects ({ config, data })
- * @param {Object} [activePage] – Optional page object from the active plot block
+ * @param {Array}  parts           – Array of part objects ({ config, data })
+ * @param {Object} [activePage]    – Optional page object from the active plot block
+ * @param {Map}    [slotVisibility] – Map<string, boolean> from applyRules; keys are lowercase slot strings
  * @returns {string} Comma-separated prompt string
  */
-export function assemblePrompt(parts, activePage) {
+export function assemblePrompt(parts, activePage, slotVisibility) {
   const tags = [];
 
-  const enabledParts = (parts || []).filter(p => p.data && p.data.enabled);
-
-  // Build hidden set for fast lookup
-  const hiddenSet = new Set(
-    (activePage?.hiddenParts || []).map(h => h.toLowerCase())
-  );
+  const visibleParts = (parts || []).filter(p => {
+    if (!p.config) return false;
+    if (!slotVisibility) return true;
+    const types = Array.isArray(p.config.type) ? p.config.type : [];
+    return types.some(t => slotVisibility.get(t.trim().toLowerCase()) === true);
+  });
 
   // Append the page-level tags, expanded to resolve {{type}} tokens
   if (activePage && activePage.tags) {
-    tags.push(...expandPageTags(activePage.tags, enabledParts));
+    tags.push(...expandPageTags(activePage.tags, visibleParts));
   }
 
-  for (const part of enabledParts) {
-    const partName = (part.config?.name || '').toLowerCase();
-    const types = Array.isArray(part.config?.type) ? part.config.type : [];
-
-    // Skip if the part name is listed in hiddenParts
-    // Skip if ANY of the part's types are present in hiddenSet
-    const anyTypeHidden = types.length > 0 && types.some(t => hiddenSet.has(t.toLowerCase()));
-    if (hiddenSet.has(partName) || anyTypeHidden) continue;
-
+  for (const part of visibleParts) {
     // Attribute values
-    const attrValues = part.data.attributeValues || {};
+    const attrValues = part.data?.attributeValues || {};
     const attrValueList = collectValues(attrValues);
 
     // Baseline tags: only used when all attribute values are empty/null

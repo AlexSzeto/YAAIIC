@@ -14,7 +14,6 @@
  *       attributes: Array<{ name: string, options: string }>
  *     },
  *     data: {
- *       enabled: boolean,
  *       attributeValues: { [attributeName: string]: string },
  *       previewImageUrl: string
  *     }
@@ -81,7 +80,6 @@ export function createDefaultPart() {
       attributes: [],
     },
     data: {
-      enabled: true,
       attributeValues: {},
       previewImageUrl: '',
     },
@@ -110,7 +108,7 @@ export function createBlankPlot() {
     name: '',
     section: '',
     description: '',
-    pages: [{ tags: '', dialogPrompt: '', hiddenParts: [] }],
+    pages: [{ tags: '', dialogPrompt: '', actions: [] }],
     progressionSections: [],
     progressionDisabledParts: [],
   };
@@ -128,13 +126,13 @@ export function loadPlot() {
     const parsed = JSON.parse(raw);
     // Ensure at least one page
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-      parsed.pages = [{ tags: '', dialogPrompt: '', hiddenParts: [] }];
+      parsed.pages = [{ tags: '', dialogPrompt: '', actions: [] }];
     }
     // Defensively default per-page fields
     const pages = parsed.pages.map(p => ({
       ...p,
       dialogPrompt: typeof p.dialogPrompt === 'string' ? p.dialogPrompt : '',
-      hiddenParts: Array.isArray(p.hiddenParts) ? p.hiddenParts : [],
+      actions: Array.isArray(p.actions) ? p.actions : [],
     }));
     return {
       uid: parsed.uid ?? '',

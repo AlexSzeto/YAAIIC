@@ -19,9 +19,10 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
-import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 
@@ -89,13 +90,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   }, [refreshKey, onPageChange, onPlotReset]);
   // Load-plot modal state
   const [loadModalOpen, setLoadModalOpen] = useState(false);
-  // All library parts — used for hidden-parts autocomplete
+  // All library parts — used for slot action editor
   const [libraryParts, setLibraryParts] = useState([]);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
   const currentPageIndex = Math.min(Math.max(activePage, 0), pageCount - 1);
-  const currentPage = plot.pages[currentPageIndex] || { tags: '', hiddenParts: [] };
+  const currentPage = plot.pages[currentPageIndex] || { tags: '', actions: [] };
   const isCurrentPageLocked = pageLocked[currentPageIndex] === true;
 
   // ── Load plot list; also sync savedPlot for the active uid on mount ─────
@@ -116,7 +117,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       .catch(err => console.error('[PlotSection] Failed to fetch plot list:', err));
   }, []);
 
-  // ── Load all library parts for hidden-parts autocomplete ─────────────────
+  // ── Load all library parts for slot action editor ─────────────────────────
   useEffect(() => {
     fetch('/anytale/parts')
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
@@ -285,15 +286,35 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   // ── Part modifier helpers are handled inline by DynamicList ─────────────
 
-  // Build autocomplete suggestions from all library part names and types
-  const hiddenPartsSuggestions = useMemo(() => {
+  // Build sorted slot options from all library part types
+  const slotOptions = useMemo(() => {
     const seen = new Set();
     const out = [];
-    // Use all library parts for a complete suggestion list
-    const allParts = libraryParts.length > 0 ? libraryParts : parts;
-    for (const p of allParts) {
-      const types = Array.isArray(p.config?.type) ? p.config.type : [];
-      for (const val of [p.config?.name, ...types]) {
+    for (const p of libraryParts) {
+      const types = Array.isArray(p.config?.type) ? p.config.type : Array.isArray(p.type) ? p.type : [];
+      for (const t of types) {
+        if (t && t.trim() && !seen.has(t.toLowerCase())) {
+          seen.add(t.toLowerCase());
+          out.push(t.trim());
+        }
+      }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [libraryParts]);
+
+  const STATUS_OPTIONS = ['covering', 'revealing', 'removed'];
+
+  const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('covering');
+
+  // Part name + type suggestions for the Progression disabled-parts chip input
+  const progressionPartSuggestions = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const p of libraryParts) {
+      const types = Array.isArray(p.config?.type) ? p.config.type : Array.isArray(p.type) ? p.type : [];
+      const name = p.config?.name || p.name || '';
+      for (const val of [name, ...types]) {
         if (val && val.trim() && !seen.has(val.toLowerCase())) {
           seen.add(val.toLowerCase());
           out.push(val.trim());
@@ -301,7 +322,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       }
     }
     return out;
-  }, [libraryParts, parts]);
+  }, [libraryParts]);
 
   const progressionSectionsSuggestions = useMemo(() => {
     const seen = new Set();
@@ -432,14 +453,51 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           disabled=${isCurrentPageLocked}
         />
 
-        <${ChipAutocompleteInput}
-          label="Hidden Parts"
-          placeholder="Type a part name or type to hide..."
-          suggestions=${hiddenPartsSuggestions}
-          disabled=${isCurrentPageLocked}
-          values=${currentPage.hiddenParts || []}
-          onValuesChange=${(newValues) => updatePage(currentPageIndex, { ...currentPage, hiddenParts: newValues })}
-        />
+        <${VerticalLayout} gap="small">
+          <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
+            <${Select}
+              label="Slot"
+              widthScale="full"
+              heightScale="compact"
+              disabled=${isCurrentPageLocked || slotOptions.length === 0}
+              value=${selectedSlot || slotOptions[0] || ''}
+              options=${slotOptions.map(s => ({ label: s, value: s }))}
+              onChange=${(e) => setSelectedSlot(e.target.value)}
+            />
+            <${Select}
+              label="Status"
+              heightScale="compact"
+              disabled=${isCurrentPageLocked}
+              value=${selectedStatus}
+              options=${STATUS_OPTIONS.map(s => ({ label: s, value: s }))}
+              onChange=${(e) => setSelectedStatus(e.target.value)}
+            />
+            <${Button}
+              variant="small-text"
+              disabled=${isCurrentPageLocked || slotOptions.length === 0}
+              onClick=${() => {
+                const slot = selectedSlot || slotOptions[0] || '';
+                if (!slot) return;
+                const actions = [...(currentPage.actions || []), { slot, status: selectedStatus }];
+                updatePage(currentPageIndex, { ...currentPage, actions });
+              }}
+            >Add</${Button}>
+          </${HorizontalLayout}>
+          <${HorizontalLayout} gap="small" style="flex-wrap: wrap; align-items: center;">
+            ${(currentPage.actions || []).map((action, i) => html`
+              <${Button}
+                key=${i}
+                variant="chip"
+                icon="x"
+                disabled=${isCurrentPageLocked}
+                onClick=${() => {
+                  const actions = (currentPage.actions || []).filter((_, j) => j !== i);
+                  updatePage(currentPageIndex, { ...currentPage, actions });
+                }}
+              >${action.slot} → ${action.status}</${Button}>
+            `)}
+          </${HorizontalLayout}>
+        </${VerticalLayout}>
 
         <!-- Navigation row -->
         <${NavRow}>
@@ -482,7 +540,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         <${ChipAutocompleteInput}
           label="Disabled Parts"
           placeholder="Type a part name or type to disable..."
-          suggestions=${hiddenPartsSuggestions}
+          suggestions=${progressionPartSuggestions}
           values=${plot.progressionDisabledParts || []}
           onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionDisabledParts: newValues }))}
         />
