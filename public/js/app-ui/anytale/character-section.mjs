@@ -137,6 +137,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   const [libraryCharacter, setLibraryCharacter] = useState(null);
   // Load-character modal state
   const [loadCharModalOpen, setLoadCharModalOpen] = useState(false);
+  const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
 
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
@@ -273,6 +274,11 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
       ],
     }));
   }, [character.parts, toast]);
+
+  const handlePartLoadSelect = useCallback((uid) => {
+    const match = libraryParts.find(p => p.uid === uid);
+    if (match) handleLibrarySelect(match);
+  }, [libraryParts, handleLibrarySelect]);
 
   const requestPartPreviewCache = useCallback((index, updatedPart) => {
     const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
@@ -629,7 +635,10 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
           <!-- Parts -->
           <${VerticalLayout} gap="small">
-            <${H2}>Parts</${H2}>
+            <${HorizontalEdgesLayout}>
+              <${H2}>Parts</${H2}>
+              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+            </${HorizontalEdgesLayout}>
 
             ${missingRecommendedTypes.length > 0
               && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Character Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
@@ -722,6 +731,15 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
             mode="single"
             onSelect=${handleCharacterSelect}
             onClose=${() => setLoadCharModalOpen(false)}
+          />
+
+          <${SearchSelectModal}
+            isOpen=${loadPartModalOpen}
+            title="Load Part"
+            items=${libraryParts.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+            mode="single"
+            onSelect=${handlePartLoadSelect}
+            onClose=${() => setLoadPartModalOpen(false)}
           />
 
         </${VerticalLayout}>

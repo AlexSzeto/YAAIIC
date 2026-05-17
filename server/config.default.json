@@ -6,6 +6,7 @@
   "comfyuiAPIPath": "http://localhost:8188",
   "comfyuiLaunchPath": "H:\\start_comfyui.bat",
   "anytale": {
+    "partPreviewWorkflow": "Text to Image (Illustrious Part Preview)",
     "portraitWorkflow": "Text to Image (Illustrious Portrait)",
     "generationWorkflow": "Text to Image (Illustrious Portrait)",
     "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",

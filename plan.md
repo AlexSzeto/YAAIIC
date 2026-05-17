@@ -1,8 +1,8 @@
-# Bugs
-
-## Implementation Details
 
 # Future Features
+- Formalize page UI: convert Actions list to use compact dynamic list, remove collapse panel around Slot preview, formalize collapse panel as reusable component, 
+
+
 - Audit client codebase and migrate all hover actions to use `TooltipProvider`.
 - Cancel generation (replace generation button)
 - Progress for one shot generations (ones that doesn't get stored in media DB)

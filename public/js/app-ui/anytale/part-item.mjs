@@ -26,6 +26,7 @@ import { getCategoryTree, getAllTagNames, tagExist, getTagDefinition } from '../
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
+import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
 
 // ============================================================================
 // Styled Components
@@ -64,7 +65,8 @@ function toPartUid(name) {
 }
 
 function getAttrOptions(optionsString) {
-  const options = [{ label: '(none)', value: '' }];
+  // (none) text removed
+  const options = [{ label: '', value: '' }];
   if (!optionsString || !optionsString.trim()) return options;
   const tags = optionsString.split(',').map(t => t.trim()).filter(t => t);
   for (const tag of tags) {
@@ -411,8 +413,8 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             values=${Array.isArray(config.type) ? config.type : []}
             onValuesChange=${handleTypeChange}
           />
-          <${Checkbox}
-            label="Reveals Parts Underneath"
+          <${ToggleSwitch}
+            label="Partial Coverage (reveals parts underneath)"
             checked=${config.isRevealing === true}
             onChange=${() => updateConfig({ isRevealing: !config.isRevealing })}
           />

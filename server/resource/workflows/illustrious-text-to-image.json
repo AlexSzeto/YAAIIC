@@ -51,7 +51,7 @@
   },
   "6": {
     "inputs": {
-      "text": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, 1girl, solo",
+      "text": "masterpiece,best quality,amazing quality, source anime,",
       "clip": [
         "4",
         1
@@ -64,7 +64,7 @@
   },
   "7": {
     "inputs": {
-      "text": "score_6, score_5, score_4, ugly face, mutated hands, extra hands, extra fingers, extra arms, extra legs, Morphing, blending, (incorrectly proportioned:1.2), long legs, long arms, long forearms, bendy)), (artifacts:1.2), (low detail:1.2), low res, blurry face, black and white. bad eyes, bad art, bad drawing, watermark, trademarked, subtitle, censored, motion blur",
+      "text": "bad quality, worst quality, worst detail, sketch, black and white, watermark, trademarked, subtitle, speech bubble, sound effects, censor, motion blur",
       "clip": [
         "4",
         1

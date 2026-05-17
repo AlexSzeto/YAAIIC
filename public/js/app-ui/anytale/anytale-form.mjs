@@ -24,7 +24,7 @@ import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
-import { H2, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
 import { OutfitSection } from './outfit-section.mjs';
@@ -118,6 +118,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
   const [previewPlotModalOpen, setPreviewPlotModalOpen] = useState(false);
+  const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
   // Live plot state mirrored from PlotSection for immediate prompt preview updates
   const [livePlot, setLivePlot] = useState(() => loadPlot());
 
@@ -213,6 +214,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     newPart.config = { ...newPart.config, ...match };
     setParts(prev => [...prev, newPart]);
   }, []);
+
+  const handlePartLoadSelect = useCallback((uid) => {
+    const match = libraryParts.find(p => p.uid === uid);
+    if (match) handleLibrarySelect(match);
+  }, [libraryParts, handleLibrarySelect]);
 
   const handleClear = useCallback(async () => {
     const result = await showDialog('This will erase all parts and the preview image name. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
@@ -660,7 +666,10 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       <${PartsScrollArea}>
         <${VerticalLayout} gap="medium">
           <${VerticalLayout} gap="small">
-            <${H2}>Parts</${H2}>
+            <${HorizontalEdgesLayout}>
+              <${H2}>Parts</${H2}>
+              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+            </${HorizontalEdgesLayout}>
             <${LibraryPartPicker}
               libraryParts=${libraryParts}
               onSelectPart=${handleLibrarySelect}
@@ -770,6 +779,15 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           ${isGenerating ? 'Generating...' : 'Generate'}
         <//>
       </${ButtonRow}>
+
+      <${SearchSelectModal}
+        isOpen=${loadPartModalOpen}
+        title="Load Part"
+        items=${libraryParts.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+        mode="single"
+        onSelect=${handlePartLoadSelect}
+        onClose=${() => setLoadPartModalOpen(false)}
+      />
     </${EditLayout}>
   `;
 

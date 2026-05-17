@@ -27,7 +27,8 @@ import { ImagePreview } from './image-preview.mjs';
 // ============================================================================
 
 function getAttributeOptions(optionsString) {
-  const options = [{ label: '(none)', value: '' }];
+  // (none) text removed
+  const options = [{ label: '', value: '' }];
   if (!optionsString || !optionsString.trim()) return options;
   for (const tag of optionsString.split(',').map(t => t.trim()).filter(t => t)) {
     options.push({ label: tag, value: tag });

@@ -374,16 +374,16 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
 
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
-    const portraitWorkflow = (config.anytale || {}).portraitWorkflow || 'Text to Image (Illustrious Portrait)';
+    const partPreviewWorkflow = (config.anytale || {}).partPreviewWorkflow || 'Text to Image (Illustrious Part Preview)';
 
     const comfyuiWorkflows = loadWorkflows();
-    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === partPreviewWorkflow);
     if (!workflowData) {
-      return res.status(400).json({ error: `Portrait workflow '${portraitWorkflow}' not found` });
+      return res.status(400).json({ error: `Portrait workflow '${partPreviewWorkflow}' not found` });
     }
 
     const requestData = {
-      workflow: portraitWorkflow,
+      workflow: partPreviewWorkflow,
       prompt,
       seed: Math.floor(Math.random() * 4294967295),
       orientation: 'square',
