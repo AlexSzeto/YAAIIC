@@ -200,6 +200,7 @@ export function ProgressBanner({
 
     const originalTitle = document.title;
     const pageTitleManager = new PageTitleManager(originalTitle);
+    let dismissTimer = null;
 
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
@@ -243,7 +244,7 @@ export function ProgressBanner({
       } else {
         console.warn(`[ProgressBanner] onComplete prop is null/undefined for taskId=${taskId}`);
       }
-      setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 2000);
+      dismissTimer = setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 2000);
     };
 
     const handleError = (data) => {
@@ -255,7 +256,7 @@ export function ProgressBanner({
         message: data.error?.message || 'Generation failed'
       }));
       if (onErrorRef.current) onErrorRef.current(data);
-      setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 5000);
+      dismissTimer = setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 5000);
     };
 
     const handleCancelled = (data) => {
@@ -278,6 +279,7 @@ export function ProgressBanner({
       console.log(`[ProgressBanner] useEffect cleanup: unsubscribing taskId=${taskId}`);
       sseManager.unsubscribe(taskId, 'banner-unmount');
       pageTitleManager.reset();
+      if (dismissTimer) clearTimeout(dismissTimer);
     };
   }, [taskId, sseManager]);
 
