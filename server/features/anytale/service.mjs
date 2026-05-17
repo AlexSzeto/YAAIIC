@@ -83,6 +83,12 @@ export function removeCharacterByUid(uid) {
   deleteCharacter(uid);
 }
 
+export function updateCharacterField(uid, field, value) {
+  const character = listCharacters().find(c => c.uid === uid);
+  if (!character) throw new Error(`Character ${uid} not found`);
+  upsertCharacter(uid, { ...character, [field]: value });
+}
+
 // ── Outfits ────────────────────────────────────────────────────────────────
 
 export function getAllOutfits() {

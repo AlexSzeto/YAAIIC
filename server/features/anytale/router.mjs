@@ -24,9 +24,11 @@
  *   DELETE /anytale/outfits/:uid  – delete an outfit
  */
 import { Router } from 'express';
-import { readFileSync } from 'fs';
+import crypto from 'crypto';
+import fs from 'node:fs';
 import { join } from 'path';
-import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid } from './service.mjs';
+import { STORAGE_DIR } from '../../core/paths.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateCharacterField } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 
@@ -36,10 +38,20 @@ const RULES_PATH = join(process.cwd(), 'server', 'resource', 'anytale-rules.txt'
 
 function loadSlotRules() {
   try {
-    return readFileSync(RULES_PATH, 'utf8');
+    return fs.readFileSync(RULES_PATH, 'utf8');
   } catch {
     return '';
   }
+}
+
+function portraitPromptHash(prompt) {
+  const normalized = prompt
+    .split(',')
+    .map(t => t.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
 router.get('/anytale/config', (req, res) => {
@@ -208,6 +220,7 @@ router.delete('/anytale/characters/:uid', (req, res) => {
 
 router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
   try {
+    const { uid } = req.params;
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
     const anytaleConfig = config.anytale || {};
@@ -257,6 +270,10 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
 
     const prompt = tags.filter(Boolean).join(', ');
 
+    const hash = portraitPromptHash(prompt);
+    const targetFilename = 'portrait_' + hash + '.png';
+    const targetPath = join(STORAGE_DIR, targetFilename);
+
     const comfyuiWorkflows = loadWorkflows();
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
     if (!workflowData) {
@@ -274,12 +291,16 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       summary: '',
       usePostPrompts: false,
       removeBackground: false,
+      saveImagePath: targetPath,
     };
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .catch(err => console.error('Portrait generation task failed:', err));
+      .then(() => {
+        updateCharacterField(uid, 'portraitUrl', '/media/' + targetFilename);
+      })
+      .catch(err => console.error('[anytale] Portrait generation failed:', err));
   } catch (error) {
     console.error('Error starting portrait generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start portrait generation', details: error.message });
@@ -290,6 +311,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
 
 router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
   try {
+    const { uid } = req.params;
     const config = req.app.locals.config;
     const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
     const anytaleConfig = config.anytale || {};
@@ -326,11 +348,32 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .catch(err => console.error('Voice generation task failed:', err));
+      .then(async result => {
+        if (result.audioUrl) {
+          updateCharacterField(uid, 'audioUrl', result.audioUrl);
+        }
+      })
+      .catch(err => console.error('[anytale] Voice generation failed:', err));
   } catch (error) {
     console.error('Error starting voice generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start voice generation', details: error.message });
   }
+});
+
+// ── Request portrait cache lookup ─────────────────────────────────────────
+
+router.post('/anytale/request-portrait', (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'prompt is required' });
+  }
+  const hash = portraitPromptHash(prompt);
+  const targetFilename = 'portrait_' + hash + '.png';
+  const targetPath = join(STORAGE_DIR, targetFilename);
+  if (fs.existsSync(targetPath)) {
+    return res.json({ found: true, portraitUrl: '/media/' + targetFilename });
+  }
+  res.json({ found: false });
 });
 
 // ── Outfit endpoints ─────────────────────────────────────────────────────

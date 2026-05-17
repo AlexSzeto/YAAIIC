@@ -19,6 +19,7 @@ import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultAttribute } from './anytale-state.mjs';
+import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { ImagePreview } from './image-preview.mjs';
 import { getCategoryTree, getAllTagNames, tagExist, getTagDefinition } from '../tags/tag-data.mjs';
@@ -105,6 +106,25 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     onChange({ ...part, config: { ...config, ...patch } });
   }, [part, onChange]);
 
+  const updateData = useCallback((patch) => {
+    onChange({ ...part, data: { ...data, ...patch } });
+  }, [part, onChange]);
+
+  const requestPortraitCache = useCallback((updatedPart) => {
+    const prompt = assemblePartPreviewPrompt(updatedPart);
+    if (!prompt) return;
+    fetch('/anytale/request-portrait', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (result.found) updateData({ previewImageUrl: result.portraitUrl });
+      })
+      .catch(() => {});
+  }, [updateData]);
+
   // When a new type is added and previewBaseline is empty, auto-fill from previewBasePromptByType.
   const handleTypeChange = useCallback((newTypes) => {
     const oldTypeSet = new Set((Array.isArray(config.type) ? config.type : []).map(t => t.toLowerCase()));
@@ -121,12 +141,10 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         }
       }
     }
-    onChange({ ...part, config: { ...config, ...patch } });
-  }, [part, config, previewBasePromptByType, onChange]);
-
-  const updateData = useCallback((patch) => {
-    onChange({ ...part, data: { ...data, ...patch } });
-  }, [part, onChange]);
+    const updatedPart = { ...part, config: { ...config, ...patch } };
+    onChange(updatedPart);
+    requestPortraitCache(updatedPart);
+  }, [part, config, previewBasePromptByType, onChange, requestPortraitCache]);
 
   // ── Attributes ──────────────────────────────────────────────────────────
   const handleAttrsChange = useCallback((newAttrs) => {
@@ -401,7 +419,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <${TagInput}
         label="Preview Baseline Tags"
         value=${config.previewBaseline}
-        onInput=${(text) => updateConfig({ previewBaseline: text })}
+        onInput=${(text) => {
+          const updatedPart = { ...part, config: { ...config, previewBaseline: text } };
+          onChange(updatedPart);
+          requestPortraitCache(updatedPart);
+        }}
         rows=${2}
         placeholder="Tags for preview generation only..."
       />
@@ -410,7 +432,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <${TagInput}
         label="Baseline Tags"
         value=${config.baseline}
-        onInput=${(text) => updateConfig({ baseline: text })}
+        onInput=${(text) => {
+          const updatedPart = { ...part, config: { ...config, baseline: text } };
+          onChange(updatedPart);
+          requestPortraitCache(updatedPart);
+        }}
         rows=${2}
         placeholder="Tags always included in prompts..."
       />

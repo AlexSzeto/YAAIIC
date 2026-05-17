@@ -292,7 +292,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   // ── Page management ───────────────────────────────────────────────────────
   const handleAddPage = useCallback(() => {
     const insertAt = currentPageIndex + 1;
-    const duplicate = JSON.parse(JSON.stringify(currentPage));
+    const duplicate = { ...JSON.parse(JSON.stringify(currentPage)), actions: [] };
     setPlot(prev => {
       const newPages = [...prev.pages];
       newPages.splice(insertAt, 0, duplicate);

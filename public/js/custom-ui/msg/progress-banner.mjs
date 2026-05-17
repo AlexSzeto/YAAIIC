@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
@@ -183,32 +183,37 @@ export function ProgressBanner({
     maxValue: 0
   });
 
-  // Effect for SSE subscription
+  // Keep callback refs current so the effect never needs to re-subscribe when
+  // inline prop functions change reference on parent re-renders.
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  const onCancelledRef = useRef(onCancelled);
+  const onDismissRef = useRef(onDismiss);
+  onCompleteRef.current = onComplete;
+  onErrorRef.current = onError;
+  onCancelledRef.current = onCancelled;
+  onDismissRef.current = onDismiss;
+
+  // Effect for SSE subscription — only re-runs when taskId or sseManager changes.
   useEffect(() => {
     if (!sseManager || !taskId) return;
 
-    // Capture the current document title before creating PageTitleManager
-    // This ensures we reset to the actual page title, not a potentially modified defaultTitle prop
     const originalTitle = document.title;
     const pageTitleManager = new PageTitleManager(originalTitle);
 
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
 
-      // Use currentStep from server (server always provides this)
       const message = data.progress.currentStep || 'Processing...';
 
-      // Add percentage display to the message for page title
       let titleMessage = message;
       if (data.progress.percentage > 0) {
         titleMessage = `(${Math.round(data.progress.percentage)}%) ${message}`;
       }
 
-      // Update page title with percentage
       pageTitleManager.update(titleMessage);
 
       setState(prev => {
-        // Don't overwrite the cancelling state with incoming progress updates
         if (prev.status === 'cancelling') return prev;
         return {
           ...prev,
@@ -222,8 +227,8 @@ export function ProgressBanner({
     };
 
     const handleComplete = (data) => {
+      console.log(`[ProgressBanner] handleComplete fired for taskId=${taskId}`);
       pageTitleManager.reset();
-      
       setState(prev => ({
         ...prev,
         status: 'completed',
@@ -232,54 +237,49 @@ export function ProgressBanner({
         currentValue: data.progress?.maxValue || 0,
         maxValue: data.progress?.maxValue || 0
       }));
-
-      if (onComplete) onComplete(data);
-
-      // Auto-hide after 2 seconds
-      setTimeout(() => {
-        if (onDismiss) onDismiss();
-      }, 2000);
+      if (onCompleteRef.current) {
+        console.log(`[ProgressBanner] calling onComplete prop for taskId=${taskId}`);
+        onCompleteRef.current(data);
+      } else {
+        console.warn(`[ProgressBanner] onComplete prop is null/undefined for taskId=${taskId}`);
+      }
+      setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 2000);
     };
 
     const handleError = (data) => {
       pageTitleManager.reset();
-      
       setState(prev => ({
         ...prev,
         status: 'error',
         percentage: 0,
         message: data.error?.message || 'Generation failed'
       }));
-
-      if (onError) onError(data);
-
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        if (onDismiss) onDismiss();
-      }, 5000);
+      if (onErrorRef.current) onErrorRef.current(data);
+      setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 5000);
     };
 
     const handleCancelled = (data) => {
       pageTitleManager.reset();
-      if (onCancelled) onCancelled(data);
-      if (onDismiss) onDismiss();
+      if (onCancelledRef.current) onCancelledRef.current(data);
+      if (onDismissRef.current) onDismissRef.current();
       toast.info('Generation cancelled');
     };
 
-    // Subscribe
-    sseManager.subscribe(taskId, {
+    console.log(`[ProgressBanner] subscribing to taskId=${taskId}`);
+    const subscribed = sseManager.subscribe(taskId, {
       onProgress: handleProgressUpdate,
       onComplete: handleComplete,
       onError: handleError,
       onCancelled: handleCancelled
     });
+    console.log(`[ProgressBanner] subscribe returned ${subscribed} for taskId=${taskId}`);
 
-    // Cleanup
     return () => {
-      sseManager.unsubscribe(taskId);
+      console.log(`[ProgressBanner] useEffect cleanup: unsubscribing taskId=${taskId}`);
+      sseManager.unsubscribe(taskId, 'banner-unmount');
       pageTitleManager.reset();
     };
-  }, [taskId, sseManager, onComplete, onError, onCancelled, defaultTitle, onDismiss]);
+  }, [taskId, sseManager]);
 
   const statusType = state.status === 'completed' ? 'success' : state.status;
   const panelColor = statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : 'secondary';

@@ -153,8 +153,10 @@ export function assemblePrompt(parts, activePage, slotVisibility) {
     const attrValues = part.data?.attributeValues || {};
     const attrValueList = collectValues(attrValues);
 
-    // Baseline tags: only used when all attribute values are empty/null
-    if (attrValueList.length === 0) {
+    // Baseline tags: excluded only when an attribute value references the part name
+    const partName = (part.config.name || '').toLowerCase();
+    const attrReferencesPartName = partName && attrValueList.some(v => v.toLowerCase().includes(partName));
+    if (!attrReferencesPartName) {
       tags.push(...splitTags(part.config.baseline));
     }
 
@@ -184,8 +186,10 @@ export function assemblePartPreviewPrompt(part) {
   const attrValues = part.data?.attributeValues || {};
   const attrValueList = collectValues(attrValues);
 
-  // Baseline tags: only used when all attribute values are empty/null
-  if (attrValueList.length === 0) {
+  // Baseline tags: excluded only when an attribute value references the part name
+  const partName = (part.config.name || '').toLowerCase();
+  const attrReferencesPartName = partName && attrValueList.some(v => v.toLowerCase().includes(partName));
+  if (!attrReferencesPartName) {
     tags.push(...splitTags(part.config.baseline));
   }
 
