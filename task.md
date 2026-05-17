@@ -1,136 +1,18 @@
-# AnyTale Portrait & Voice Generation — Result Linking, Portrait Deduplication, and Cache Lookup
+# Fix Bugs Introduced From Previous Feature (98-anytale-portrait-voice-result-linking-deduplication-cache-lookup)
 
 ## Goal
-After portrait or voice generation completes, automatically update the character record on the server with the output URL — regardless of whether the client is still connected. Portrait generation always writes to a deterministic hash-addressed filename (same tags → same file, overwriting on regeneration). A separate `request-portrait` endpoint lets the client instantly look up a cached portrait by prompt hash without triggering generation — used whenever part properties (attribute values, base tags, or preview tags) change, so cached results surface immediately and the cached library grows over time as previews are generated.
+Fix all outstanding bugs introduced by the previous feature implementation that leaves all media generations associated with the feature (thus, the entire AnyTale page) broken.
 
-## TODO Before Implementation
-Plan these tasks:
-- Preview image for outfits
-- outfit preview default tags
-- character gender
+## Bug Details
+- Server side: Partially Broken.
+1. Requests to update the Portrait appear to be working on the server side - as refreshing after a Generate Portrait request appears to show a new portrait image associated with the data entry.
+2. Requests to update the Voice only works if the client stays on the same page until the server completes the media generation workflow and returns its results. If the client refreshes before generation is complete, the information is lost - even if the server finishes generation successfully.
+3. Requests to generate Part previews appears to be generating hashed names and sending them back to the client correctly.
+
+- Client side: Completely Broken.
+1. Requests to update the Portrait always fail to update the client data after generation completion - the new portrait wouldn't be seen until a manual refresh is complete.
+2. Requests to generation Voice: Again, if the client navigates away from or refreshes the AnyTale page while voice generation is happening, that generation information is lost. It is not being stored in the server properly unless the task completes and returns to the client.
+3. The ability to pull up cached images for parts is failing completely. If I generate a parts preview, it shows up. If I change tags or attributes, the preview image remains - which shouldn't happen, because the client should be looking up a hashed image assocaited with the new tag combination. If I generate a new preview image and try to navigate between two tag configurations that should have cached images, still nothing happens. The expected result is that the client should toggle between the two hashed images, because a pre-generated image is available for those tag combinations and they should be pulled up whenever I try to load a part or switch its attributes. These should all happen whether the preview is being generated in the Parts & Plot tab or Character & Outfits tab.
 
 ## Tasks
 
-- [x] Task 1: Shared — add `portraitPromptHash` utility and `updateCharacterField` service helper
-  - In `server/features/anytale/router.mjs` (or a new `server/features/anytale/portrait-hash.mjs` if preferred), add:
-    ```js
-    import crypto from 'crypto';
-    export function portraitPromptHash(prompt) {
-      const normalized = prompt
-        .split(',')
-        .map(t => t.trim().toLowerCase())
-        .filter(Boolean)
-        .sort()
-        .join(',');
-      return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
-    }
-    ```
-  - In `server/features/anytale/service.mjs`, add `updateCharacterField(uid, field, value)`:
-    - Load the character by uid via the repository.
-    - Patch the field and save via `upsertCharacter`.
-    - Export the function.
-  - **Manual test:** No UI yet — verify the hash function produces consistent output by calling it twice with the same prompt string in a quick Node REPL or `console.log` during a later task.
-
-- [x] Task 2: Portrait — deterministic filename and post-completion character record update
-  - In `server/features/anytale/router.mjs`, in the `generate-portrait` endpoint:
-    1. After `prompt` is assembled, call `portraitPromptHash(prompt)` to get `hash`.
-    2. `targetFilename = 'portrait_' + hash + '.png'`
-    3. Resolve `targetPath = path.join(<mediaOutputDir>, targetFilename)` — use the same path constant already used elsewhere in the anytale router for media output.
-    4. Always proceed with generation (no skip). Replace the fire-and-forget `.catch(...)` with:
-       ```js
-       processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-         .then(async result => {
-           const actualPath = result.saveImagePath;
-           if (actualPath && actualPath !== targetPath) {
-             await fs.promises.rename(actualPath, targetPath);
-           }
-           await service.updateCharacterField(uid, 'portraitUrl', '/media/' + targetFilename);
-         })
-         .catch(err => console.error('[anytale] Portrait generation failed:', err));
-       ```
-  - Import `fs` from `'node:fs'` if not already imported.
-  - **Manual test:** Trigger portrait generation for a character. Confirm the output file in the media directory is named `portrait_<16-char-hex>.png`. Confirm `anytale-data.json` for that character has `portraitUrl` set to `/media/portrait_<hash>.png`. Trigger generation again with identical parts/attributes — confirm the file is overwritten (same filename, newer mtime) and the character record still points to the same URL.
-
-- [x] Task 3: Voice — link result to character record
-  - In the `generate-voice` endpoint, replace the fire-and-forget `.catch(...)` with:
-    ```js
-    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .then(async result => {
-        if (result.audioUrl) {
-          await service.updateCharacterField(uid, 'audioUrl', result.audioUrl);
-        }
-      })
-      .catch(err => console.error('[anytale] Voice generation failed:', err));
-    ```
-  - Reuse `updateCharacterField` from Task 1.
-  - **Manual test:** Trigger voice generation for a character, then close the browser tab. After generation completes (watch server logs), confirm `anytale-data.json` has `audioUrl` set. Reload the app and verify the audio URL is populated in the character editor.
-
-- [x] Task 4: New endpoint — `POST /anytale/request-portrait`
-  - Add a new route `POST /anytale/request-portrait` in the anytale router.
-  - Request body: `{ prompt: string }` — the same assembled prompt that would be passed to `generate-portrait`.
-  - Handler:
-    1. Compute `hash = portraitPromptHash(req.body.prompt)`.
-    2. `targetFilename = 'portrait_' + hash + '.png'`
-    3. `targetPath = path.join(<mediaOutputDir>, targetFilename)`
-    4. Check if the file exists using `fs.existsSync(targetPath)` (synchronous is fine here — it's a single stat check).
-    5. If it **exists**: respond `200` with `{ found: true, portraitUrl: '/media/' + targetFilename }`.
-    6. If it **does not exist**: respond `200` with `{ found: false }`.
-  - No generation is triggered by this endpoint.
-  - **Manual test:** After generating at least one portrait (Task 2), send a `POST /anytale/request-portrait` with the same prompt string via curl or browser console fetch. Confirm the response is `{ found: true, portraitUrl: '/media/portrait_<hash>.png' }`. Send a request with a different prompt — confirm `{ found: false }`.
-    ```sh
-    curl -X POST http://localhost:3000/anytale/request-portrait \
-      -H "Content-Type: application/json" \
-      -d '{"prompt": "blue hair, short hair, smile"}'
-    ```
-
-- [x] Task 5: Client — call `request-portrait` when part properties change
-  - In `public/js/app-ui/anytale/part-item.mjs`, whenever `config.previewBaseline`, `config.baseline`, or `config.type` changes (i.e. in `handleTypeChange` and any `updateConfig` call that touches these fields), trigger a cache lookup:
-    1. Assemble the preview prompt the same way the server does for portrait generation — use whatever prompt-assembly logic already exists on the client for the part preview (check `anytale-form.mjs` or the preview generation call site to find how the prompt is built from `config`).
-    2. Send `POST /anytale/request-portrait` with `{ prompt: assembledPrompt }`.
-    3. If `found: true`, update `data.previewImageUrl` to the returned `portraitUrl` via `updateData({ previewImageUrl: response.portraitUrl })`.
-    4. If `found: false`, do nothing — the existing `previewImageUrl` (if any) stays.
-  - This call should be fire-and-forget (no loading state, no error display). Use a plain `fetch` without `await` in the event handlers (or use `.then()` without blocking).
-  - **Manual test:** Generate a preview for a part. Change one of its attribute values back and forth. Confirm the preview image snaps instantly to the cached portrait when the attributes match a previously generated combination, without triggering a new generation job.
-
-## Implementation Details
-
-### `processGenerationTask` Return Value
-The function returns `completionData` which includes all `generationData` fields:
-- `result.saveImagePath` — absolute filesystem path of the generated image
-- `result.imageUrl` — public URL of the generated image
-- `result.audioUrl` — public URL of the generated audio (voice workflows)
-
-`silent=true` only skips the `addMediaDataEntry()` call — the task still runs to completion and returns the full result.
-
-### Prompt Normalization for Hashing
-Tags are sorted alphabetically after trimming and lowercasing. Order must not matter — the same tags in any order produce the same hash. The `portraitPromptHash` function in Task 1 implements this.
-
-### `updateCharacterField` Helper
-```js
-export async function updateCharacterField(uid, field, value) {
-  const character = await repository.getCharacter(uid);
-  if (!character) throw new Error(`Character ${uid} not found`);
-  await repository.upsertCharacter(uid, { ...character, [field]: value });
-}
-```
-
-### Media Output Directory
-The `config` object passed to `processGenerationTask` contains the output path. Check how `server/features/generation/router.mjs` resolves the media output directory from `config` and use the same approach in the anytale router.
-
-## Bugs
-
-### ~~ProgressBanner `onComplete` never fires after SSE fix~~ (Fixed)
-
-**Root cause:** Race condition in `_handleError`. When the server closes the TCP connection in the same payload as the `complete` event, the EventSource fires `onerror` (readyState CLOSED) before dispatching the queued `complete` event. `_handleError` called `_cleanup(taskId)` immediately, removing the connection from `activeConnections`. When the `complete` listener then fired, `_handleMessage` could not find the connection and returned early — silently dropping `onComplete`.
-
-**Fix:** In `_handleError`, when `readyState === CLOSED`, defer `_cleanup` by one tick via `setTimeout(0)`. The deferred closure checks that the connection is still the same one before cleaning up, so it is safe if `complete` already ran `unsubscribe` first.
-
----
-
-### Key File Locations
-- AnyTale router: `server/features/anytale/router.mjs`
-- AnyTale service: `server/features/anytale/service.mjs`
-- AnyTale repository: `server/features/anytale/repository.mjs`
-- Part item component: `public/js/app-ui/anytale/part-item.mjs`
-- AnyTale form: `public/js/app-ui/anytale/anytale-form.mjs`
-- Character data: `server/database/anytale-data.json`
