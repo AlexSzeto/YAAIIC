@@ -8,6 +8,8 @@ class SSEManager {
   constructor() {
     // Map of taskId -> { eventSource, callbacks }
     this.activeConnections = new Map();
+    // Cached result from the last fetchActiveTasks() call
+    this._activeTasksCache = null;
   }
 
   /**
@@ -267,6 +269,29 @@ class SSEManager {
     console.log(`[SSE] _cleanup: removing ${taskId} from map`);
     this._clearTimeout(taskId);
     this.activeConnections.delete(taskId);
+  }
+
+  /**
+   * Fetch the list of in-progress server tasks and cache the result.
+   * @returns {Promise<Array>}
+   */
+  async fetchActiveTasks() {
+    const res = await fetch('/generation/tasks/active');
+    if (!res.ok) throw new Error(`fetchActiveTasks: HTTP ${res.status}`);
+    this._activeTasksCache = await res.json();
+    return this._activeTasksCache;
+  }
+
+  /**
+   * Return cached active tasks, optionally filtered by entityType.
+   * Returns an empty array if fetchActiveTasks() has not been called yet.
+   * @param {string} [entityType]
+   * @returns {Array}
+   */
+  getActiveTasks(entityType) {
+    const cache = this._activeTasksCache || [];
+    if (!entityType) return cache;
+    return cache.filter(t => t.entityType === entityType);
   }
 
   /**

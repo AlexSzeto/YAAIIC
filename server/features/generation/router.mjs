@@ -14,7 +14,7 @@ import { initializeGenerationTask, processGenerationTask } from './orchestrator.
 import { loadWorkflows, validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
-  createTask, deleteTask, getTask,
+  createTask, deleteTask, getTask, getActiveTasks,
   resetProgressLog,
   emitProgressUpdate, emitTaskError,
   cancelTask, emitTaskCancelled
@@ -26,6 +26,14 @@ import { SERVER_DIR } from '../../core/paths.mjs';
 import { interruptGeneration } from './comfy-client.mjs';
 
 const router = Router();
+
+// ---------------------------------------------------------------------------
+// GET /generation/tasks/active – list all in-progress generation tasks
+// ---------------------------------------------------------------------------
+
+router.get('/generation/tasks/active', (req, res) => {
+  res.json(getActiveTasks());
+});
 
 // ---------------------------------------------------------------------------
 // POST /generate – kick off a ComfyUI media-generation pipeline

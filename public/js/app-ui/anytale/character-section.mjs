@@ -126,7 +126,22 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
  * @param {Function} [props.onImportHandlerReady] – Exposes the import handler to the parent
  * @param {number}   [props.refreshKey=0]         – Increment to force reload from localStorage
  */
-export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onImportHandlerReady, refreshKey = 0, scrollable = true, outfitList: outfitListProp, onEditParts }) {
+export function CharacterSection({
+  libraryParts = [],
+  onLibraryPartsChange,
+  onImportHandlerReady,
+  refreshKey = 0,
+  scrollable = true,
+  outfitList: outfitListProp,
+  onEditParts,
+  portraitTaskId,
+  voiceTaskId,
+  onPortraitTaskStart,
+  onVoiceTaskStart,
+  onSelectedCharacterUidChange,
+  onPortraitApplyReady,
+  onVoiceApplyReady,
+}) {
   const toast = useToast();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
@@ -151,9 +166,8 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
   }, [refreshKey]);
 
   // ── Generation state ─────────────────────────────────────────────────────
-  const [portraitTaskId, setPortraitTaskId] = useState(null);
+  // portraitTaskId and voiceTaskId are lifted to the parent (anytale-form.mjs)
   const isGeneratingPortrait = !!portraitTaskId;
-  const [voiceTaskId, setVoiceTaskId] = useState(null);
   const isGeneratingVoice = !!voiceTaskId;
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
@@ -388,12 +402,12 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     const uid = character.uid || 'temp-portrait';
     try {
       const { taskId } = await generateCharacterPortrait(uid, character.parts);
-      setPortraitTaskId(taskId);
+      if (onPortraitTaskStart) onPortraitTaskStart(taskId);
     } catch (err) {
       console.error('[CharacterSection] Portrait generation failed:', err);
       toast.error(`Portrait generation failed: ${err.message}`);
     }
-  }, [character, isGeneratingPortrait, toast]);
+  }, [character, isGeneratingPortrait, onPortraitTaskStart, toast]);
 
   // ── Voice generation ─────────────────────────────────────────────────────
 
@@ -402,12 +416,12 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     const uid = character.uid || 'temp-voice';
     try {
       const { taskId } = await generateCharacterVoice(uid, character.personality, character.name);
-      setVoiceTaskId(taskId);
+      if (onVoiceTaskStart) onVoiceTaskStart(taskId);
     } catch (err) {
       console.error('[CharacterSection] Voice generation failed:', err);
       toast.error(`Voice generation failed: ${err.message}`);
     }
-  }, [character, isGeneratingVoice, toast]);
+  }, [character, isGeneratingVoice, onVoiceTaskStart, toast]);
 
   // ── Prompt parts (used by handleGenerate) ───────────────────────────────
 
@@ -493,12 +507,60 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
 
   const handleCharacterSelect = useCallback((uid) => {
     if (!uid) return;
+    // Cancel any in-flight generation tasks before switching characters
+    if (portraitTaskId) {
+      fetch('/generate/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: portraitTaskId }),
+      }).catch(err => console.error('[CharacterSection] Failed to cancel portrait task:', err));
+      if (onPortraitTaskStart) onPortraitTaskStart(null);
+    }
+    if (voiceTaskId) {
+      fetch('/generate/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: voiceTaskId }),
+      }).catch(err => console.error('[CharacterSection] Failed to cancel voice task:', err));
+      if (onVoiceTaskStart) onVoiceTaskStart(null);
+    }
     const match = characterList.find(c => c.uid === uid);
     if (!match) return;
     setCharacter(match);
     setSavedCharacterUid(match.uid);
     setLibraryCharacter(match);
-  }, [characterList]);
+  }, [characterList, portraitTaskId, voiceTaskId, onPortraitTaskStart, onVoiceTaskStart]);
+
+  // ── Notify parent of currently displayed character uid ───────────────────
+  useEffect(() => {
+    if (onSelectedCharacterUidChange) onSelectedCharacterUidChange(character.uid || null);
+  }, [character.uid, onSelectedCharacterUidChange]);
+
+  // ── Expose apply-result functions to parent via callback refs ────────────
+  const applyPortraitResult = useCallback((imageUrl) => {
+    setCharacter(prev => ({ ...prev, portraitUrl: imageUrl }));
+    toast.success('Portrait generated');
+  }, [toast]);
+
+  const applyVoiceResult = useCallback((audioUrl, introTranscript) => {
+    setCharacter(prev => {
+      const updates = {};
+      if (audioUrl) updates.audioUrl = audioUrl;
+      if (introTranscript) updates.introTranscript = introTranscript;
+      return { ...prev, ...updates };
+    });
+    toast.success('Voice generated');
+  }, [toast]);
+
+  useEffect(() => {
+    if (onPortraitApplyReady) onPortraitApplyReady(applyPortraitResult);
+    return () => { if (onPortraitApplyReady) onPortraitApplyReady(null); };
+  }, [applyPortraitResult, onPortraitApplyReady]);
+
+  useEffect(() => {
+    if (onVoiceApplyReady) onVoiceApplyReady(applyVoiceResult);
+    return () => { if (onVoiceApplyReady) onVoiceApplyReady(null); };
+  }, [applyVoiceResult, onVoiceApplyReady]);
 
   // ── Import handler (from AnyTaleForm parent) ───────────────────────────
   const handleImport = useCallback(async (imageItem) => {
@@ -783,60 +845,8 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     })
   ];
 
-  if (portraitTaskId) {
-    banners.push(html`<${ProgressBanner}
-      key=${portraitTaskId}
-      taskId=${portraitTaskId}
-      sseManager=${sseManager}
-      defaultTitle="Generating portrait…"
-      onComplete=${(data) => {
-        if (data.result?.imageUrl) {
-          setCharacter(prev => ({ ...prev, portraitUrl: data.result.imageUrl }));
-          toast.success('Portrait generated');
-        }
-        setPortraitTaskId(null);
-      }}
-      onCancelled=${() => setPortraitTaskId(null)}
-      onCancel=${async () => {
-        await fetch('/generate/cancel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId: portraitTaskId }),
-        });
-      }}
-      onError=${() => setPortraitTaskId(null)}
-      onDismiss=${() => setPortraitTaskId(null)}
-    />`);
-  }
-
-  if (voiceTaskId) {
-    banners.push(html`<${ProgressBanner}
-      key=${voiceTaskId}
-      taskId=${voiceTaskId}
-      sseManager=${sseManager}
-      defaultTitle="Generating voice…"
-      onComplete=${(data) => {
-        const updates = {};
-        if (data.result?.audioUrl) updates.audioUrl = data.result.audioUrl;
-        if (data.result?.summary) updates.introTranscript = data.result.summary;
-        if (Object.keys(updates).length > 0) {
-          setCharacter(prev => ({ ...prev, ...updates }));
-          toast.success('Voice generated');
-        }
-        setVoiceTaskId(null);
-      }}
-      onCancelled=${() => setVoiceTaskId(null)}
-      onCancel=${async () => {
-        await fetch('/generate/cancel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId: voiceTaskId }),
-        });
-      }}
-      onError=${() => setVoiceTaskId(null)}
-      onDismiss=${() => setVoiceTaskId(null)}
-    />`);
-  }
+  // Portrait and voice ProgressBanners are rendered by the parent (anytale-form.mjs)
+  // so they persist across character switches.
 
   return banners;
 }

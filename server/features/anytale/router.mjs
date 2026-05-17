@@ -29,6 +29,7 @@ import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
 import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateCharacterField } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
+import { updateTask } from '../../core/sse.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
 
@@ -280,6 +281,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
     };
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
+    updateTask(taskId, { characterUid: uid, entityType: 'anytale-portrait' });
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
       .then(result => {
@@ -338,6 +340,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     }
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
+    updateTask(taskId, { characterUid: uid, entityType: 'anytale-voice' });
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
       .then(result => {
