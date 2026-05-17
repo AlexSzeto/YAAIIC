@@ -2,18 +2,15 @@
  * anytale.mjs – Top-level page component for the AnyTale generation mode.
  *
  * Layout:
- *   - Top strip: WorkflowSelector filtered to Image workflows
  *   - Two-column main area: left = image viewer, right = generation parameters
  */
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { Page } from '../../custom-ui/layout/page.mjs';
-import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H1, HorizontalLayout, HorizontalEdgesLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
-import { WorkflowSelector } from '../workflow-selector.mjs';
 import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
 import { Gallery } from '../main/gallery.mjs';
 import { useItemNavigation } from '../../custom-ui/nav/use-item-navigation.mjs';
@@ -71,8 +68,21 @@ export function AnyTalePage() {
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
 
-  // Workflow
-  const [workflow, setWorkflow] = useState(null);
+  // Workflow config loaded from /anytale/config + /workflows on mount
+  const [workflowConfig, setWorkflowConfig] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/anytale/config').then(r => r.json()),
+      fetch('/workflows').then(r => r.json()),
+    ])
+      .then(([config, workflows]) => {
+        const name = config.generationWorkflow;
+        const found = Array.isArray(workflows) ? workflows.find(w => w.name === name) : null;
+        setWorkflowConfig(found || null);
+      })
+      .catch(err => console.error('[AnyTalePage] Failed to load workflow config:', err));
+  }, []);
 
   // Import handlers forwarded from AnyTaleForm
   const [importControls, setImportControls] = useState(null);
@@ -187,27 +197,26 @@ export function AnyTalePage() {
   }, [history, nav]);
 
   const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData) => {
-    if (!workflow) {
-      toast.error('Please select a workflow first');
+    if (!workflowConfig) {
+      toast.error('Generation workflow not configured');
       return;
     }
     setIsGenerating(true);
     try {
       const seed = Math.floor(Math.random() * 4294967295);
       const payload = {
-        workflow: workflow.name,
+        workflow: workflowConfig.name,
         name: name || '',
         description: assembledPrompt,
         prompt: assembledPrompt,
         seed,
-        orientation: workflow.orientation,
+        orientation: workflowConfig.orientation,
         parts: partsData && Object.keys(partsData).length > 0 ? partsData : null,
         plot: plotData ?? null,
       };
 
-      // Add extraInputs with their declared defaults
-      if (Array.isArray(workflow.extraInputs)) {
-        workflow.extraInputs.forEach(input => {
+      if (Array.isArray(workflowConfig.extraInputs)) {
+        workflowConfig.extraInputs.forEach(input => {
           if (input.default !== undefined) {
             payload[input.id] = input.default;
           }
@@ -230,7 +239,7 @@ export function AnyTalePage() {
       toast.error(err.message || 'Failed to start generation');
       setIsGenerating(false);
     }
-  }, [workflow]);
+  }, [workflowConfig]);
 
   return html`
     <${TooltipProvider}>
@@ -257,17 +266,6 @@ export function AnyTalePage() {
           <${HamburgerMenu} />
         <//>
       </${HorizontalEdgesLayout}>
-
-      <div style="display: none;">
-      <${Panel} variant="outlined">
-        <${WorkflowSelector}
-          value=${workflow}
-          onChange=${setWorkflow}
-          disabled=${isGenerating}
-          typeOptions=${[{ label: 'Image', value: 'image' }]}
-        />
-      </${Panel}>
-      </div>
 
       <${TwoColumn}>
         <${LeftColumn}>

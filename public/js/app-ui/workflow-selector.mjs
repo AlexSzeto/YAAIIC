@@ -21,7 +21,7 @@ Container.className = 'container';
 /**
  * Workflow Selector Component
  * Fetches and displays available workflows from the server
- * 
+ *
  * @param {Object} props
  * @param {Object|null} props.value - Selected workflow object
  * @param {Function} props.onChange - Callback when workflow changes (workflow) => void

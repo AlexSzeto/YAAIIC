@@ -102,6 +102,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   }, [refreshKey]);
   // ── Recommended part types config ────────────────────────────────────
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
+  const [partPreviewWorkflow, setPartPreviewWorkflow] = useState('');
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -109,6 +110,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       .then(data => {
         if (Array.isArray(data.recommendedOutfitPartTypes)) {
           setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
+        }
+        if (typeof data.partPreviewWorkflow === 'string' && data.partPreviewWorkflow) {
+          setPartPreviewWorkflow(data.partPreviewWorkflow);
         }
       })
       .catch(err => console.error('[OutfitSection] Failed to load AnyTale config:', err));
@@ -214,7 +218,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflow: 'Text to Image (Illustrious Portrait)',
+          workflow: partPreviewWorkflow,
           name: libConfig?.name || item.partUid || 'preview',
           prompt,
           seed: Math.floor(Math.random() * 4294967295),
@@ -239,7 +243,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       console.error('[OutfitSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
     }
-  }, [generatingPreviews, libraryParts, toast]);
+  }, [generatingPreviews, libraryParts, partPreviewWorkflow, toast]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
