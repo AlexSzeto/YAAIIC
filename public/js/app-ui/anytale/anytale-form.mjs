@@ -350,26 +350,15 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         return;
       }
 
-      const response = await fetch('/generate/silent/async', {
+      const response = await fetch('/anytale/generate-part-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: 'Text to Image (Illustrious Portrait)',
-          name: item.config?.name || 'preview',
-          prompt,
-          seed: Math.floor(Math.random() * 4294967295),
-          orientation: 'square',
-          imageFormat: 'png',
-          usePostPrompts: false,
-          removeBackground: false,
-        }),
+        body: JSON.stringify({ prompt }),
       });
-
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-
       const { taskId } = await response.json();
       setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
     } catch (err) {
@@ -885,10 +874,11 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         defaultTitle="Generating preview…"
         onComplete=${(data) => {
           if (data.result?.imageUrl) {
+            const url = `${data.result.imageUrl}?t=${Date.now()}`;
             setParts(prev => {
               const next = [...prev];
               if (next[idx]) {
-                next[idx] = { ...next[idx], data: { ...next[idx].data, previewImageUrl: data.result.imageUrl } };
+                next[idx] = { ...next[idx], data: { ...next[idx].data, previewImageUrl: url } };
               }
               return next;
             });

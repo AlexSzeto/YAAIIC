@@ -24,13 +24,13 @@
  *   DELETE /anytale/outfits/:uid  – delete an outfit
  */
 import { Router } from 'express';
-import crypto from 'crypto';
 import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
 import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateCharacterField } from './service.mjs';
 import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
+import { portraitPromptHash } from './portrait-hash.mjs';
 
 const router = Router();
 
@@ -42,16 +42,6 @@ function loadSlotRules() {
   } catch {
     return '';
   }
-}
-
-function portraitPromptHash(prompt) {
-  const normalized = prompt
-    .split(',')
-    .map(t => t.trim().toLowerCase())
-    .filter(Boolean)
-    .sort()
-    .join(',');
-  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
 router.get('/anytale/config', (req, res) => {
@@ -270,10 +260,6 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
 
     const prompt = tags.filter(Boolean).join(', ');
 
-    const hash = portraitPromptHash(prompt);
-    const targetFilename = 'portrait_' + hash + '.png';
-    const targetPath = join(STORAGE_DIR, targetFilename);
-
     const comfyuiWorkflows = loadWorkflows();
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
     if (!workflowData) {
@@ -291,14 +277,20 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       summary: '',
       usePostPrompts: false,
       removeBackground: false,
-      saveImagePath: targetPath,
     };
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .then(() => {
-        updateCharacterField(uid, 'portraitUrl', '/media/' + targetFilename);
+      .then(result => {
+        if (result.imageUrl) {
+          const exists = getAllCharacters().some(c => c.uid === uid);
+          if (!exists) {
+            console.warn(`[anytale] Skipping portrait update: uid '${uid}' is not a saved character`);
+            return;
+          }
+          updateCharacterField(uid, 'portraitUrl', result.imageUrl);
+        }
       })
       .catch(err => console.error('[anytale] Portrait generation failed:', err));
   } catch (error) {
@@ -348,10 +340,17 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .then(async result => {
-        if (result.audioUrl) {
-          updateCharacterField(uid, 'audioUrl', result.audioUrl);
+      .then(result => {
+        if (!result.audioUrl && !result.summary) return;
+        const char = getAllCharacters().find(c => c.uid === uid);
+        if (!char) {
+          console.warn(`[anytale] Skipping voice update: uid '${uid}' is not a saved character`);
+          return;
         }
+        const updates = {};
+        if (result.audioUrl) updates.audioUrl = result.audioUrl;
+        if (result.summary) updates.introTranscript = result.summary;
+        saveCharacter(uid, { ...char, ...updates });
       })
       .catch(err => console.error('[anytale] Voice generation failed:', err));
   } catch (error) {
@@ -360,9 +359,56 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
   }
 });
 
-// ── Request portrait cache lookup ─────────────────────────────────────────
+// ── Generate a part preview image (always generates; hash-named for idempotency) ──
 
-router.post('/anytale/request-portrait', (req, res) => {
+router.post('/anytale/generate-part-preview', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+
+    const hash = portraitPromptHash(prompt);
+    const targetFilename = 'portrait_' + hash + '.png';
+    const targetPath = join(STORAGE_DIR, targetFilename);
+
+    const config = req.app.locals.config;
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+    const portraitWorkflow = (config.anytale || {}).portraitWorkflow || 'Text to Image (Illustrious Portrait)';
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Portrait workflow '${portraitWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: portraitWorkflow,
+      prompt,
+      seed: Math.floor(Math.random() * 4294967295),
+      orientation: 'square',
+      imageFormat: 'png',
+      tags: '',
+      description: '',
+      summary: '',
+      usePostPrompts: false,
+      removeBackground: false,
+      saveImagePath: targetPath,
+    };
+
+    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
+    res.json({ taskId });
+    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
+      .catch(err => console.error('[anytale] Part preview generation failed:', err));
+  } catch (error) {
+    console.error('Error starting part preview generation:', error);
+    res.status(500).json({ error: 'Failed to start part preview generation', details: error.message });
+  }
+});
+
+// ── Part preview cache lookup ─────────────────────────────────────────────
+
+router.post('/anytale/request-part-preview', (req, res) => {
   const { prompt } = req.body;
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'prompt is required' });

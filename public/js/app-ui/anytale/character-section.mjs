@@ -212,7 +212,19 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
           const uid = loadCharacter().uid;
           if (uid) {
             const saved = list.find(c => c.uid === uid);
-            if (saved) setLibraryCharacter(saved);
+            if (saved) {
+              setLibraryCharacter(saved);
+              // Merge server-authoritative fields that may have been written by
+              // background generation while the client was away (e.g. voice generation
+              // that completed after a page reload).
+              setCharacter(prev => {
+                const serverFields = {};
+                if (saved.portraitUrl) serverFields.portraitUrl = saved.portraitUrl;
+                if (saved.audioUrl) serverFields.audioUrl = saved.audioUrl;
+                if (saved.introTranscript) serverFields.introTranscript = saved.introTranscript;
+                return { ...prev, ...serverFields };
+              });
+            }
           }
         }
       })
@@ -262,13 +274,50 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     }));
   }, [character.parts, toast]);
 
+  const requestPartPreviewCache = useCallback((index, updatedPart) => {
+    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
+    if (!libConfig) return;
+    const prompt = assemblePartPreviewPrompt({
+      config: {
+        name: libConfig.name,
+        previewBaseline: libConfig.previewBaseline || '',
+        baseline: libConfig.baseline || '',
+        attributes: libConfig.attributes || [],
+      },
+      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
+    });
+    if (!prompt) return;
+    fetch('/anytale/request-part-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (!result.found) return;
+        setCharacter(prev => {
+          const parts = [...(prev.parts || [])];
+          if (parts[index]?.partUid === updatedPart.partUid) {
+            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
+          }
+          return { ...prev, parts };
+        });
+      })
+      .catch(() => {});
+  }, [libraryParts]);
+
   const handlePartChange = useCallback((index, updatedPart) => {
+    const currentPart = character.parts[index];
+    const attrChanged = JSON.stringify(currentPart?.attributeValues) !== JSON.stringify(updatedPart.attributeValues);
     setCharacter(prev => {
       const newParts = [...prev.parts];
-      newParts[index] = updatedPart;
+      newParts[index] = attrChanged ? { ...updatedPart, previewImageUrl: '' } : updatedPart;
       return { ...prev, parts: newParts };
     });
-  }, []);
+    if (attrChanged) {
+      requestPartPreviewCache(index, { ...updatedPart, previewImageUrl: '' });
+    }
+  }, [character.parts, requestPartPreviewCache]);
 
   // ── Part preview generation (manual, via header action button) ───────────
 
@@ -284,7 +333,7 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     if (generatingPreviews[index]) return;
 
     const libConfig = libraryParts.find(p => p.uid === item.partUid);
-      const partForPrompt = {
+    const partForPrompt = {
       config: {
         name: libConfig?.name || item.partUid,
         previewBaseline: libConfig?.previewBaseline || '',
@@ -305,29 +354,15 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
     }
 
     try {
-      const response = await fetch('/generate/silent/async', {
+      const response = await fetch('/anytale/generate-part-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: 'Text to Image (Illustrious Portrait)',
-          name: libConfig?.name || item.partUid || 'preview',
-          prompt,
-          seed: Math.floor(Math.random() * 4294967295),
-          orientation: 'square',
-          imageFormat: 'png',
-          tags: '',
-          description: '',
-          summary: '',
-          usePostPrompts: false,
-          removeBackground: false,
-        }),
+        body: JSON.stringify({ prompt }),
       });
-
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-
       const { taskId } = await response.json();
       setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
     } catch (err) {
@@ -705,10 +740,11 @@ export function CharacterSection({ libraryParts = [], onLibraryPartsChange, onIm
         defaultTitle="Generating preview…"
         onComplete=${(data) => {
           if (data.result?.imageUrl) {
+            const url = `${data.result.imageUrl}?t=${Date.now()}`;
             setCharacter(prev => {
               const newParts = [...(prev.parts || [])];
               if (newParts[idx]) {
-                newParts[idx] = { ...newParts[idx], previewImageUrl: data.result.imageUrl };
+                newParts[idx] = { ...newParts[idx], previewImageUrl: url };
               }
               return { ...prev, parts: newParts };
             });

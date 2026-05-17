@@ -113,17 +113,17 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const requestPortraitCache = useCallback((updatedPart) => {
     const prompt = assemblePartPreviewPrompt(updatedPart);
     if (!prompt) return;
-    fetch('/anytale/request-portrait', {
+    fetch('/anytale/request-part-preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     })
       .then(r => r.json())
       .then(result => {
-        if (result.found) updateData({ previewImageUrl: result.portraitUrl });
+        if (result.found) onChange({ ...updatedPart, data: { ...updatedPart.data, previewImageUrl: result.portraitUrl } });
       })
       .catch(() => {});
-  }, [updateData]);
+  }, [onChange]);
 
   // When a new type is added and previewBaseline is empty, auto-fill from previewBasePromptByType.
   const handleTypeChange = useCallback((newTypes) => {
@@ -158,13 +158,17 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
 
   const handleAttrValueChange = useCallback((index, value) => {
     const attrName = config.attributes[index]?.name ?? String(index);
-    updateData({
-      attributeValues: {
-        ...data.attributeValues,
-        [attrName]: value,
+    const updatedPart = {
+      ...part,
+      data: {
+        ...data,
+        attributeValues: { ...data.attributeValues, [attrName]: value },
+        previewImageUrl: '',
       },
-    });
-  }, [data, config.attributes, updateData]);
+    };
+    onChange(updatedPart);
+    requestPortraitCache(updatedPart);
+  }, [part, data, config.attributes, onChange, requestPortraitCache]);
 
   // ── Tag import helper: opens category selector for a specific attribute ─
   const handleTagImportClick = useCallback((attr, attrIndex) => {
