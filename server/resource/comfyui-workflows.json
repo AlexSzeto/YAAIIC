@@ -1375,10 +1375,10 @@
       ]
     },
     {
-      "name": "Inpaint (Realistic Vision Fantasy)",
+      "name": "Inpaint (Waifu Anime)",
       "options": {
         "type": "inpaint",
-        "autocomplete": false,
+        "autocomplete": true,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
@@ -1394,7 +1394,7 @@
           "to": "enhancedPrompt"
         }
       ],
-      "base": "realvis-fantasy-inpaint.json",
+      "base": "waifu-anime-inpaint.json",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -1439,10 +1439,10 @@
       ]
     },
     {
-      "name": "Inpaint (Waifu Anime)",
+      "name": "Inpaint (Realistic Vision Fantasy)",
       "options": {
         "type": "inpaint",
-        "autocomplete": true,
+        "autocomplete": false,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
@@ -1458,7 +1458,7 @@
           "to": "enhancedPrompt"
         }
       ],
-      "base": "waifu-anime-inpaint.json",
+      "base": "realvis-fantasy-inpaint.json",
       "replace": [
         {
           "from": "enhancedPrompt",
