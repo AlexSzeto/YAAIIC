@@ -14,7 +14,7 @@ import { initializeGenerationTask, processGenerationTask } from './orchestrator.
 import { loadWorkflows, validateNoNestedExecuteWorkflow } from './workflow-validator.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import {
-  createTask, deleteTask, getTask, getActiveTasks,
+  createTask, deleteTask, getTask, getActiveTasks, updateTask,
   resetProgressLog,
   emitProgressUpdate, emitTaskError,
   cancelTask, emitTaskCancelled
@@ -180,6 +180,7 @@ router.post('/generate', upload.any(), async (req, res) => {
     console.log('Starting media generation with request data: ', req.body);
 
     const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+    if (req.body.requestOrigin) updateTask(taskId, { requestOrigin: req.body.requestOrigin });
 
     // Respond immediately so the client can subscribe to SSE progress events
     res.json({ success: true, taskId, message: 'Generation task created' });
@@ -649,6 +650,7 @@ router.post('/generate/inpaint', upload.fields([
       }
       
       const { taskId } = initializeGenerationTask(req.body, workflowData, config);
+      if (req.body.requestOrigin) updateTask(taskId, { requestOrigin: req.body.requestOrigin });
 
       res.json({ success: true, taskId, message: 'Generation task created' });
 

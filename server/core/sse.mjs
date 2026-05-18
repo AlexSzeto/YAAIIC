@@ -578,6 +578,7 @@ export function getActiveTasks() {
     if (s === 'completed' || s === 'cancelled' || s === 'error') continue;
     result.push({
       taskId,
+      requestOrigin: task.requestOrigin || null,
       characterUid: task.characterUid || null,
       entityType: task.entityType || null,
       progress: task.progress || { percentage: 0, currentStep: 'Starting...' },

@@ -5,7 +5,10 @@
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Get-ChildItem -Path \"f:\\\\YAAIIC\" -Recurse -Directory -ErrorAction SilentlyContinue)",
       "Bash(Select-Object -First 30)",
-      "PowerShell(Get-ChildItem -Path \"f:\\\\YAAIIC\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object {$_.FullName -match \"\\(server|public\\)\" } | Select-Object -First 20)"
+      "PowerShell(Get-ChildItem -Path \"f:\\\\YAAIIC\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object {$_.FullName -match \"\\(server|public\\)\" } | Select-Object -First 20)",
+      "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\" -Recurse -Directory -Depth 3)",
+      "Bash(Select-Object FullName)",
+      "Bash(Head -30)"
     ]
   }
 }

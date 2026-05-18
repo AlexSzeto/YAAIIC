@@ -281,7 +281,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
     };
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    updateTask(taskId, { characterUid: uid, entityType: 'anytale-portrait' });
+    updateTask(taskId, { characterUid: uid, entityType: 'anytale-portrait', requestOrigin: 'anytale' });
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
       .then(result => {
@@ -340,7 +340,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     }
 
     const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    updateTask(taskId, { characterUid: uid, entityType: 'anytale-voice' });
+    updateTask(taskId, { characterUid: uid, entityType: 'anytale-voice', requestOrigin: 'anytale' });
     res.status(202).json({ taskId });
     processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
       .then(result => {

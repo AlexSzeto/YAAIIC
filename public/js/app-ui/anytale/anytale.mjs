@@ -62,7 +62,7 @@ RightColumn.className = 'right-column';
 
 export function AnyTalePage() {
   const toast = useToast();
-  const { show: progressShow } = useProgress();
+  const { show: progressShow, activeTasks } = useProgress();
 
   // Theme re-render trigger
   const [, setTheme] = useState(currentTheme.value);
@@ -160,6 +160,20 @@ export function AnyTalePage() {
     toast.error(data.error?.message || 'Generation failed');
   }, []);
 
+  // Reconnect-resume: restore in-progress anytale image generation tasks on page load
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const task = activeTasks.find(t => t.requestOrigin === 'anytale' && !t.entityType);
+    if (task && !taskId) {
+      setIsGenerating(true);
+      setTaskId(task.taskId);
+      progressShow(task.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+      });
+    }
+  }, [activeTasks]);
+
   const handleDeleteImage = useCallback(async (image) => {
     if (!image) return;
     const result = await showDialog(
@@ -213,6 +227,7 @@ export function AnyTalePage() {
         orientation: workflowConfig.orientation,
         parts: partsData && Object.keys(partsData).length > 0 ? partsData : null,
         plot: plotData ?? null,
+        requestOrigin: 'anytale',
       };
 
       if (Array.isArray(workflowConfig.extraInputs)) {

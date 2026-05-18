@@ -56,7 +56,7 @@ function generateRandomSeed() {
 function App() {
   const toast = useToast();
   const hoverPanel = useHoverPanel();
-  const { show: progressShow } = useProgress();
+  const { show: progressShow, activeTasks } = useProgress();
   
   // Theme state - triggers re-render on theme change so goober styled components update
   const [, setTheme] = useState(currentTheme.value);
@@ -418,6 +418,7 @@ function App() {
         formData.append('prompt', formState.description);
         formData.append('workflow', workflow.name);
         formData.append('seed', seedToUse);
+        formData.append('requestOrigin', 'yaaiic');
         
         if (formState.name.trim()) {
           formData.append('name', formState.name.trim());
@@ -506,7 +507,8 @@ function App() {
           description: formState.description,
           prompt: formState.description,
           seed: seedToUse,
-          orientation: orientation
+          orientation: orientation,
+          requestOrigin: 'yaaiic'
         };
         
         // Add all extra inputs from workflow configuration
@@ -547,15 +549,14 @@ function App() {
   const handleGenerationComplete = async (data) => {
     setIsGenerating(false);
     setTaskId(null);
-    
+
     if (data.result && data.result.uid) {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
         setGeneratedImage(media);
-        
-        // Add to history
         setHistory(prev => [media, ...prev]);
-        
+        historyNav.selectByIndex(0);
+
         toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
@@ -563,12 +564,26 @@ function App() {
       }
     }
   };
-  
+
   const handleGenerationError = (data) => {
     setIsGenerating(false);
     setTaskId(null);
     toast.error(data.error?.message || 'Generation failed');
   };
+
+  // Reconnect-resume: restore in-progress yaaiic generation tasks on page load
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const task = activeTasks.find(t => t.requestOrigin === 'yaaiic');
+    if (task && !taskId) {
+      setIsGenerating(true);
+      setTaskId(task.taskId);
+      progressShow(task.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+      });
+    }
+  }, [activeTasks]);
   
   // Handlers for Generated Result
   const handleUseSeed = (seed) => {

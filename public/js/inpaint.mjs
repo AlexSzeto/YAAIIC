@@ -106,7 +106,7 @@ async function createOriginalImageCanvas(imageUrl) {
  */
 function InpaintApp() {
   const toast = useToast();
-  const { show: progressShow } = useProgress();
+  const { show: progressShow, activeTasks } = useProgress();
 
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
@@ -309,6 +309,7 @@ function InpaintApp() {
       formData.append('maskFilename', maskFilename);
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
+      formData.append('requestOrigin', 'inpaint');
       if (mediaData.uid) formData.append('origin', String(mediaData.uid));
       
       // Append image field names from the source mediaData
@@ -418,6 +419,20 @@ function InpaintApp() {
     console.error('Inpaint generation failed:', data);
     toast.error(data.error?.message || 'Inpaint generation failed');
   };
+
+  // Reconnect-resume: restore in-progress inpaint generation tasks on page load
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const task = activeTasks.find(t => t.requestOrigin === 'inpaint');
+    if (task && !taskId) {
+      setIsGenerating(true);
+      setTaskId(task.taskId);
+      progressShow(task.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+      });
+    }
+  }, [activeTasks]);
 
   // Handle folder selection
   const handleOpenFolderSelect = () => {

@@ -31,7 +31,7 @@
   },
   "6": {
     "inputs": {
-      "text": "a painterly digital art style illustration\n\n",
+      "text": "masterpiece,best quality,amazing quality, source anime, ",
       "clip": [
         "29",
         1
@@ -44,7 +44,7 @@
   },
   "7": {
     "inputs": {
-      "text": "watermark, text, realistic, low quality",
+      "text": "bad quality, worst quality, worst detail, ",
       "clip": [
         "29",
         1
@@ -96,7 +96,7 @@
   },
   "26": {
     "inputs": {
-      "grow_mask_by": 12,
+      "grow_mask_by": 48,
       "pixels": [
         "20",
         0
