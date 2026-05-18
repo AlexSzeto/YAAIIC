@@ -379,8 +379,9 @@ function InpaintApp() {
         const newImageData = await fetchJson(`/media-data/${data.result.uid}`);
         setMediaData(newImageData);
         
-        // Add to history
+        // Add to history and jump to the new entry
         setHistory(prev => [newImageData, ...prev]);
+        historyNav.selectByIndex(0);
         
         // Update URL with new UID
         const newUrl = new URL(window.location);

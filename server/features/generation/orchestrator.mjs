@@ -763,6 +763,22 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     if (!generationData.summary) generationData.summary = '';
     if (!generationData.tags) generationData.tags = '';
 
+    // Safety-net: derive format fields from file extensions if not already set
+    if (!generationData.imageFormat && generationData.saveImagePath) {
+      const ext = path.extname(generationData.saveImagePath).slice(1).toLowerCase();
+      if (ext) {
+        generationData.imageFormat = ext;
+        console.log('Auto-derived imageFormat from saveImagePath:', ext);
+      }
+    }
+    if (!generationData.audioFormat && generationData.saveAudioPath) {
+      const ext = path.extname(generationData.saveAudioPath).slice(1).toLowerCase();
+      if (ext) {
+        generationData.audioFormat = ext;
+        console.log('Auto-derived audioFormat from saveAudioPath:', ext);
+      }
+    }
+
     // Save to database (skip if silent mode / nested workflow)
     if (!silent && addMediaDataEntry) {
       addMediaDataEntry(generationData);
