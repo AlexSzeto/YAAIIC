@@ -17,7 +17,7 @@
   },
   "11": {
     "inputs": {
-      "text": "masterpiece, best quality,score_9, score_8, score_7, uncensored, game screenshot,\n\ndive bar counter, liquor cabinet,\n\n1girl: \nlong hair, straight hair, black hair, single sidelock, small breasts, \n purple eyes, bangle, black thighhighs, lace thighhighs, black garter belt, \npussy juice, topless, dark nipples, nipple stimulation, torn panties, large penis, leg up, closed eyes, open mouth, after vaginal, cum on stomach, cum on breasts, facial, hetero\n\n\n1boy:\nblonde hair, short hair, pale skin, bottomless, shirt, blue shirt, penis,\nerection,  ejaculation, cum on penis, orgasm, clenched teeth, ",
+      "text": "masterpiece, best quality,score_9, score_8, score_7, uncensored, source anime,",
       "clip": [
         "45",
         0
@@ -30,7 +30,7 @@
   },
   "12": {
     "inputs": {
-      "text": "worst quality, low quality, score_1, score_2, score_3, blurry, watermark, trademarked, subtitle, jpeg artifacts, safe, censored, sketch, black and white, speech bubble, text background, foreground text, sound effects, motion blur",
+      "text": "worst quality, low quality, score_1, score_2, score_3, bad eyes, extra hands, extra fingers, extra arms, extra legs, blurry, watermark, trademarked, subtitle, jpeg artifacts, censored, sketch, black and white, speech bubble, text background, foreground text, sound effects, motion blur",
       "clip": [
         "45",
         0

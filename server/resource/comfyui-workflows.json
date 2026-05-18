@@ -117,7 +117,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality, amazing quality, source anime, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         },
         {
@@ -226,7 +226,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality, amazing quality, source anime, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         },
         {
@@ -482,7 +482,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality, amazing quality, source anime, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],
@@ -834,7 +834,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality,score_9, score_8, score_7, anime screenshot, {{prompt}}",
+          "template": "masterpiece, best quality,score_9, score_8, score_7, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],
@@ -1003,7 +1003,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality, amazing quality, source anime, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],
@@ -4739,7 +4739,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality, amazing quality, source anime, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
         },
         {

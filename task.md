@@ -1,28 +1,60 @@
-# SSE Context Refactor
+# Reconnect-Resume for All Generation Pages
 
 ## Goal
 
-Refactor the SSE/ProgressBanner system to use Preact Context so any component can access active task state and trigger progress banners via a unified `useProgress()` hook, eliminating direct `sseManager` imports and prop drilling across page components.
+Extend reconnect-resume behaviour to all generation entry points (main YAAIIC page, AnyTale image generation, and inpaint page) so that when a user returns to any page with an active generation in progress, the progress banner resumes automatically and the completion event is handled exactly as if the user never left.
 
 ## Tasks
 
-- [x] Refactor `public/js/custom-ui/msg/progress-context.mjs`: remove `sseManager` prop from `ProgressProvider` and import the singleton directly; add `activeTasks` state populated on mount via `sseManager.fetchActiveTasks()`; update `show(taskId, options)` to add to `activeTasks` and remove on completion/error/cancel (wrapping user callbacks); update `hide(taskId)` to also remove from `activeTasks`; update `useProgress()` to return `{ activeTasks, show, hide }`
-- [x] Wrap the `app.mjs` render tree with `<ProgressProvider>` and migrate the `App` component to use `useProgress()`: remove the direct `sseManager` import and all inline `<ProgressBanner>` renders, replacing them with `show(taskId, options)` calls
-- [x] Wrap the `inpaint.mjs` render tree with `<ProgressProvider>` and migrate `InpaintApp` to use `useProgress()`: remove the direct `sseManager` import and inline `<ProgressBanner>` render, replacing it with a `show(taskId, options)` call
-- [x] Wrap the `anytale.mjs` render tree with `<ProgressProvider>` and migrate `anytale-form.mjs` to use `useProgress()`: remove the direct `sseManager` import and inline `<ProgressBanner>` renders, replacing them with `show()`/`hide()` calls; replace the `sseManager.fetchActiveTasks()` call in the reconnect-resume `useEffect` with a read from `activeTasks` in context
+- [ ] Add `requestOrigin` to the server-side task registry: update `updateTask` / task storage so the field is persisted, and include it in the `GET /generation/tasks/active` response alongside existing fields
+- [ ] Update `POST /generate` to read `requestOrigin` from the request body and store it on the task immediately after initialisation
+- [ ] Update `POST /generate/inpaint` to read `requestOrigin` from the request body and store it on the task immediately after initialisation
+- [ ] Backfill AnyTale portrait and voice generation endpoints in `server/features/anytale/router.mjs` with `requestOrigin: 'anytale'` alongside their existing `entityType` values
+- [ ] On the main YAAIIC page, send `requestOrigin: 'yaaiic'` in every generate request payload
+- [ ] On the main YAAIIC page, add a reconnect-resume `useEffect` that filters `activeTasks` from `useProgress()` by `requestOrigin === 'yaaiic'` and calls `show(taskId, onComplete)` for any match not already showing
+- [ ] On the main YAAIIC page, fix `onComplete` to jump to the newly generated image after adding it to the results
+- [ ] On the AnyTale page, send `requestOrigin: 'anytale'` in every image generate request payload
+- [ ] On the AnyTale page, add a reconnect-resume `useEffect` that filters `activeTasks` by `requestOrigin === 'anytale'` and absent/null `entityType`, and calls `show(taskId, onComplete)` for any match not already showing
+- [ ] On the AnyTale page, fix `onComplete` for image generation to jump to the newly generated image after adding it to the viewer
+- [ ] On the inpaint page, send `requestOrigin: 'inpaint'` in every inpaint generate request payload
+- [ ] On the inpaint page, add a reconnect-resume `useEffect` that filters `activeTasks` by `requestOrigin === 'inpaint'` and calls `show(taskId, onComplete)` for any match not already showing
 
 ## Implementation Details
 
-### `progress-context.mjs` changes
+### `requestOrigin` values by page
 
-`sseManager` is imported as a singleton at the top of the file rather than accepted as a prop. On mount, `ProgressProvider` calls `sseManager.fetchActiveTasks()` and stores the result as `activeTasks` state (array of `{ taskId, entityType, characterUid, progress }` objects).
+| Page | `requestOrigin` |
+|---|---|
+| Main YAAIIC page | `'yaaiic'` |
+| AnyTale page | `'anytale'` |
+| Inpaint page | `'inpaint'` |
 
-`show(taskId, options)` adds an entry to `activeTasks` if the `taskId` is not already present, then proceeds with the existing banner registration logic. It wraps `options.onComplete`, `options.onError`, and `options.onCancelled` so that each removes the task from `activeTasks` before calling the original callback.
+`requestOrigin` identifies which page initiated the request. It is distinct from `entityType`, which identifies a sub-type within a page (e.g. `'anytale-portrait'`, `'anytale-voice'`). AnyTale image generation tasks carry `requestOrigin: 'anytale'` with no `entityType`; portrait/voice tasks carry both.
 
-`hide(taskId)` removes the task from `activeTasks` in addition to removing the banner from `progresses`.
+### Server changes
 
-`useProgress()` returns `{ activeTasks, show, hide }`.
+`GET /generation/tasks/active` response objects gain a `requestOrigin` field:
+```json
+{ "taskId": "...", "requestOrigin": "yaaiic", "entityType": null, "progress": 0.5 }
+```
 
-### Reconnect-resume in `anytale-form.mjs`
+### Reconnect-resume pattern (same as AnyTale portrait/voice, already implemented)
 
-The existing `useEffect` that calls `sseManager.fetchActiveTasks()` on mount is replaced with a `useEffect` that depends on `activeTasks` from `useProgress()`. When `activeTasks` is populated (non-empty), the component searches for portrait/voice tasks by `entityType` and calls `show(taskId, options)` for any it finds. This effect runs whenever `activeTasks` changes, but the `show()` call is guarded so it only fires once per task (i.e. not re-registered if the banner is already showing).
+```js
+useEffect(() => {
+  for (const task of activeTasks) {
+    if (task.requestOrigin !== PAGE_ORIGIN) continue;
+    // additional filter by entityType if needed
+    if (progresses[task.taskId]) continue; // already showing
+    show(task.taskId, buildOnComplete(task));
+  }
+}, [activeTasks]);
+```
+
+### Jump-to-result
+
+After adding the new image to the results list, scroll or navigate so the new item is visible. The exact mechanism depends on each page's viewer component — verify current behaviour before implementing.
+
+### Inpaint `onComplete` note
+
+The existing inpaint `onComplete` already prepends the result to history (making it the current item) and applies `data.result.inpaintArea` from the server response. No changes are needed beyond wiring up the reconnect-resume effect. Verify this claim before committing changes.
