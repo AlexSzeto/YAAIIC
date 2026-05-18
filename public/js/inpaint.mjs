@@ -12,13 +12,12 @@ import { AppHeader } from './app-ui/themed-base.mjs';
 import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
+import { ProgressProvider, useProgress } from './custom-ui/msg/progress-context.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint/inpaint-canvas.mjs';
 import { InpaintForm } from './app-ui/inpaint/inpaint-form.mjs';
-import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
-import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
@@ -107,6 +106,7 @@ async function createOriginalImageCanvas(imageUrl) {
  */
 function InpaintApp() {
   const toast = useToast();
+  const { show: progressShow } = useProgress();
 
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
@@ -353,8 +353,12 @@ function InpaintApp() {
       }
       
       setTaskId(result.taskId);
+      progressShow(result.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+      });
       console.log('Inpaint generation started with taskId:', result.taskId);
-      
+
     } catch (err) {
       console.error('Error during inpaint:', err);
       toast.error(`Inpaint failed: ${err.message}`);
@@ -556,16 +560,6 @@ function InpaintApp() {
         </${Panel}>
       `}
       
-      ${taskId ? html`
-        <${ProgressBanner} 
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
-      ` : null}
-
     </${VerticalLayout}>
   `;
 }
@@ -578,7 +572,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       <${TooltipProvider}>
         <${Page}>
           <${ToastProvider}>
-            <${InpaintApp} />
+            <${ProgressProvider}>
+              <${InpaintApp} />
+            </${ProgressProvider}>
           </${ToastProvider}>
         </${Page}>
       </${TooltipProvider}>

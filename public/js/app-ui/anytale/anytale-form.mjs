@@ -31,8 +31,7 @@ import { OutfitSection } from './outfit-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
-import { sseManager } from '../sse-manager.mjs';
-import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
+import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 
 // ============================================================================
 // Styled Components
@@ -111,6 +110,7 @@ PromptPreview.className = 'prompt-preview';
  */
 export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentItem = null }) {
   const toast = useToast();
+  const { show: progressShow, activeTasks } = useProgress();
   const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   const [isImporting, setIsImporting] = useState(false);
@@ -167,17 +167,50 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       .catch(err => console.error('[AnyTaleForm] Failed to fetch config:', err));
   }, []);
 
-  // ── Reconnect-resume: restore in-progress portrait/voice tasks on mount ──
+  // ── Reconnect-resume: restore in-progress portrait/voice tasks from context ──
   useEffect(() => {
-    sseManager.fetchActiveTasks()
-      .then(tasks => {
-        const portraitTask = tasks.find(t => t.entityType === 'anytale-portrait');
-        const voiceTask = tasks.find(t => t.entityType === 'anytale-voice');
-        if (portraitTask) setPortraitTaskId(portraitTask.taskId);
-        if (voiceTask) setVoiceTaskId(voiceTask.taskId);
-      })
-      .catch(err => console.error('[AnyTaleForm] Failed to fetch active tasks for resume:', err));
-  }, []);
+    if (activeTasks.length === 0) return;
+    const portraitTask = activeTasks.find(t => t.entityType === 'anytale-portrait');
+    const voiceTask = activeTasks.find(t => t.entityType === 'anytale-voice');
+    if (portraitTask && !portraitTaskId) {
+      setPortraitTaskId(portraitTask.taskId);
+      progressShow(portraitTask.taskId, {
+        entityType: 'anytale-portrait',
+        defaultTitle: 'Generating portrait…',
+        onComplete: (data) => {
+          const resultUid = data.result?.uid;
+          if (resultUid === selectedCharacterUid) {
+            if (data.result?.imageUrl && applyPortraitRef.current) {
+              applyPortraitRef.current(data.result.imageUrl);
+            }
+          }
+          setPortraitTaskId(null);
+        },
+        onCancelled: () => setPortraitTaskId(null),
+        onError: () => setPortraitTaskId(null),
+        onDismiss: () => setPortraitTaskId(null),
+      });
+    }
+    if (voiceTask && !voiceTaskId) {
+      setVoiceTaskId(voiceTask.taskId);
+      progressShow(voiceTask.taskId, {
+        entityType: 'anytale-voice',
+        defaultTitle: 'Generating voice…',
+        onComplete: (data) => {
+          const resultUid = data.result?.uid;
+          if (resultUid === selectedCharacterUid) {
+            if (applyVoiceRef.current) {
+              applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
+            }
+          }
+          setVoiceTaskId(null);
+        },
+        onCancelled: () => setVoiceTaskId(null),
+        onError: () => setVoiceTaskId(null),
+        onDismiss: () => setVoiceTaskId(null),
+      });
+    }
+  }, [activeTasks]);
   // �"��"� Plot list for Character & Outfits tab generate section �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
   const [charTabPlotList, setCharTabPlotList] = useState([]);
   const [charTabPlotName, setCharTabPlotName] = useState('');
@@ -390,6 +423,32 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       }
       const { taskId } = await response.json();
       setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
+      progressShow(taskId, {
+        defaultTitle: 'Generating preview…',
+        onComplete: (data) => {
+          if (data.result?.imageUrl) {
+            const url = `${data.result.imageUrl}?t=${Date.now()}`;
+            setParts(prev => {
+              const next = [...prev];
+              if (next[index]) {
+                next[index] = { ...next[index], data: { ...next[index].data, previewImageUrl: url } };
+              }
+              return next;
+            });
+          }
+          dismissPreviewByIndex(index);
+        },
+        onCancelled: () => dismissPreviewByIndex(index),
+        onCancel: async () => {
+          await fetch('/generate/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId }),
+          });
+        },
+        onError: () => dismissPreviewByIndex(index),
+        onDismiss: () => dismissPreviewByIndex(index),
+      });
     } catch (err) {
       console.error('[AnyTaleForm] Preview generation failed:', err);
     }
@@ -835,8 +894,62 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               onEditParts=${handleEditParts}
               portraitTaskId=${portraitTaskId}
               voiceTaskId=${voiceTaskId}
-              onPortraitTaskStart=${setPortraitTaskId}
-              onVoiceTaskStart=${setVoiceTaskId}
+              onPortraitTaskStart=${(taskId) => {
+                setPortraitTaskId(taskId);
+                progressShow(taskId, {
+                  entityType: 'anytale-portrait',
+                  defaultTitle: 'Generating portrait…',
+                  onComplete: (data) => {
+                    const resultUid = data.result?.uid;
+                    if (resultUid === selectedCharacterUid) {
+                      if (data.result?.imageUrl && applyPortraitRef.current) {
+                        applyPortraitRef.current(data.result.imageUrl);
+                      }
+                    } else if (resultUid && resultUid !== 'temp-portrait') {
+                      console.log(`[AnyTaleForm] Portrait completed for background character ${resultUid} — no UI update`);
+                    }
+                    setPortraitTaskId(null);
+                  },
+                  onCancelled: () => setPortraitTaskId(null),
+                  onCancel: async () => {
+                    await fetch('/generate/cancel', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskId }),
+                    });
+                  },
+                  onError: () => setPortraitTaskId(null),
+                  onDismiss: () => setPortraitTaskId(null),
+                });
+              }}
+              onVoiceTaskStart=${(taskId) => {
+                setVoiceTaskId(taskId);
+                progressShow(taskId, {
+                  entityType: 'anytale-voice',
+                  defaultTitle: 'Generating voice…',
+                  onComplete: (data) => {
+                    const resultUid = data.result?.uid;
+                    if (resultUid === selectedCharacterUid) {
+                      if (applyVoiceRef.current) {
+                        applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
+                      }
+                    } else if (resultUid && resultUid !== 'temp-voice') {
+                      console.log(`[AnyTaleForm] Voice completed for background character ${resultUid} — no UI update`);
+                    }
+                    setVoiceTaskId(null);
+                  },
+                  onCancelled: () => setVoiceTaskId(null),
+                  onCancel: async () => {
+                    await fetch('/generate/cancel', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskId }),
+                    });
+                  },
+                  onError: () => setVoiceTaskId(null),
+                  onDismiss: () => setVoiceTaskId(null),
+                });
+              }}
               onSelectedCharacterUidChange=${setSelectedCharacterUid}
               onPortraitApplyReady=${handlePortraitApplyReady}
               onVoiceApplyReady=${handleVoiceApplyReady}
@@ -905,111 +1018,12 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     },
   ];
 
-  const portraitBanner = portraitTaskId ? html`<${ProgressBanner}
-    key=${portraitTaskId}
-    taskId=${portraitTaskId}
-    sseManager=${sseManager}
-    defaultTitle="Generating portrait…"
-    onComplete=${(data) => {
-      const resultUid = data.result?.uid;
-      if (resultUid === selectedCharacterUid) {
-        // Result is for the currently displayed character — apply it
-        if (data.result?.imageUrl && applyPortraitRef.current) {
-          applyPortraitRef.current(data.result.imageUrl);
-        }
-      } else if (resultUid && resultUid !== 'temp-portrait') {
-        // Result is for a different saved character — server already wrote the DB;
-        // nothing to update in the current view.
-        console.log(`[AnyTaleForm] Portrait completed for background character ${resultUid} — no UI update`);
-      }
-      // uid is 'temp-portrait' or missing → discard entirely
-      setPortraitTaskId(null);
-    }}
-    onCancelled=${() => setPortraitTaskId(null)}
-    onCancel=${async () => {
-      await fetch('/generate/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: portraitTaskId }),
-      });
-    }}
-    onError=${() => setPortraitTaskId(null)}
-    onDismiss=${() => setPortraitTaskId(null)}
-  />` : null;
-
-  const voiceBanner = voiceTaskId ? html`<${ProgressBanner}
-    key=${voiceTaskId}
-    taskId=${voiceTaskId}
-    sseManager=${sseManager}
-    defaultTitle="Generating voice…"
-    onComplete=${(data) => {
-      const resultUid = data.result?.uid;
-      if (resultUid === selectedCharacterUid) {
-        // Result is for the currently displayed character — apply it
-        if (applyVoiceRef.current) {
-          applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
-        }
-      } else if (resultUid && resultUid !== 'temp-voice') {
-        // Result is for a different saved character — server already wrote the DB
-        console.log(`[AnyTaleForm] Voice completed for background character ${resultUid} — no UI update`);
-      }
-      // uid is 'temp-voice' or missing → discard entirely
-      setVoiceTaskId(null);
-    }}
-    onCancelled=${() => setVoiceTaskId(null)}
-    onCancel=${async () => {
-      await fetch('/generate/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: voiceTaskId }),
-      });
-    }}
-    onError=${() => setVoiceTaskId(null)}
-    onDismiss=${() => setVoiceTaskId(null)}
-  />` : null;
-
-  return [
-    html`<${TabPanels}
-      tabs=${tabs}
-      activeTab=${activeTab}
-      onTabChange=${handleTabChange}
-      variant="outlined"
-      style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    />`,
-    portraitBanner,
-    voiceBanner,
-    ...Object.entries(generatingPreviews).map(([indexStr, taskId]) => {
-      const idx = parseInt(indexStr);
-      return html`<${ProgressBanner}
-        key=${taskId}
-        taskId=${taskId}
-        sseManager=${sseManager}
-        defaultTitle="Generating preview…"
-        onComplete=${(data) => {
-          if (data.result?.imageUrl) {
-            const url = `${data.result.imageUrl}?t=${Date.now()}`;
-            setParts(prev => {
-              const next = [...prev];
-              if (next[idx]) {
-                next[idx] = { ...next[idx], data: { ...next[idx].data, previewImageUrl: url } };
-              }
-              return next;
-            });
-          }
-          dismissPreviewByIndex(idx);
-        }}
-        onCancelled=${() => dismissPreviewByIndex(idx)}
-        onCancel=${async () => {
-          await fetch('/generate/cancel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId }),
-          });
-        }}
-        onError=${() => dismissPreviewByIndex(idx)}
-        onDismiss=${() => dismissPreviewByIndex(idx)}
-      />`;
-    })
-  ];
+  return html`<${TabPanels}
+    tabs=${tabs}
+    activeTab=${activeTab}
+    onTabChange=${handleTabChange}
+    variant="outlined"
+    style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+  />`;
 }
 

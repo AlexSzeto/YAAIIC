@@ -7,7 +7,7 @@ import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 
 import { Button } from './custom-ui/io/button.mjs';
-import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
+import { ProgressProvider, useProgress } from './custom-ui/msg/progress-context.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
@@ -24,7 +24,6 @@ import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
 import { openFolderSelect } from './app-ui/use-folder-select.mjs';
 
-import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
@@ -57,6 +56,7 @@ function generateRandomSeed() {
 function App() {
   const toast = useToast();
   const hoverPanel = useHoverPanel();
+  const { show: progressShow } = useProgress();
   
   // Theme state - triggers re-render on theme change so goober styled components update
   const [, setTheme] = useState(currentTheme.value);
@@ -528,11 +528,15 @@ function App() {
       
       if (response.taskId) {
         setTaskId(response.taskId);
+        progressShow(response.taskId, {
+          onComplete: handleGenerationComplete,
+          onError: handleGenerationError,
+        });
         toast.show('Generation started...', 'info');
       } else {
         throw new Error('No taskId returned');
       }
-      
+
     } catch (err) {
       console.error('Generation failed:', err);
       toast.error(err.message || 'Failed to start generation');
@@ -790,7 +794,11 @@ function App() {
   const handleSoundEditSaveTask = useCallback((taskId) => {
     setSoundEditorItem(null);
     setTaskId(taskId);
-  }, []);
+    progressShow(taskId, {
+      onComplete: handleGenerationComplete,
+      onError: handleGenerationError,
+    });
+  }, [progressShow]);
 
   const handleEdit = async (uid, field, value) => {
     try {
@@ -837,8 +845,11 @@ function App() {
         throw new Error('No task ID returned from server');
       }
 
-      // Set regeneration task ID to trigger progress banner
       setRegenerateTaskId(response.taskId);
+      progressShow(response.taskId, {
+        onComplete: handleRegenerateComplete,
+        onError: handleRegenerateError,
+      });
 
     } catch (err) {
       console.error('Regenerate failed:', err);
@@ -1022,8 +1033,12 @@ function App() {
       });
       
       if (result.taskId) {
-         setTaskId(result.taskId);
-         toast.show('Uploading...', 'info');
+        setTaskId(result.taskId);
+        progressShow(result.taskId, {
+          onComplete: handleGenerationComplete,
+          onError: handleGenerationError,
+        });
+        toast.show('Uploading...', 'info');
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -1150,26 +1165,6 @@ function App() {
       />
     ` : null}
 
-    ${taskId ? html`
-      <${ProgressBanner}
-        key=${taskId}
-        taskId=${taskId}
-        sseManager=${sseManager}
-        onComplete=${handleGenerationComplete}
-        onError=${handleGenerationError}
-      />
-    ` : null}
-    
-    ${regenerateTaskId ? html`
-      <${ProgressBanner} 
-        key=${regenerateTaskId}
-        taskId=${regenerateTaskId}
-        sseManager=${sseManager}
-        onComplete=${handleRegenerateComplete}
-        onError=${handleRegenerateError}
-      />
-    ` : null}
-
     <${Gallery} 
       isOpen=${isGalleryOpen}
       onClose=${() => {
@@ -1211,7 +1206,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <${TooltipProvider}>
           <${Page}>
             <${ToastProvider}>
-              <${App} />
+              <${ProgressProvider}>
+                <${App} />
+              </${ProgressProvider}>
             </${ToastProvider}>
           </${Page}>
         </${TooltipProvider}>

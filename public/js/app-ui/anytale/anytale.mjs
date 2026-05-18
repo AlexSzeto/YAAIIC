@@ -11,10 +11,9 @@ import { Page } from '../../custom-ui/layout/page.mjs';
 import { H1, HorizontalLayout, HorizontalEdgesLayout, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
-import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
+import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { Gallery } from '../main/gallery.mjs';
 import { useItemNavigation } from '../../custom-ui/nav/use-item-navigation.mjs';
-import { sseManager } from '../sse-manager.mjs';
 import { fetchJson } from '../../custom-ui/util.mjs';
 import { backfillMissingProperties } from '../../util.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
@@ -63,6 +62,7 @@ RightColumn.className = 'right-column';
 
 export function AnyTalePage() {
   const toast = useToast();
+  const { show: progressShow } = useProgress();
 
   // Theme re-render trigger
   const [, setTheme] = useState(currentTheme.value);
@@ -230,6 +230,10 @@ export function AnyTalePage() {
       });
       if (response.taskId) {
         setTaskId(response.taskId);
+        progressShow(response.taskId, {
+          onComplete: handleGenerationComplete,
+          onError: handleGenerationError,
+        });
         toast.show('Generation started...', 'info');
       } else {
         throw new Error('No taskId returned');
@@ -298,16 +302,6 @@ export function AnyTalePage() {
           />
         </${RightColumn}>
       </${TwoColumn}>
-
-      ${taskId ? html`
-        <${ProgressBanner}
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
-      ` : null}
 
       <${Gallery}
         isOpen=${isGalleryOpen}

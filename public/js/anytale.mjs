@@ -4,6 +4,7 @@ import { html } from 'htm/preact';
 import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider } from './custom-ui/msg/toast.mjs';
 import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
+import { ProgressProvider } from './custom-ui/msg/progress-context.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { AnyTalePage } from './app-ui/anytale/anytale.mjs';
@@ -15,7 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <${TooltipProvider}>
         <${Page}>
           <${ToastProvider}>
-            <${AnyTalePage} />
+            <${ProgressProvider}>
+              <${AnyTalePage} />
+            </${ProgressProvider}>
           </${ToastProvider}>
         </${Page}>
       </${TooltipProvider}>
