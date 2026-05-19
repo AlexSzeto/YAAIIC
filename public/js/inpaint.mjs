@@ -26,6 +26,7 @@ import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
+import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
 
 /**
  * Helper function to generate random seed
@@ -577,6 +578,8 @@ function InpaintApp() {
       `}
       
     </${VerticalLayout}>
+
+    <${QueueStatusBanner} progressVisible=${!!taskId} />
   `;
 }
 

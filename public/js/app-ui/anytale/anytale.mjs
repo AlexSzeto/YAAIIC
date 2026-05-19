@@ -25,6 +25,7 @@ import { AnyTaleViewer } from './anytale-viewer.mjs';
 import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
+import { QueueStatusBanner } from '../queue-status-banner.mjs';
 
 const TwoColumn = styled('div')`
   display: flex;
@@ -339,5 +340,7 @@ export function AnyTalePage() {
       />
     </${VerticalLayout}>
     </${TooltipProvider}>
+
+    <${QueueStatusBanner} progressVisible=${!!taskId} />
   `;
 }

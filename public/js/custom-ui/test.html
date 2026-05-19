@@ -867,6 +867,21 @@
                       addLabel="Add Item"
                       condensed=${true}
                     />
+
+                    <h4 style="margin: 32px 0 8px;">canDrop — Pinned First Item</h4>
+                    <p style="margin-bottom: 8px; opacity: 0.7;">The first item cannot be moved (simulates a locked running queue item). Drag or use move-up on item 2 to verify it stops at position 1.</p>
+                    <${DynamicList}
+                      title="Pinned List"
+                      items=${this.state.dynamicListItems}
+                      renderItem=${(item) => html`<div style="padding: 4px 0;">${item.title || 'Untitled'}</div>`}
+                      getTitle=${(item) => item.title || 'Untitled'}
+                      createItem=${() => ({ id: Date.now(), title: 'New item', description: '' })}
+                      onChange=${(items) => this.setState({ dynamicListItems: items })}
+                      addLabel="Add Task"
+                      showMoveUpDownButtons=${true}
+                      showDragButton=${true}
+                      canDrop=${(from, to) => !(from === 0 || to === 0)}
+                    />
                   </${Section}>
                   
                   <${CategoryHeader}>Input/Output Components<//>

@@ -220,7 +220,7 @@ export function GenerationForm({
           loading=${isQueuedDuplicate}
           disabled=${isGenerateDisabled}
         >
-          ${isQueuedDuplicate ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
+          ${isQueuedDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue' : 'Generate'}
         </${Button}>
 
 

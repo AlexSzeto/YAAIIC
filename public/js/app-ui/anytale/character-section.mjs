@@ -736,7 +736,7 @@ export function CharacterSection({
                 loading=${isPortraitDuplicate}
                 disabled=${isPortraitDuplicate}
               >
-                ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? `Generate Portrait (${queueCount} Queued)` : 'Generate Portrait'}
+                ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Portrait' : 'Generate Portrait'}
               <//>
               <${Button}
                 variant="small-text"
@@ -746,7 +746,7 @@ export function CharacterSection({
                 loading=${isVoiceDuplicate}
                 disabled=${!character.personality?.trim() || isVoiceDuplicate}
               >
-                ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? `Generate Voice (${queueCount} Queued)` : 'Generate Voice'}
+                ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Voice' : 'Generate Voice'}
               <//>
             </${ButtonRow}>
 

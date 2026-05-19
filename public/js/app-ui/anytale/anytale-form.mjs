@@ -940,7 +940,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null }) {
           icon="play"
           onClick=${handleGenerate}
         >
-          ${queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
+          ${queueCount > 0 ? 'Queue' : 'Generate'}
         <//>
       </${ButtonRow}>
 
@@ -1028,7 +1028,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null }) {
                 icon="play"
                 onClick=${handleCharTabGenerate}
               >
-                ${queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
+                ${queueCount > 0 ? 'Queue' : 'Generate'}
               <//>
             </${ButtonRow}>
             <${SearchSelectModal}

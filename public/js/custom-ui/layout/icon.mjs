@@ -65,6 +65,7 @@ const ICON_MAP = {
   'disc': 'album',
   'headphone': 'headphones',
   'book': 'book_2',
+  'file-detail': 'docs',
   
   // Communication
   'search': 'search',

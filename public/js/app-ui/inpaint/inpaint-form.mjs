@@ -186,7 +186,7 @@ export function InpaintForm({
           loading=${isQueuedDuplicate}
           disabled=${isInpaintDisabled}
         >
-          ${isQueuedDuplicate ? 'Inpainting...' : queueCount > 0 ? `Inpaint (${queueCount} Queued)` : 'Inpaint'}
+          ${isQueuedDuplicate ? 'Inpainting...' : queueCount > 0 ? 'Queue' : 'Inpaint'}
         </${Button}>
       </${FormRow}>
 

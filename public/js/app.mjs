@@ -34,6 +34,7 @@ import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { backfillMissingProperties } from './util.mjs';
 import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
+import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
 
 // =========================================================================
 // Styled Components
@@ -1207,12 +1208,14 @@ function App() {
       onDelete=${handleGalleryDelete}
     />
     
-    <${HiddenFileInput} 
-      type="file" 
-      id="upload-file-input" 
+    <${HiddenFileInput}
+      type="file"
+      id="upload-file-input"
       accept="image/*,audio/*"
       onChange=${handleUploadFile}
     />
+
+    <${QueueStatusBanner} progressVisible=${!!(taskId || regenerateTaskId)} />
   `;
 }
 

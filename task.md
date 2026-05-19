@@ -154,15 +154,15 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
 ### Phase 4 — Queue Dashboard
 *After this phase: users can monitor, reorder, pause, skip, and clear the queue from any page via a queue status banner that appears whenever the queue is non-empty.*
 
-- [ ] Add a `canDrop(fromIndex, toIndex) => bool` prop to `public/js/custom-ui/layout/dynamic-list.mjs`. When provided, the drag-and-drop handler calls it before committing a drop; if it returns `false`, the drop is cancelled. Also disable the arrange-up button on a row when `canDrop(index, index - 1)` would return `false`. Add a usage example to `public/js/custom-ui/test.html`.
+- [x] Add a `canDrop(fromIndex, toIndex) => bool` prop to `public/js/custom-ui/layout/dynamic-list.mjs`. When provided, the drag-and-drop handler calls it before committing a drop; if it returns `false`, the drop is cancelled. Also disable the arrange-up button on a row when `canDrop(index, index - 1)` would return `false`. Add a usage example to `public/js/custom-ui/test.html`.
 
-- [ ] Create `public/js/app-ui/queue-dashboard.mjs` as a modal component:
+- [x] Create `public/js/app-ui/queue-dashboard.mjs` as a modal component:
   - **Header**: `"Task Queue"` with a status badge showing current state in parentheses, e.g. `"(running)"`, `"(paused)"`, `"(stopped)"`
   - **Body**: `DynamicList` of active queue items (status `queued` or `running`); each row shows `[type icon] [source label] – [name][ (subLabel)]` and a delete icon button; when queue state is `running | cancelling | skipping | pausing`, pass `canDrop` to pin index 0 (see Implementation Details)
   - **Footer**: `Start` / `Pause` toggle button (icon + text, swaps label/icon based on state), `Clear` button (calls `showDialog` for confirmation before `POST /queue/clear`), and `Close` button
   - Responds live to all `queue:*` SSE events via `queueSseManager`
 
-- [ ] Create `public/js/app-ui/queue-status-banner.mjs` as a reusable component rendered on every page that has a progress banner (`app.mjs`, `inpaint.mjs`, `anytale.mjs`):
+- [x] Create `public/js/app-ui/queue-status-banner.mjs` as a reusable component rendered on every page that has a progress banner (`app.mjs`, `inpaint.mjs`, `anytale.mjs`):
   - Positioned fixed at the bottom-right corner, in the same stacking region as `ProgressBanner`
   - Only visible when the queue has at least one non-failed item
   - When a `ProgressBanner` is also visible, the `QueueStatusBanner` renders above it (higher `bottom` offset); when no progress banner is present it sits at the corner baseline
@@ -170,9 +170,14 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
   - State and item count come from `useQueueStatus`; the state string is capitalised (first letter only)
   - The `QueueDashboardModal` is rendered as a sibling inside the same component so no parent wiring is needed
 
-- [ ] Add `QueueStatusBanner` to `app.mjs`, `inpaint.mjs`, and `anytale.mjs` alongside their existing `ProgressBanner` usage. Pass a `progressVisible` boolean prop so the banner can offset itself correctly above the progress banner when it is present.
+- [x] Add `QueueStatusBanner` to `app.mjs`, `inpaint.mjs`, and `anytale.mjs` alongside their existing `ProgressBanner` usage. Pass a `progressVisible` boolean prop so the banner can offset itself correctly above the progress banner when it is present.
 
-- [ ] Update all generate button labels: when the queue is non-empty, replace the full `"Generate (N Queued)"` label with simply `"Queue"`. The disabled/loading `"Generating..."` label when a duplicate is queued remains unchanged. Affected files: `generation-form.mjs`, `inpaint-form.mjs`, `anytale-form.mjs`, `character-section.mjs`.
+- [x] Update all generate button labels: when the queue is non-empty, replace the full `"Generate (N Queued)"` label with simply `"Queue"`. The disabled/loading `"Generating..."` label when a duplicate is queued remains unchanged. Affected files: `generation-form.mjs`, `inpaint-form.mjs`, `anytale-form.mjs`, `character-section.mjs`.
+
+#### Follow Up Tasks 1
+- [x] Modify the panel style (background color, outlines, etc.) of the queue-status-banner to be an exact match of the progress banner.
+
+- [x] In the QueueDashboardModal, each item should have an icon according to its generated media type: image (image icon), audio (microphone icon), and video (video icon). Status text should appear for all items, not just the one that is currently running (they would be "queued").
 
 ---
 

@@ -157,6 +157,7 @@ function DynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  upDisabled,
   headerActions,
   getEnabled,
   onToggleEnabled,
@@ -230,7 +231,7 @@ function DynamicListItem({
             <${Button}
               variant="small-icon"
               icon="up-arrow"
-              disabled=${index === 0}
+              disabled=${upDisabled ?? (index === 0)}
               onClick=${onMoveUp}
               tooltip="Move up"
             />
@@ -278,6 +279,7 @@ function CondensedDynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  upDisabled,
   headerActions,
   getEnabled,
   onToggleEnabled,
@@ -325,7 +327,7 @@ function CondensedDynamicListItem({
           <${Button}
             variant="small-icon"
             icon="up-arrow"
-            disabled=${index === 0}
+            disabled=${upDisabled ?? (index === 0)}
             onClick=${onMoveUp}
             tooltip="Move up"
           />
@@ -387,6 +389,7 @@ function CondensedDynamicListItem({
  * @param {Function} [props.getHeaderSelectValue]    - `(item, index) => string` — current value for the header Select.
  * @param {Function} [props.onHeaderSelectChange]    - `(item, index, value) => void` — called when the header Select changes.
  * @param {Function} [props.getHeaderSelectTooltip]  - `(item, index) => string|null` — optional tooltip for the header Select.
+ * @param {Function} [props.canDrop]               - `(fromIndex, toIndex) => bool` — when provided, called before committing a drag-drop or move-up; returning `false` cancels the operation. Also disables the move-up button at index i when `canDrop(i, i-1)` returns `false`.
  * @returns {preact.VNode}
  *
  * @example
@@ -424,6 +427,7 @@ export function DynamicList({
   getHeaderSelectValue,        // optional: (item, index) => string
   onHeaderSelectChange,        // optional: (item, index, value) => void
   getHeaderSelectTooltip,      // optional: (item, index) => string|null — tooltip for the header Select
+  canDrop,                     // optional: (fromIndex, toIndex) => bool — cancels drag/move-up when false
 }) {
   const theme = currentTheme.value;
 
@@ -470,10 +474,11 @@ export function DynamicList({
 
   const handleMoveUp = useCallback((index) => {
     if (index === 0) return;
+    if (canDrop && !canDrop(index, index - 1)) return;
     const next = [...items];
     [next[index - 1], next[index]] = [next[index], next[index - 1]];
     onChange(next);
-  }, [items, onChange]);
+  }, [items, onChange, canDrop]);
 
   const handleMoveDown = useCallback((index) => {
     if (index === items.length - 1) return;
@@ -598,7 +603,7 @@ export function DynamicList({
 
       setDragState(null);
 
-      if (from !== to) {
+      if (from !== to && (!canDrop || canDrop(from, to))) {
         // Use itemsRef.current so we never capture a stale items array.
         const next = [...itemsRef.current];
         const [moved] = next.splice(from, 1);
@@ -671,6 +676,7 @@ export function DynamicList({
                 isDragTarget=${false}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                upDisabled=${index === 0 || (canDrop ? !canDrop(index, index - 1) : false)}
                 headerActions=${headerActions}
                 getEnabled=${getEnabled}
                 onToggleEnabled=${onToggleEnabled}
@@ -694,6 +700,7 @@ export function DynamicList({
                 initialCollapsed=${!isNew}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                upDisabled=${index === 0 || (canDrop ? !canDrop(index, index - 1) : false)}
                 headerActions=${headerActions}
                 getEnabled=${getEnabled}
                 onToggleEnabled=${onToggleEnabled}
