@@ -8,7 +8,7 @@ Replace direct fire-and-forget generation calls with a persistent, server-manage
 ### Phase 1 — Outfit Preview Bug Fix
 *Standalone fix. App is fully functional after this phase.*
 
-- [ ] Fix outfit part preview in `public/js/app-ui/anytale/outfit-section.mjs` to use `/anytale/generate-part-preview` instead of `/generate/silent/async`, and add cache-busting (`?t=${Date.now()}`) to the resulting image URL on completion — matching the implementation in `anytale-form.mjs`. Remove any props on `OutfitSection` that were only needed for the old generic endpoint (e.g. `partPreviewWorkflow`).
+- [x] Fix outfit part preview in `public/js/app-ui/anytale/outfit-section.mjs` to use `/anytale/generate-part-preview` instead of `/generate/silent/async`, and add cache-busting (`?t=${Date.now()}`) to the resulting image URL on completion — matching the implementation in `anytale-form.mjs`. Remove any props on `OutfitSection` that were only needed for the old generic endpoint (e.g. `partPreviewWorkflow`).
 
 ---
 
@@ -17,19 +17,19 @@ Replace direct fire-and-forget generation calls with a persistent, server-manage
 
 #### Server — Queue Domain
 
-- [ ] Create `server/features/queue/` with three files:
+- [x] Create `server/features/queue/` with three files:
   - `repository.mjs` — reads/writes `server/database/queue-data.json` (flat JSON array); creates the file with `[]` if absent; exports `loadQueue()`, `saveQueue(items)`
   - `service.mjs` — owns in-memory queue state (`items[]`, `state`); syncs to repository on every mutation; exports `enqueue(record)`, `deleteItem(id)`, `reorder({ id, toIndex })`, `clear()`, `start()`, `pause()`, `skip()`, `getStatus()`, `resume()`, and `setTaskCancelledCallback(fn)` for wiring into the per-task SSE cancellation path
   - `router.mjs` — mounts all `/queue/*` REST endpoints and the `/queue/sse` stream; imports from `service.mjs`
 
-- [ ] Implement the queue SSE stream at `GET /queue/sse` inside `queue/router.mjs`:
+- [x] Implement the queue SSE stream at `GET /queue/sse` inside `queue/router.mjs`:
   - Separate from `/progress/:taskId`; tracks its own connected clients
   - Exports an `emitQueueEvent(event, payload)` helper used by `service.mjs`
   - Named events: `queue:updated`, `queue:started`, `queue:stopped`, `queue:task-started`, `queue:task-complete`, `queue:task-cancelled`
   - Every state mutation in `service.mjs` calls `emitQueueEvent('queue:updated', getStatus())` after the mutation, plus the specific named event
   - `queue:task-started` payload must include `taskId` (the per-task SSE id assigned by the orchestrator) so clients can bridge from `queueId` to `taskId` for progress tracking
 
-- [ ] Implement queue REST endpoints in `queue/router.mjs`:
+- [x] Implement queue REST endpoints in `queue/router.mjs`:
   - `GET /queue/status` — returns `{ state, items }` (no side effects)
   - `POST /queue/start` — resumes a paused/stopped queue; starts executing the head item; 409 if already running
   - `POST /queue/pause` — cancels the in-progress task; on cancel-complete the task stays at head and queue state becomes `paused`; 409 if nothing running
@@ -38,37 +38,90 @@ Replace direct fire-and-forget generation calls with a persistent, server-manage
   - `POST /queue/clear` — cancels the running task (if any), then deletes all items; emits `queue:stopped` with `reason: 'user-paused'`
   - `PATCH /queue/reorder` — body `{ id, toIndex }`; 400 if `toIndex === 0` and queue state is `running | cancelling | skipping | pausing`
 
-- [ ] Mount `queueRouter` in `server/server.mjs` and wire queue resume into the server startup sequence: after `startReadinessPolling` confirms both ComfyUI and Ollama are online, call `queueService.resume()` to begin processing any persisted incomplete items. Support a `--clear-queue` CLI argument that calls `queueService.clear()` silently before `resume()`.
+- [x] Mount `queueRouter` in `server/server.mjs` and wire queue resume into the server startup sequence: after `startReadinessPolling` confirms both ComfyUI and Ollama are online, call `queueService.resume()` to begin processing any persisted incomplete items. Support a `--clear-queue` CLI argument that calls `queueService.clear()` silently before `resume()`.
 
 #### Server — Generation Endpoint Migration
 
-- [ ] Refactor `server/features/generation/orchestrator.mjs` to expose an `executeQueuedTask(queueItem)` function that accepts a fully-formed queue record and runs it through the existing pipeline (`initializeGenerationTask` + `processGenerationTask`). The queue service's `_runNext()` calls this; `_runNext()` assigns the `taskId` returned by `initializeGenerationTask` to the queue record and includes it in the `queue:task-started` SSE event.
+- [x] Refactor `server/features/generation/orchestrator.mjs` to expose an `executeQueuedTask(queueItem)` function that accepts a fully-formed queue record and runs it through the existing pipeline (`initializeGenerationTask` + `processGenerationTask`). The queue service's `_runNext()` calls this; `_runNext()` assigns the `taskId` returned by `initializeGenerationTask` to the queue record and includes it in the `queue:task-started` SSE event.
 
-- [ ] Migrate `POST /generate` (main page / AnyTale story image) to enqueue: extract all form fields (including `seed`) into `taskData`, build a queue record (see schema in Implementation Details), call `queueService.enqueue(record)`, and return `{ queueId }` immediately. The `type` is inferred from the workflow metadata (image/video/audio). The `source` is determined by a `source` field the client sends: `'yaaiic'` (default) or `'anytale'`.
+- [x] Migrate `POST /generate` (main page / AnyTale story image) to enqueue: extract all form fields (including `seed`) into `taskData`, build a queue record (see schema in Implementation Details), call `queueService.enqueue(record)`, and return `{ queueId }` immediately. The `type` is inferred from the workflow metadata (image/video/audio). The `source` is determined by a `source` field the client sends: `'yaaiic'` (default) or `'anytale'`.
 
-- [ ] Migrate `POST /generate/inpaint` to enqueue with `source: 'yaaiic-inpaint'`, `type: 'image'`.
+- [x] Migrate `POST /generate/inpaint` to enqueue with `source: 'yaaiic-inpaint'`, `type: 'image'`.
 
-- [ ] Migrate `POST /regenerate` (field regen / LLM description) to enqueue with `source: 'yaaiic'`, `type: 'text'`, `name` resolved from the target media entry's `name` field at enqueue time.
+- [x] Migrate `POST /regenerate` (field regen / LLM description) to enqueue with `source: 'yaaiic'`, `type: 'text'`, `name` resolved from the target media entry's `name` field at enqueue time.
 
-- [ ] Migrate AnyTale generation endpoints to enqueue:
+- [x] Migrate AnyTale generation endpoints to enqueue:
   - `POST /anytale/generate-part-preview` → `source: 'anytale'`, `type: 'image'`, `subLabel: 'Part Preview'`, `name` from part name (sent in request body)
   - `POST /anytale/characters/:uid/generate-portrait` → `source: 'anytale'`, `type: 'image'`, `subLabel: 'Portrait'`, `name` from character record
   - `POST /anytale/characters/:uid/generate-voice` → `source: 'anytale'`, `type: 'audio'`, `subLabel: 'Voice'`, `name` from character record
 
-- [ ] Route per-task cancellation events upstream to the queue service: when the existing per-task SSE emits `cancelled` for a `taskId` that matches the queue's running item, call the appropriate queue service method based on current queue state — `pausing` → mark task as `queued` again + set state to `paused`; `skipping` or delete-triggered → remove task + call `_runNext()`; emit corresponding `queue:task-cancelled` and `queue:updated` events.
+- [x] Route per-task cancellation events upstream to the queue service: when the existing per-task SSE emits `cancelled` for a `taskId` that matches the queue's running item, call the appropriate queue service method based on current queue state — `pausing` → mark task as `queued` again + set state to `paused`; `skipping` or delete-triggered → remove task + call `_runNext()`; emit corresponding `queue:task-cancelled` and `queue:updated` events.
 
 #### Client — Queue SSE Integration
 
-- [ ] Add a `queueSseManager` singleton in `public/js/app-ui/queue-sse-manager.mjs` that opens a persistent `EventSource` to `/queue/sse` on page load and exposes `subscribeQueue(id, callbacks)` / `unsubscribeQueue(id)` with callbacks `{ onUpdated, onStarted, onStopped, onTaskStarted, onTaskComplete, onTaskCancelled }`. Import and initialize it alongside `sseManager` in each page's entry file (e.g. `app.mjs`, `inpaint.mjs`, `anytale.mjs`).
+- [x] Add a `queueSseManager` singleton in `public/js/app-ui/queue-sse-manager.mjs` that opens a persistent `EventSource` to `/queue/sse` on page load and exposes `subscribeQueue(id, callbacks)` / `unsubscribeQueue(id)` with callbacks `{ onUpdated, onStarted, onStopped, onTaskStarted, onTaskComplete, onTaskCancelled }`. Import and initialize it alongside `sseManager` in each page's entry file (e.g. `app.mjs`, `inpaint.mjs`, `anytale.mjs`).
 
-- [ ] Add a `useQueueStatus` hook in `public/js/app-ui/use-queue-status.mjs` that returns `{ state, items }` from the latest `queue:updated` event. On first mount, calls `GET /queue/status` to hydrate before SSE events arrive. Pages use this hook wherever they need live queue data.
+- [x] Add a `useQueueStatus` hook in `public/js/app-ui/use-queue-status.mjs` that returns `{ state, items }` from the latest `queue:updated` event. On first mount, calls `GET /queue/status` to hydrate before SSE events arrive. Pages use this hook wherever they need live queue data.
 
-- [ ] Update all client-side generate handlers to bridge from `queueId` to `taskId` for per-task progress tracking. Currently each handler receives `{ taskId }` and calls `progressShow(taskId, callbacks)` directly. After migration the endpoint returns `{ queueId }` instead. Each handler must:
+- [x] Update all client-side generate handlers to bridge from `queueId` to `taskId` for per-task progress tracking. Currently each handler receives `{ taskId }` and calls `progressShow(taskId, callbacks)` directly. After migration the endpoint returns `{ queueId }` instead. Each handler must:
   1. Receive `{ queueId }` from the enqueue response
   2. Subscribe to `queueSseManager` for `queue:task-started` events
   3. When a `queue:task-started` event arrives with a matching `queueId`, extract its `taskId` and call `progressShow(taskId, callbacks)` as before; unsubscribe from the queue SSE listener immediately after
   - Affected files: `generation-form.mjs` (main page), `inpaint.mjs`, `anytale.mjs` (story image), `anytale-form.mjs` (part preview), `character-section.mjs` (portrait and voice)
   - The `onComplete` / `onError` / `onCancel` / `onCancelled` callbacks on `progressShow` remain unchanged; only the handshake to obtain `taskId` changes
+
+---
+
+### Bugs and Flaws
+
+#### Per-Request `queueId → taskId` Bridging Is the Wrong Model
+
+The Phase 2 client implementation treats `queue:task-started` as a per-request handshake: each generate handler submits a request, receives a `queueId`, then subscribes to the queue SSE stream looking for that specific `queueId` in an incoming `queue:task-started` event. Once found, it unsubscribes. This approach has two fundamental problems:
+
+1. **Race condition**: the server emits `queue:task-started` within microseconds of returning the HTTP response (the queue auto-starts immediately when stopped). The SSE subscription in the client is set up *after* the response is parsed, so the event is frequently missed. A status-poll fallback was added as a workaround, but this is a symptom fix, not a design fix.
+
+2. **Subsequent queue items are invisible**: if the user submits three generate requests, only the first `queueId` is bridged; the second and third items never produce a progress banner on the page, even while the user is still watching the same page. The page has no listener for future `queue:task-started` events once the first bridging subscription is cleaned up.
+
+The correct model: each page **persistently subscribes** to `queue:task-started` at component mount and filters by `source` (and optionally `subLabel` / `endpointKey`). Any matching task that starts — regardless of which specific HTTP request originated it — is immediately picked up and shown to the user. The generate handler's only job is to enqueue; it does not participate in progress tracking at all.
+
+---
+
+### Phase 2.5 — Bug Fix: Source-Based Queue Task Routing
+*Replaces the per-request `waitForTaskId` bridge with persistent, source-filtered subscriptions. After this phase, progress banners appear for every matching task that starts — including tasks queued from a previous request — as long as the user remains on the relevant page.*
+
+- [x] Add `endpointKey` to the `queue:task-started` SSE event payload in `server/features/queue/service.mjs` so client subscribers can distinguish task types (e.g. `generate` vs `regenerate`) without additional state.
+
+- [x] Remove `waitForTaskId` from all client-side generate handlers. Generate handlers should enqueue, update any local "is generating" UI state, and return — they must not subscribe to queue SSE or await a taskId themselves. Affected files: `app.mjs`, `inpaint.mjs`, `anytale.mjs`, `anytale-form.mjs`, `character-section.mjs`, `outfit-section.mjs`.
+
+- [x] In `app.mjs`: add a persistent `queue:task-started` subscription on component mount (via `useEffect`) that listens for any event where `source === 'yaaiic'`. Route by `endpointKey`:
+  - `endpointKey === 'regenerate'` → call `setRegenerateTaskId(taskId)` + `progressShow(taskId, { onComplete: handleRegenerateComplete, onError: handleRegenerateError })`
+  - anything else → call `setTaskId(taskId)` + `progressShow(taskId, { onComplete: handleGenerationComplete, onError: handleGenerationError })`
+  Unsubscribe on unmount.
+
+- [x] In `inpaint.mjs`: add a persistent `queue:task-started` subscription on mount for `source === 'yaaiic-inpaint'` → call `setTaskId(taskId)` + `progressShow(taskId, { onComplete: handleGenerationComplete, onError: handleGenerationError })`. Unsubscribe on unmount.
+
+- [x] In `anytale.mjs`: add a persistent `queue:task-started` subscription on mount for `source === 'anytale'` AND `subLabel === null` (story image) → call `setTaskId(taskId)` + `progressShow(taskId, { onComplete: handleGenerationComplete, onError: handleGenerationError })`. Unsubscribe on unmount.
+
+- [x] In `anytale-form.mjs`: add a persistent `queue:task-started` subscription on mount for `source === 'anytale'` and route by `subLabel`:
+  - `subLabel === 'Portrait'` → call `setPortraitTaskId(taskId)` + `progressShow(taskId, portrait callbacks)`
+  - `subLabel === 'Voice'` → call `setVoiceTaskId(taskId)` + `progressShow(taskId, voice callbacks)`
+  - `subLabel === 'Part Preview'` → match by queueId→index ref; call `setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }))` + `progressShow(taskId, preview callbacks)`
+  Unsubscribe on unmount.
+
+- [x] Remove `waitForTaskId` and `useQueueTaskId` exports from `public/js/app-ui/queue-sse-manager.mjs` once all call sites are removed. Remove the status-poll fallback that was added as a workaround.
+
+---
+
+### Phase 2.6 — Bug Fix: Part Preview Updates and Portrait/Voice Client-Side Sync
+*Standalone fix. App is fully functional after this phase.*
+
+- [ ] **Part preview completion not updating the image** — When a part preview generates, the `onComplete` handler scans parts by prompt match (`data.result?.prompt`), but this field may not be present in the completion payload in the expected location, or `assemblePartPreviewPrompt` may not produce the exact same string as the server used when building the request. Investigate whether `data.result?.prompt` is actually populated on the client side. If it is not, an alternative is to store the assembled prompt alongside the `queueId → index` mapping at enqueue time (i.e. `partPreviewQueueIds.current[queueId] = { index, prompt }`) and use that stored prompt to do the scan in `onComplete`, eliminating the dependency on server-echoed data.
+
+*NOTE* Previous fix attempt failed, task unchecked. Add console outputs. We'll debug through this manually.
+
+- [x] **Parts not showing cached preview images on first add** — When a part is first added to the AnyTale form parts list, character, or outfit, any existing cached preview image for that part's base tags is not shown. The `/anytale/request-part-preview` endpoint already supports this lookup (used when attribute values change), but is not called at the moment a part is added. The fix should call this endpoint on part addition and populate `previewImageUrl` if a cached image exists, for all three contexts: AnyTale form parts list, character parts, and outfit parts.
+
+- [x] **Portrait/voice client-side update lost after character switch and switch-back** — Portrait and voice completions correctly update the server (via `updateCharacterField`) even when the active character has changed. However, when the user switches back to the character that made the request after completion, the locally displayed `portraitUrl`/`audioUrl` is stale (still reflects the pre-generation state). The fix requires that when loading a character (via `handleCharacterSelect`), the fresh server record is fetched and used — or alternatively, the completion handler persists the result to `localStorage` for the target character uid so that the stale in-memory state is replaced on next load. The current `fetchCharacterList` on mount with `serverFields` merge only runs once on mount and does not cover the case where the character was updated by a background task after mount.
 
 ---
 
@@ -252,3 +305,9 @@ curl -N http://localhost:3000/queue/sse
 6. Click Start — confirm the paused task retries and header shows `(running)`
 7. Delete a non-running item — confirm it disappears from the list
 8. Click Clear — confirm the confirmation dialog appears; after accepting, confirm all items are gone and header shows `(stopped)`
+
+---
+
+## Future Implementation Rules Suggestions
+
+When a feature introduces a shared, server-managed event stream (such as an SSE queue), the planning rules should explicitly require that the **consumer model be defined before any client code is written**: specifically, whether the client reacts to events it personally originated (per-request, pull model) or to all events of a matching type regardless of origin (source-filtered, push model). For a queue system, the correct model is almost always the push model — each page declares at mount what sources it owns and responds to any matching event — because the queue is explicitly designed to decouple submission from execution. Per-request bridging (submit → wait for your specific ID → subscribe) recreates the old fire-and-forget tight coupling and breaks down as soon as more than one item is in the queue. The implementation rules should require that any SSE-driven feature task include an explicit statement of the consumer model (push vs. pull, filter criteria, lifecycle of the subscription) as part of the task description, and that implementation tasks for the client and server are specified together rather than leaving "bridge the two sides" as an implicit afterthought.

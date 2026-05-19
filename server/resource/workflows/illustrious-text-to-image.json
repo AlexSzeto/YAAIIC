@@ -3,7 +3,7 @@
     "inputs": {
       "seed": -1,
       "steps": 20,
-      "cfg": 3,
+      "cfg": 5,
       "sampler_name": "euler",
       "scheduler": "beta",
       "denoise": 1,

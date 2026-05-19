@@ -28,9 +28,8 @@ import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
 import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateCharacterField } from './service.mjs';
-import { initializeGenerationTask, processGenerationTask } from '../generation/orchestrator.mjs';
-import { updateTask } from '../../core/sse.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
+import * as queueService from '../queue/service.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
 
 const router = Router();
@@ -212,9 +211,7 @@ router.delete('/anytale/characters/:uid', (req, res) => {
 router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
   try {
     const { uid } = req.params;
-    const config = req.app.locals.config;
-    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
-    const anytaleConfig = config.anytale || {};
+    const anytaleConfig = req.app.locals.config?.anytale || {};
     const portraitWorkflow = anytaleConfig.portraitWorkflow || 'Text to Image (Illustrious Portrait)';
     const portraitBasePrompt = anytaleConfig.portraitBasePrompt || '';
     const portraitPartMatchers = Array.isArray(anytaleConfig.portraitParts) ? anytaleConfig.portraitParts : [];
@@ -267,6 +264,8 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       return res.status(400).json({ error: `Portrait workflow '${portraitWorkflow}' not found` });
     }
 
+    const charName = getAllCharacters().find(c => c.uid === uid)?.name || uid;
+
     const requestData = {
       workflow: portraitWorkflow,
       prompt,
@@ -278,23 +277,22 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       summary: '',
       usePostPrompts: false,
       removeBackground: false,
+      characterUid: uid,
+      entityType: 'anytale-portrait',
+      requestOrigin: 'anytale',
     };
 
-    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    updateTask(taskId, { characterUid: uid, entityType: 'anytale-portrait', requestOrigin: 'anytale' });
-    res.status(202).json({ taskId });
-    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .then(result => {
-        if (result.imageUrl) {
-          const exists = getAllCharacters().some(c => c.uid === uid);
-          if (!exists) {
-            console.warn(`[anytale] Skipping portrait update: uid '${uid}' is not a saved character`);
-            return;
-          }
-          updateCharacterField(uid, 'portraitUrl', result.imageUrl);
-        }
-      })
-      .catch(err => console.error('[anytale] Portrait generation failed:', err));
+    const autoStart = req.query.queueOnly !== 'true';
+    const queueItem = queueService.enqueue({
+      type: 'image',
+      source: 'anytale',
+      name: charName,
+      subLabel: 'Portrait',
+      endpointKey: 'anytale-portrait',
+      taskData: requestData,
+    }, { autoStart });
+
+    res.status(202).json({ queueId: queueItem.id });
   } catch (error) {
     console.error('Error starting portrait generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start portrait generation', details: error.message });
@@ -306,9 +304,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
 router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
   try {
     const { uid } = req.params;
-    const config = req.app.locals.config;
-    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
-    const anytaleConfig = config.anytale || {};
+    const anytaleConfig = req.app.locals.config?.anytale || {};
     const voiceWorkflow = anytaleConfig.voiceWorkflow || 'Personality to Voice Design (Qwen3-TTS)';
 
     const { personality = '', name = '' } = req.body;
@@ -339,23 +335,21 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
       }
     }
 
-    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    updateTask(taskId, { characterUid: uid, entityType: 'anytale-voice', requestOrigin: 'anytale' });
-    res.status(202).json({ taskId });
-    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .then(result => {
-        if (!result.audioUrl && !result.summary) return;
-        const char = getAllCharacters().find(c => c.uid === uid);
-        if (!char) {
-          console.warn(`[anytale] Skipping voice update: uid '${uid}' is not a saved character`);
-          return;
-        }
-        const updates = {};
-        if (result.audioUrl) updates.audioUrl = result.audioUrl;
-        if (result.summary) updates.introTranscript = result.summary;
-        saveCharacter(uid, { ...char, ...updates });
-      })
-      .catch(err => console.error('[anytale] Voice generation failed:', err));
+    requestData.characterUid = uid;
+    requestData.entityType = 'anytale-voice';
+    requestData.requestOrigin = 'anytale';
+
+    const autoStart = req.query.queueOnly !== 'true';
+    const queueItem = queueService.enqueue({
+      type: 'audio',
+      source: 'anytale',
+      name,
+      subLabel: 'Voice',
+      endpointKey: 'anytale-voice',
+      taskData: requestData,
+    }, { autoStart });
+
+    res.status(202).json({ queueId: queueItem.id });
   } catch (error) {
     console.error('Error starting voice generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start voice generation', details: error.message });
@@ -375,9 +369,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
     const targetFilename = 'portrait_' + hash + '.png';
     const targetPath = join(STORAGE_DIR, targetFilename);
 
-    const config = req.app.locals.config;
-    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
-    const partPreviewWorkflow = (config.anytale || {}).partPreviewWorkflow || 'Text to Image (Illustrious Part Preview)';
+    const partPreviewWorkflow = (req.app.locals.config?.anytale || {}).partPreviewWorkflow || 'Text to Image (Illustrious Part Preview)';
 
     const comfyuiWorkflows = loadWorkflows();
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === partPreviewWorkflow);
@@ -399,10 +391,17 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
       saveImagePath: targetPath,
     };
 
-    const { taskId } = initializeGenerationTask(requestData, workflowData, config);
-    res.json({ taskId });
-    processGenerationTask(taskId, requestData, workflowData, config, true, uploadFileToComfyUI)
-      .catch(err => console.error('[anytale] Part preview generation failed:', err));
+    const autoStart = req.query.queueOnly !== 'true';
+    const queueItem = queueService.enqueue({
+      type: 'image',
+      source: 'anytale',
+      name: prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt,
+      subLabel: 'Part Preview',
+      endpointKey: 'anytale-part-preview',
+      taskData: requestData,
+    }, { autoStart });
+
+    res.json({ queueId: queueItem.id });
   } catch (error) {
     console.error('Error starting part preview generation:', error);
     res.status(500).json({ error: 'Failed to start part preview generation', details: error.message });

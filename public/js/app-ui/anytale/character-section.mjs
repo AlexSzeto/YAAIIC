@@ -34,8 +34,8 @@ import { ImagePreview } from './image-preview.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
-import { sseManager } from '../sse-manager.mjs';
-import { ProgressBanner } from '../../custom-ui/msg/progress-banner.mjs';
+import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
+import { queueSSEManager } from '../queue-sse-manager.mjs';
 
 // ============================================================================
 // Styled Components
@@ -143,6 +143,7 @@ export function CharacterSection({
   onVoiceApplyReady,
 }) {
   const toast = useToast();
+  const { show: progressShow } = useProgress();
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
   const [character, setCharacter] = useState(() => loadCharacter());
@@ -171,6 +172,11 @@ export function CharacterSection({
   const isGeneratingVoice = !!voiceTaskId;
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
+  // Maps queueId → part index for pending part preview tasks
+  const partPreviewQueueIds = useRef({});
+  // Always-current libraryParts ref for use in persistent subscription callbacks
+  const libraryPartsRef = useRef(libraryParts);
+  libraryPartsRef.current = libraryParts;
 
   // ── Outfit list for preferredOutfits autocomplete ────────────────────────
   const [outfitListInternal, setOutfitListInternal] = useState([]);
@@ -269,30 +275,6 @@ export function CharacterSection({
   }, [outfitList]);
 
   // ── Library autocomplete: add part from library ──────────────────────────
-  const handleLibrarySelect = useCallback((match) => {
-    if (!match) return;
-    // Avoid duplicates
-    if (character.parts.some(cp => cp.partUid === match.uid)) {
-      toast.info(`Part '${match.name}' is already added`);
-      return;
-    }
-    setCharacter(prev => ({
-      ...prev,
-      parts: [
-        ...prev.parts,
-        {
-          partUid: match.uid,
-          attributeValues: {},
-          previewImageUrl: '',
-        },
-      ],
-    }));
-  }, [character.parts, toast]);
-
-  const handlePartLoadSelect = useCallback((uid) => {
-    const match = libraryParts.find(p => p.uid === uid);
-    if (match) handleLibrarySelect(match);
-  }, [libraryParts, handleLibrarySelect]);
 
   const requestPartPreviewCache = useCallback((index, updatedPart) => {
     const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
@@ -326,6 +308,27 @@ export function CharacterSection({
       .catch(() => {});
   }, [libraryParts]);
 
+  const handleLibrarySelect = useCallback((match) => {
+    if (!match) return;
+    // Avoid duplicates
+    if (character.parts.some(cp => cp.partUid === match.uid)) {
+      toast.info(`Part '${match.name}' is already added`);
+      return;
+    }
+    const newIndex = character.parts.length;
+    const newPart = { partUid: match.uid, attributeValues: {}, previewImageUrl: '' };
+    setCharacter(prev => ({
+      ...prev,
+      parts: [...prev.parts, newPart],
+    }));
+    requestPartPreviewCache(newIndex, newPart);
+  }, [character.parts, requestPartPreviewCache, toast]);
+
+  const handlePartLoadSelect = useCallback((uid) => {
+    const match = libraryParts.find(p => p.uid === uid);
+    if (match) handleLibrarySelect(match);
+  }, [libraryParts, handleLibrarySelect]);
+
   const handlePartChange = useCallback((index, updatedPart) => {
     const currentPart = character.parts[index];
     const attrChanged = JSON.stringify(currentPart?.attributeValues) !== JSON.stringify(updatedPart.attributeValues);
@@ -341,13 +344,43 @@ export function CharacterSection({
 
   // ── Part preview generation (manual, via header action button) ───────────
 
-  const dismissPreviewByIndex = useCallback((index) => {
-    setGeneratingPreviews(prev => {
-      const next = { ...prev };
-      delete next[index];
-      return next;
+  // Persistent subscription: pick up Part Preview task-started events initiated by this section
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ id: queueId, taskId, source, subLabel }) => {
+        if (source !== 'anytale' || subLabel !== 'Part Preview') return;
+        const entry = partPreviewQueueIds.current[queueId];
+        if (entry === undefined) return;
+        delete partPreviewQueueIds.current[queueId];
+        const { index: idx, prompt: storedPrompt } = entry;
+        setGeneratingPreviews(prev => ({ ...prev, [idx]: taskId }));
+        progressShow(taskId, {
+          defaultTitle: 'Generating preview…',
+          onComplete: (data) => {
+            if (data.result?.imageUrl) {
+              const url = `${data.result.imageUrl}?t=${Date.now()}`;
+              setCharacter(prev => {
+                const newParts = (prev.parts || []).map(cp => {
+                  const libCfg = libraryPartsRef.current.find(p => p.uid === cp.partUid);
+                  if (!libCfg) return cp;
+                  const assembled = assemblePartPreviewPrompt({
+                    config: { name: libCfg.name, previewBaseline: libCfg.previewBaseline || '', baseline: libCfg.baseline || '', attributes: libCfg.attributes || [] },
+                    data: { enabled: true, attributeValues: cp.attributeValues, previewImageUrl: cp.previewImageUrl || '' },
+                  });
+                  return assembled === storedPrompt ? { ...cp, previewImageUrl: url } : cp;
+                });
+                return { ...prev, parts: newParts };
+              });
+            }
+            setGeneratingPreviews(prev => { const next = { ...prev }; delete next[idx]; return next; });
+          },
+          onCancelled: () => setGeneratingPreviews(prev => { const next = { ...prev }; delete next[idx]; return next; }),
+          onError: () => setGeneratingPreviews(prev => { const next = { ...prev }; delete next[idx]; return next; }),
+          onDismiss: () => setGeneratingPreviews(prev => { const next = { ...prev }; delete next[idx]; return next; }),
+        });
+      },
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
@@ -374,7 +407,7 @@ export function CharacterSection({
     }
 
     try {
-      const response = await fetch('/anytale/generate-part-preview', {
+      const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
@@ -383,8 +416,8 @@ export function CharacterSection({
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-      const { taskId } = await response.json();
-      setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
+      const { queueId } = await response.json();
+      partPreviewQueueIds.current[queueId] = { index, prompt };
     } catch (err) {
       console.error('[CharacterSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
@@ -401,13 +434,12 @@ export function CharacterSection({
     if (isGeneratingPortrait) return;
     const uid = character.uid || 'temp-portrait';
     try {
-      const { taskId } = await generateCharacterPortrait(uid, character.parts);
-      if (onPortraitTaskStart) onPortraitTaskStart(taskId);
+      await generateCharacterPortrait(uid, character.parts);
     } catch (err) {
       console.error('[CharacterSection] Portrait generation failed:', err);
       toast.error(`Portrait generation failed: ${err.message}`);
     }
-  }, [character, isGeneratingPortrait, onPortraitTaskStart, toast]);
+  }, [character, isGeneratingPortrait, toast]);
 
   // ── Voice generation ─────────────────────────────────────────────────────
 
@@ -415,13 +447,12 @@ export function CharacterSection({
     if (isGeneratingVoice) return;
     const uid = character.uid || 'temp-voice';
     try {
-      const { taskId } = await generateCharacterVoice(uid, character.personality, character.name);
-      if (onVoiceTaskStart) onVoiceTaskStart(taskId);
+      await generateCharacterVoice(uid, character.personality, character.name);
     } catch (err) {
       console.error('[CharacterSection] Voice generation failed:', err);
       toast.error(`Voice generation failed: ${err.message}`);
     }
-  }, [character, isGeneratingVoice, onVoiceTaskStart, toast]);
+  }, [character, isGeneratingVoice, toast]);
 
   // ── Prompt parts (used by handleGenerate) ───────────────────────────────
 
@@ -505,31 +536,28 @@ export function CharacterSection({
 
   // ── Load character from library ──────────────────────────────────────────
 
-  const handleCharacterSelect = useCallback((uid) => {
+  const handleCharacterSelect = useCallback(async (uid) => {
     if (!uid) return;
-    // Cancel any in-flight generation tasks before switching characters
-    if (portraitTaskId) {
-      fetch('/generate/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: portraitTaskId }),
-      }).catch(err => console.error('[CharacterSection] Failed to cancel portrait task:', err));
-      if (onPortraitTaskStart) onPortraitTaskStart(null);
+    try {
+      const list = await fetchCharacterList();
+      if (Array.isArray(list)) {
+        setCharacterList(list);
+        const match = list.find(c => c.uid === uid);
+        if (match) {
+          setCharacter(match);
+          setSavedCharacterUid(match.uid);
+          setLibraryCharacter(match);
+        }
+      }
+    } catch (err) {
+      console.error('[CharacterSection] Failed to refresh character list on select:', err);
+      const match = characterList.find(c => c.uid === uid);
+      if (!match) return;
+      setCharacter(match);
+      setSavedCharacterUid(match.uid);
+      setLibraryCharacter(match);
     }
-    if (voiceTaskId) {
-      fetch('/generate/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: voiceTaskId }),
-      }).catch(err => console.error('[CharacterSection] Failed to cancel voice task:', err));
-      if (onVoiceTaskStart) onVoiceTaskStart(null);
-    }
-    const match = characterList.find(c => c.uid === uid);
-    if (!match) return;
-    setCharacter(match);
-    setSavedCharacterUid(match.uid);
-    setLibraryCharacter(match);
-  }, [characterList, portraitTaskId, voiceTaskId, onPortraitTaskStart, onVoiceTaskStart]);
+  }, [characterList]);
 
   // ── Notify parent of currently displayed character uid ───────────────────
   useEffect(() => {
@@ -809,44 +837,9 @@ export function CharacterSection({
 
     </${VerticalLayout}>
   `;
-  const banners = [
-    sectionHtml,
-    ...Object.entries(generatingPreviews).map(([indexStr, taskId]) => {
-      const idx = parseInt(indexStr);
-      return html`<${ProgressBanner}
-        key=${taskId}
-        taskId=${taskId}
-        sseManager=${sseManager}
-        defaultTitle="Generating preview…"
-        onComplete=${(data) => {
-          if (data.result?.imageUrl) {
-            const url = `${data.result.imageUrl}?t=${Date.now()}`;
-            setCharacter(prev => {
-              const newParts = [...(prev.parts || [])];
-              if (newParts[idx]) {
-                newParts[idx] = { ...newParts[idx], previewImageUrl: url };
-              }
-              return { ...prev, parts: newParts };
-            });
-          }
-          dismissPreviewByIndex(idx);
-        }}
-        onCancelled=${() => dismissPreviewByIndex(idx)}
-        onCancel=${async () => {
-          await fetch('/generate/cancel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId }),
-          });
-        }}
-        onError=${() => dismissPreviewByIndex(idx)}
-        onDismiss=${() => dismissPreviewByIndex(idx)}
-      />`;
-    })
-  ];
-
   // Portrait and voice ProgressBanners are rendered by the parent (anytale-form.mjs)
-  // so they persist across character switches.
+  // so they persist across character switches. Part preview progress is shown via
+  // progressShow (progress-context), so no inline ProgressBanners needed here.
 
-  return banners;
+  return sectionHtml;
 }

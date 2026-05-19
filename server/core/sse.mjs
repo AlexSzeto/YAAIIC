@@ -62,6 +62,15 @@ export function logProgressEvent(eventData, source, promptId = null, taskId = nu
   }
 }
 
+// Queue lifecycle callbacks — set by queue/service.mjs to react to task events
+let _onTaskCancelled = null;
+let _onTaskCompleted = null;
+let _onTaskError = null;
+
+export function setTaskCancelledCallback(fn) { _onTaskCancelled = fn; }
+export function setTaskCompletedCallback(fn) { _onTaskCompleted = fn; }
+export function setTaskErrorCallback(fn) { _onTaskError = fn; }
+
 // Task tracking system
 const activeTasks = new Map();
 // activeTasks.set(taskId, {
@@ -367,7 +376,7 @@ export function emitTaskCompletion(promptIdOrTaskId, result) {
   logProgressEvent({ result: message.result }, 'emit-complete', task.promptId, taskId);
   
   emitSSEToTask(taskId, message);
-  
+  if (_onTaskCompleted) _onTaskCompleted(taskId, result);
   scheduleTaskCleanup(taskId);
 }
 
@@ -399,7 +408,7 @@ export function emitTaskErrorByTaskId(taskId, errorMessage, errorDetails) {
   logProgressEvent({ error: message.error }, 'emit-error', task.promptId, taskId);
   
   emitSSEToTask(taskId, message);
-  
+  if (_onTaskError) _onTaskError(taskId, errorMessage);
   scheduleTaskCleanup(taskId);
 }
 
@@ -550,7 +559,7 @@ export function emitTaskCancelled(taskId) {
     }
   });
   disconnectedClients.forEach(client => task.sseClients.delete(client));
-
+  if (_onTaskCancelled) _onTaskCancelled(taskId);
   scheduleTaskCleanup(taskId);
 }
 

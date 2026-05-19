@@ -32,6 +32,7 @@ import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
+import { queueSSEManager } from '../queue-sse-manager.mjs';
 
 // ============================================================================
 // Styled Components
@@ -178,8 +179,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         entityType: 'anytale-portrait',
         defaultTitle: 'Generating portrait…',
         onComplete: (data) => {
-          const resultUid = data.result?.uid;
-          if (resultUid === selectedCharacterUid) {
+          if (data.result?.characterUid === selectedCharacterUidRef.current) {
             if (data.result?.imageUrl && applyPortraitRef.current) {
               applyPortraitRef.current(data.result.imageUrl);
             }
@@ -197,8 +197,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         entityType: 'anytale-voice',
         defaultTitle: 'Generating voice…',
         onComplete: (data) => {
-          const resultUid = data.result?.uid;
-          if (resultUid === selectedCharacterUid) {
+          if (data.result?.characterUid === selectedCharacterUidRef.current) {
             if (applyVoiceRef.current) {
               applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
             }
@@ -215,6 +214,81 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const [charTabPlotList, setCharTabPlotList] = useState([]);
   const [charTabPlotName, setCharTabPlotName] = useState('');
   const [charTabPlotUid, setCharTabPlotUid] = useState('');
+
+  // Ref so the persistent subscription always sees the latest selectedCharacterUid
+  const selectedCharacterUidRef = useRef(selectedCharacterUid);
+  selectedCharacterUidRef.current = selectedCharacterUid;
+
+  // Persistent subscription: route anytale task-started events to progress tracking
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ id: queueId, taskId, source, subLabel }) => {
+        if (source !== 'anytale') return;
+
+        if (subLabel === 'Portrait') {
+          setPortraitTaskId(taskId);
+          progressShow(taskId, {
+            entityType: 'anytale-portrait',
+            defaultTitle: 'Generating portrait…',
+            onComplete: (data) => {
+              if (data.result?.characterUid === selectedCharacterUidRef.current) {
+                if (data.result?.imageUrl && applyPortraitRef.current) {
+                  applyPortraitRef.current(data.result.imageUrl);
+                }
+              }
+              setPortraitTaskId(null);
+            },
+            onCancelled: () => setPortraitTaskId(null),
+            onError: () => setPortraitTaskId(null),
+            onDismiss: () => setPortraitTaskId(null),
+          });
+
+        } else if (subLabel === 'Voice') {
+          setVoiceTaskId(taskId);
+          progressShow(taskId, {
+            entityType: 'anytale-voice',
+            defaultTitle: 'Generating voice…',
+            onComplete: (data) => {
+              if (data.result?.characterUid === selectedCharacterUidRef.current) {
+                if (applyVoiceRef.current) {
+                  applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
+                }
+              }
+              setVoiceTaskId(null);
+            },
+            onCancelled: () => setVoiceTaskId(null),
+            onError: () => setVoiceTaskId(null),
+            onDismiss: () => setVoiceTaskId(null),
+          });
+
+        } else if (subLabel === 'Part Preview') {
+          const entry = partPreviewQueueIds.current[queueId];
+          if (entry === undefined) return; // belongs to CharacterSection or OutfitSection
+          delete partPreviewQueueIds.current[queueId];
+          const { index: idx, prompt: storedPrompt } = entry;
+          setGeneratingPreviews(prev => ({ ...prev, [idx]: taskId }));
+          progressShow(taskId, {
+            defaultTitle: 'Generating preview…',
+            onComplete: (data) => {
+              if (data.result?.imageUrl) {
+                const url = `${data.result.imageUrl}?t=${Date.now()}`;
+                setParts(prev => prev.map(part => {
+                  const assembled = assemblePartPreviewPrompt(part);
+                  return assembled === storedPrompt
+                    ? { ...part, data: { ...part.data, previewImageUrl: url } }
+                    : part;
+                }));
+              }
+              dismissPreviewByIndex(idx);
+            },
+            onCancelled: () => dismissPreviewByIndex(idx),
+            onError: () => dismissPreviewByIndex(idx),
+            onDismiss: () => dismissPreviewByIndex(idx),
+          });
+        }
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchPlotList()
@@ -264,12 +338,34 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   }, [previewImageName, activePlotPage, parts]);
 
   // ── Library lookup: add part from library ────────────────────────────────
+
+  const requestPartPreviewCacheForFormPart = useCallback((newPart) => {
+    const prompt = assemblePartPreviewPrompt(newPart);
+    if (!prompt) return;
+    fetch('/anytale/request-part-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (!result.found) return;
+        setParts(prev => prev.map(p =>
+          p.id === newPart.id
+            ? { ...p, data: { ...p.data, previewImageUrl: result.portraitUrl } }
+            : p
+        ));
+      })
+      .catch(() => {});
+  }, []);
+
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;
     const newPart = createDefaultPart();
     newPart.config = { ...newPart.config, ...match };
     setParts(prev => [...prev, newPart]);
-  }, []);
+    requestPartPreviewCacheForFormPart(newPart);
+  }, [requestPartPreviewCacheForFormPart]);
 
   const handlePartLoadSelect = useCallback((uid) => {
     const match = libraryParts.find(p => p.uid === uid);
@@ -395,6 +491,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   // Derived: true if any part preview generation is in-flight
   const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
 
+  // Maps queueId → part index for pending part preview tasks (resolved on queue:task-started)
+  const partPreviewQueueIds = useRef({});
+
   const dismissPreviewByIndex = useCallback((index) => {
     setGeneratingPreviews(prev => {
       const next = { ...prev };
@@ -412,7 +511,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         return;
       }
 
-      const response = await fetch('/anytale/generate-part-preview', {
+      const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
@@ -421,34 +520,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-      const { taskId } = await response.json();
-      setGeneratingPreviews(prev => ({ ...prev, [index]: taskId }));
-      progressShow(taskId, {
-        defaultTitle: 'Generating preview…',
-        onComplete: (data) => {
-          if (data.result?.imageUrl) {
-            const url = `${data.result.imageUrl}?t=${Date.now()}`;
-            setParts(prev => {
-              const next = [...prev];
-              if (next[index]) {
-                next[index] = { ...next[index], data: { ...next[index].data, previewImageUrl: url } };
-              }
-              return next;
-            });
-          }
-          dismissPreviewByIndex(index);
-        },
-        onCancelled: () => dismissPreviewByIndex(index),
-        onCancel: async () => {
-          await fetch('/generate/cancel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId }),
-          });
-        },
-        onError: () => dismissPreviewByIndex(index),
-        onDismiss: () => dismissPreviewByIndex(index),
-      });
+      const { queueId } = await response.json();
+      partPreviewQueueIds.current[queueId] = { index, prompt };
     } catch (err) {
       console.error('[AnyTaleForm] Preview generation failed:', err);
     }
@@ -894,62 +967,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
               onEditParts=${handleEditParts}
               portraitTaskId=${portraitTaskId}
               voiceTaskId=${voiceTaskId}
-              onPortraitTaskStart=${(taskId) => {
-                setPortraitTaskId(taskId);
-                progressShow(taskId, {
-                  entityType: 'anytale-portrait',
-                  defaultTitle: 'Generating portrait…',
-                  onComplete: (data) => {
-                    const resultUid = data.result?.uid;
-                    if (resultUid === selectedCharacterUid) {
-                      if (data.result?.imageUrl && applyPortraitRef.current) {
-                        applyPortraitRef.current(data.result.imageUrl);
-                      }
-                    } else if (resultUid && resultUid !== 'temp-portrait') {
-                      console.log(`[AnyTaleForm] Portrait completed for background character ${resultUid} — no UI update`);
-                    }
-                    setPortraitTaskId(null);
-                  },
-                  onCancelled: () => setPortraitTaskId(null),
-                  onCancel: async () => {
-                    await fetch('/generate/cancel', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ taskId }),
-                    });
-                  },
-                  onError: () => setPortraitTaskId(null),
-                  onDismiss: () => setPortraitTaskId(null),
-                });
-              }}
-              onVoiceTaskStart=${(taskId) => {
-                setVoiceTaskId(taskId);
-                progressShow(taskId, {
-                  entityType: 'anytale-voice',
-                  defaultTitle: 'Generating voice…',
-                  onComplete: (data) => {
-                    const resultUid = data.result?.uid;
-                    if (resultUid === selectedCharacterUid) {
-                      if (applyVoiceRef.current) {
-                        applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
-                      }
-                    } else if (resultUid && resultUid !== 'temp-voice') {
-                      console.log(`[AnyTaleForm] Voice completed for background character ${resultUid} — no UI update`);
-                    }
-                    setVoiceTaskId(null);
-                  },
-                  onCancelled: () => setVoiceTaskId(null),
-                  onCancel: async () => {
-                    await fetch('/generate/cancel', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ taskId }),
-                    });
-                  },
-                  onError: () => setVoiceTaskId(null),
-                  onDismiss: () => setVoiceTaskId(null),
-                });
-              }}
+              onPortraitTaskStart=${(value) => { if (value === null) setPortraitTaskId(null); }}
+              onVoiceTaskStart=${(value) => { if (value === null) setVoiceTaskId(null); }}
               onSelectedCharacterUidChange=${setSelectedCharacterUid}
               onPortraitApplyReady=${handlePortraitApplyReady}
               onVoiceApplyReady=${handleVoiceApplyReady}

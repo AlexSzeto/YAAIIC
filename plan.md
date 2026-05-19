@@ -3,9 +3,8 @@
 - Formalize page UI: convert Actions list to use compact dynamic list, remove collapse panel around Slot preview, formalize collapse panel as reusable component, 
 
 
-- Audit client codebase and migrate all hover actions to use `TooltipProvider`.
-- Cancel generation (replace generation button)
-- Progress for one shot generations (ones that doesn't get stored in media DB)
+- Unify iconography: delete, clear, close needs different icons
+- Unify and fix custom-ui mouseover: Audit client codebase and migrate all hover actions to use `TooltipProvider`.
 - Settings page (for updating server config.json)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)

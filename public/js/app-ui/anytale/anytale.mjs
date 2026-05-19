@@ -24,6 +24,7 @@ import { TooltipProvider } from '../../custom-ui/overlays/tooltip.mjs';
 import { AnyTaleViewer } from './anytale-viewer.mjs';
 import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
+import { queueSSEManager } from '../queue-sse-manager.mjs';
 
 const TwoColumn = styled('div')`
   display: flex;
@@ -174,6 +175,20 @@ export function AnyTalePage() {
     }
   }, [activeTasks]);
 
+  // Persistent subscription: pick up story image task-started events (subLabel null = story image)
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, subLabel }) => {
+        if (source !== 'anytale' || subLabel !== null) return;
+        setTaskId(taskId);
+        progressShow(taskId, {
+          onComplete: handleGenerationComplete,
+          onError: handleGenerationError,
+        });
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleDeleteImage = useCallback(async (image) => {
     if (!image) return;
     const result = await showDialog(
@@ -238,21 +253,15 @@ export function AnyTalePage() {
         });
       }
 
-      const response = await fetchJson('/generate', {
+      const response = await fetchJson('/generate?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (response.taskId) {
-        setTaskId(response.taskId);
-        progressShow(response.taskId, {
-          onComplete: handleGenerationComplete,
-          onError: handleGenerationError,
-        });
-        toast.show('Generation started...', 'info');
-      } else {
-        throw new Error('No taskId returned');
+      if (!response.queueId) {
+        throw new Error('No queueId returned');
       }
+      toast.show('Generation queued...', 'info');
     } catch (err) {
       console.error('Generation failed:', err);
       toast.error(err.message || 'Failed to start generation');

@@ -73,7 +73,7 @@ export async function deleteCharacter(uid) {
  * @returns {Promise<{portraitUrl: string|null}>}
  */
 export async function generateCharacterPortrait(uid, parts) {
-  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-portrait`, {
+  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-portrait?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ parts }),
@@ -93,7 +93,7 @@ export async function generateCharacterPortrait(uid, parts) {
  * @returns {Promise<{audioUrl: string|null, transcript: string|null}>}
  */
 export async function generateCharacterVoice(uid, personality, name) {
-  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-voice`, {
+  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-voice?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ personality, name }),

@@ -1,7 +1,7 @@
 // Inpaint page entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from 'goober';
 
 import { Page } from './custom-ui/layout/page.mjs';
@@ -25,6 +25,7 @@ import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
+import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
 
 /**
  * Helper function to generate random seed
@@ -337,7 +338,7 @@ function InpaintApp() {
       toast.show('Sending inpaint request...');
       
       // Send request
-      const response = await fetchWithRetry('/generate/inpaint', {
+      const response = await fetchWithRetry('/generate/inpaint?queueOnly=false', {
         method: 'POST',
         body: formData
       }, {
@@ -348,17 +349,10 @@ function InpaintApp() {
       });
       
       const result = await response.json();
-      
-      if (!result.taskId) {
-        throw new Error('Server did not return a taskId');
+
+      if (!result.queueId) {
+        throw new Error('Server did not return a queueId');
       }
-      
-      setTaskId(result.taskId);
-      progressShow(result.taskId, {
-        onComplete: handleGenerationComplete,
-        onError: handleGenerationError,
-      });
-      console.log('Inpaint generation started with taskId:', result.taskId);
 
     } catch (err) {
       console.error('Error during inpaint:', err);
@@ -434,6 +428,26 @@ function InpaintApp() {
       });
     }
   }, [activeTasks]);
+
+  // Refs to call the latest callback versions from the persistent subscription
+  const handleGenerationCompleteRef = useRef(handleGenerationComplete);
+  handleGenerationCompleteRef.current = handleGenerationComplete;
+  const handleGenerationErrorRef = useRef(handleGenerationError);
+  handleGenerationErrorRef.current = handleGenerationError;
+
+  // Persistent subscription: bridge queue task-started events to progress tracking
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source }) => {
+        if (source !== 'yaaiic-inpaint') return;
+        setTaskId(taskId);
+        progressShow(taskId, {
+          onComplete: (data) => handleGenerationCompleteRef.current(data),
+          onError: (data) => handleGenerationErrorRef.current(data),
+        });
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle folder selection
   const handleOpenFolderSelect = () => {

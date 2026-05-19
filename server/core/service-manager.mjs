@@ -111,9 +111,25 @@ export function getServiceStatus() {
   return { ollama: ollamaReady, comfyui: comfyuiReady };
 }
 
+let _onAllReadyCallback = null;
+
+export function setOnAllReady(fn) {
+  _onAllReadyCallback = fn;
+  // If both services were already ready before this was registered, fire immediately
+  if (ollamaReady && comfyuiReady) fn();
+}
+
+function _notifyAllReady() {
+  console.log('✓ All services are ready');
+  if (_onAllReadyCallback) _onAllReadyCallback();
+}
+
 // Polls both services every 15 seconds until both are ready
 export function startReadinessPolling() {
-  if (ollamaReady && comfyuiReady) return;
+  if (ollamaReady && comfyuiReady) {
+    _notifyAllReady();
+    return;
+  }
 
   const interval = setInterval(async () => {
     if (!ollamaReady) {
@@ -125,8 +141,8 @@ export function startReadinessPolling() {
       if (comfyuiReady) console.log('✓ ComfyUI is now ready');
     }
     if (ollamaReady && comfyuiReady) {
-      console.log('✓ All services are ready');
       clearInterval(interval);
+      _notifyAllReady();
     }
   }, 15000);
 }

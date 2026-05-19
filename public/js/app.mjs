@@ -1,7 +1,7 @@
 // Main application entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from 'goober';
 import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
@@ -33,6 +33,7 @@ import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
 import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { backfillMissingProperties } from './util.mjs';
+import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
 
 // =========================================================================
 // Styled Components
@@ -495,7 +496,7 @@ function App() {
           }
         }
         
-        response = await fetchJson('/generate', {
+        response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           body: formData
         });
@@ -521,23 +522,17 @@ function App() {
           });
         }
 
-        response = await fetchJson('/generate', {
+        response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
         });
       }
       
-      if (response.taskId) {
-        setTaskId(response.taskId);
-        progressShow(response.taskId, {
-          onComplete: handleGenerationComplete,
-          onError: handleGenerationError,
-        });
-        toast.show('Generation started...', 'info');
-      } else {
-        throw new Error('No taskId returned');
+      if (!response.queueId) {
+        throw new Error('No queueId returned');
       }
+      toast.show('Generation queued...', 'info');
 
     } catch (err) {
       console.error('Generation failed:', err);
@@ -584,7 +579,7 @@ function App() {
       });
     }
   }, [activeTasks]);
-  
+
   // Handlers for Generated Result
   const handleUseSeed = (seed) => {
     setFormState(prev => ({ ...prev, seed: String(seed), seedLocked: true }));
@@ -850,21 +845,15 @@ function App() {
 
   const handleRegenerate = async (uid, field) => {
     try {
-      const response = await fetchJson('/regenerate', {
+      const response = await fetchJson('/regenerate?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, fields: [field] })
       });
 
-      if (!response.taskId) {
-        throw new Error('No task ID returned from server');
+      if (!response.queueId) {
+        throw new Error('No queue ID returned from server');
       }
-
-      setRegenerateTaskId(response.taskId);
-      progressShow(response.taskId, {
-        onComplete: handleRegenerateComplete,
-        onError: handleRegenerateError,
-      });
 
     } catch (err) {
       console.error('Regenerate failed:', err);
@@ -894,6 +883,38 @@ function App() {
     setRegenerateTaskId(null);
     toast.error(data.error?.message || 'Regeneration failed');
   };
+
+  // Refs to always call the latest callback versions from the persistent subscription
+  const handleGenerationCompleteRef = useRef(handleGenerationComplete);
+  handleGenerationCompleteRef.current = handleGenerationComplete;
+  const handleGenerationErrorRef = useRef(handleGenerationError);
+  handleGenerationErrorRef.current = handleGenerationError;
+  const handleRegenerateCompleteRef = useRef(handleRegenerateComplete);
+  handleRegenerateCompleteRef.current = handleRegenerateComplete;
+  const handleRegenerateErrorRef = useRef(handleRegenerateError);
+  handleRegenerateErrorRef.current = handleRegenerateError;
+
+  // Persistent subscription: bridge queue task-started events to progress tracking
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, endpointKey }) => {
+        if (source !== 'yaaiic') return;
+        if (endpointKey === 'regenerate') {
+          setRegenerateTaskId(taskId);
+          progressShow(taskId, {
+            onComplete: (data) => handleRegenerateCompleteRef.current(data),
+            onError: (data) => handleRegenerateErrorRef.current(data),
+          });
+        } else {
+          setTaskId(taskId);
+          progressShow(taskId, {
+            onComplete: (data) => handleGenerationCompleteRef.current(data),
+            onError: (data) => handleGenerationErrorRef.current(data),
+          });
+        }
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Folder handlers
   const handleOpenFolderSelect = () => {

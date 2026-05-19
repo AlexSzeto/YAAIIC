@@ -24,6 +24,7 @@ import {
 } from '../../core/database.mjs';
 import { SERVER_DIR } from '../../core/paths.mjs';
 import { interruptGeneration } from './comfy-client.mjs';
+import * as queueService from '../queue/service.mjs';
 
 const router = Router();
 
@@ -177,18 +178,23 @@ router.post('/generate', upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Workflow validation failed', details: validation.error });
     }
 
-    console.log('Starting media generation with request data: ', req.body);
+    // Infer source and type for queue record
+    const source = req.body.source || (req.body.requestOrigin === 'anytale' ? 'anytale' : 'yaaiic');
+    const rawType = workflowData.options?.type;
+    const type = rawType === 'inpaint' ? 'image' : (rawType || 'image');
 
-    const { taskId } = initializeGenerationTask(req.body, workflowData, config);
-    if (req.body.requestOrigin) updateTask(taskId, { requestOrigin: req.body.requestOrigin });
+    const autoStart = req.query.queueOnly !== 'true';
+    const queueItem = queueService.enqueue({
+      type,
+      source,
+      name: req.body.name || '',
+      subLabel: null,
+      endpointKey: 'generate',
+      taskData: { ...req.body, requestOrigin: source === 'anytale' ? 'anytale' : 'yaaiic' },
+    }, { autoStart });
 
-    // Respond immediately so the client can subscribe to SSE progress events
-    res.json({ success: true, taskId, message: 'Generation task created' });
-
-    // Run the pipeline in the background; SSE notifies on completion/error
-    processGenerationTask(taskId, req.body, workflowData, config, false, uploadFileToComfyUI).catch(error => {
-      console.error(`Error in background task ${taskId}:`, error);
-    });
+    console.log(`[generate] Enqueued ${queueItem.id}`);
+    res.json({ queueId: queueItem.id });
   } catch (error) {
     console.error('Error in generate endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -276,142 +282,25 @@ router.post('/regenerate', async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid fields array' });
     }
 
-    // Reset prompt / progress logs
-    resetPromptLog();
-    resetProgressLog();
-
-    console.log(`Regenerate request for UID: ${uid}, fields: ${fields.join(', ')}`);
-
     const imageIndex = findMediaIndexByUid(uid);
     if (imageIndex === -1) {
-      console.log(`No image found with UID: ${uid}`);
       return res.status(404).json({ error: `Image with uid ${uid} not found` });
     }
-
     const imageEntry = getAllMediaData()[imageIndex];
+    const albumArt = fields.length === 1 && fields[0] === 'imageUrl';
+    const type = albumArt ? 'image' : 'text';
 
-    // Reconstruct saveImagePath from imageUrl
-    if (imageEntry.imageUrl) {
-      const filename = imageEntry.imageUrl.replace(/^\/media\//, '');
-      imageEntry.saveImagePath = path.join(SERVER_DIR, 'storage', filename);
-      console.log(`Reconstructed saveImagePath: ${imageEntry.saveImagePath}`);
-    }
+    const autoStart = req.query.queueOnly !== 'true';
+    const queueItem = queueService.enqueue({
+      type,
+      source: 'yaaiic',
+      name: imageEntry.name || String(uid),
+      subLabel: null,
+      endpointKey: 'regenerate',
+      taskData: { uid, fields, albumArt },
+    }, { autoStart });
 
-    // Create SSE task
-    const taskId = `regenerate-${uid}-${Date.now()}`;
-    createTask(taskId, { type: 'regenerate', uid, fields });
-
-    // Respond immediately with taskId
-    res.json({ taskId, message: 'Regeneration started' });
-
-    try {
-      const comfyuiWorkflows = loadWorkflows();
-
-      // Special case: regenerate album art image using the album art workflow
-      if (fields.length === 1 && fields[0] === 'imageUrl') {
-        const config = req.app.locals.config;
-        const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
-        const albumWorkflow = comfyuiWorkflows.workflows.find(w => w.name === 'Text to Image (Album)');
-
-        if (!albumWorkflow) {
-          emitTaskError(taskId, 'Album art workflow not found');
-          setTimeout(() => deleteTask(taskId), 5000);
-          return;
-        }
-
-        const requestData = {
-          workflow: 'Text to Image (Album)',
-          name: imageEntry.name || '',
-          seed: Math.floor(Math.random() * 4294967295)
-        };
-
-        const { taskId: innerTaskId } = initializeGenerationTask(requestData, albumWorkflow, config);
-        const completionData = await processGenerationTask(innerTaskId, requestData, albumWorkflow, config, true, uploadFileToComfyUI);
-
-        imageEntry.imageUrl = completionData.imageUrl;
-        saveMediaData();
-
-        const { saveImagePath: _sip, saveAudioPath: _sap, ...imageDataForClient } = imageEntry;
-
-        const sseTask = getTask(taskId);
-        if (sseTask && sseTask.sseClients) {
-          const completionMessage = {
-            taskId,
-            status: 'completed',
-            progress: { percentage: 100, currentStep: 'Complete', currentValue: 1, maxValue: 1 },
-            mediaData: imageDataForClient,
-            message: 'Album image regenerated',
-            timestamp: new Date().toISOString()
-          };
-          const msgData = JSON.stringify(completionMessage);
-          sseTask.sseClients.forEach(client => {
-            try { client.write(`event: complete\ndata: ${msgData}\n\n`); }
-            catch (e) { console.error('Failed to send album art completion:', e); }
-          });
-        }
-
-        console.log(`Album image regeneration completed for UID: ${uid}`);
-        setTimeout(() => deleteTask(taskId), 5000);
-        return;
-      }
-
-      const postGenTasks = comfyuiWorkflows.defaultImageGenerationTasks || [];
-
-      let completedFields = 0;
-      const totalFields = fields.length;
-
-      for (const field of fields) {
-        console.log(`Regenerating field: ${field}`);
-
-        const task = postGenTasks.find(t => t.to === field);
-        if (!task) {
-          console.log(`No postGenerationTask found for field: ${field}`);
-          emitProgressUpdate(taskId, `Skipping ${field} - no task configured`, completedFields / totalFields);
-          completedFields++;
-          continue;
-        }
-
-        emitProgressUpdate(taskId, `Regenerating ${field}...`, completedFields / totalFields);
-        await modifyDataWithPrompt(task, imageEntry);
-
-        completedFields++;
-        console.log(`Completed regeneration for field: ${field}`);
-      }
-
-      // Persist
-      saveMediaData();
-
-      // Remove transient field before sending to client
-      const { saveImagePath, ...imageDataForClient } = imageEntry;
-
-      // Send SSE completion event
-      const sseTask = getTask(taskId);
-      if (sseTask && sseTask.sseClients) {
-        const completionMessage = {
-          taskId,
-          status: 'completed',
-          progress: { percentage: 100, currentStep: 'Complete', currentValue: 1, maxValue: 1 },
-          mediaData: imageDataForClient,
-          message: 'Regeneration complete',
-          timestamp: new Date().toISOString()
-        };
-
-        const data = JSON.stringify(completionMessage);
-        sseTask.sseClients.forEach(client => {
-          try { client.write(`event: complete\ndata: ${data}\n\n`); }
-          catch (error) { console.error('Failed to send completion to client:', error); }
-        });
-      }
-
-      console.log(`Regeneration completed for UID: ${uid}`);
-      setTimeout(() => deleteTask(taskId), 5000);
-
-    } catch (regenerateError) {
-      console.error('Error during regeneration:', regenerateError);
-      emitTaskError(taskId, `Regeneration failed: ${regenerateError.message}`);
-      setTimeout(() => deleteTask(taskId), 5000);
-    }
-
+    res.json({ queueId: queueItem.id });
   } catch (error) {
     console.error('Error in regenerate endpoint:', error);
     res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
@@ -649,14 +538,17 @@ router.post('/generate/inpaint', upload.fields([
         return res.status(500).json({ error: 'Workflow validation failed', details: validation.error });
       }
       
-      const { taskId } = initializeGenerationTask(req.body, workflowData, config);
-      if (req.body.requestOrigin) updateTask(taskId, { requestOrigin: req.body.requestOrigin });
+      const autoStart = req.query.queueOnly !== 'true';
+      const queueItem = queueService.enqueue({
+        type: 'image',
+        source: 'yaaiic-inpaint',
+        name: req.body.name || '',
+        subLabel: null,
+        endpointKey: 'generate-inpaint',
+        taskData: { ...req.body, workflowName: workflow },
+      }, { autoStart });
 
-      res.json({ success: true, taskId, message: 'Generation task created' });
-
-      processGenerationTask(taskId, req.body, workflowData, config, false, uploadFileToComfyUI).catch(error => {
-        console.error(`Error in background inpaint task ${taskId}:`, error);
-      });
+      res.json({ queueId: queueItem.id });
       
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);

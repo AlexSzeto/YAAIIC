@@ -5,7 +5,7 @@ import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
-import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling } from './core/service-manager.mjs';
+import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling, setOnAllReady } from './core/service-manager.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
 
 // Core infrastructure
@@ -27,6 +27,9 @@ import chatRouter from './features/chat/router.mjs';
 import brewRouter from './features/brew/router.mjs';
 import soundSourcesRouter from './features/sound-sources/router.mjs';
 import anytaleRouter from './features/anytale/router.mjs';
+import queueRouter from './features/queue/router.mjs';
+import * as queueService from './features/queue/service.mjs';
+import { executeQueuedTask } from './features/generation/orchestrator.mjs';
 
 const app = express();
 
@@ -56,6 +59,9 @@ try {
 
   // Initialize ComfyUI WebSocket with API path from config
   initComfyUIWebSocket(config.comfyuiAPIPath);
+
+  // Initialize the queue service
+  queueService.initialize({ config, uploadFileToComfyUI, executeQueuedTask });
 } catch (error) {
   console.error('Failed to load configuration files:', error);
   process.exit(1);
@@ -100,6 +106,7 @@ app.use(chatRouter);
 app.use(brewRouter);
 app.use(soundSourcesRouter);
 app.use(anytaleRouter);
+app.use(queueRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)
@@ -150,7 +157,14 @@ app.get('/workflows', (req, res) => {
 async function startServer() {
   // Load image data on server initialization
   loadMediaData();
-  
+
+  const clearQueue = process.argv.includes('--clear-queue');
+
+  setOnAllReady(() => {
+    if (clearQueue) queueService.clear();
+    queueService.resume();
+  });
+
   await checkAndStartServices();
   startReadinessPolling();
 

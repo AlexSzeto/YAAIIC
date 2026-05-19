@@ -26,8 +26,10 @@ import {
   resetProgressLog
 } from '../../core/sse.mjs';
 import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
-import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR } from '../../core/paths.mjs';
+import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR, SERVER_DIR } from '../../core/paths.mjs';
 import { loadWorkflows } from './workflow-validator.mjs';
+import { findMediaByUid, getAllMediaData, saveMediaData } from '../../core/database.mjs';
+import { getAllCharacters, saveCharacter, updateCharacterField } from '../anytale/service.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -811,4 +813,143 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
     throw error;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Queue integration
+// ---------------------------------------------------------------------------
+
+/**
+ * Execute a fully-formed queue record through the generation pipeline.
+ * Called by queue/service.mjs._runNext().
+ *
+ * @returns {{ taskId: string }}
+ */
+export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI }) {
+  const { endpointKey, taskData } = queueItem;
+
+  if (endpointKey === 'regenerate') {
+    return _runRegenerateTask(taskData, config, uploadFileToComfyUI);
+  }
+
+  const comfyuiWorkflows = loadWorkflows();
+  const workflowData = comfyuiWorkflows.workflows.find(w => w.name === taskData.workflow);
+  if (!workflowData) throw new Error(`Workflow '${taskData.workflow}' not found`);
+
+  // Apply postGenerationTasks defaults for inpaint
+  if (endpointKey === 'generate-inpaint' && comfyuiWorkflows.postGenerationTasks) {
+    workflowData.postGenerationTasks = comfyuiWorkflows.postGenerationTasks;
+  }
+
+  const silent = endpointKey === 'anytale-part-preview' ||
+                 endpointKey === 'anytale-portrait' ||
+                 endpointKey === 'anytale-voice';
+
+  const { taskId } = initializeGenerationTask(taskData, workflowData, config);
+
+  if (taskData.entityType) updateTask(taskId, { entityType: taskData.entityType });
+  if (taskData.requestOrigin) updateTask(taskId, { requestOrigin: taskData.requestOrigin });
+  if (taskData.characterUid) updateTask(taskId, { characterUid: taskData.characterUid });
+
+  processGenerationTask(taskId, taskData, workflowData, config, silent, uploadFileToComfyUI)
+    .then(result => {
+      if (endpointKey === 'anytale-portrait' && result?.imageUrl && taskData.characterUid) {
+        const exists = getAllCharacters().some(c => c.uid === taskData.characterUid);
+        if (exists) updateCharacterField(taskData.characterUid, 'portraitUrl', result.imageUrl);
+      }
+      if (endpointKey === 'anytale-voice' && taskData.characterUid) {
+        const char = getAllCharacters().find(c => c.uid === taskData.characterUid);
+        if (char) {
+          const updates = {};
+          if (result?.audioUrl) updates.audioUrl = result.audioUrl;
+          if (result?.summary) updates.introTranscript = result.summary;
+          if (Object.keys(updates).length) saveCharacter(taskData.characterUid, { ...char, ...updates });
+        }
+      }
+    })
+    .catch(err => console.error(`[queue] executeQueuedTask(${endpointKey}) post-processing failed:`, err));
+
+  return { taskId };
+}
+
+/**
+ * Run the regenerate pipeline (LLM-only, no ComfyUI) from a queue item.
+ */
+async function _runRegenerateTask(taskData, config, uploadFileToComfyUI) {
+  const { uid, fields, albumArt } = taskData;
+
+  resetPromptLog();
+
+  const taskId = `regenerate-${uid}-${Date.now()}`;
+  createTask(taskId, { type: 'regenerate', uid, fields });
+
+  const mediaIndex = getAllMediaData().findIndex(m => m.uid === uid);
+  if (mediaIndex === -1) throw new Error(`Media entry ${uid} not found`);
+
+  const imageEntry = { ...getAllMediaData()[mediaIndex] };
+
+  if (imageEntry.imageUrl) {
+    const filename = imageEntry.imageUrl.replace(/^\/media\//, '');
+    imageEntry.saveImagePath = path.join(SERVER_DIR, 'storage', filename);
+  }
+
+  // Run pipeline in background; return taskId immediately
+  (async () => {
+    try {
+      if (albumArt) {
+        // Album art re-generation (special case: ComfyUI workflow)
+        const comfyuiWorkflows = loadWorkflows();
+        const albumWorkflow = comfyuiWorkflows.workflows.find(w => w.name === 'Text to Image (Album)');
+        if (!albumWorkflow) throw new Error('Album art workflow not found');
+
+        const requestData = {
+          workflow: 'Text to Image (Album)',
+          name: imageEntry.name || '',
+          seed: Math.floor(Math.random() * 4294967295),
+        };
+        const { taskId: innerTaskId } = initializeGenerationTask(requestData, albumWorkflow, config);
+        const completionData = await processGenerationTask(innerTaskId, requestData, albumWorkflow, config, true, uploadFileToComfyUI);
+
+        // Update media entry
+        const allData = getAllMediaData();
+        const entry = allData[allData.findIndex(m => m.uid === uid)];
+        if (entry) entry.imageUrl = completionData.imageUrl;
+        saveMediaData();
+
+        const { saveImagePath: _sip, saveAudioPath: _sap, ...forClient } = entry || imageEntry;
+        emitTaskCompletion(taskId, {
+          ...forClient,
+          maxValue: 1,
+          message: 'Album image regenerated',
+        });
+      } else {
+        const comfyuiWorkflows = loadWorkflows();
+        const postGenTasks = comfyuiWorkflows.defaultImageGenerationTasks || [];
+        let completed = 0;
+        const total = fields.length;
+
+        for (const field of fields) {
+          const task = postGenTasks.find(t => t.to === field);
+          if (!task) { completed++; continue; }
+
+          emitProgressUpdate(taskId, { percentage: Math.round(completed / total * 100), value: completed, max: total }, `Regenerating ${field}...`);
+          await modifyDataWithPrompt(task, imageEntry);
+          completed++;
+        }
+
+        // Persist
+        const allData = getAllMediaData();
+        const entryInDb = allData[allData.findIndex(m => m.uid === uid)];
+        if (entryInDb) Object.assign(entryInDb, imageEntry);
+        saveMediaData();
+
+        const { saveImagePath, ...forClient } = imageEntry;
+        emitTaskCompletion(taskId, { ...forClient, maxValue: total, message: 'Regeneration complete' });
+      }
+    } catch (err) {
+      emitTaskErrorByTaskId(taskId, `Regeneration failed: ${err.message}`);
+    }
+  })();
+
+  return { taskId };
 }
