@@ -172,11 +172,11 @@ export function CharacterSection({
   const isGeneratingVoice = !!voiceTaskId;
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
-  // Maps queueId → part index for pending part preview tasks
-  const partPreviewQueueIds = useRef({});
-  // Always-current libraryParts ref for use in persistent subscription callbacks
+  // Always-current refs for use in persistent subscription closures
   const libraryPartsRef = useRef(libraryParts);
   libraryPartsRef.current = libraryParts;
+  const characterRef = useRef(character);
+  characterRef.current = character;
 
   // ── Outfit list for preferredOutfits autocomplete ────────────────────────
   const [outfitListInternal, setOutfitListInternal] = useState([]);
@@ -347,12 +347,20 @@ export function CharacterSection({
   // Persistent subscription: pick up Part Preview task-started events initiated by this section
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ id: queueId, taskId, source, subLabel }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
         if (source !== 'anytale' || subLabel !== 'Part Preview') return;
-        const entry = partPreviewQueueIds.current[queueId];
-        if (entry === undefined) return;
-        delete partPreviewQueueIds.current[queueId];
-        const { index: idx, prompt: storedPrompt } = entry;
+        if (taskData?.partContext !== 'character') return;
+        const prompt = taskData.prompt;
+        const currentParts = characterRef.current.parts || [];
+        const idx = currentParts.findIndex(cp => {
+          const libCfg = libraryPartsRef.current.find(p => p.uid === cp.partUid);
+          if (!libCfg) return false;
+          return assemblePartPreviewPrompt({
+            config: { name: libCfg.name, previewBaseline: libCfg.previewBaseline || '', baseline: libCfg.baseline || '', attributes: libCfg.attributes || [] },
+            data: { enabled: true, attributeValues: cp.attributeValues, previewImageUrl: '' },
+          }) === prompt;
+        });
+        if (idx === -1) return;
         setGeneratingPreviews(prev => ({ ...prev, [idx]: taskId }));
         progressShow(taskId, {
           defaultTitle: 'Generating preview…',
@@ -365,9 +373,9 @@ export function CharacterSection({
                   if (!libCfg) return cp;
                   const assembled = assemblePartPreviewPrompt({
                     config: { name: libCfg.name, previewBaseline: libCfg.previewBaseline || '', baseline: libCfg.baseline || '', attributes: libCfg.attributes || [] },
-                    data: { enabled: true, attributeValues: cp.attributeValues, previewImageUrl: cp.previewImageUrl || '' },
+                    data: { enabled: true, attributeValues: cp.attributeValues, previewImageUrl: '' },
                   });
-                  return assembled === storedPrompt ? { ...cp, previewImageUrl: url } : cp;
+                  return assembled === prompt ? { ...cp, previewImageUrl: url } : cp;
                 });
                 return { ...prev, parts: newParts };
               });
@@ -410,14 +418,12 @@ export function CharacterSection({
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, partContext: 'character' }),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-      const { queueId } = await response.json();
-      partPreviewQueueIds.current[queueId] = { index, prompt };
     } catch (err) {
       console.error('[CharacterSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);

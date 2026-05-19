@@ -114,6 +114,9 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   const { show: progressShow, activeTasks } = useProgress();
   const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
+  // Always-current parts ref for use in persistent subscription closures
+  const partsRef = useRef(parts);
+  partsRef.current = parts;
   const [isImporting, setIsImporting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(() => loadState().activePlotPage);
   const [pageLocked, setPageLocked] = useState([]);
@@ -222,7 +225,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   // Persistent subscription: route anytale task-started events to progress tracking
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ id: queueId, taskId, source, subLabel }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
         if (source !== 'anytale') return;
 
         if (subLabel === 'Portrait') {
@@ -262,22 +265,21 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           });
 
         } else if (subLabel === 'Part Preview') {
-          const entry = partPreviewQueueIds.current[queueId];
-          if (entry === undefined) return; // belongs to CharacterSection or OutfitSection
-          delete partPreviewQueueIds.current[queueId];
-          const { index: idx, prompt: storedPrompt } = entry;
+          if (taskData?.partContext !== 'parts-list') return;
+          const prompt = taskData.prompt;
+          const idx = partsRef.current.findIndex(p => assemblePartPreviewPrompt(p) === prompt);
+          if (idx === -1) return;
           setGeneratingPreviews(prev => ({ ...prev, [idx]: taskId }));
           progressShow(taskId, {
             defaultTitle: 'Generating preview…',
             onComplete: (data) => {
               if (data.result?.imageUrl) {
                 const url = `${data.result.imageUrl}?t=${Date.now()}`;
-                setParts(prev => prev.map(part => {
-                  const assembled = assemblePartPreviewPrompt(part);
-                  return assembled === storedPrompt
+                setParts(prev => prev.map(part =>
+                  assemblePartPreviewPrompt(part) === prompt
                     ? { ...part, data: { ...part.data, previewImageUrl: url } }
-                    : part;
-                }));
+                    : part
+                ));
               }
               dismissPreviewByIndex(idx);
             },
@@ -491,9 +493,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   // Derived: true if any part preview generation is in-flight
   const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
 
-  // Maps queueId → part index for pending part preview tasks (resolved on queue:task-started)
-  const partPreviewQueueIds = useRef({});
-
   const dismissPreviewByIndex = useCallback((index) => {
     setGeneratingPreviews(prev => {
       const next = { ...prev };
@@ -510,18 +509,15 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
         console.warn('[AnyTaleForm] No tags to generate preview for part', index);
         return;
       }
-
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, partContext: 'parts-list' }),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-      const { queueId } = await response.json();
-      partPreviewQueueIds.current[queueId] = { index, prompt };
     } catch (err) {
       console.error('[AnyTaleForm] Preview generation failed:', err);
     }

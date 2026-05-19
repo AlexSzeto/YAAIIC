@@ -236,6 +236,7 @@ async function _runNext() {
       name: next.name,
       subLabel: next.subLabel || null,
       endpointKey: next.endpointKey,
+      taskData: next.taskData,
     });
     emitUpdated();
     console.log(`[queue] Started item ${next.id} → taskId ${taskId}`);

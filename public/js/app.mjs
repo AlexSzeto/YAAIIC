@@ -529,9 +529,6 @@ function App() {
         });
       }
       
-      if (!response.queueId) {
-        throw new Error('No queueId returned');
-      }
       toast.show('Generation queued...', 'info');
 
     } catch (err) {
@@ -850,10 +847,6 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, fields: [field] })
       });
-
-      if (!response.queueId) {
-        throw new Error('No queue ID returned from server');
-      }
 
     } catch (err) {
       console.error('Regenerate failed:', err);

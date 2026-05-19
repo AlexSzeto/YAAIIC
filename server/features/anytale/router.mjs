@@ -292,7 +292,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       taskData: requestData,
     }, { autoStart });
 
-    res.status(202).json({ queueId: queueItem.id });
+    res.status(202).json({});
   } catch (error) {
     console.error('Error starting portrait generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start portrait generation', details: error.message });
@@ -349,7 +349,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
       taskData: requestData,
     }, { autoStart });
 
-    res.status(202).json({ queueId: queueItem.id });
+    res.status(202).json({});
   } catch (error) {
     console.error('Error starting voice generation for anytale character:', error);
     res.status(500).json({ error: 'Failed to start voice generation', details: error.message });
@@ -360,7 +360,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
 
 router.post('/anytale/generate-part-preview', async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, partContext } = req.body;
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'prompt is required' });
     }
@@ -380,6 +380,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
     const requestData = {
       workflow: partPreviewWorkflow,
       prompt,
+      partContext: partContext || null,
       seed: Math.floor(Math.random() * 4294967295),
       orientation: 'square',
       imageFormat: 'png',
@@ -392,7 +393,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
     };
 
     const autoStart = req.query.queueOnly !== 'true';
-    const queueItem = queueService.enqueue({
+    queueService.enqueue({
       type: 'image',
       source: 'anytale',
       name: prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt,
@@ -401,7 +402,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
       taskData: requestData,
     }, { autoStart });
 
-    res.json({ queueId: queueItem.id });
+    res.json({});
   } catch (error) {
     console.error('Error starting part preview generation:', error);
     res.status(500).json({ error: 'Failed to start part preview generation', details: error.message });

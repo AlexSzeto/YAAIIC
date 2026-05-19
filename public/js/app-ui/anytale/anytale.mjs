@@ -258,9 +258,6 @@ export function AnyTalePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!response.queueId) {
-        throw new Error('No queueId returned');
-      }
       toast.show('Generation queued...', 'info');
     } catch (err) {
       console.error('Generation failed:', err);

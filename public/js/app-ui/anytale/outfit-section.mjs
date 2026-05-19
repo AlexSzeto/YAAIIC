@@ -88,11 +88,11 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const [outfit, setOutfit] = useState(() => loadOutfit());
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
-  // Maps queueId → part index for pending part preview tasks
-  const partPreviewQueueIds = useRef({});
-  // Always-current libraryParts ref for use in persistent subscription callbacks
+  // Always-current refs for use in persistent subscription closures
   const libraryPartsRef = useRef(libraryParts);
   libraryPartsRef.current = libraryParts;
+  const outfitRef = useRef(outfit);
+  outfitRef.current = outfit;
   const [outfitList, setOutfitList] = useState([]);
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryOutfit, setLibraryOutfit] = useState(null);
@@ -220,12 +220,20 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // Persistent subscription: pick up Part Preview task-started events initiated by this section
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ id: queueId, taskId, source, subLabel }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
         if (source !== 'anytale' || subLabel !== 'Part Preview') return;
-        const entry = partPreviewQueueIds.current[queueId];
-        if (entry === undefined) return;
-        delete partPreviewQueueIds.current[queueId];
-        const { index: idx, prompt: storedPrompt } = entry;
+        if (taskData?.partContext !== 'outfit') return;
+        const prompt = taskData.prompt;
+        const currentParts = outfitRef.current.parts || [];
+        const idx = currentParts.findIndex(op => {
+          const libCfg = libraryPartsRef.current.find(p => p.uid === op.partUid);
+          if (!libCfg) return false;
+          return assemblePartPreviewPrompt({
+            config: { name: libCfg.name, previewBaseline: libCfg.previewBaseline || '', baseline: libCfg.baseline || '', attributes: libCfg.attributes || [] },
+            data: { enabled: true, attributeValues: op.attributeValues, previewImageUrl: '' },
+          }) === prompt;
+        });
+        if (idx === -1) return;
         setGeneratingPreviews(prev => ({ ...prev, [idx]: taskId }));
         progressShow(taskId, {
           defaultTitle: 'Generating preview…',
@@ -239,9 +247,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                   if (!libCfg) return op;
                   const assembled = assemblePartPreviewPrompt({
                     config: { name: libCfg.name, previewBaseline: libCfg.previewBaseline || '', baseline: libCfg.baseline || '', attributes: libCfg.attributes || [] },
-                    data: { enabled: true, attributeValues: op.attributeValues, previewImageUrl: op.previewImageUrl || '' },
+                    data: { enabled: true, attributeValues: op.attributeValues, previewImageUrl: '' },
                   });
-                  return assembled === storedPrompt ? { ...op, previewImageUrl: url } : op;
+                  return assembled === prompt ? { ...op, previewImageUrl: url } : op;
                 }),
               }));
             }
@@ -283,16 +291,13 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, partContext: 'outfit' }),
       });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
       }
-
-      const { queueId } = await response.json();
-      partPreviewQueueIds.current[queueId] = { index, prompt };
     } catch (err) {
       console.error('[OutfitSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);

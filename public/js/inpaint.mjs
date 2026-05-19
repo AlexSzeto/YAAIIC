@@ -348,12 +348,6 @@ function InpaintApp() {
         showUserFeedback: false
       });
       
-      const result = await response.json();
-
-      if (!result.queueId) {
-        throw new Error('Server did not return a queueId');
-      }
-
     } catch (err) {
       console.error('Error during inpaint:', err);
       toast.error(`Inpaint failed: ${err.message}`);

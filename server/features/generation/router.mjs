@@ -194,7 +194,7 @@ router.post('/generate', upload.any(), async (req, res) => {
     }, { autoStart });
 
     console.log(`[generate] Enqueued ${queueItem.id}`);
-    res.json({ queueId: queueItem.id });
+    res.json({});
   } catch (error) {
     console.error('Error in generate endpoint:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
@@ -300,7 +300,7 @@ router.post('/regenerate', async (req, res) => {
       taskData: { uid, fields, albumArt },
     }, { autoStart });
 
-    res.json({ queueId: queueItem.id });
+    res.json({});
   } catch (error) {
     console.error('Error in regenerate endpoint:', error);
     res.status(500).json({ error: 'Failed to process regenerate request', details: error.message });
@@ -548,8 +548,8 @@ router.post('/generate/inpaint', upload.fields([
         taskData: { ...req.body, workflowName: workflow },
       }, { autoStart });
 
-      res.json({ queueId: queueItem.id });
-      
+      res.json({});
+
     } catch (uploadError) {
       console.error('Failed to upload images to ComfyUI:', uploadError);
       return res.status(500).json({
