@@ -4414,6 +4414,85 @@
         }
       ],
       "base": "desiwa22-q3-image-to-video.json"
+    },
+    {
+      "name": "Text to Image (Lustify XL Characters)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "lustifyxl-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        }
+      ]
     }
   ]
 }

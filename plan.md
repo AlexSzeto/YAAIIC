@@ -1,10 +1,10 @@
 
 # Future Features
 - Formalize page UI: convert Actions list to use compact dynamic list, remove collapse panel around Slot preview, formalize collapse panel as reusable component, 
-
-
 - Unify iconography: delete, clear, close needs different icons
 - Unify and fix custom-ui mouseover: Audit client codebase and migrate all hover actions to use `TooltipProvider`.
+- Prediction logic for counting generation steps: post-generation tasks should have its booleans evaluated at generation start time.
+- Workflow editor improvements: 
 - Settings page (for updating server config.json)
 - Add versioning to config/default config. If there's a newer version default config, create new fields that currently didn't exist in config.
 - Cropping (similar to inpaint, but "execution" crops the image, and instead of a generation menu there are image ratio options and 1/3 guide toggle)
@@ -12,6 +12,7 @@
 - Add progress recovery capabilities so clients logging into workflow in progress would properly prevent generation and show the workflow progress.
 - Add watch mode for config files (config.json, comfyui-workflows.json). If any of these files change, reload the config and workflows.
 - Auto download models from Hugging Face
+- Workflow editor improvements: comfyUI graph recreation
 
 # Scratch Space
 - Download URLs for Wan5b:
