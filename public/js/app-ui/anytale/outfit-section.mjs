@@ -100,14 +100,54 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const [libraryOutfit, setLibraryOutfit] = useState(null);
   // Load-outfit modal state
   const [loadOutfitModalOpen, setLoadOutfitModalOpen] = useState(false);
+  // ORDERING CONSTRAINT: Every hook referenced in a useEffect dependency array must be
+  // declared BEFORE that useEffect in the function body. Hook dep arrays are evaluated
+  // immediately on render, so any const/useCallback below the useEffect causes a TDZ
+  // ReferenceError. If you add hooks that are deps of the effects below, declare them here.
+  const requestPartPreviewCache = useCallback((index, updatedPart) => {
+    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
+    if (!libConfig) return;
+    const prompt = assemblePartPreviewPrompt({
+      config: {
+        name: libConfig.name,
+        previewBaseline: libConfig.previewBaseline || '',
+        baseline: libConfig.baseline || '',
+        attributes: libConfig.attributes || [],
+      },
+      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
+    });
+    if (!prompt) return;
+    fetch('/anytale/request-part-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (!result.found) return;
+        setOutfit(prev => {
+          const parts = [...(prev.parts || [])];
+          if (parts[index]?.partUid === updatedPart.partUid) {
+            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
+          }
+          return { ...prev, parts };
+        });
+      })
+      .catch(() => {});
+  }, [libraryParts]);
+
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
     if (refreshKey === refreshKeyRef.current) return;
     refreshKeyRef.current = refreshKey;
-    setOutfit(loadOutfit());
+    const loaded = loadOutfit();
+    setOutfit(loaded);
     setLibraryOutfit(null);
-  }, [refreshKey]);
+    (loaded.parts || []).forEach((part, index) => {
+      if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+    });
+  }, [refreshKey, requestPartPreviewCache]);
   // ── Recommended part types config ────────────────────────────────────
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
 
@@ -156,38 +196,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   }, []);
 
   // ── Library autocomplete: add part from library ──────────────────────
-
-  const requestPartPreviewCache = useCallback((index, updatedPart) => {
-    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
-    if (!libConfig) return;
-    const prompt = assemblePartPreviewPrompt({
-      config: {
-        name: libConfig.name,
-        previewBaseline: libConfig.previewBaseline || '',
-        baseline: libConfig.baseline || '',
-        attributes: libConfig.attributes || [],
-      },
-      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
-    });
-    if (!prompt) return;
-    fetch('/anytale/request-part-preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-      .then(r => r.json())
-      .then(result => {
-        if (!result.found) return;
-        setOutfit(prev => {
-          const parts = [...(prev.parts || [])];
-          if (parts[index]?.partUid === updatedPart.partUid) {
-            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
-          }
-          return { ...prev, parts };
-        });
-      })
-      .catch(() => {});
-  }, [libraryParts]);
 
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;

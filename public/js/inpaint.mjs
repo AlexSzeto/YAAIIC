@@ -120,7 +120,6 @@ function InpaintApp() {
   const [inpaintArea, setInpaintArea] = useState(null);
   const [history, setHistory] = useState([]);
   const [taskId, setTaskId] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
@@ -272,7 +271,6 @@ function InpaintApp() {
     }
     
     try {
-      setIsGenerating(true);
       toast.show('Preparing inpaint request...');
       
       // Get the original image canvas
@@ -351,13 +349,11 @@ function InpaintApp() {
     } catch (err) {
       console.error('Error during inpaint:', err);
       toast.error(`Inpaint failed: ${err.message}`);
-      setIsGenerating(false);
     }
   };
 
   // Handle generation complete
   const handleGenerationComplete = async (data) => {
-    setIsGenerating(false);
     setTaskId(null);
     console.log('Inpaint complete:', data);
     
@@ -403,7 +399,6 @@ function InpaintApp() {
 
   // Handle generation error
   const handleGenerationError = (data) => {
-    setIsGenerating(false);
     setTaskId(null);
     console.error('Inpaint generation failed:', data);
     toast.error(data.error?.message || 'Inpaint generation failed');
@@ -414,7 +409,6 @@ function InpaintApp() {
     if (activeTasks.length === 0) return;
     const task = activeTasks.find(t => t.requestOrigin === 'inpaint');
     if (task && !taskId) {
-      setIsGenerating(true);
       setTaskId(task.taskId);
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
@@ -550,17 +544,15 @@ function InpaintApp() {
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
-            disabled=${isGenerating}
             typeOptions=${[
               { label: 'Inpaint', value: 'inpaint' }
             ]}
           />
-          
+
           <${InpaintForm}
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${isGenerating}
             onGenerate=${handleGenerate}
             hasValidInpaintArea=${hasValidInpaintArea}
           />

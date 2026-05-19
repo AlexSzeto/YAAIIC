@@ -48,15 +48,14 @@ export function initialize({ config, uploadFileToComfyUI, executeQueuedTask }) {
   items = loadQueue();
 
   // Treat any item that was 'running' at server shutdown as 'queued'
-  // so it will be re-executed on resume().
-  let dirty = false;
+  // so it will be re-executed on resume(). Remove any 'failed' items left
+  // over from before auto-removal was introduced.
+  const before = items.length;
+  items = items.filter(i => i.status !== 'failed');
   for (const item of items) {
-    if (item.status === 'running') {
-      item.status = 'queued';
-      dirty = true;
-    }
+    if (item.status === 'running') item.status = 'queued';
   }
-  if (dirty) saveQueue(items);
+  if (items.length !== before || items.some(i => i.status === 'queued')) saveQueue(items);
 
   // Wire into SSE lifecycle
   setTaskCancelledCallback(_handleTaskCancelled);
@@ -241,13 +240,11 @@ async function _runNext() {
     emitUpdated();
     console.log(`[queue] Started item ${next.id} → taskId ${taskId}`);
   } catch (err) {
-    console.error(`[queue] Failed to start item ${next.id}:`, err);
-    next.status = 'failed';
-    state = 'stopped';
+    console.error(`[queue] Failed to start item ${next.id} — removing and continuing:`, err);
+    items = items.filter(i => i.id !== next.id);
     runningTaskId = null;
     saveQueue(items);
-    emit('queue:stopped', { state: 'stopped', reason: 'missing-data' });
-    emitUpdated();
+    _runNext();
   }
 }
 
@@ -314,10 +311,12 @@ function _handleTaskError(taskId, errorMessage) {
   if (taskId !== runningTaskId) return;
 
   const runningItem = items.find(i => i.status === 'running');
-  if (runningItem) runningItem.status = 'failed';
-  state = 'stopped';
+  if (runningItem) {
+    console.warn(`[queue] Task ${taskId} failed — removing item ${runningItem.id} and continuing`);
+    items = items.filter(i => i.id !== runningItem.id);
+  }
   runningTaskId = null;
   saveQueue(items);
-  emit('queue:stopped', { state: 'stopped', reason: 'task-failed' });
-  emitUpdated();
+  emit('queue:task-complete', { id: runningItem?.id });
+  _runNext();
 }

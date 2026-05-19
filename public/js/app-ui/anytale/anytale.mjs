@@ -317,7 +317,6 @@ export function AnyTalePage() {
         <${RightColumn}>
           <${AnyTaleForm}
             onGenerate=${handleGenerate}
-            isGenerating=${isGenerating}
             onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
           />

@@ -22,7 +22,6 @@ import { useQueueStatus } from '../use-queue-status.mjs';
  * @param {Object|null} props.workflow - Selected workflow object
  * @param {Object} props.formState - Form field values
  * @param {Function} props.onFieldChange - Callback for field changes: (fieldName, value) => void
- * @param {boolean} props.isGenerating - Whether generation is in progress
  * @param {Function} props.onGenerate - Callback for generate action
  * @param {Function} [props.onOpenGallery] - Callback to open gallery
  * @param {Function} [props.onUploadClick] - Callback for upload button
@@ -31,7 +30,6 @@ export function GenerationForm({
   workflow,
   formState,
   onFieldChange,
-  isGenerating,
   onGenerate,
   onOpenGallery,
   onUploadClick,
@@ -44,7 +42,7 @@ export function GenerationForm({
 }) {
 
   const { items: queueItems } = useQueueStatus();
-  const queueCount = queueItems.length;
+  const queueCount = queueItems.filter(i => i.status !== 'failed').length;
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
@@ -109,9 +107,9 @@ export function GenerationForm({
   const isVideoWorkflow = workflow?.type === 'video';
 
   // Create renderExtraInputs function using the reusable renderer
-  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
+  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, false);
 
-  const isQueuedDuplicate = !!(workflow && queueItems.some(item =>
+  const isQueuedDuplicate = !!(workflow && formState.seedLocked && queueItems.some(item =>
     (item.status === 'queued' || item.status === 'running') &&
     item.endpointKey === 'generate' &&
     item.taskData?.workflow === workflow.name &&
@@ -122,8 +120,6 @@ export function GenerationForm({
 
   // Compute whether generate button should be disabled
   const isGenerateDisabled = (() => {
-    // Disabled while generating
-    if (isGenerating) return true;
     // Disabled if no workflow selected
     if (!workflow) return true;
     // Disabled if name is required but not provided
@@ -154,7 +150,6 @@ export function GenerationForm({
           placeholder="Enter name"
           value=${formState.name || ''}
           onChange=${handleChange('name')}
-          disabled=${isGenerating}
         />
 
         <${SeedControl}
@@ -162,7 +157,6 @@ export function GenerationForm({
           setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
           locked=${formState.seedLocked || false}
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
-          disabled=${isGenerating}
         />
       </${HorizontalLayout}>
 
@@ -181,7 +175,6 @@ export function GenerationForm({
         placeholder="Enter your text here..."
         value=${formState.description || ''}
         onChange=${handleChange('description')}
-        disabled=${isGenerating}
       />
 
       <!-- Extra Textarea Inputs (after description) -->
@@ -197,7 +190,6 @@ export function GenerationForm({
               value=${inputImages[i]?.url || inputImages[i]?.blob || null}
               onChange=${(fileOrUrl) => onImageChange && onImageChange(i, fileOrUrl)}
               onSelectFromGallery=${() => onSelectFromGallery && onSelectFromGallery(i)}
-              disabled=${isGenerating}
             />
           `)}
         </${HorizontalLayout}>
@@ -213,7 +205,6 @@ export function GenerationForm({
               value=${inputAudios[i]?.mediaData || inputAudios[i]?.url || null}
               onChange=${(audioUrlOrData) => onAudioChange && onAudioChange(i, audioUrlOrData)}
               onSelectFromGallery=${() => onSelectAudioFromGallery && onSelectAudioFromGallery(i)}
-              disabled=${isGenerating}
             />
           `)}
         </${HorizontalLayout}>
@@ -226,10 +217,10 @@ export function GenerationForm({
           color="primary"
           icon="play"
           onClick=${onGenerate}
-          loading=${isGenerating}
+          loading=${isQueuedDuplicate}
           disabled=${isGenerateDisabled}
         >
-          ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
+          ${isQueuedDuplicate ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
         </${Button}>
 
 
@@ -239,7 +230,6 @@ export function GenerationForm({
           icon="upload"
           tooltip="Upload Media"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
-          disabled=${isGenerating}
         >
           Upload
         </${Button}>

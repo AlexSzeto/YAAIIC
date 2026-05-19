@@ -107,14 +107,13 @@ PromptPreview.className = 'prompt-preview';
 /**
  * @param {Object}   props
  * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
- * @param {boolean}  props.isGenerating  – True while a generation is in-flight
  * @param {Function} [props.onImportReady] – Called with import handlers when they change; null on unmount
  */
-export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentItem = null }) {
+export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null }) {
   const toast = useToast();
   const { show: progressShow, activeTasks } = useProgress();
   const { items: queueItems } = useQueueStatus();
-  const queueCount = queueItems.length;
+  const queueCount = queueItems.filter(i => i.status !== 'failed').length;
   const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   // Always-current parts ref for use in persistent subscription closures
@@ -493,9 +492,6 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
   // Preview generation – { [index]: taskId } while a preview is in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
 
-  // Derived: true if any part preview generation is in-flight
-  const isAnyPreviewGenerating = Object.keys(generatingPreviews).length > 0;
-
   const dismissPreviewByIndex = useCallback((index) => {
     setGeneratingPreviews(prev => {
       const next = { ...prev };
@@ -614,6 +610,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
       }
 
       setParts(importedParts);
+      for (const p of importedParts) requestPartPreviewCacheForFormPart(p);
 
       if (skipped.length > 0) {
         toast.info(`Imported ${importedParts.length} part(s); ${skipped.length} tag(s) had no match: ${skipped.join(', ')}`);
@@ -623,7 +620,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     } finally {
       setIsImporting(false);
     }
-  }, [preparePromptImport, fetchImportConfigs, toast]);
+  }, [preparePromptImport, fetchImportConfigs, toast, requestPartPreviewCacheForFormPart]);
 
   const handleImportCharacter = useCallback(async () => {
     const prepared = preparePromptImport();
@@ -754,7 +751,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     }
   }, [preparePromptImport, fetchImportConfigs, activePlotPage, pageLocked, toast]);
 
-  const canImport = !!extractImagePrompt(currentItem) && !isGenerating && !isImporting;
+  const canImport = !!extractImagePrompt(currentItem) && !isImporting;
   useEffect(() => {
     if (!onImportReady) return;
     onImportReady({
@@ -778,28 +775,30 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
 
   // ── Edit Parts: push character/outfit part attribute values into the parts list ──
   const handleEditParts = useCallback((sourceParts) => {
-    setParts(prev => {
-      const next = [...prev];
-      for (const sp of sourceParts) {
-        const libConfig = libraryParts.find(p => p.uid === sp.partUid);
-        if (!libConfig) continue;
-        const existingIdx = next.findIndex(p => p.config?.uid === sp.partUid);
-        if (existingIdx >= 0) {
-          next[existingIdx] = {
-            ...next[existingIdx],
-            data: { ...next[existingIdx].data, attributeValues: { ...sp.attributeValues } },
-          };
-        } else {
-          const newPart = createDefaultPart();
-          newPart.config = { ...libConfig };
-          newPart.data = { ...newPart.data, attributeValues: { ...sp.attributeValues } };
-          next.push(newPart);
-        }
+    const newParts = [];
+    const current = partsRef.current;
+    const next = [...current];
+    for (const sp of sourceParts) {
+      const libConfig = libraryParts.find(p => p.uid === sp.partUid);
+      if (!libConfig) continue;
+      const existingIdx = next.findIndex(p => p.config?.uid === sp.partUid);
+      if (existingIdx >= 0) {
+        next[existingIdx] = {
+          ...next[existingIdx],
+          data: { ...next[existingIdx].data, attributeValues: { ...sp.attributeValues } },
+        };
+      } else {
+        const newPart = createDefaultPart();
+        newPart.config = { ...libConfig };
+        newPart.data = { ...newPart.data, attributeValues: { ...sp.attributeValues } };
+        next.push(newPart);
+        newParts.push(newPart);
       }
-      return next;
-    });
+    }
+    setParts(next);
+    for (const p of newParts) requestPartPreviewCacheForFormPart(p);
     handleTabChange('parts-plot');
-  }, [libraryParts, handleTabChange]);
+  }, [libraryParts, handleTabChange, requestPartPreviewCacheForFormPart]);
 
   // Compute all unique type strings from the library for autocomplete suggestions
   const allTypes = useMemo(() => {
@@ -940,9 +939,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           color="primary"
           icon="play"
           onClick=${handleGenerate}
-          disabled=${isGenerating || isAnyPreviewGenerating}
         >
-          ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
+          ${queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
         <//>
       </${ButtonRow}>
 
@@ -1029,9 +1027,8 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                 color="primary"
                 icon="play"
                 onClick=${handleCharTabGenerate}
-                disabled=${isGenerating}
               >
-                ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
+                ${queueCount > 0 ? `Generate (${queueCount} Queued)` : 'Generate'}
               <//>
             </${ButtonRow}>
             <${SearchSelectModal}

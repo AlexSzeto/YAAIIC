@@ -76,7 +76,6 @@ function App() {
   
   const [generatedImage, setGeneratedImage] = useState(null);
   const [taskId, setTaskId] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [regenerateTaskId, setRegenerateTaskId] = useState(null);
   const [soundEditorItem, setSoundEditorItem] = useState(null);
 
@@ -380,8 +379,6 @@ function App() {
     }
 
     try {
-      setIsGenerating(true);
-      
       // Determine orientation - default to "detect" if undefined
       let orientation = workflow.orientation || 'detect';
       
@@ -475,7 +472,6 @@ function App() {
               } catch (fetchError) {
                 console.error(`Failed to fetch audio from ${audio.url}:`, fetchError);
                 toast.error(`Failed to load audio file ${index + 1}`);
-                setIsGenerating(false);
                 return;
               }
             }
@@ -534,12 +530,10 @@ function App() {
     } catch (err) {
       console.error('Generation failed:', err);
       toast.error(err.message || 'Failed to start generation');
-      setIsGenerating(false);
     }
   };
-  
+
   const handleGenerationComplete = async (data) => {
-    setIsGenerating(false);
     setTaskId(null);
 
     if (data.result && data.result.uid) {
@@ -558,7 +552,6 @@ function App() {
   };
 
   const handleGenerationError = (data) => {
-    setIsGenerating(false);
     setTaskId(null);
     toast.error(data.error?.message || 'Generation failed');
   };
@@ -568,7 +561,6 @@ function App() {
     if (activeTasks.length === 0) return;
     const task = activeTasks.find(t => t.requestOrigin === 'yaaiic');
     if (task && !taskId) {
-      setIsGenerating(true);
       setTaskId(task.taskId);
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
@@ -1108,7 +1100,6 @@ function App() {
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
-            disabled=${isGenerating}
             typeOptions=${[
               { label: 'Image', value: 'image' },
               { label: 'Video', value: 'video' },
@@ -1120,7 +1111,6 @@ function App() {
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${!!(taskId || regenerateTaskId)}
             onGenerate=${handleGenerate}
             onOpenGallery=${() => setIsGalleryOpen(true)}
             onUploadClick=${() => document.getElementById('upload-file-input')?.click()}

@@ -133,29 +133,46 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
   - **AnyTale tasks** (Portrait, Voice, Part Preview): the corresponding action button is disabled if any `queued` or `running` item matches `source === 'anytale'` AND the same `name` AND the same `subLabel`, regardless of `taskData` (for Part Preview, this restriction only applies if the tags are also identical).
 
 
-- [] Uncaught bugs from previous sections: onload previews are not being requested when parts are imported from characters, outfits, or any version of the image to anytale imports (image to parts, image to plot, image to character, image to outfit)
+#### Fixes (Round 1)
+- [x] Uncaught bugs from previous sections: onload previews are not being requested when parts are imported from characters, outfits, or any version of the image to anytale imports (image to parts, image to plot, image to character, image to outfit)
 
-- [] The queue number is arbitarily starting at the number "3". the number was meant to be an example. The correct wording of the generation buttons should be "Generate (3 Queued)", where the number is derived from the number of tasks currently in queue. After queueing a task, the button should update to "Generate (4 Queued)" unless it is disabled, in which case the "Generating..." with loading icon label is displayed.
+- [x] The queue number is arbitarily starting at the number "3". the number was meant to be an example. The correct wording of the generation buttons should be "Generate (3 Queued)", where the number is derived from the number of tasks currently in queue. After queueing a task, the button should update to "Generate (4 Queued)" unless it is disabled, in which case the "Generating..." with loading icon label is displayed.
 
-- [] Unintended missing feature: The Main page and Inpaint generation forms currently lock when image generation is in progress, making queueing multiple generation requests impossible.
+- [x] Unintended missing feature: The Main page and Inpaint generation forms currently lock when image generation is in progress, making queueing multiple generation requests impossible.
 
-- [] All generation buttons should now be independently tracking whether it should enable queueing or not. If a voice is queued, it should not prevent portrait from queueing, which should not prevent parts from queueing, etc.
+- [x] All generation buttons should now be independently tracking whether it should enable queueing or not. If a voice is queued, it should not prevent portrait from queueing, which should not prevent parts from queueing, etc.
 
+#### Fixes (Round 2)
+- [x] Make an exception for main page and inpaint generate where the lock seed boolean is evaluated first - if it is set to false, then ignore the deep parameters match check.
+
+- [x] On the server, the queue is counted as empty, but the SSE is still tracking 3 failed tasks, causing the generate button to incorrectly display "Generate (3 Queued)".
+
+- [x] Server side: removed failed items from queue after reporting the error to the client event stream.
 
 ---
 
 ### Phase 4 — Queue Dashboard
-*After this phase: users can monitor, reorder, pause, skip, and clear the queue from any page via the hamburger menu.*
+*After this phase: users can monitor, reorder, pause, skip, and clear the queue from any page via a queue status banner that appears whenever the queue is non-empty.*
 
 - [ ] Add a `canDrop(fromIndex, toIndex) => bool` prop to `public/js/custom-ui/layout/dynamic-list.mjs`. When provided, the drag-and-drop handler calls it before committing a drop; if it returns `false`, the drop is cancelled. Also disable the arrange-up button on a row when `canDrop(index, index - 1)` would return `false`. Add a usage example to `public/js/custom-ui/test.html`.
 
 - [ ] Create `public/js/app-ui/queue-dashboard.mjs` as a modal component:
   - **Header**: `"Task Queue"` with a status badge showing current state in parentheses, e.g. `"(running)"`, `"(paused)"`, `"(stopped)"`
-  - **Body**: `DynamicList` of active queue items (status `queued`, `running`, or `failed`); each row shows `[type icon] [source label] – [name][ (subLabel)]` and a delete icon button; when queue state is `running | cancelling | skipping | pausing`, pass `canDrop` to pin index 0 (see Implementation Details)
+  - **Body**: `DynamicList` of active queue items (status `queued` or `running`); each row shows `[type icon] [source label] – [name][ (subLabel)]` and a delete icon button; when queue state is `running | cancelling | skipping | pausing`, pass `canDrop` to pin index 0 (see Implementation Details)
   - **Footer**: `Start` / `Pause` toggle button (icon + text, swaps label/icon based on state), `Clear` button (calls `showDialog` for confirmation before `POST /queue/clear`), and `Close` button
   - Responds live to all `queue:*` SSE events via `queueSseManager`
 
-- [ ] Register `"Task Queue"` in `public/js/app-ui/hamburger-menu.mjs`: add a menu item that toggles a `showQueueDashboard` state flag, and render `<${QueueDashboardModal} open=${showQueueDashboard} onClose=${() => setShowQueueDashboard(false)} />` inside `HamburgerMenu`.
+- [ ] Create `public/js/app-ui/queue-status-banner.mjs` as a reusable component rendered on every page that has a progress banner (`app.mjs`, `inpaint.mjs`, `anytale.mjs`):
+  - Positioned fixed at the bottom-right corner, in the same stacking region as `ProgressBanner`
+  - Only visible when the queue has at least one non-failed item
+  - When a `ProgressBanner` is also visible, the `QueueStatusBanner` renders above it (higher `bottom` offset); when no progress banner is present it sits at the corner baseline
+  - Content: a text label `"[State] ([N] Queued)"` — e.g. `"Stopped (3 Queued)"`, `"Running (1 Queued)"` — followed by an icon-only button using the `arrow-out-up-right-square` icon that opens the `QueueDashboardModal`
+  - State and item count come from `useQueueStatus`; the state string is capitalised (first letter only)
+  - The `QueueDashboardModal` is rendered as a sibling inside the same component so no parent wiring is needed
+
+- [ ] Add `QueueStatusBanner` to `app.mjs`, `inpaint.mjs`, and `anytale.mjs` alongside their existing `ProgressBanner` usage. Pass a `progressVisible` boolean prop so the banner can offset itself correctly above the progress banner when it is present.
+
+- [ ] Update all generate button labels: when the queue is non-empty, replace the full `"Generate (N Queued)"` label with simply `"Queue"`. The disabled/loading `"Generating..."` label when a duplicate is queued remains unchanged. Affected files: `generation-form.mjs`, `inpaint-form.mjs`, `anytale-form.mjs`, `character-section.mjs`.
 
 ---
 

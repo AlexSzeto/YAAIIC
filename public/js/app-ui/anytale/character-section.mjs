@@ -146,7 +146,7 @@ export function CharacterSection({
   const toast = useToast();
   const { show: progressShow } = useProgress();
   const { items: queueItems } = useQueueStatus();
-  const queueCount = queueItems.length;
+  const queueCount = queueItems.filter(i => i.status !== 'failed').length;
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
   const [character, setCharacter] = useState(() => loadCharacter());
@@ -158,6 +158,42 @@ export function CharacterSection({
   const [loadCharModalOpen, setLoadCharModalOpen] = useState(false);
   const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
 
+  // ORDERING CONSTRAINT: Every hook referenced in a useEffect dependency array must be
+  // declared BEFORE that useEffect in the function body. Hook dep arrays are evaluated
+  // immediately on render, so any const/useCallback below the useEffect causes a TDZ
+  // ReferenceError. If you add hooks that are deps of the effects below, declare them here.
+  const requestPartPreviewCache = useCallback((index, updatedPart) => {
+    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
+    if (!libConfig) return;
+    const prompt = assemblePartPreviewPrompt({
+      config: {
+        name: libConfig.name,
+        previewBaseline: libConfig.previewBaseline || '',
+        baseline: libConfig.baseline || '',
+        attributes: libConfig.attributes || [],
+      },
+      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
+    });
+    if (!prompt) return;
+    fetch('/anytale/request-part-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (!result.found) return;
+        setCharacter(prev => {
+          const parts = [...(prev.parts || [])];
+          if (parts[index]?.partUid === updatedPart.partUid) {
+            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
+          }
+          return { ...prev, parts };
+        });
+      })
+      .catch(() => {});
+  }, [libraryParts]);
+
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -167,7 +203,10 @@ export function CharacterSection({
     setCharacter(loaded);
     setSavedCharacterUid(loaded.uid || null);
     setLibraryCharacter(null);
-  }, [refreshKey]);
+    (loaded.parts || []).forEach((part, index) => {
+      if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+    });
+  }, [refreshKey, requestPartPreviewCache]);
 
   // ── Generation state ─────────────────────────────────────────────────────
   // portraitTaskId and voiceTaskId are lifted to the parent (anytale-form.mjs)
@@ -292,38 +331,6 @@ export function CharacterSection({
   }, [outfitList]);
 
   // ── Library autocomplete: add part from library ──────────────────────────
-
-  const requestPartPreviewCache = useCallback((index, updatedPart) => {
-    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
-    if (!libConfig) return;
-    const prompt = assemblePartPreviewPrompt({
-      config: {
-        name: libConfig.name,
-        previewBaseline: libConfig.previewBaseline || '',
-        baseline: libConfig.baseline || '',
-        attributes: libConfig.attributes || [],
-      },
-      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
-    });
-    if (!prompt) return;
-    fetch('/anytale/request-part-preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-      .then(r => r.json())
-      .then(result => {
-        if (!result.found) return;
-        setCharacter(prev => {
-          const parts = [...(prev.parts || [])];
-          if (parts[index]?.partUid === updatedPart.partUid) {
-            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
-          }
-          return { ...prev, parts };
-        });
-      })
-      .catch(() => {});
-  }, [libraryParts]);
 
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;
@@ -726,18 +733,20 @@ export function CharacterSection({
                 color="primary"
                 icon="image"
                 onClick=${handleGeneratePortrait}
-                disabled=${isGeneratingPortrait || isGeneratingVoice || isPortraitDuplicate}
+                loading=${isPortraitDuplicate}
+                disabled=${isPortraitDuplicate}
               >
-                ${isGeneratingPortrait ? 'Generating...' : queueCount > 0 ? `Generate Portrait (${queueCount})` : 'Generate Portrait'}
+                ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? `Generate Portrait (${queueCount} Queued)` : 'Generate Portrait'}
               <//>
               <${Button}
                 variant="small-text"
                 color="primary"
                 icon="microphone"
                 onClick=${handleGenerateVoice}
-                disabled=${isGeneratingPortrait || isGeneratingVoice || !character.personality?.trim() || isVoiceDuplicate}
+                loading=${isVoiceDuplicate}
+                disabled=${!character.personality?.trim() || isVoiceDuplicate}
               >
-                ${isGeneratingVoice ? 'Generating...' : queueCount > 0 ? `Generate Voice (${queueCount})` : 'Generate Voice'}
+                ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? `Generate Voice (${queueCount} Queued)` : 'Generate Voice'}
               <//>
             </${ButtonRow}>
 
