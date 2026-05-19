@@ -102,7 +102,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   }, [refreshKey]);
   // ── Recommended part types config ────────────────────────────────────
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
-  const [partPreviewWorkflow, setPartPreviewWorkflow] = useState('');
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -110,9 +109,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       .then(data => {
         if (Array.isArray(data.recommendedOutfitPartTypes)) {
           setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
-        }
-        if (typeof data.partPreviewWorkflow === 'string' && data.partPreviewWorkflow) {
-          setPartPreviewWorkflow(data.partPreviewWorkflow);
         }
       })
       .catch(err => console.error('[OutfitSection] Failed to load AnyTale config:', err));
@@ -171,13 +167,50 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }));
   }, [outfit.parts, toast]);
 
+  const requestPartPreviewCache = useCallback((index, updatedPart) => {
+    const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
+    if (!libConfig) return;
+    const prompt = assemblePartPreviewPrompt({
+      config: {
+        name: libConfig.name,
+        previewBaseline: libConfig.previewBaseline || '',
+        baseline: libConfig.baseline || '',
+        attributes: libConfig.attributes || [],
+      },
+      data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
+    });
+    if (!prompt) return;
+    fetch('/anytale/request-part-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (!result.found) return;
+        setOutfit(prev => {
+          const parts = [...(prev.parts || [])];
+          if (parts[index]?.partUid === updatedPart.partUid) {
+            parts[index] = { ...parts[index], previewImageUrl: result.portraitUrl };
+          }
+          return { ...prev, parts };
+        });
+      })
+      .catch(() => {});
+  }, [libraryParts]);
+
   const handlePartChange = useCallback((index, updatedPart) => {
+    const currentPart = outfit.parts[index];
+    const attrChanged = JSON.stringify(currentPart?.attributeValues) !== JSON.stringify(updatedPart.attributeValues);
     setOutfit(prev => {
       const newParts = [...prev.parts];
-      newParts[index] = updatedPart;
+      newParts[index] = attrChanged ? { ...updatedPart, previewImageUrl: '' } : updatedPart;
       return { ...prev, parts: newParts };
     });
-  }, []);
+    if (attrChanged) {
+      requestPartPreviewCache(index, { ...updatedPart, previewImageUrl: '' });
+    }
+  }, [outfit.parts, requestPartPreviewCache]);
 
   // ── Part preview generation (manual, via header action button) ───────
 
@@ -214,22 +247,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }
 
     try {
-      const response = await fetch('/generate/silent/async', {
+      const response = await fetch('/anytale/generate-part-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: partPreviewWorkflow,
-          name: libConfig?.name || item.partUid || 'preview',
-          prompt,
-          seed: Math.floor(Math.random() * 4294967295),
-          orientation: 'square',
-          imageFormat: 'png',
-          tags: '',
-          description: '',
-          summary: '',
-          usePostPrompts: false,
-          removeBackground: false,
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
@@ -243,7 +264,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       console.error('[OutfitSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
     }
-  }, [generatingPreviews, libraryParts, partPreviewWorkflow, toast]);
+  }, [generatingPreviews, libraryParts, toast]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
@@ -476,10 +497,11 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         defaultTitle="Generating preview…"
         onComplete=${(data) => {
           if (data.result?.imageUrl) {
+            const url = `${data.result.imageUrl}?t=${Date.now()}`;
             setOutfit(prev => {
               const newParts = [...prev.parts];
               if (newParts[idx]) {
-                newParts[idx] = { ...newParts[idx], previewImageUrl: data.result.imageUrl };
+                newParts[idx] = { ...newParts[idx], previewImageUrl: url };
               }
               return { ...prev, parts: newParts };
             });

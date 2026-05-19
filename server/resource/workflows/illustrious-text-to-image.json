@@ -51,7 +51,7 @@
   },
   "6": {
     "inputs": {
-      "text": "masterpiece,best quality,amazing quality, source anime,",
+      "text": "masterpiece, best quality, amazing quality, source anime,",
       "clip": [
         "4",
         1
@@ -64,7 +64,7 @@
   },
   "7": {
     "inputs": {
-      "text": "bad quality, worst quality, worst detail, bad eyes, extra hands, extra fingers, extra arms, extra legs, sketch, black and white, watermark, trademarked, subtitle, background text, foreground text, speech bubble, sound effects, censor, motion blur",
+      "text": "bad quality, worst quality, worst detail, bad eyes, extra hands, extra fingers, extra arms, extra legs, sketch, black and white, watermark, trademarked, subtitle, background text, foreground text, speech bubble, sound effects, censor, motion blur, motion lines, smear frame",
       "clip": [
         "4",
         1
