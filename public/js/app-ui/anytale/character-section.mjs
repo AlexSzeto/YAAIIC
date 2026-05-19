@@ -36,6 +36,7 @@ import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 // ============================================================================
 // Styled Components
@@ -144,6 +145,8 @@ export function CharacterSection({
 }) {
   const toast = useToast();
   const { show: progressShow } = useProgress();
+  const { items: queueItems } = useQueueStatus();
+  const queueCount = queueItems.length;
 
   // ── Character state (lazy-loaded from localStorage) ─────────────────────
   const [character, setCharacter] = useState(() => loadCharacter());
@@ -172,6 +175,20 @@ export function CharacterSection({
   const isGeneratingVoice = !!voiceTaskId;
   // Part preview generation: keyed by part index, truthy while in-flight
   const [generatingPreviews, setGeneratingPreviews] = useState({});
+
+  // ── Duplicate-detection helpers ──────────────────────────────────────────
+  const isPortraitDuplicate = queueItems.some(item =>
+    (item.status === 'queued' || item.status === 'running') &&
+    item.source === 'anytale' &&
+    item.subLabel === 'Portrait' &&
+    item.name === character.name
+  );
+  const isVoiceDuplicate = queueItems.some(item =>
+    (item.status === 'queued' || item.status === 'running') &&
+    item.source === 'anytale' &&
+    item.subLabel === 'Voice' &&
+    item.name === character.name
+  );
   // Always-current refs for use in persistent subscription closures
   const libraryPartsRef = useRef(libraryParts);
   libraryPartsRef.current = libraryParts;
@@ -390,8 +407,30 @@ export function CharacterSection({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isPartPreviewQueued = useCallback((item) => {
+    const libConfig = libraryParts.find(p => p.uid === item.partUid);
+    const partForPrompt = {
+      config: {
+        name: libConfig?.name || item.partUid,
+        previewBaseline: libConfig?.previewBaseline || '',
+        baseline: libConfig?.baseline || '',
+        attributes: libConfig?.attributes || [],
+      },
+      data: { enabled: true, attributeValues: item.attributeValues, previewImageUrl: item.previewImageUrl || '' },
+    };
+    const prompt = assemblePartPreviewPrompt(partForPrompt);
+    if (!prompt) return false;
+    return queueItems.some(q =>
+      (q.status === 'queued' || q.status === 'running') &&
+      q.source === 'anytale' &&
+      q.subLabel === 'Part Preview' &&
+      q.taskData?.prompt === prompt
+    );
+  }, [queueItems, libraryParts]);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
+    if (isPartPreviewQueued(item)) return;
 
     const libConfig = libraryParts.find(p => p.uid === item.partUid);
     const partForPrompt = {
@@ -428,7 +467,7 @@ export function CharacterSection({
       console.error('[CharacterSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
     }
-  }, [generatingPreviews, libraryParts, toast]);
+  }, [generatingPreviews, libraryParts, toast, isPartPreviewQueued]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
@@ -687,18 +726,18 @@ export function CharacterSection({
                 color="primary"
                 icon="image"
                 onClick=${handleGeneratePortrait}
-                disabled=${isGeneratingPortrait || isGeneratingVoice}
+                disabled=${isGeneratingPortrait || isGeneratingVoice || isPortraitDuplicate}
               >
-                ${isGeneratingPortrait ? 'Generating...' : 'Generate Portrait'}
+                ${isGeneratingPortrait ? 'Generating...' : queueCount > 0 ? `Generate Portrait (${queueCount})` : 'Generate Portrait'}
               <//>
               <${Button}
                 variant="small-text"
                 color="primary"
                 icon="microphone"
                 onClick=${handleGenerateVoice}
-                disabled=${isGeneratingPortrait || isGeneratingVoice || !character.personality?.trim()}
+                disabled=${isGeneratingPortrait || isGeneratingVoice || !character.personality?.trim() || isVoiceDuplicate}
               >
-                ${isGeneratingVoice ? 'Generating...' : 'Generate Voice'}
+                ${isGeneratingVoice ? 'Generating...' : queueCount > 0 ? `Generate Voice (${queueCount})` : 'Generate Voice'}
               <//>
             </${ButtonRow}>
 
@@ -756,7 +795,7 @@ export function CharacterSection({
                     part=${item}
                     libraryConfig=${libConfig}
                     onPartChange=${(updated) => handlePartChange(i, updated)}
-                    isGenerating=${!!generatingPreviews[i]}
+                    isGenerating=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
                     onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
                   />
                 `;

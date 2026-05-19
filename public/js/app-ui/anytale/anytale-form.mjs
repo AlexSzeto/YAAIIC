@@ -33,6 +33,7 @@ import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 // ============================================================================
 // Styled Components
@@ -112,6 +113,8 @@ PromptPreview.className = 'prompt-preview';
 export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentItem = null }) {
   const toast = useToast();
   const { show: progressShow, activeTasks } = useProgress();
+  const { items: queueItems } = useQueueStatus();
+  const queueCount = queueItems.length;
   const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   // Always-current parts ref for use in persistent subscription closures
@@ -501,8 +504,20 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     });
   }, []);
 
+  const isPartPreviewQueued = useCallback((item) => {
+    const prompt = assemblePartPreviewPrompt(item);
+    if (!prompt) return false;
+    return queueItems.some(q =>
+      (q.status === 'queued' || q.status === 'running') &&
+      q.source === 'anytale' &&
+      q.subLabel === 'Part Preview' &&
+      q.taskData?.prompt === prompt
+    );
+  }, [queueItems]);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
+    if (isPartPreviewQueued(item)) return;
     try {
       const prompt = assemblePartPreviewPrompt(item);
       if (!prompt) {
@@ -521,7 +536,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
     } catch (err) {
       console.error('[AnyTaleForm] Preview generation failed:', err);
     }
-  }, [generatingPreviews]);
+  }, [generatingPreviews, isPartPreviewQueued]);
 
   // Header actions for DynamicList items
   const headerActions = [
@@ -844,7 +859,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                 onDeletedFromLibrary=${() => setParts(prev => prev.filter((_, j) => j !== i))}
                 previewBasePromptByType=${previewBasePromptByType}
                 onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
-                isGeneratingPreview=${!!generatingPreviews[i]}
+                isGeneratingPreview=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
               />
             `}
             getTitle=${(item) => {
@@ -927,7 +942,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
           onClick=${handleGenerate}
           disabled=${isGenerating || isAnyPreviewGenerating}
         >
-          ${isGenerating ? 'Generating...' : 'Generate'}
+          ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
         <//>
       </${ButtonRow}>
 
@@ -1016,7 +1031,7 @@ export function AnyTaleForm({ onGenerate, isGenerating, onImportReady, currentIt
                 onClick=${handleCharTabGenerate}
                 disabled=${isGenerating}
               >
-                ${isGenerating ? 'Generating...' : 'Generate'}
+                ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
               <//>
             </${ButtonRow}>
             <${SearchSelectModal}

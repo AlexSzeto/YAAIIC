@@ -115,9 +115,7 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
 ### Phase 2.6 — Bug Fix: Part Preview Updates and Portrait/Voice Client-Side Sync
 *Standalone fix. App is fully functional after this phase.*
 
-- [ ] **Part preview completion not updating the image** — When a part preview generates, the `onComplete` handler scans parts by prompt match (`data.result?.prompt`), but this field may not be present in the completion payload in the expected location, or `assemblePartPreviewPrompt` may not produce the exact same string as the server used when building the request. Investigate whether `data.result?.prompt` is actually populated on the client side. If it is not, an alternative is to store the assembled prompt alongside the `queueId → index` mapping at enqueue time (i.e. `partPreviewQueueIds.current[queueId] = { index, prompt }`) and use that stored prompt to do the scan in `onComplete`, eliminating the dependency on server-echoed data.
-
-*NOTE* Previous fix attempt failed, task unchecked. Add console outputs. We'll debug through this manually.
+- [x] **Part preview completion not updating the image** — When a part preview generates, the `onComplete` handler scans parts by prompt match (`data.result?.prompt`), but this field may not be present in the completion payload in the expected location, or `assemblePartPreviewPrompt` may not produce the exact same string as the server used when building the request. Investigate whether `data.result?.prompt` is actually populated on the client side. If it is not, an alternative is to store the assembled prompt alongside the `queueId → index` mapping at enqueue time (i.e. `partPreviewQueueIds.current[queueId] = { index, prompt }`) and use that stored prompt to do the scan in `onComplete`, eliminating the dependency on server-echoed data.
 
 - [x] **Parts not showing cached preview images on first add** — When a part is first added to the AnyTale form parts list, character, or outfit, any existing cached preview image for that part's base tags is not shown. The `/anytale/request-part-preview` endpoint already supports this lookup (used when attribute values change), but is not called at the moment a part is added. The fix should call this endpoint on part addition and populate `previewImageUrl` if a cached image exists, for all three contexts: AnyTale form parts list, character parts, and outfit parts.
 
@@ -128,11 +126,21 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
 ### Phase 3 — Generate Button Queue Awareness
 *After this phase: buttons display live queue depth and are automatically disabled when an identical task is already queued or running.*
 
-- [ ] Update all generate buttons that have text labels to display the current total queue count when non-zero, e.g. `"Generate (3)"`. Use `useQueueStatus` to read the count live. Check if `widthScale="normal"` (200px) fits the longest expected label; if not, introduce a new `widthScale` value between `normal` and `wide` in `util.mjs` and `Button`, or switch to `widthScale="wide"` (400px). Update `public/js/custom-ui/test.html` if `Button`'s API changes.
+- [x] Update all generate buttons that have text labels to display the current total queue count when non-zero, e.g. `"Generate (3)"`. Use `useQueueStatus` to read the count live. Check if `widthScale="normal"` (200px) fits the longest expected label; if not, introduce a new `widthScale` value between `normal` and `wide` in `util.mjs` and `Button`, or switch to `widthScale="wide"` (400px). Update `public/js/custom-ui/test.html` if `Button`'s API changes.
 
-- [ ] Implement duplicate-detection to selectively disable each generate button using the `items` array from `useQueueStatus`:
+- [x] Implement duplicate-detection to selectively disable each generate button using the `items` array from `useQueueStatus`:
   - **Main page & inpaint**: the button is disabled if any `queued` or `running` item with the same `endpointKey` has a `taskData` that deep-equals the current form's intended `taskData` (including seed). Seed must be captured from the current form state at comparison time.
-  - **AnyTale tasks** (Portrait, Voice, Part Preview): the corresponding action button is disabled if any `queued` or `running` item matches `source === 'anytale'` AND the same `name` AND the same `subLabel`, regardless of `taskData`.
+  - **AnyTale tasks** (Portrait, Voice, Part Preview): the corresponding action button is disabled if any `queued` or `running` item matches `source === 'anytale'` AND the same `name` AND the same `subLabel`, regardless of `taskData` (for Part Preview, this restriction only applies if the tags are also identical).
+
+
+- [] Uncaught bugs from previous sections: onload previews are not being requested when parts are imported from characters, outfits, or any version of the image to anytale imports (image to parts, image to plot, image to character, image to outfit)
+
+- [] The queue number is arbitarily starting at the number "3". the number was meant to be an example. The correct wording of the generation buttons should be "Generate (3 Queued)", where the number is derived from the number of tasks currently in queue. After queueing a task, the button should update to "Generate (4 Queued)" unless it is disabled, in which case the "Generating..." with loading icon label is displayed.
+
+- [] Unintended missing feature: The Main page and Inpaint generation forms currently lock when image generation is in progress, making queueing multiple generation requests impossible.
+
+- [] All generation buttons should now be independently tracking whether it should enable queueing or not. If a voice is queued, it should not prevent portrait from queueing, which should not prevent parts from queueing, etc.
+
 
 ---
 

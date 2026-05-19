@@ -33,6 +33,7 @@ import { CharacterPartItem } from './character-part-item.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 // ============================================================================
 // Styled Components
@@ -82,6 +83,7 @@ function outfitsEqual(a, b) {
  */
 export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true, onOutfitListChange, onEditParts }) {
   const toast = useToast();
+  const { items: queueItems } = useQueueStatus();
   const { show: progressShow } = useProgress();
 
   // ── Outfit state (lazy-loaded from localStorage) ─────────────────────
@@ -263,8 +265,30 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isPartPreviewQueued = useCallback((item) => {
+    const libConfig = libraryParts.find(p => p.uid === item.partUid);
+    const partForPrompt = {
+      config: {
+        name: libConfig?.name || item.partUid,
+        previewBaseline: libConfig?.previewBaseline || '',
+        baseline: libConfig?.baseline || '',
+        attributes: libConfig?.attributes || [],
+      },
+      data: { enabled: true, attributeValues: item.attributeValues, previewImageUrl: item.previewImageUrl || '' },
+    };
+    const prompt = assemblePartPreviewPrompt(partForPrompt);
+    if (!prompt) return false;
+    return queueItems.some(q =>
+      (q.status === 'queued' || q.status === 'running') &&
+      q.source === 'anytale' &&
+      q.subLabel === 'Part Preview' &&
+      q.taskData?.prompt === prompt
+    );
+  }, [queueItems, libraryParts]);
+
   const handlePreviewGenerate = useCallback(async (item, index) => {
     if (generatingPreviews[index]) return;
+    if (isPartPreviewQueued(item)) return;
 
     const libConfig = libraryParts.find(p => p.uid === item.partUid);
     const partForPrompt = {
@@ -302,7 +326,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       console.error('[OutfitSection] Part preview generation failed:', err);
       toast.error(`Preview failed: ${err.message}`);
     }
-  }, [generatingPreviews, libraryParts, toast]);
+  }, [generatingPreviews, libraryParts, toast, isPartPreviewQueued]);
 
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
@@ -446,7 +470,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                     part=${item}
                     libraryConfig=${libConfig}
                     onPartChange=${(updated) => handlePartChange(i, updated)}
-                    isGenerating=${!!generatingPreviews[i]}
+                    isGenerating=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
                     onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
                   />
                 `;

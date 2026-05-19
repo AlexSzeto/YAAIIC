@@ -12,6 +12,7 @@ import { insertTagAtCursorPos, extractWordAtCursor, replaceTagInPrompt } from '.
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 /**
  * Generation Form Component
@@ -41,6 +42,9 @@ export function GenerationForm({
   onAudioChange,
   onSelectAudioFromGallery
 }) {
+
+  const { items: queueItems } = useQueueStatus();
+  const queueCount = queueItems.length;
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
@@ -107,6 +111,15 @@ export function GenerationForm({
   // Create renderExtraInputs function using the reusable renderer
   const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
 
+  const isQueuedDuplicate = !!(workflow && queueItems.some(item =>
+    (item.status === 'queued' || item.status === 'running') &&
+    item.endpointKey === 'generate' &&
+    item.taskData?.workflow === workflow.name &&
+    String(item.taskData?.prompt ?? '') === String(formState.description ?? '') &&
+    String(item.taskData?.seed ?? '') === String(formState.seed ?? '') &&
+    String(item.taskData?.name ?? '') === String(formState.name ?? '')
+  ));
+
   // Compute whether generate button should be disabled
   const isGenerateDisabled = (() => {
     // Disabled while generating
@@ -127,6 +140,7 @@ export function GenerationForm({
       const filledCount = inputAudios.filter(audio => audio && (audio.blob || audio.url)).length;
       if (filledCount < workflow.inputAudios) return true;
     }
+    if (isQueuedDuplicate) return true;
     return false;
   })();
 
@@ -215,7 +229,7 @@ export function GenerationForm({
           loading=${isGenerating}
           disabled=${isGenerateDisabled}
         >
-          ${isGenerating ? 'Generating...' : 'Generate'}
+          ${isGenerating ? 'Generating...' : queueCount > 0 ? `Generate (${queueCount})` : 'Generate'}
         </${Button}>
 
 

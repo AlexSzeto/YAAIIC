@@ -11,6 +11,7 @@ import { insertTagAtCursorPos, extractWordAtCursor, replaceTagInPrompt } from '.
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 // Styled components
 const FormContainer = styled('div')`
@@ -49,6 +50,8 @@ export function InpaintForm({
   onGenerate,
   hasValidInpaintArea
 }) {
+  const { items: queueItems } = useQueueStatus();
+  const queueCount = queueItems.length;
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
@@ -110,6 +113,15 @@ export function InpaintForm({
   const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
 
   // Compute whether inpaint button should be disabled
+  const isQueuedDuplicate = !!(workflow && queueItems.some(item =>
+    (item.status === 'queued' || item.status === 'running') &&
+    item.endpointKey === 'generate-inpaint' &&
+    item.taskData?.workflow === workflow.name &&
+    String(item.taskData?.prompt ?? '') === String(formState.description ?? '') &&
+    String(item.taskData?.seed ?? '') === String(formState.seed ?? '') &&
+    String(item.taskData?.name ?? '') === String(formState.name ?? '')
+  ));
+
   const isInpaintDisabled = (() => {
     // Disabled while generating
     if (isGenerating) return true;
@@ -121,6 +133,7 @@ export function InpaintForm({
     if (workflow.nameRequired && !formState.name?.trim()) return true;
     // Disabled if prompt is required but not provided
     if (!workflow.optionalPrompt && !formState.description?.trim()) return true;
+    if (isQueuedDuplicate) return true;
     return false;
   })();
 
@@ -180,7 +193,7 @@ export function InpaintForm({
           loading=${isGenerating}
           disabled=${isInpaintDisabled}
         >
-          ${isGenerating ? 'Inpainting...' : 'Inpaint'}
+          ${isGenerating ? 'Inpainting...' : queueCount > 0 ? `Inpaint (${queueCount})` : 'Inpaint'}
         </${Button}>
       </${FormRow}>
 
