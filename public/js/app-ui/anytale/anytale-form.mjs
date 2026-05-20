@@ -423,7 +423,36 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     onGenerate(prompt, previewImageName, partsData, plotData);
   }, [parts, previewImageName, onGenerate, activePlotPage, computeSlotVisibility]);
 
-  // �"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
+  const handleFullPlotTest = useCallback(() => {
+    const currentPlot = loadPlot();
+    const plotPageCount = currentPlot.pages.length;
+    if (plotPageCount === 0) return;
+
+    setPageLocked(currentPlot.pages.map(() => true));
+
+    const partsData = {};
+    for (const p of parts) {
+      if (p.config?.name?.trim()) {
+        partsData[p.config.name] = {
+          attributeValues: p.data.attributeValues,
+          previewImageUrl: p.data.previewImageUrl,
+        };
+      }
+    }
+
+    for (let i = 0; i < plotPageCount; i++) {
+      const activePage = currentPlot.pages[i];
+      const enabledParts = parts.filter(p => p.data?.enabled !== false);
+      const slotVisibility = computeSlotVisibility(enabledParts, currentPlot.pages, i);
+      const prompt = assemblePrompt(parts, activePage, slotVisibility);
+      const plotData = (currentPlot.uid || currentPlot.name)
+        ? { uid: currentPlot.uid, name: currentPlot.name, page: i }
+        : null;
+      onGenerate(prompt, previewImageName, partsData, plotData);
+    }
+  }, [parts, previewImageName, onGenerate, computeSlotVisibility]);
+
+  //�"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
   const handleCharTabGenerate = useCallback(async () => {
     const currentCharacter = loadCharacter();
     const currentOutfit = loadOutfit();
@@ -956,6 +985,14 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         >
           ${queueCount > 0 ? 'Queue' : 'Generate'}
         <//>
+        <${Button}
+          variant="large-text"
+          color="primary"
+          icon="play"
+          onClick=${handleFullPlotTest}
+        >
+          ${'Queue Plot'}
+        <//>        
       </${ButtonRow}>
 
       <${SearchSelectModal}
