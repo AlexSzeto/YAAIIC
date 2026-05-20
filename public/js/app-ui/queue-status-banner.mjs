@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
@@ -39,6 +39,11 @@ export function QueueStatusBanner({ progressVisible = false }) {
   const [dashboardOpen, setDashboardOpen] = useState(false);
 
   const activeItems = items.filter(i => i.status !== 'failed');
+
+  useEffect(() => {
+    if (activeItems.length === 0) setDashboardOpen(false);
+  }, [activeItems.length]);
+
   if (activeItems.length === 0) return null;
 
   const stateLabel = state ? state.charAt(0).toUpperCase() + state.slice(1) : '';

@@ -414,6 +414,7 @@ function InpaintApp() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
+        onCancelled: () => setTaskId(null),
       });
     }
   }, [activeTasks]);
@@ -433,6 +434,7 @@ function InpaintApp() {
         progressShow(taskId, {
           onComplete: (data) => handleGenerationCompleteRef.current(data),
           onError: (data) => handleGenerationErrorRef.current(data),
+          onCancelled: () => setTaskId(null),
         });
       },
     });

@@ -139,7 +139,7 @@ export function QueueDashboardModal({ isOpen, onClose }) {
             renderItem=${(item) => html`
               <${ItemRow}>
                 <${Icon} name=${TYPE_ICONS[item.type] || 'image'} size='24px' color=${currentTheme.value.colors.text.secondary} />
-                <${SourceLabel}>${TYPE_ICONS[item.type]} ${item.type} ${SOURCE_LABELS[item.source] || item.source}</${SourceLabel}>
+                <${SourceLabel}>${SOURCE_LABELS[item.source] || item.source}</${SourceLabel}>
                 <span style=${{ color: currentTheme.value.colors.text.secondary }}>–</span>
                 <${ItemName}>${item.name}${item.subLabel ? ` (${item.subLabel})` : ''}</${ItemName}>
                 <${RunningBadge}>${item.status}</${RunningBadge}>

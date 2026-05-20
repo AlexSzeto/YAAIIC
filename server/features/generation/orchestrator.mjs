@@ -810,7 +810,13 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
   } catch (error) {
     console.error(`Error in task ${taskId}:`, error);
     taskTimers.delete(taskId);
-    emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
+    // If the task was intentionally cancelled (pause/skip/cancel), emit cancelled
+    // instead of error so the client shows "Generation cancelled" rather than a failure toast.
+    if (getTask(taskId)?.cancelled) {
+      emitTaskCancelled(taskId);
+    } else {
+      emitTaskErrorByTaskId(taskId, 'Failed to process generation request', error.message);
+    }
     throw error;
   }
 }

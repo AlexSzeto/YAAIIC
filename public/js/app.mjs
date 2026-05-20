@@ -566,6 +566,7 @@ function App() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
+        onCancelled: () => setTaskId(null),
       });
     }
   }, [activeTasks]);
@@ -797,6 +798,7 @@ function App() {
     progressShow(taskId, {
       onComplete: handleGenerationComplete,
       onError: handleGenerationError,
+      onCancelled: () => setTaskId(null),
     });
   }, [progressShow]);
 
@@ -890,12 +892,14 @@ function App() {
           progressShow(taskId, {
             onComplete: (data) => handleRegenerateCompleteRef.current(data),
             onError: (data) => handleRegenerateErrorRef.current(data),
+            onCancelled: () => setRegenerateTaskId(null),
           });
         } else {
           setTaskId(taskId);
           progressShow(taskId, {
             onComplete: (data) => handleGenerationCompleteRef.current(data),
             onError: (data) => handleGenerationErrorRef.current(data),
+            onCancelled: () => setTaskId(null),
           });
         }
       },
@@ -1059,6 +1063,7 @@ function App() {
         progressShow(result.taskId, {
           onComplete: handleGenerationComplete,
           onError: handleGenerationError,
+          onCancelled: () => setTaskId(null),
         });
         toast.show('Uploading...', 'info');
       }

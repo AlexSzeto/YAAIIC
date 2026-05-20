@@ -179,6 +179,26 @@ The correct model: each page **persistently subscribes** to `queue:task-started`
 
 - [x] In the QueueDashboardModal, each item should have an icon according to its generated media type: image (image icon), audio (microphone icon), and video (video icon). Status text should appear for all items, not just the one that is currently running (they would be "queued").
 
+#### Fixes
+- [x] The items inside the queue dashboard is sorting oddly and incorrectly. Let's remove the canDrop property and replicate the look of a dynamic list item above the list instead of putting that item into the list, which means that:
+1. within the UI, the first item is always spliced out of the actual queue and placed into a layout that replicates the dynamic list item, but won't have the reorder button (delete button should still be present).
+2. rearranging the rest of the list would result in the actual queue item index 1 thru (length-1) being rearranged. when sorting happens, the actual index for all the items involved would need to be reassembled.
+- [x] Currently, pausing a task causes the server to interpret comfyUI's response as an error instead of an intentional interruption, causing the task to be treated as failed instead of paused, and immediately deleting the task instead of leaving it in the queue. There should be a difference in status between intentional interruption and unintended error, and the status parser needs to be able to correctly distinguish between the two types of messages:
+```
+Error in task task_1779232001299_f53osdz0u: Error: ComfyUI generation failed
+    at processGenerationTask (file:///F:/YAAIIC/server/features/generation/orchestrator.mjs:602:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[queue] executeQueuedTask(generate) post-processing failed: Error: ComfyUI generation failed
+    at processGenerationTask (file:///F:/YAAIIC/server/features/generation/orchestrator.mjs:602:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+SSE client disconnected for task task_1779232001299_f53osdz0u
+```
+
+#### Fixes Round 2
+- [x] after the current task is paused, the progress banner is not reporting that it is gone, resulting in the task queue banner hanging higher than where it should be.
+- [x] pausing the current task causes the tab title load icon to stay on indefinitely.
+- [x] clearing the queue when an item is running would only result in the first item being skipped. When a clear request is made, immediately delete all remaining queued items before attempting to skip the running item. This should be reflected on the UI as well.
+- [x] if the queue dashboard is auto dismissed because all queued items are complete, mark the modal as being closed so it wouldn't appear automatically again when new items are queued.
 ---
 
 ## Implementation Details

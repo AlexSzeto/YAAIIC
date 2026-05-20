@@ -172,6 +172,7 @@ export function AnyTalePage() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
+        onCancelled: () => { setIsGenerating(false); setTaskId(null); },
       });
     }
   }, [activeTasks]);
@@ -185,6 +186,7 @@ export function AnyTalePage() {
         progressShow(taskId, {
           onComplete: handleGenerationComplete,
           onError: handleGenerationError,
+          onCancelled: () => { setIsGenerating(false); setTaskId(null); },
         });
       },
     });

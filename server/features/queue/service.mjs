@@ -143,8 +143,12 @@ export function reorder({ id, toIndex }) {
 export function clear() {
   if (state === 'running' || state === 'cancelling' || state === 'skipping' || state === 'pausing') {
     state = 'cancelling';
+    // Immediately drop queued items so the UI reflects the clear right away.
+    // The running item will be removed in _handleTaskCancelled once the cancel completes.
+    items = items.filter(i => i.status !== 'queued');
+    saveQueue(items);
+    emitUpdated();
     _cancelRunningTask();
-    // Items cleared in _handleTaskCancelled when state === 'cancelling'
   } else {
     items = [];
     saveQueue(items);
@@ -309,6 +313,13 @@ function _handleTaskCompleted(taskId, result) {
 
 function _handleTaskError(taskId, errorMessage) {
   if (taskId !== runningTaskId) return;
+
+  // An interrupt sent by pause/skip/cancel causes ComfyUI to reject with an error.
+  // Route it to the cancellation handler so the correct state transition fires.
+  if (state === 'pausing' || state === 'skipping' || state === 'cancelling') {
+    _handleTaskCancelled(taskId);
+    return;
+  }
 
   const runningItem = items.find(i => i.status === 'running');
   if (runningItem) {
