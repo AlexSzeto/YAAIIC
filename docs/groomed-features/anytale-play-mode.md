@@ -34,7 +34,7 @@ Play mode uses "**chapter**" as the user-facing term for plot blocks.
 #### Normal page layout (during chapter navigation)
 
 - Shared **`AppHeader`** as on other pages; below it, the experience is **one outlined portrait panel** (mobile-friendly, touch targets).
-- **Top of frame:** Reset (with **confirm** dialog), Dialog on/off (controls **chat/dialog generation**), Mute (voice playback / new TTS), **Music** play/stop (looping background tracks).
+- **Top of frame:** Reset (with **confirm** dialog), Mute (voice playback / new TTS), **Music** play/stop (looping background tracks).
 - **Below controls:** speech bubble for **current dialog** (empty when none).
 - **Generated image area:** full portrait display with **fade in/out transitions** between page images (same transition style as the editor slideshow mode).
 - **Bottom controls** (two-row layout):
@@ -57,6 +57,53 @@ Play mode uses "**chapter**" as the user-facing term for plot blocks.
 #### Three + one pattern
 
 "Other" is always a **fourth** choice when the pattern applies. **Introduction main page** and **mood page** are exceptions with **exactly three** options and no fourth.
+
+### Play mode UI styling
+
+Play mode has a unique visual style distinct from the rest of the app, while reusing theme colors.
+
+#### Circular control buttons
+
+All control buttons (reset, mute, music, prev, play, stop, next, show/hide UI): **completely circular, 48×48px**. Background uses the **theme background color** with the **glass panel's frosted/backdrop filter** applied. **Thick outline**, single **centered icon**.
+
+#### Speech bubble
+
+Used for displaying character dialog text. Shape based on this CSS pattern, adapted to use theme color/border/padding/margin:
+
+```css
+.speech-bubble {
+  position: relative;
+  background: var(--theme-color); /* adapt to theme */
+  border-radius: .4em;
+}
+
+.speech-bubble:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 24px solid transparent;
+  border-top-color: var(--theme-color);
+  border-bottom: 0;
+  border-left: 0;
+  margin-left: -12px;
+  margin-bottom: -24px;
+}
+```
+
+#### Caption bubble (decision hints)
+
+Same size and styling as the speech bubble, but **without the `:after` triangle** — a plain rounded rectangle.
+
+#### Decision option buttons
+
+**Glass panel style background**, **rounded rectangle** shape. When an image is present: image on the **left**, word-wrapped multiline text on the **right**. When no image: text is **centered**.
+
+#### Progress bar
+
+True **pill shape** (fully rounded ends), **solid color** fills for each layer. See Progress Bar behavior section below for layer details.
 
 ### Progress bar
 
@@ -93,26 +140,35 @@ When the user enters a new chapter (plot block), **all media is queued at once**
 - Random **outfit** from the selected character's **preferred outfits** list.
 - Random **`background`-typed** part plus **random attribute selections** (respect category/custom attribute rules from part config).
 - Random **music genre** from the database, then random **track** from that genre's playlist.
-- Random **plot** whose plot block **`section`** is **`prelude`** (case-insensitive match per product convention).
-- Start at **page index 0** (page 1).
-- After bootstrap, show **introduction** until the user picks an action.
-- If the library has no usable prelude plot, no usable epilogue plot, no character, no `background`-typed part, or no music tracks, fail the play page load with a simple message asking the user to create the missing data in the editor before entering play mode.
+- Random **plot** whose plot block **`section`** is **`prelude`** (case-insensitive match per product convention). This plot is **pre-selected and stored** but not entered until the user chooses "Begin the tale".
+- After bootstrap, show the **introduction** using the **introduction plot** (see below).
+- If the library has no usable prelude plot, no usable epilogue plot, no introduction plot, no character, no `background`-typed part, or no music tracks, fail the play page load with a simple message asking the user to create the missing data in the editor before entering play mode.
+
+### Introduction plot
+
+- A **fixed, 1-page plot** whose name is configurable in `config.json` (e.g. `anytale.introductionPlotName`).
+- Its single page contains tags/settings designed to generate the character in a **neutral pose** (e.g. standing, facing camera, simple composition).
+- During the entire introduction phase (main page, mood page, and all change flows), the displayed image is generated from: **current character parts + current outfit parts + current background part + introduction plot page tags**, assembled via `assemblePrompt`.
+- On first load (cold start), the portrait area shows **top/bottom controls with a giant loading spinner** in the center while the initial introduction image generates.
+- When the user changes **any setting** (character, outfit, or background) during introduction, a **new image is generated** using the updated combination. The **UI blocks** (loading spinner) until the new image is ready, then **fades** from the old image to the new one.
+- Music changes do **not** trigger an image regeneration.
+- The introduction plot is **not part of the timeline** — it exists purely as the visual backdrop for the intro decision-making phase.
 
 ### Interaction flows
 
 #### 1. Introduction — main page
 
-Three options only (no fourth):
-1. **"Let me meet someone else"** → character change flow.
+The introduction displays the image generated from the introduction plot (see Introduction Plot section). Three options only (no fourth):
+1. **"Let me meet someone else"** → character change flow. On return, regenerates intro image (blocks UI, fade transition).
 2. **"The mood isn't right"** → mood sub-page.
-3. **"Begin the tale"** → exits intro, enters chapter navigation at page 1. Queues all media generation for the prelude chapter.
+3. **"Begin the tale"** → exits intro, enters the pre-selected prelude chapter at page 1. Queues all media generation for the prelude chapter.
 
 #### 2. Introduction — mood page
 
 Three options only (no fourth):
-1. **"Maybe try on a different outfit?"** → outfit change flow (3+1 pattern, fourth = "Nevermind" — no change).
-2. **"Let's go somewhere else."** → background change flow.
-3. **"Let's listen to something different."** → music change flow.
+1. **"Maybe try on a different outfit?"** → outfit change flow (3+1 pattern, fourth = "Nevermind" — no change). On pick, regenerates intro image (blocks UI, fade transition).
+2. **"Let's go somewhere else."** → background change flow. On completion, regenerates intro image (blocks UI, fade transition).
+3. **"Let's listen to something different."** → music change flow. Does **not** trigger image regeneration.
 
 Completing any mood change returns to the intro main page.
 
@@ -147,7 +203,7 @@ When the user reaches the last page, a **decision page** is shown:
 
 **After the user makes a choice:**
 
-1. A **loading page** appears after the decision page in the timeline. The user is moved to this loading page.
+1. A **loading page** appears after the decision page in the timeline. The user is moved to this loading page. The loading page displays **top/bottom controls with a giant loading spinner** in the center (no image).
 2. While on the loading page, the user can **navigate back** to reconsider their choice.
 3. All media for the new chapter is queued (see Queue Strategy).
 4. Once the new chapter is **ready** (page 1 assets are done), the timeline transforms:
@@ -163,7 +219,7 @@ Append chosen plots to a **linear timeline** in the persisted session object for
 When the epilogue chapter ends, a **final end screen** is appended:
 - Image is **reused from the final page** of the epilogue.
 - Simple message: *"You have reached the end of this tale."*
-- Single option: **"Play again"** → triggers a **full reset** (same as the reset button — cancel all, stop all audio, full cold start reroll).
+- No explicit "play again" button — the **reset button** in the top controls serves this purpose.
 
 #### 10. Mid-session changes
 
@@ -178,12 +234,12 @@ Not supported in this version. Character, outfit, background, and music choices 
 
 ### Dialog (LLM)
 
+- Dialog text **always generates** when conditions are met (no on/off toggle). The **mute button** controls only voice/TTS playback, not dialog text generation.
 - Chat generation is now available server-side through `server/features/chat/router.mjs` as **`POST /api/chat`**, backed by `server/core/llm.mjs::chat()`. AnyTale play mode should use this real endpoint rather than a placeholder stub.
 - Add AnyTale dialog settings under `server/config.default.json` / runtime config, using the imported LLM preset/session shape: `model`, `systemMessage`, and `parameters` (`temperature`, `topP`, `maxTokens`). Also store mode (`chat` or `completion`), completion format (`chatml` when needed), and stream default.
 - The configured `systemMessage` is a template. Substitute `{{profile}}` with the current character's personality profile and `{{location}}` with the current background part's **location attribute value**. If either substitution source is missing/blank, skip dialog generation for that page.
 - Fetch the AnyTale dialog config through `GET /anytale/config`; do not hard-code model names in the play client.
 - Add a small AnyTale dialog client module that renders the configured system-message template, sends the active page's `dialogPrompt` as the user/content prompt, then calls `/api/chat`. Prefer non-streaming for the first usable implementation unless the UI is explicitly wired for streaming partial text.
-- When dialog is **on:** system prompt = rendered configured `systemMessage`; user/content prompt includes the active page's **`dialogPrompt`** one-liner. When dialog is **off:** **skip** generation; plot still advances on **new page entry** without dialog text.
 - If the page has no `dialogPrompt` or the prompt is empty after trimming, skip dialog generation for that page as if the character is temporarily muted.
 - If the character personality profile is missing, skip dialog generation.
 - Cache generated dialog text by the same stable asset signature used for generated images/voice so reloads and back navigation can reuse it without re-calling `/api/chat`.
@@ -212,7 +268,7 @@ Not supported in this version. Character, outfit, background, and music choices 
 
 ### Persistence
 
-- **One** `localStorage` JSON object (distinct key from editor keys `anytale-state`, `anytale-plot`, `anytale-character` — **do not clobber** editor storage). Contents: selected **character** (uid + snapshot fields needed for UI), **outfit** uid, **background part** uid + **attribute map**, **music genre** + **track id**, **linear plot timeline**, **generated asset cache**, **current plot uid**, **current page index**, UI mode / phase (intro vs mood vs character picker vs plot vs end-of-chapter vs end screen), toggles (dialog on, mute, music on), navigation mode (manual vs autoplay). **Always restore** on `/anytale.html` load.
+- **One** `localStorage` JSON object (distinct key from editor keys `anytale-state`, `anytale-plot`, `anytale-character` — **do not clobber** editor storage). Contents: selected **character** (uid + snapshot fields needed for UI), **outfit** uid, **background part** uid + **attribute map**, **music genre** + **track id**, **linear plot timeline**, **generated asset cache**, **current plot uid**, **current page index**, UI mode / phase (intro vs mood vs character picker vs plot vs end-of-chapter vs end screen), toggles (mute, music on), navigation mode (manual vs autoplay). **Always restore** on `/anytale.html` load.
 - Store timeline as ordered entries rather than only uids, e.g. `{ plotUid, startedAt, pageCount, progressionDisabledPartsApplied }`, so future save/load/share features have room to grow.
 - Store generated assets keyed by a stable signature containing plot uid, page index, character uid, outfit uid, background part uid, background attribute signature, and relevant prompt/page inputs. Cache entries hold image URL/task id/status, dialog text/status, voice URL/status, errors, and generated timestamps. Character/outfit/background changes should naturally invalidate old generated entries by changing the signature.
 
@@ -231,7 +287,19 @@ Not supported in this version. Character, outfit, background, and music choices 
 
 ## Tasks
 
-_Tasks will be broken into separate feature rollout documents in `docs/groomed-features/`._
+This feature is broken into 6 sequential, testable rollouts. Each rollout document contains its own task checklist and implementation details.
+
+1. [Rollout 1: Foundation & Routing](file:///f:/YAAIIC/docs/groomed-features/anytale-play-1-foundation.md) — Editor rename, play shell, hamburger, config workflow, data migration, fetch layer.
+2. [Rollout 2: Play UI Components & Session](file:///f:/YAAIIC/docs/groomed-features/anytale-play-2-ui-components.md) — Glass buttons, speech/caption bubbles, decision options, progress bar, portrait panel, session module.
+3. [Rollout 3: Introduction Flow & Image Generation](file:///f:/YAAIIC/docs/groomed-features/anytale-play-3-introduction.md) — Cold start, introduction plot, character/outfit/background/music change flows, blocking image regen.
+4. [Rollout 4: Chapter Navigation & Queue](file:///f:/YAAIIC/docs/groomed-features/anytale-play-4-chapter-navigation.md) — Chapter entry, page navigation, autoplay, queue strategy, progress bar, asset cache.
+5. [Rollout 5: Dialog, Voice & Audio](file:///f:/YAAIIC/docs/groomed-features/anytale-play-5-dialog-voice-audio.md) — LLM dialog, TTS endpoint, two-channel audio runtime, music, queue expansion, voice reprioritization.
+6. [Rollout 6: Branching, Completion & Polish](file:///f:/YAAIIC/docs/groomed-features/anytale-play-6-branching-completion.md) — End-of-chapter branching, chapter transitions, epilogue, cancellation, reset, regression.
+
+### External dependencies
+
+- **Outfit preview images** — needed by Rollout 3 (outfit change flow)
+- **Editor music tab** — needed by Rollout 3 (music genre selection)
 
 ## Future Implementation Rules Suggestions
 
