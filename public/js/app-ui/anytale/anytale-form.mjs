@@ -732,13 +732,25 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
     setIsImporting(true);
     try {
-      const { latestLibrary } = await fetchImportConfigs();
+      const { latestLibrary, outfitTypes } = await fetchImportConfigs();
       const { pageTags, removedCount, remainingCount } = extractRemainingPageTags(
         prepared.tags,
         latestLibrary
       );
 
-      plotPageTagsFnRef.current(activePlotPage, pageTags);
+      // For every tag in the prompt, if a full word in a tag matches the name of a library part, replace the full word with the library part's type
+      const outfitTypesLower = outfitTypes.map(t => t.toLowerCase());
+      let updatedPageTags = pageTags;
+      for (const libPart of latestLibrary) {
+        const partName = libPart.name?.trim();
+        const partTypes = Array.isArray(libPart.type) ? libPart.type : (libPart.type ? [libPart.type] : []);
+        if (!partName || partTypes.length === 0) continue;
+        if (!partTypes.some(t => outfitTypesLower.includes(t.toLowerCase()))) continue;
+        const regex = new RegExp(`\\b${partName}\\b`, 'gi');
+        updatedPageTags = updatedPageTags.replace(regex, `{{${partTypes[0]}}}`);
+      }
+
+      plotPageTagsFnRef.current(activePlotPage, updatedPageTags);
 
       if (removedCount === 0) {
         toast.success(`Updated page tags with ${remainingCount} tag(s) from the prompt`);
