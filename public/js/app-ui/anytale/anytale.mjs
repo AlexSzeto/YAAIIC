@@ -228,6 +228,30 @@ export function AnyTalePage() {
     }
   }, [history, nav]);
 
+  const handleReject = useCallback(async ({ plotUid, pageIndex }) => {
+    if (!plotUid) return;
+    const matching = history.filter(item => item.plot?.uid === plotUid && item.plot?.page === pageIndex);
+    if (matching.length === 0) return;
+    try {
+      await fetchJson('/media-data/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uids: matching.map(item => item.uid) }),
+      });
+      const deletedSet = new Set(matching.map(item => item.uid));
+      const newHistory = history.filter(item => !deletedSet.has(item.uid));
+      setHistory(newHistory);
+      if (nav.currentItem && deletedSet.has(nav.currentItem.uid)) {
+        const deletedIndex = history.findIndex(item => item.uid === nav.currentItem.uid);
+        nav.selectByIndex(Math.min(deletedIndex, newHistory.length - 1));
+      }
+      toast.success(`Rejected: deleted ${matching.length} image(s)`);
+    } catch (err) {
+      console.error('[AnyTalePage] Reject delete failed:', err);
+      toast.error('Failed to delete images');
+    }
+  }, [history, nav, toast]);
+
   const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData) => {
     if (!workflowConfig) {
       toast.error('Generation workflow not configured');
@@ -322,6 +346,7 @@ export function AnyTalePage() {
             onGenerate=${handleGenerate}
             onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
+            onReject=${handleReject}
           />
         </${RightColumn}>
       </${TwoColumn}>

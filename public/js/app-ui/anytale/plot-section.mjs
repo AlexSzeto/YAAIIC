@@ -105,8 +105,9 @@ RequirementsHeader.className = 'requirements-header';
  * @param {Function} [props.onPlotChange]            – Called with the updated plot whenever its content changes
  * @param {number}   [props.refreshKey=0]            – Increment to force reload from localStorage
  * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
+ * @param {Function} [props.onReject]                  – Called with ({ plotUid, pageIndex }) after page is unlocked
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -460,6 +461,22 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return () => { if (onImportHandlerReady) onImportHandlerReady(null); };
   }, [importLoadPlot, onImportHandlerReady]);
 
+  // ── Reject: unlock page and notify parent ────────────────────────────────
+  const handleReject = useCallback(() => {
+    if (!onPageLockedChange) return;
+    const next = [...pageLocked];
+    next[currentPageIndex] = false;
+    onPageLockedChange(next);
+    onReject?.({ plotUid: plot.uid, pageIndex: currentPageIndex });
+  }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);
+
+  const handleUnlock = useCallback(() => {
+    if (!onPageLockedChange) return;
+    const next = [...pageLocked];
+    next[currentPageIndex] = false;
+    onPageLockedChange(next);
+  }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);  
+
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
   const saveLabel = isInLibrary ? 'Update' : 'Save';
@@ -629,31 +646,44 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
 
         <!-- Navigation row -->
-        <${NavRow}>
-          <${NavigatorControl}
-            currentPage=${currentPageIndex}
-            totalPages=${pageCount}
-            onPrev=${() => navigateTo(currentPageIndex - 1)}
-            onNext=${() => navigateTo(currentPageIndex + 1)}
-            onFirst=${() => navigateTo(0)}
-            onLast=${() => navigateTo(pageCount - 1)}
-            showFirstLast=${true}
-          />
-          <${Button} variant="small-text" icon="plus" color="secondary" onClick=${handleAddPage}>Add Page</${Button}>
-          <${Button} variant="small-text" icon="trash" color="danger" onClick=${handleDeletePage} disabled=${pageCount <= 1}>Delete Page</${Button}>
-          <${Button}
-            variant="small-text"
-            icon="unlock"
-            style=${{ marginLeft: 'auto' }}
-            disabled=${!isCurrentPageLocked}
-            onClick=${() => {
-              if (!onPageLockedChange) return;
-              const next = [...pageLocked];
-              next[currentPageIndex] = false;
-              onPageLockedChange(next);
-            }}
-          >Unlock<//>
-        </${NavRow}>
+        <${HorizontalEdgesLayout}>
+          <${HorizontalLayout} gap="small" style="align-items: center;">
+            <${NavigatorControl}
+              currentPage=${currentPageIndex}
+              totalPages=${pageCount}
+              onPrev=${() => navigateTo(currentPageIndex - 1)}
+              onNext=${() => navigateTo(currentPageIndex + 1)}
+              onFirst=${() => navigateTo(0)}
+              onLast=${() => navigateTo(pageCount - 1)}
+              showFirstLast=${true}
+            />
+            <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage}></${Button}>
+            <${Button}
+              variant="medium-icon"
+              icon="unlock"
+              disabled=${!isCurrentPageLocked}
+              onClick=${handleUnlock}
+            >Reject<//>
+            <${Button}
+            <${Button} 
+              variant="medium-icon"
+              icon="trash" color="danger"
+              style=${{ marginLeft: 'auto' }}
+              onClick=${handleDeletePage}
+              disabled=${pageCount <= 1}></${Button}>
+          </${HorizontalLayout}>
+          <${HorizontalLayout} gap="small" style="align-items: center;">
+            <${Button}
+              variant="small-text"
+              icon="trash"
+              disabled=${!isCurrentPageLocked}
+              onClick=${handleReject}
+            >Reject<//>
+            <${Button}
+              disabled=${!isCurrentPageLocked}
+            variant="small-text" icon="plus" color="secondary" onClick=${handleAddPage}>Extend</${Button}>
+          </${HorizontalLayout}>
+        </${HorizontalEdgesLayout}>
       </${VerticalLayout}>
 
       <!-- TODO (AnyTale play mode): Revisit whether progressionSections is the right

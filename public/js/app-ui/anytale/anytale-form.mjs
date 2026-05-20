@@ -108,8 +108,9 @@ PromptPreview.className = 'prompt-preview';
  * @param {Object}   props
  * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
  * @param {Function} [props.onImportReady] – Called with import handlers when they change; null on unmount
+ * @param {Function} [props.onReject]      – Called with ({ plotUid, pageIndex }) when a page is rejected
  */
-export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null }) {
+export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onReject }) {
   const toast = useToast();
   const { show: progressShow, activeTasks } = useProgress();
   const { items: queueItems } = useQueueStatus();
@@ -912,6 +913,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null }) {
             onPageTagsUpdateReady=${handlePlotPageTagsReady}
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
+            onReject=${onReject}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>
