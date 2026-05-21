@@ -7,6 +7,8 @@
     "start": "node server/server.mjs",
     "pull": "node public/js/custom-ui/lib-sync.mjs pull",
     "push": "node public/js/custom-ui/lib-sync.mjs push",
+    "sync:codex-skills": "node scripts/sync-codex-skills.mjs",
+    "sync:antigravity-skills": "node scripts/sync-antigravity-skills.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
