@@ -1,5 +1,4 @@
 ---
-trigger: model_decision
 description: when working on the client facing (i.e. /public) side of the website
 ---
 
@@ -51,3 +50,7 @@ description: when working on the client facing (i.e. /public) side of the websit
 - **CSS-in-JS**:
     - Keep styles local to the component file whenever possible.
     - Avoid generic class names like `.container` or `.wrapper` in global CSS; scope them within the styled component.
+
+## Testing
+- **Custom UI components**: Every new component added to `public/js/custom-ui/` must have a render entry added to `public/js/custom-ui/test.vitest.mjs`. The entry should render the component with minimal props and assert no `console.error` calls.
+- **Passing definition**: At phase boundaries, "passing" means `npx vitest run` (full suite) exits 0 — not just `--changed`. All tests, including pre-existing ones, must be green before a phase is considered complete.

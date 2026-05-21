@@ -1,5 +1,4 @@
 ---
-trigger: model_decision
 description: when working on the server side of the website
 ---
 
@@ -52,3 +51,8 @@ The backend is organized into **Feature Domains** to avoid monolithic files. Eac
 - **Comments**:
     - Explain *why*, not just *what*.
     - Use `// TODO:` comments to mark areas for future improvement, but try to resolve them if they are within scope.
+
+## 7. Testing
+- **Co-located tests**: Every new route module or service module must include a co-located test file (e.g. `router.mjs` → `router.test.mjs`).
+- **Passing definition**: At phase boundaries, "passing" means `npx vitest run` (full suite) exits 0 — not just `--changed`. All tests, including pre-existing ones, must be green before a phase is considered complete.
+- **Mocks available**: ComfyUI and Ollama mocks are in `server/test/mocks/` (`comfy-mock.mjs`, `ollama-mock.mjs`). Use them for any test that exercises generation or LLM paths rather than hitting real services.
