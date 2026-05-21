@@ -1,5 +1,7 @@
 # Image Cropping Tool
 
+**Priority:** low
+
 ## Goal
 
 Add a cropping tool similar to inpaint: the user draws a crop region over an image, selects an output aspect ratio, and executing the crop produces a cropped image rather than triggering a generation. Optionally show a rule-of-thirds guide overlay to assist composition.

@@ -1,5 +1,7 @@
 # AnyTale UI Cleanups
 
+**Priority:** medium
+
 ## Goal
 
 Polish the AnyTale editor UI for clarity and usability. Searchable list items (parts, outfits, characters) should display both name and type in their label so users can distinguish items with the same name — e.g. "shirt (outer upper body)" or "dress (outer upper body, inner upper body)".
@@ -41,3 +43,9 @@ Example: `[🔒] outer upper body → revealing` with a secondary background col
 **Open questions:**
 - How does the background color encoding work for slots that have no current status (not in any active part)?
 - Should the per-page transition arrow be optional (no transition = pill shows status only, no arrow)?
+
+## Additional Idea: Auto-Regen Part Previews on Empty Queue Response
+
+Whenever a `request-part-preview` comes back empty:
+1. Delete any existing preview generation jobs in the queue that match that part's UID.
+2. Queue a new preview generation for that part based on its current tag combination.

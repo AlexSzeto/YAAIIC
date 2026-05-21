@@ -1,5 +1,7 @@
 # Workflow Editor: ComfyUI Graph Recreation
 
+**Priority:** low
+
 ## Goal
 
 Extend the workflow editor to recreate and display the underlying ComfyUI node graph, allowing users to inspect and potentially edit the graph structure directly from the app rather than switching to ComfyUI's own UI.

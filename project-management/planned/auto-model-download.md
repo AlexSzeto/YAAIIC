@@ -1,5 +1,7 @@
 # Auto Model Download from Hugging Face
 
+**Priority:** medium
+
 ## Goal
 
 Allow users to trigger model downloads from Hugging Face directly through the app, rather than manually placing files in ComfyUI directories. The server fetches the file from a given URL and saves it to the appropriate model folder.

@@ -82,7 +82,7 @@ export function clearState() {
  */
 export function createDefaultPart() {
   return {
-    id: 'part-' + Date.now(),
+    id: 'part-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     config: {
       name: '',
       type: [],

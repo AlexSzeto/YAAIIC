@@ -1,5 +1,7 @@
 # Config File Watch Mode
 
+**Priority:** medium
+
 ## Goal
 
 Make the server automatically detect and reload `config.json` and `comfyui-workflows.json` when those files change on disk, so users don't need to restart the server after editing configuration or workflow definitions.

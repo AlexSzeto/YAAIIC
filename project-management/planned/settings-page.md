@@ -1,5 +1,7 @@
 # Settings Page
 
+**Priority:** low
+
 ## Goal
 
 Add a settings page that lets users view and edit `config.json` through the UI without touching the file directly. Also introduce versioning to the default config so that when `config.default.json` gains new fields, any existing `config.json` that lacks those fields is automatically migrated on startup.

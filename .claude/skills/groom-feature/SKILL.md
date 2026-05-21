@@ -12,7 +12,24 @@ You are developing a full feature specification through iterative dialogue, one 
 The skill may be invoked with:
 - **A filename from `project-management/planned/`** — read that file first and use its goal/notes as the starting context.
 - **A free-form description** — treat it as the seed and begin questioning from there.
-- **No argument** — ask the user for a one-sentence description of the feature to build.
+- **No argument** — read all files in `project-management/planned/`, parse each file's `**Priority:**` line, and present a numbered list sorted by priority before asking the user which feature to groom:
+
+```
+High priority:
+  1. Feature Name — one-sentence goal
+  2. Feature Name — one-sentence goal
+
+Medium priority:
+  3. Feature Name — one-sentence goal
+
+Low priority:
+  4. Feature Name — one-sentence goal
+
+(unset)
+  5. Feature Name — one-sentence goal
+```
+
+Ask: *"Which feature would you like to groom? Enter a number, or describe a new feature from scratch."* If the user picks a number, load that file and proceed as if it was passed as an argument. If the user describes a new feature, treat it as a free-form description and do **not** use any planned file.
 
 If a `planned/` source file was used, read it before asking the first question.
 

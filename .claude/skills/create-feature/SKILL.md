@@ -16,12 +16,16 @@ You are capturing a feature idea into `project-management/planned/`. This is a l
    - Ask the user: merge into the existing file, or create a new one anyway?
    - If merging: append the new idea to the existing file under a clearly labelled section, then stop.
 
-3. **Write the file.** If creating a new file:
+3. **Assign priority.** Ask the user: *"What priority is this feature — high, medium, or low?"* Wait for their answer before writing the file.
+
+4. **Write the file.** If creating a new file:
    - Derive a kebab-case slug from the feature name (e.g. `outfit-preview-images`).
    - Write to `project-management/planned/<slug>.md` with this structure:
 
 ```markdown
 # <Feature Title>
+
+**Priority:** <high | medium | low>
 
 ## Goal
 
@@ -32,7 +36,7 @@ You are capturing a feature idea into `project-management/planned/`. This is a l
 <Any rough ideas, constraints, or open questions the user mentioned. Leave blank if none.>
 ```
 
-4. **Confirm.** Tell the user the file was created and suggest running `/groom-feature <slug>.md` when they are ready to develop a full spec.
+5. **Confirm.** Tell the user the file was created and suggest running `/groom-feature <slug>.md` when they are ready to develop a full spec.
 
 ## Rules
 

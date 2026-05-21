@@ -1,5 +1,7 @@
 # UI Consistency Polish
 
+**Priority:** low
+
 ## Goal
 
 Improve visual and interaction consistency across the app by formalizing reusable UI patterns: convert action lists to use a compact dynamic list component, refactor the collapse panel into a reusable component and remove ad-hoc usages, unify delete/clear/close iconography with distinct icons, and audit all hover interactions to migrate them to `TooltipProvider`.
