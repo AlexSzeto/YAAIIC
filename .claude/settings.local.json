@@ -4,7 +4,8 @@
       "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(grep -v \"^//\")",
-      "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\\\\server\\\\features\\\\anytale\\\\\" -File | Select-Object Name)"
+      "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\\\\server\\\\features\\\\anytale\\\\\" -File | Select-Object Name)",
+      "Bash(npm run *)"
     ]
   }
 }

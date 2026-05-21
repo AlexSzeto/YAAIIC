@@ -19,8 +19,12 @@ Tasks are organized under `### Phase N — <description>` headings. Execute all 
 At the end of each phase:
 1. Run `npx vitest run` (full suite, not `--changed`).
 2. If tests fail: read the output, identify the root cause, fix the issue, re-run until all tests pass.
-3. Once tests are green, stop and prompt the user: *"Phase N complete. Ready to start Phase N+1?"*
-4. Do not proceed until the user confirms.
+3. Once tests are green, report to the user:
+   - **Phase goal** — one sentence restating what this phase was meant to achieve (from the phase heading).
+   - **Changes made** — brief bullet list of what was modified.
+   - **Manual testing** — if the phase touched user-visible behavior (UI, endpoints, data), provide concrete steps the user can follow to verify it in the browser or via curl. Omit this section if the phase was purely internal (tests, refactors, migrations with no observable surface).
+4. End with: *"Phase N complete. Ready to start Phase N+1?"*
+5. Do not proceed until the user confirms.
 
 ### Maintenance / server-only features
 Features with no phase headings (flat task list) run all tasks in a single pass, then run the full test suite at the end.

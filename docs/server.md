@@ -907,12 +907,12 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 | `PUT` | `/anytale/characters/:uid` | Update an existing character |
 | `DELETE` | `/anytale/characters/:uid` | Delete a character |
 
-### Generate Portrait
-- **Endpoint**: `POST /anytale/characters/:uid/generate-portrait`
+### Render Portrait
+- **Endpoint**: `POST /anytale/characters/:uid/render-portrait`
 - **Use Case**: Enqueues a portrait image generation for a character. Assembles the prompt from the character's part attribute values filtered by `portraitParts` matchers in config.
 - **Payload**: JSON body `{ parts: CharacterPart[] }` — the character's current part list.
 - **Query**: `queueOnly=true` to add to queue without auto-starting.
-- **Output**: `202 {}` — result arrives via queue SSE.
+- **Output**: `202 {}` — result arrives via queue SSE (`endpointKey: 'anytale-render-portrait'`).
 
 ### Generate Voice
 - **Endpoint**: `POST /anytale/characters/:uid/generate-voice`
@@ -929,6 +929,11 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 | `POST` | `/anytale/outfits` | Create a new outfit (server assigns UUID); returns `{ saved }` |
 | `PUT` | `/anytale/outfits/:uid` | Update an existing outfit |
 | `DELETE` | `/anytale/outfits/:uid` | Delete an outfit |
+
+### Render Outfit
+- **Endpoint**: `POST /anytale/outfits/:uid/render-outfit`
+- **Use Case**: Enqueues a render image generation for an outfit. Assembles the prompt from `portraitBasePrompt` + each outfit part's `baseline` + `attributeValues` (all parts, no type filtering).
+- **Output**: `202 {}` — result arrives via queue SSE (`endpointKey: 'anytale-render-outfit'`). On completion, `outfit.renderUrl` is updated in the DB.
 
 ### Part Preview
 

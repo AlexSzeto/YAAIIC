@@ -178,12 +178,12 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   // ── Reconnect-resume: restore in-progress portrait/voice tasks from context ──
   useEffect(() => {
     if (activeTasks.length === 0) return;
-    const portraitTask = activeTasks.find(t => t.entityType === 'anytale-portrait');
+    const portraitTask = activeTasks.find(t => t.entityType === 'anytale-render-portrait');
     const voiceTask = activeTasks.find(t => t.entityType === 'anytale-voice');
     if (portraitTask && !portraitTaskId) {
       setPortraitTaskId(portraitTask.taskId);
       progressShow(portraitTask.taskId, {
-        entityType: 'anytale-portrait',
+        entityType: 'anytale-render-portrait',
         defaultTitle: 'Generating portrait…',
         onComplete: (data) => {
           if (data.result?.characterUid === selectedCharacterUidRef.current) {
@@ -235,7 +235,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         if (subLabel === 'Portrait') {
           setPortraitTaskId(taskId);
           progressShow(taskId, {
-            entityType: 'anytale-portrait',
+            entityType: 'anytale-render-portrait',
             defaultTitle: 'Generating portrait…',
             onComplete: (data) => {
               if (data.result?.characterUid === selectedCharacterUidRef.current) {

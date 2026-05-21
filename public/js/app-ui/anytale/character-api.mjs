@@ -73,7 +73,7 @@ export async function deleteCharacter(uid) {
  * @returns {Promise<{portraitUrl: string|null}>}
  */
 export async function generateCharacterPortrait(uid, parts) {
-  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-portrait?queueOnly=false`, {
+  const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/render-portrait?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ parts }),

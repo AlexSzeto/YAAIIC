@@ -8,17 +8,18 @@
   "anytale": {
     "partPreviewWorkflow": "Text to Image (Illustrious Part Preview)",
     "portraitWorkflow": "Text to Image (Illustrious Portrait)",
-    "generationWorkflow": "Text to Image (Illustrious Portrait)",
+    "generationWorkflow": "Text to Image (Illustrious Characters)",
     "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",
-    "portraitBasePrompt": "1girl, solo, portrait, looking at viewer, outdoors",
+    "portraitBasePrompt": "1girl, solo, portrait, facing forward, looking at viewer, outdoors",
+    "outfitBasePrompt": "general, 1girl, solo, head out of frame, upper body, lower body, facing viewer, simple background, dressing room",
     "previewBasePromptByType": {
-      "background": "no humans",
+      "location": "background",
       "head": "1girl, solo, simple background, grey background, cropped head, facing viewer",
-      "outer upper body": "1girl, solo, simple background, grey background, cropped torso, headless, facing viewer",
+      "outer upper body": "1girl, solo, simple background, grey background, cropped torso, head out of frame, facing viewer",
       "outer lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",
-      "inner upper body": "1girl, solo, simple background, grey background, cropped torso, headless, facing viewer",
+      "inner upper body": "1girl, solo, simple background, grey background, cropped torso, head out of frame, facing viewer",
       "inner lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",
-      "nude upper body": "1girl, solo, simple background, grey background, cropped torso, headless, topless, closeup, facing viewer",
+      "nude upper body": "1girl, solo, simple background, grey background, cropped torso, head out of frame, topless, closeup, facing viewer",
       "nude lower body": "1girl, solo, simple background, grey background, completely nude, crotch",
       "arms": "1girl, solo, simple background, grey background, hand focus",
       "feet": "1girl, solo, simple background, grey background, feet only, facing viewer"
@@ -27,7 +28,6 @@
     "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"]
   },
-
   "exports": [
     {
       "id": "download",

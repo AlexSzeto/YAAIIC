@@ -52,6 +52,24 @@ export async function saveOutfit(uid, outfit) {
 }
 
 /**
+ * Enqueue a render image generation for an outfit.
+ * @param {string}   uid
+ * @param {string[]} [visiblePartUids] – If provided, only these parts are included in the prompt.
+ * @returns {Promise<void>}
+ */
+export async function renderOutfit(uid, visiblePartUids) {
+  const response = await fetch(`/anytale/outfits/${encodeURIComponent(uid)}/render-outfit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(visiblePartUids ? { visiblePartUids } : {}),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to start outfit render: HTTP ${response.status}`);
+  }
+}
+
+/**
  * Delete an outfit by uid.
  * @param {string} uid
  * @returns {Promise<void>}

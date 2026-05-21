@@ -82,6 +82,8 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} uid - UUID assigned by server
  * @property {string} name
  * @property {CharacterPart[]} parts - Part overrides for this outfit
+ * @property {string[]} [preferredLocations=[]] - UIDs of preferred location-typed parts
+ * @property {string} [renderUrl=''] - URL of the generated render image
  */
 
 function readData() {

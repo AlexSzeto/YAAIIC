@@ -27,13 +27,16 @@ import { H2, H3, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/t
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
-import { fetchOutfitList, createOutfit, saveOutfit, deleteOutfit } from './outfit-api.mjs';
+import { fetchOutfitList, createOutfit, saveOutfit, deleteOutfit, renderOutfit } from './outfit-api.mjs';
+import { ImagePreview } from './image-preview.mjs';
+import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
+import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs';
 
 // ============================================================================
 // Styled Components
@@ -66,7 +69,8 @@ ScrollArea.className = 'outfit-scroll-area';
 function outfitsEqual(a, b) {
   if (!a || !b) return false;
   return a.name === b.name &&
-    JSON.stringify(a.parts || []) === JSON.stringify(b.parts || []);
+    JSON.stringify(a.parts || []) === JSON.stringify(b.parts || []) &&
+    JSON.stringify(a.preferredLocations || []) === JSON.stringify(b.preferredLocations || []);
 }
 
 // ============================================================================
@@ -84,7 +88,8 @@ function outfitsEqual(a, b) {
 export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refreshKey = 0, scrollable = true, onOutfitListChange, onEditParts }) {
   const toast = useToast();
   const { items: queueItems } = useQueueStatus();
-  const { show: progressShow } = useProgress();
+  const { show: progressShow, activeTasks } = useProgress();
+  const [renderTaskId, setRenderTaskId] = useState(null);
 
   // ── Outfit state (lazy-loaded from localStorage) ─────────────────────
   const [outfit, setOutfit] = useState(() => loadOutfit());
@@ -136,6 +141,54 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       .catch(() => {});
   }, [libraryParts]);
 
+  // ── Preferred locations: resolve uid ↔ name ─────────────────────────
+  const locationParts = useMemo(
+    () => libraryParts.filter(p => Array.isArray(p.type) && p.type.includes('location')),
+    [libraryParts]
+  );
+
+  const preferredLocationNames = useMemo(
+    () => (outfit.preferredLocations || []).map(uid => {
+      const match = locationParts.find(p => p.uid === uid);
+      return match ? match.name : uid;
+    }),
+    [outfit.preferredLocations, locationParts]
+  );
+
+  const handlePreferredLocationsChange = useCallback((names) => {
+    const uids = names.map(name => {
+      const match = locationParts.find(p => p.name === name);
+      return match ? match.uid : name;
+    });
+    setOutfit(prev => ({ ...prev, preferredLocations: uids }));
+  }, [locationParts]);
+
+  // ── Outfit render: SSE subscription + reconnect-resume ───────────────
+
+  // Reconnect-resume: if a render task was already running before this mount, re-attach.
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const renderTask = activeTasks.find(t => t.entityType === 'anytale-render-outfit');
+    if (renderTask && !renderTaskId) {
+      setRenderTaskId(renderTask.taskId);
+      progressShow(renderTask.taskId, {
+        entityType: 'anytale-render-outfit',
+        defaultTitle: 'Generating outfit render…',
+        onComplete: (data) => {
+          if (data.result?.imageUrl) {
+            const imageUrl = data.result.imageUrl;
+            setOutfit(prev => ({ ...prev, renderUrl: imageUrl }));
+            setLibraryOutfit(prev => prev ? { ...prev, renderUrl: imageUrl } : prev);
+          }
+          setRenderTaskId(null);
+        },
+        onCancelled: () => setRenderTaskId(null),
+        onError: () => setRenderTaskId(null),
+        onDismiss: () => setRenderTaskId(null),
+      });
+    }
+  }, [activeTasks]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -150,6 +203,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   }, [refreshKey, requestPartPreviewCache]);
   // ── Recommended part types config ────────────────────────────────────
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
+  const [parsedRules, setParsedRules] = useState([]);
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -157,6 +211,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       .then(data => {
         if (Array.isArray(data.recommendedOutfitPartTypes)) {
           setRecommendedOutfitPartTypes(data.recommendedOutfitPartTypes);
+        }
+        if (typeof data.slotRules === 'string') {
+          setParsedRules(parseRules(data.slotRules));
         }
       })
       .catch(err => console.error('[OutfitSection] Failed to load AnyTale config:', err));
@@ -188,7 +245,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
           const uid = loadOutfit().uid;
           if (uid) {
             const saved = list.find(o => o.uid === uid);
-            if (saved) setLibraryOutfit(saved);
+            if (saved) {
+              setLibraryOutfit(saved);
+              if (saved.renderUrl) setOutfit(prev => ({ ...prev, renderUrl: saved.renderUrl }));
+            }
           }
         }
       })
@@ -273,6 +333,31 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Persistent subscription: pick up Outfit Render task-started events
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, subLabel }) => {
+        if (source !== 'anytale' || subLabel !== 'Outfit Render') return;
+        setRenderTaskId(taskId);
+        progressShow(taskId, {
+          entityType: 'anytale-render-outfit',
+          defaultTitle: 'Generating outfit render…',
+          onComplete: (data) => {
+            if (data.result?.imageUrl) {
+              const imageUrl = data.result.imageUrl;
+              setOutfit(prev => ({ ...prev, renderUrl: imageUrl }));
+              setLibraryOutfit(prev => prev ? { ...prev, renderUrl: imageUrl } : prev);
+            }
+            setRenderTaskId(null);
+          },
+          onCancelled: () => setRenderTaskId(null),
+          onError: () => setRenderTaskId(null),
+          onDismiss: () => setRenderTaskId(null),
+        });
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isPartPreviewQueued = useCallback((item) => {
     const libConfig = libraryParts.find(p => p.uid === item.partUid);
     const partForPrompt = {
@@ -339,6 +424,42 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const partHeaderActions = [
     { icon: 'refresh', title: 'Generate preview', onClick: handlePreviewGenerate },
   ];
+
+  // ── Outfit render ─────────────────────────────────────────────────────
+
+  const isRenderBusy = !!renderTaskId || queueItems.some(q =>
+    (q.status === 'queued' || q.status === 'running') &&
+    q.source === 'anytale' &&
+    q.subLabel === 'Outfit Render'
+  );
+
+  const handleGenerateRender = useCallback(async () => {
+    if (isRenderBusy || !outfit.uid) return;
+    try {
+      // Build active parts for slot resolution (initial state: no plot page actions)
+      const activeParts = (outfit.parts || [])
+        .map(op => libraryParts.find(p => p.uid === op.partUid))
+        .filter(Boolean)
+        .map(lib => ({ config: { type: lib.type || [], isRevealing: lib.isRevealing ?? false } }));
+
+      const slotStatuses = resolveSlotStatuses(activeParts, [], -1);
+      const visibility = applyRules(slotStatuses, parsedRules);
+
+      const visiblePartUids = (outfit.parts || [])
+        .filter(op => {
+          const lib = libraryParts.find(p => p.uid === op.partUid);
+          if (!lib) return false;
+          if (!Array.isArray(lib.type) || lib.type.length === 0) return true;
+          return lib.type.some(t => visibility.get(t.trim().toLowerCase()) !== false);
+        })
+        .map(op => op.partUid);
+
+      await renderOutfit(outfit.uid, visiblePartUids);
+    } catch (err) {
+      console.error('[OutfitSection] Render generation failed:', err);
+      toast.error(`Render failed: ${err.message}`);
+    }
+  }, [outfit.uid, outfit.parts, libraryParts, parsedRules, isRenderBusy, toast]);
 
   // ── Outfit CRUD actions ──────────────────────────────────────────────
 
@@ -445,12 +566,36 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadOutfitModalOpen(true)}>Load<//>
             </${HorizontalEdgesLayout}>
 
+            <!-- Render preview -->
+            <${ImagePreview} src=${outfit.renderUrl} alt="Outfit render" isGenerating=${isRenderBusy} placeholderText="No render" />
+            <!-- Inline layout to prevent button from going full width -->
+            <div>
+            <${Button}
+              variant="small-text"
+              color="primary"
+              icon="image"
+              onClick=${handleGenerateRender}
+              loading=${isRenderBusy}
+              disabled=${!outfit.uid || isRenderBusy}
+            >
+              ${isRenderBusy ? 'Generating…' : 'Generate Render'}
+            <//>
+            </div>
+
             <${Input}
               label="Name"
               value=${outfit.name}
               onInput=${(e) => setOutfit(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Outfit name"
               widthScale="full"
+            />
+
+            <${ChipAutocompleteInput}
+              label="Preferred Locations"
+              placeholder="Type to add a location…"
+              suggestions=${locationParts.map(p => p.name)}
+              values=${preferredLocationNames}
+              onValuesChange=${handlePreferredLocationsChange}
             />
           </${VerticalLayout}>
 

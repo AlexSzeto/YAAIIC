@@ -12,9 +12,9 @@ Parts Library → Character Builder → Generate Portrait / Voice
 
 1. **Parts library** (`/anytale/parts`): define reusable part templates (head shape, clothing items, etc.) with selectable attributes and preview baselines.
 2. **Character section**: create or load a character, attach parts from the library, set attribute values per part, configure personality text, assign preferred outfits.
-3. **Portrait generation**: assemble prompt from matched portrait parts + attribute values → queue `anytale-portrait` generation → result saved to character's `portraitUrl`.
+3. **Portrait generation**: assemble prompt from matched portrait parts + attribute values → queue `anytale-render-portrait` generation → result saved to character's `portraitUrl`.
 4. **Voice generation**: send character `personality` + `name` to the voice workflow → result saved to character's `audioUrl` and `introTranscript`.
-5. **Outfit section**: create named outfits as part-override sets; attach to characters via `preferredOutfits`.
+5. **Outfit section**: create named outfits as part-override sets; attach to characters via `preferredOutfits`. Optionally generate a render image for the outfit via `anytale-render-outfit`; specify preferred location parts via `preferredLocations`.
 6. **Plot section**: create plot blocks with pages, each page having prompt tags, dialog prompts, and actions; select a plot page to inject its tags into scene generation.
 7. **Scene generation**: assembled prompt (character parts + active plot page tags) feeds the standard generation queue.
 
@@ -65,7 +65,8 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | POST | `/anytale/characters` | Create character |
 | PUT | `/anytale/characters/:uid` | Update character |
 | DELETE | `/anytale/characters/:uid` | Delete character |
-| POST | `/anytale/characters/:uid/generate-portrait` | Queue portrait generation |
+| POST | `/anytale/characters/:uid/render-portrait` | Queue portrait generation |
+| POST | `/anytale/outfits/:uid/render-outfit` | Queue outfit render image generation |
 | POST | `/anytale/characters/:uid/generate-voice` | Queue voice generation |
 | GET | `/anytale/outfits` | List all outfits |
 | POST | `/anytale/outfits` | Create outfit |
@@ -88,6 +89,22 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 
 See `@typedef` declarations in `server/features/anytale/repository.mjs` for authoritative types: `PartConfig`, `PartAttribute`, `PlotBlock`, `PlotPage`, `Character`, `CharacterPart`, `Outfit`.
 
+### Outfit shape
+
+```js
+{
+  uid: string,
+  name: string,
+  parts: CharacterPart[],          // same part-override format as character parts
+  preferredLocations: string[],    // UIDs of preferred location-typed parts; used by play mode bootstrap
+  renderUrl: string,               // URL of the generated render image (server-set via render-outfit)
+}
+```
+
+### Part types
+
+Parts carry a `type: string[]` array. The `"location"` type identifies background/scene parts used in play mode to pick a scene location. Parts may carry multiple types (e.g. `["outer upper body", "inner upper body"]`).
+
 ### Portrait prompt assembly
 
 ```
@@ -106,7 +123,15 @@ Preview images are named `portrait_<hash>.png` where hash = `portraitPromptHash(
 
 ### Queue integration
 
-Portrait and voice generation are queued via the standard queue service (`endpointKey: 'anytale-portrait'` / `'anytale-voice'`). On completion, the orchestrator updates `character.portraitUrl` or `character.audioUrl + introTranscript` directly.
+Portrait, voice, and outfit render generation are queued via the standard queue service. `endpointKey` values:
+
+| endpointKey | Trigger | Orchestrator completion action |
+|---|---|---|
+| `anytale-render-portrait` | `POST /anytale/characters/:uid/render-portrait` | Sets `character.portraitUrl` |
+| `anytale-voice` | `POST /anytale/characters/:uid/generate-voice` | Sets `character.audioUrl` + `introTranscript` |
+| `anytale-render-outfit` | `POST /anytale/outfits/:uid/render-outfit` | Sets `outfit.renderUrl` |
+
+All three are in the orchestrator's `silent` set (no global notification popup on completion).
 
 ## Persistence
 

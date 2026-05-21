@@ -113,3 +113,9 @@ export function removeOutfitByUid(uid) {
   // throws with code ENOENT if not found
   deleteOutfit(uid);
 }
+
+export function updateOutfitField(uid, field, value) {
+  const outfit = listOutfits().find(o => o.uid === uid);
+  if (!outfit) throw new Error(`Outfit ${uid} not found`);
+  upsertOutfit(uid, { ...outfit, [field]: value });
+}

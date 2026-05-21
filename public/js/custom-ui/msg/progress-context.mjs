@@ -155,7 +155,7 @@ export function ProgressProvider({ children }) {
  * hide('task-123');
  *
  * // Check active tasks
- * const portrait = activeTasks.find(t => t.entityType === 'anytale-portrait');
+ * const portrait = activeTasks.find(t => t.entityType === 'anytale-render-portrait');
  */
 export function useProgress() {
   const context = useContext(ProgressContext);

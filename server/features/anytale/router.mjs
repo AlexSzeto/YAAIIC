@@ -15,19 +15,20 @@
  *   POST   /anytale/characters             – create a new character; server assigns UUID; returns { saved }
  *   PUT    /anytale/characters/:uid        – update an existing character by uid
  *   DELETE /anytale/characters/:uid        – remove a character by uid
- *   POST   /anytale/characters/:uid/generate-portrait – generate a portrait image for a character
+ *   POST   /anytale/characters/:uid/render-portrait – render a portrait image for a character
  *   POST   /anytale/characters/:uid/generate-voice    – generate voice audio for a character
  *
- *   GET    /anytale/outfits       – returns array of all saved outfits
- *   POST   /anytale/outfits       – create a new outfit; server assigns UUID; returns { saved }
- *   PUT    /anytale/outfits/:uid  – update an existing outfit by uid
- *   DELETE /anytale/outfits/:uid  – delete an outfit
+ *   GET    /anytale/outfits                    – returns array of all saved outfits
+ *   POST   /anytale/outfits                    – create a new outfit; server assigns UUID; returns { saved }
+ *   PUT    /anytale/outfits/:uid               – update an existing outfit by uid
+ *   DELETE /anytale/outfits/:uid               – delete an outfit
+ *   POST   /anytale/outfits/:uid/render-outfit – render an image for an outfit
  */
 import { Router } from 'express';
 import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
-import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateCharacterField } from './service.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField } from './service.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 import * as queueService from '../queue/service.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
@@ -206,9 +207,9 @@ router.delete('/anytale/characters/:uid', (req, res) => {
   }
 });
 
-// ── Generate portrait for a character ─────────────────────────────────────
+// ── Render portrait for a character ───────────────────────────────────────
 
-router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
+router.post('/anytale/characters/:uid/render-portrait', async (req, res) => {
   try {
     const { uid } = req.params;
     const anytaleConfig = req.app.locals.config?.anytale || {};
@@ -278,7 +279,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       usePostPrompts: false,
       removeBackground: false,
       characterUid: uid,
-      entityType: 'anytale-portrait',
+      entityType: 'anytale-render-portrait',
       requestOrigin: 'anytale',
     };
 
@@ -288,7 +289,7 @@ router.post('/anytale/characters/:uid/generate-portrait', async (req, res) => {
       source: 'anytale',
       name: charName,
       subLabel: 'Portrait',
-      endpointKey: 'anytale-portrait',
+      endpointKey: 'anytale-render-portrait',
       taskData: requestData,
     }, { autoStart });
 
@@ -476,6 +477,78 @@ router.delete('/anytale/outfits/:uid', (req, res) => {
     if (error.code === 'ENOENT') return res.status(404).json({ error: 'Outfit not found' });
     console.error('Error deleting anytale outfit:', error);
     res.status(500).json({ error: 'Failed to delete outfit' });
+  }
+});
+
+// ── Render outfit image ───────────────────────────────────────────────────
+
+router.post('/anytale/outfits/:uid/render-outfit', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const portraitWorkflow = anytaleConfig.portraitWorkflow || 'Text to Image (Illustrious Portrait)';
+    const outfitBasePrompt = anytaleConfig.outfitBasePrompt || '';
+
+    const outfit = getAllOutfits().find(o => o.uid === uid);
+    if (!outfit) return res.status(404).json({ error: 'Outfit not found' });
+
+    const { visiblePartUids } = req.body || {};
+    const activeParts = visiblePartUids
+      ? (outfit.parts || []).filter(op => visiblePartUids.includes(op.partUid))
+      : (outfit.parts || []);
+
+    const libraryParts = getAllParts();
+
+    const tags = [];
+    if (outfitBasePrompt) tags.push(outfitBasePrompt);
+
+    for (const outfitPart of activeParts) {
+      const libPart = libraryParts.find(p => p.uid === outfitPart.partUid);
+      if (!libPart) continue;
+      if (libPart.baseline) tags.push(libPart.baseline);
+      for (const val of Object.values(outfitPart.attributeValues || {})) {
+        if (val?.trim()) tags.push(val.trim());
+      }
+    }
+
+    const prompt = tags.filter(Boolean).join(', ');
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === portraitWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Portrait workflow '${portraitWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: portraitWorkflow,
+      prompt,
+      seed: Math.floor(Math.random() * 4294967295),
+      orientation: 'square',
+      imageFormat: 'png',
+      tags: '',
+      description: '',
+      summary: '',
+      usePostPrompts: false,
+      removeBackground: false,
+      outfitUid: uid,
+      entityType: 'anytale-render-outfit',
+      requestOrigin: 'anytale',
+    };
+
+    const autoStart = req.query.queueOnly !== 'true';
+    queueService.enqueue({
+      type: 'image',
+      source: 'anytale',
+      name: outfit.name || uid,
+      subLabel: 'Outfit Render',
+      endpointKey: 'anytale-render-outfit',
+      taskData: requestData,
+    }, { autoStart });
+
+    res.status(202).json({});
+  } catch (error) {
+    console.error('Error starting outfit render:', error);
+    res.status(500).json({ error: 'Failed to start outfit render', details: error.message });
   }
 });
 

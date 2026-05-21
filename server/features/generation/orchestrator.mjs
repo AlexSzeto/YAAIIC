@@ -29,7 +29,7 @@ import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR, SERVER_DIR } from '../../core/paths.mjs';
 import { loadWorkflows } from './workflow-validator.mjs';
 import { findMediaByUid, getAllMediaData, saveMediaData } from '../../core/database.mjs';
-import { getAllCharacters, saveCharacter, updateCharacterField } from '../anytale/service.mjs';
+import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField } from '../anytale/service.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -848,7 +848,8 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
   }
 
   const silent = endpointKey === 'anytale-part-preview' ||
-                 endpointKey === 'anytale-portrait' ||
+                 endpointKey === 'anytale-render-portrait' ||
+                 endpointKey === 'anytale-render-outfit' ||
                  endpointKey === 'anytale-voice';
 
   const { taskId } = initializeGenerationTask(taskData, workflowData, config);
@@ -856,12 +857,16 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
   if (taskData.entityType) updateTask(taskId, { entityType: taskData.entityType });
   if (taskData.requestOrigin) updateTask(taskId, { requestOrigin: taskData.requestOrigin });
   if (taskData.characterUid) updateTask(taskId, { characterUid: taskData.characterUid });
+  if (taskData.outfitUid) updateTask(taskId, { outfitUid: taskData.outfitUid });
 
   processGenerationTask(taskId, taskData, workflowData, config, silent, uploadFileToComfyUI)
     .then(result => {
-      if (endpointKey === 'anytale-portrait' && result?.imageUrl && taskData.characterUid) {
+      if (endpointKey === 'anytale-render-portrait' && result?.imageUrl && taskData.characterUid) {
         const exists = getAllCharacters().some(c => c.uid === taskData.characterUid);
         if (exists) updateCharacterField(taskData.characterUid, 'portraitUrl', result.imageUrl);
+      }
+      if (endpointKey === 'anytale-render-outfit' && result?.imageUrl && taskData.outfitUid) {
+        try { updateOutfitField(taskData.outfitUid, 'renderUrl', result.imageUrl); } catch { /* outfit may have been deleted */ }
       }
       if (endpointKey === 'anytale-voice' && taskData.characterUid) {
         const char = getAllCharacters().find(c => c.uid === taskData.characterUid);

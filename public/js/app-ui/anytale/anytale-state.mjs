@@ -251,6 +251,8 @@ export function createBlankOutfit() {
     uid: '',
     name: '',
     parts: [],
+    preferredLocations: [],
+    renderUrl: '',
   };
 }
 
@@ -268,6 +270,8 @@ export function loadOutfit() {
       uid: parsed.uid ?? '',
       name: parsed.name ?? '',
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
+      preferredLocations: Array.isArray(parsed.preferredLocations) ? parsed.preferredLocations : [],
+      renderUrl: parsed.renderUrl ?? '',
     };
   } catch {
     return createBlankOutfit();

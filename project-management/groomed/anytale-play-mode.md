@@ -138,19 +138,19 @@ When the user enters a new chapter (plot block), **all media is queued at once**
 
 - Random **character** (from library).
 - Random **outfit** from the selected character's **preferred outfits** list.
-- Random **`background`-typed** part plus **random attribute selections** (respect category/custom attribute rules from part config).
+- **Location part**: pick a random UID from the selected outfit's `preferredLocations`; if the array is empty or none of the UIDs exist in the library, fall back to a random part from all `location`-typed parts. Then pick random attribute selections (respect category/custom attribute rules from part config).
 - Random **music genre** from the database, then random **track** from that genre's playlist.
 - Random **plot** whose plot block **`section`** is **`prelude`** (case-insensitive match per product convention). This plot is **pre-selected and stored** but not entered until the user chooses "Begin the tale".
 - After bootstrap, show the **introduction** using the **introduction plot** (see below).
-- If the library has no usable prelude plot, no usable epilogue plot, no introduction plot, no character, no `background`-typed part, or no music tracks, fail the play page load with a simple message asking the user to create the missing data in the editor before entering play mode.
+- If the library has no usable prelude plot, no usable epilogue plot, no introduction plot, no character, no `location`-typed part, or no music tracks, fail the play page load with a simple message asking the user to create the missing data in the editor before entering play mode.
 
 ### Introduction plot
 
 - A **fixed, 1-page plot** whose name is configurable in `config.json` (e.g. `anytale.introductionPlotName`).
 - Its single page contains tags/settings designed to generate the character in a **neutral pose** (e.g. standing, facing camera, simple composition).
-- During the entire introduction phase (main page, mood page, and all change flows), the displayed image is generated from: **current character parts + current outfit parts + current background part + introduction plot page tags**, assembled via `assemblePrompt`.
+- During the entire introduction phase (main page, mood page, and all change flows), the displayed image is generated from: **current character parts + current outfit parts + current location part + introduction plot page tags**, assembled via `assemblePrompt`.
 - On first load (cold start), the portrait area shows **top/bottom controls with a giant loading spinner** in the center while the initial introduction image generates.
-- When the user changes **any setting** (character, outfit, or background) during introduction, a **new image is generated** using the updated combination. The **UI blocks** (loading spinner) until the new image is ready, then **fades** from the old image to the new one.
+- When the user changes **any setting** (character, outfit, or location) during introduction, a **new image is generated** using the updated combination. The **UI blocks** (loading spinner) until the new image is ready, then **fades** from the old image to the new one.
 - Music changes do **not** trigger an image regeneration.
 - The introduction plot is **not part of the timeline** — it exists purely as the visual backdrop for the intro decision-making phase.
 
@@ -167,7 +167,7 @@ The introduction displays the image generated from the introduction plot (see In
 
 Three options only (no fourth):
 1. **"Maybe try on a different outfit?"** → outfit change flow (3+1 pattern, fourth = "Nevermind" — no change). On pick, regenerates intro image (blocks UI, fade transition).
-2. **"Let's go somewhere else."** → background change flow. On completion, regenerates intro image (blocks UI, fade transition).
+2. **"Let's go somewhere else."** → location change flow. On completion, regenerates intro image (blocks UI, fade transition).
 3. **"Let's listen to something different."** → music change flow. Does **not** trigger image regeneration.
 
 Completing any mood change returns to the intro main page.
@@ -182,7 +182,7 @@ Show **three** random outfits (name, preview image). Fourth: **"Nevermind"** →
 
 #### 5. Background change
 
-Show **three** random parts with type **`background`**. On pick, walk **each attribute**: three concrete options + fourth **"None of these"** leaves that attribute **unset / null**. Then return to the intro main page.
+Show **three** random parts with type **`location`**. On pick, walk **each attribute**: three concrete options + fourth **"None of these"** leaves that attribute **unset / null**. Then return to the intro main page.
 
 #### 6. Music change
 
@@ -223,11 +223,11 @@ When the epilogue chapter ends, a **final end screen** is appended:
 
 #### 10. Mid-session changes
 
-Not supported in this version. Character, outfit, background, and music choices are locked to the introduction only. The system architecture supports mid-session changes, but they are deferred to reduce scope.
+Not supported in this version. Character, outfit, location, and music choices are locked to the introduction only. The system architecture supports mid-session changes, but they are deferred to reduce scope.
 
 ### Imagery
 
-- Composite prompt via **`assemblePrompt(enabledParts, activePage)`** in `public/js/app-ui/anytale/prompt-assembler.mjs`: enabled parts include the **session character parts**, **session outfit parts**, **session background part**; **`activePage`** is the current plot page (`tags`, `hiddenParts`, etc.).
+- Composite prompt via **`assemblePrompt(enabledParts, activePage)`** in `public/js/app-ui/anytale/prompt-assembler.mjs`: enabled parts include the **session character parts**, **session outfit parts**, **session location part**; **`activePage`** is the current plot page (`tags`, `hiddenParts`, etc.).
 - Remove the editor `WorkflowSelector`; both AnyTale editor and play mode use the configured AnyTale image workflow directly from config (new config key if needed), including workflow defaults / `extraInputs`.
 - Invoke the **same image generation path and settings** as the AnyTale editor after that config-based workflow selection is in place.
 - Page images use **fade in/out transitions** when navigating between pages.
@@ -237,7 +237,7 @@ Not supported in this version. Character, outfit, background, and music choices 
 - Dialog text **always generates** when conditions are met (no on/off toggle). The **mute button** controls only voice/TTS playback, not dialog text generation.
 - Chat generation is now available server-side through `server/features/chat/router.mjs` as **`POST /api/chat`**, backed by `server/core/llm.mjs::chat()`. AnyTale play mode should use this real endpoint rather than a placeholder stub.
 - Add AnyTale dialog settings under `server/config.default.json` / runtime config, using the imported LLM preset/session shape: `model`, `systemMessage`, and `parameters` (`temperature`, `topP`, `maxTokens`). Also store mode (`chat` or `completion`), completion format (`chatml` when needed), and stream default.
-- The configured `systemMessage` is a template. Substitute `{{profile}}` with the current character's personality profile and `{{location}}` with the current background part's **location attribute value**. If either substitution source is missing/blank, skip dialog generation for that page.
+- The configured `systemMessage` is a template. Substitute `{{profile}}` with the current character's personality profile and `{{location}}` with the current location part's **location attribute value**. If either substitution source is missing/blank, skip dialog generation for that page.
 - Fetch the AnyTale dialog config through `GET /anytale/config`; do not hard-code model names in the play client.
 - Add a small AnyTale dialog client module that renders the configured system-message template, sends the active page's `dialogPrompt` as the user/content prompt, then calls `/api/chat`. Prefer non-streaming for the first usable implementation unless the UI is explicitly wired for streaming partial text.
 - If the page has no `dialogPrompt` or the prompt is empty after trimming, skip dialog generation for that page as if the character is temporarily muted.
@@ -268,9 +268,9 @@ Not supported in this version. Character, outfit, background, and music choices 
 
 ### Persistence
 
-- **One** `localStorage` JSON object (distinct key from editor keys `anytale-state`, `anytale-plot`, `anytale-character` — **do not clobber** editor storage). Contents: selected **character** (uid + snapshot fields needed for UI), **outfit** uid, **background part** uid + **attribute map**, **music genre** + **track id**, **linear plot timeline**, **generated asset cache**, **current plot uid**, **current page index**, UI mode / phase (intro vs mood vs character picker vs plot vs end-of-chapter vs end screen), toggles (mute, music on), navigation mode (manual vs autoplay). **Always restore** on `/anytale.html` load.
+- **One** `localStorage` JSON object (distinct key from editor keys `anytale-state`, `anytale-plot`, `anytale-character` — **do not clobber** editor storage). Contents: selected **character** (uid + snapshot fields needed for UI), **outfit** uid, **location part** uid + **attribute map**, **music genre** + **track id**, **linear plot timeline**, **generated asset cache**, **current plot uid**, **current page index**, UI mode / phase (intro vs mood vs character picker vs plot vs end-of-chapter vs end screen), toggles (mute, music on), navigation mode (manual vs autoplay). **Always restore** on `/anytale.html` load.
 - Store timeline as ordered entries rather than only uids, e.g. `{ plotUid, startedAt, pageCount, progressionDisabledPartsApplied }`, so future save/load/share features have room to grow.
-- Store generated assets keyed by a stable signature containing plot uid, page index, character uid, outfit uid, background part uid, background attribute signature, and relevant prompt/page inputs. Cache entries hold image URL/task id/status, dialog text/status, voice URL/status, errors, and generated timestamps. Character/outfit/background changes should naturally invalidate old generated entries by changing the signature.
+- Store generated assets keyed by a stable signature containing plot uid, page index, character uid, outfit uid, location part uid, location attribute signature, and relevant prompt/page inputs. Cache entries hold image URL/task id/status, dialog text/status, voice URL/status, errors, and generated timestamps. Character/outfit/location changes should naturally invalidate old generated entries by changing the signature.
 
 ### Plot data model (editor-aligned)
 
@@ -281,7 +281,7 @@ Not supported in this version. Character, outfit, background, and music choices 
 
 ### Part attribute options migration
 
-- Expand part attribute data so **category attributes store their concrete selectable option list**, similar to custom attributes. This is needed for random/bootstrap and the background attribute wizard without repeatedly traversing tag category trees at runtime.
+- Expand part attribute data so **category attributes store their concrete selectable option list**, similar to custom attributes. This is needed for random/bootstrap and the location attribute wizard without repeatedly traversing tag category trees at runtime.
 - Keep the editor compatible: it may continue editing category references as today, but saved part configs should include hydrated option lists for play mode.
 - Add a migration script for `server/database/anytale-data.json` that reads existing category attributes, resolves each category through tag data/category trees, and writes option lists into the part configs. The script should be idempotent and report unresolved categories.
 
@@ -291,7 +291,7 @@ This feature is broken into 6 sequential, testable rollouts. Each rollout docume
 
 1. [Rollout 1: Foundation & Routing](file:///f:/YAAIIC/docs/groomed-features/anytale-play-1-foundation.md) — Editor rename, play shell, hamburger, config workflow, data migration, fetch layer.
 2. [Rollout 2: Play UI Components & Session](file:///f:/YAAIIC/docs/groomed-features/anytale-play-2-ui-components.md) — Glass buttons, speech/caption bubbles, decision options, progress bar, portrait panel, session module.
-3. [Rollout 3: Introduction Flow & Image Generation](file:///f:/YAAIIC/docs/groomed-features/anytale-play-3-introduction.md) — Cold start, introduction plot, character/outfit/background/music change flows, blocking image regen.
+3. [Rollout 3: Introduction Flow & Image Generation](file:///f:/YAAIIC/docs/groomed-features/anytale-play-3-introduction.md) — Cold start, introduction plot, character/outfit/location/music change flows, blocking image regen.
 4. [Rollout 4: Chapter Navigation & Queue](file:///f:/YAAIIC/docs/groomed-features/anytale-play-4-chapter-navigation.md) — Chapter entry, page navigation, autoplay, queue strategy, progress bar, asset cache.
 5. [Rollout 5: Dialog, Voice & Audio](file:///f:/YAAIIC/docs/groomed-features/anytale-play-5-dialog-voice-audio.md) — LLM dialog, TTS endpoint, two-channel audio runtime, music, queue expansion, voice reprioritization.
 6. [Rollout 6: Branching, Completion & Polish](file:///f:/YAAIIC/docs/groomed-features/anytale-play-6-branching-completion.md) — End-of-chapter branching, chapter transitions, epilogue, cancellation, reset, regression.
