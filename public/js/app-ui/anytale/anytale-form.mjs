@@ -34,6 +34,7 @@ import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 
 // ============================================================================
 // Styled Components
@@ -1101,7 +1102,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     activeTab=${activeTab}
     onTabChange=${handleTabChange}
     variant="outlined"
-    style=${{ height: 'calc(100vh - 240px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    style=${{ height: 'calc(100vh - 160px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
   />`;
 }
 

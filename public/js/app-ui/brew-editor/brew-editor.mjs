@@ -939,7 +939,7 @@ export function BrewEditor() {
           <${Button}
             variant="medium-icon-text"
             icon="save"
-            color="secondary"
+            color="primary"
             onClick=${async () => {
               try {
                 for (const src of globalSources) {
@@ -1031,7 +1031,7 @@ export function BrewEditor() {
             <${Button}
               variant="medium-icon-text"
               icon=${isPlaying ? 'stop' : 'play'}
-              color=${isPlaying ? 'secondary' : 'primary'}
+              color=${isPlaying ? 'secondary' : 'secondary'}
               disabled=${!isPlaying && brewPreviewDisabled}
               onClick=${isPlaying ? stopPlayback : () => startPreview()}
             >

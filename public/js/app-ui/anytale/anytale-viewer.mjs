@@ -131,6 +131,7 @@ export function AnyTaleViewer({
   onImportOutfit,
   onDelete,
   canDelete = false,
+  onImageWidthChange,
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
@@ -160,6 +161,10 @@ export function AnyTaleViewer({
     if (isPlaying && currentIndex === 0) setIsPlaying(false);
   }, [currentIndex]);
 
+  useEffect(() => {
+    if (!items.length) onImageWidthChange?.(null);
+  }, [items.length]);
+
   if (!items.length) {
     return html`
       <${Panel} variant="outlined">
@@ -188,6 +193,7 @@ export function AnyTaleViewer({
             key=${imageUrl}
             src=${imageUrl}
             alt=${item?.name || 'Generated image'}
+            onLoad=${(e) => onImageWidthChange?.(e.currentTarget.getBoundingClientRect().width)}
             onMouseEnter=${(e) => { if (item?.prompt) tooltip.show(item.prompt, e.clientX, e.clientY); }}
             onMouseLeave=${() => tooltip.hide()}
           />

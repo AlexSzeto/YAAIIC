@@ -4813,6 +4813,234 @@
           }
         }
       ]
+    },
+    {
+      "name": "TEST",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": "41"
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": "24"
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "from": "frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": 0,
+              "scale": 0.5,
+              "bias": 10,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "desiwa22-q3-image-to-video-loop.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "102",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "103",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "115",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "117",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": [
+            "101",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": [
+            "77",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "115",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        },
+        {
+          "process": "crossfadeVideoFrames",
+          "parameters": {
+            "blendFrames": 10
+          }
+        }
+      ],
+      "hidden": true
     }
   ]
 }

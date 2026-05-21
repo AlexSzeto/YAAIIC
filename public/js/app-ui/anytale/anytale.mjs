@@ -42,7 +42,7 @@ TwoColumn.className = 'two-column';
 const LeftColumn = styled('div')`
   flex: 6 6;
   min-width: 0;
-  max-height: calc(100vh - 240px); /* Account for header and workflow selector */
+  max-height: calc(100vh - 160px); /* Account for header and workflow selector */
 
   @media (max-width: 900px) {
     max-width: 100%;
@@ -88,6 +88,8 @@ export function AnyTalePage() {
 
   // Import handlers forwarded from AnyTaleForm
   const [importControls, setImportControls] = useState(null);
+
+  const [imageWidth, setImageWidth] = useState(null);
 
   const handleImportReady = useCallback((controls) => {
     setImportControls(controls);
@@ -320,7 +322,7 @@ export function AnyTalePage() {
       </${HorizontalEdgesLayout}>
 
       <${TwoColumn}>
-        <${LeftColumn}>
+        <${LeftColumn} style=${{ maxWidth: imageWidth ? `${imageWidth}px` : undefined }}>
           <${AnyTaleViewer}
             items=${history}
             currentIndex=${nav.currentIndex}
@@ -338,6 +340,7 @@ export function AnyTalePage() {
             onImportOutfit=${importControls?.importOutfit}
             onDelete=${() => handleDeleteImage(nav.currentItem)}
             canDelete=${!!nav.currentItem}
+            onImageWidthChange=${setImageWidth}
           />
         </${LeftColumn}>
 
