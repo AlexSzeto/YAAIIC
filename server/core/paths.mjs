@@ -52,3 +52,6 @@ export const COMFYUI_WORKFLOWS_DIR = path.join(RESOURCE_DIR, 'workflows');
 
 /** Path to `server/resource/comfyui-workflows.json` */
 export const WORKFLOWS_PATH = path.join(RESOURCE_DIR, 'comfyui-workflows.json');
+
+/** Path to `scripts/migrate/backups/` (migration backup files, gitignored) */
+export const BACKUP_DIR = path.join(PROJECT_ROOT, 'scripts', 'migrate', 'backups');

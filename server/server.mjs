@@ -11,6 +11,7 @@ import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs'
 // Core infrastructure
 import { SERVER_DIR, PUBLIC_DIR, STORAGE_DIR } from './core/paths.mjs';
 import { loadConfig } from './core/config.mjs';
+import { migrateAll } from './core/migrator.mjs';
 import {
   loadMediaData, addMediaDataEntry, findMediaByUid
 } from './core/database.mjs';
@@ -155,6 +156,8 @@ app.get('/workflows', (req, res) => {
 // ---------------------------------------------------------------------------
 
 async function startServer() {
+  await migrateAll();
+
   // Load image data on server initialization
   loadMediaData();
 

@@ -20,10 +20,10 @@ The user must provide an explicit filename from `project-management/in-progress/
    - **Drop them** — remove them from the file before archiving.
    - **Move them** — create or append to a new in-progress file for a follow-on feature.
 
-3. **Determine the archive number.** List the files in `project-management/archived/` and find the highest leading number. The new file's number is that value plus one.
+3. **Run the archive script.** Execute:
+   ```
+   node scripts/archive-feature.mjs <filename>
+   ```
+   This script determines the next archive number, copies the file to `project-management/archived/<number>-<filename>`, and deletes the in-progress file in a single atomic operation.
 
-4. **Write the archive file.** Copy the title, goal, and all completed tasks verbatim to `project-management/archived/<number>-<filename>.md`. Preserve the full content including implementation details.
-
-5. **Delete the in-progress file.** Remove `project-management/in-progress/<filename>.md`.
-
-6. **Confirm.** Tell the user the feature has been archived with its assigned number and the in-progress file has been removed.
+4. **Confirm.** Report the archive number and filename printed by the script.

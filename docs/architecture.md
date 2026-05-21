@@ -12,7 +12,7 @@ This document describes the overall architecture and design patterns used in YAA
 - [Configuration](#configuration)
 - [Directory Structure](#directory-structure)
 - [Data Persistence](#data-persistence)
-- [Migration Scripts](#migration-scripts)
+- [Data Versioning](#data-versioning)
 
 ## Overview
 
@@ -95,6 +95,8 @@ server/
 ├── core/                   # Shared infrastructure
 │   ├── config.mjs          # Configuration loader
 │   ├── database.mjs        # Media data repository
+│   ├── data-versions.mjs   # Domain registry: tracked files and expected versions
+│   ├── migrator.mjs        # Startup migration runner
 │   ├── paths.mjs           # Centralized path constants
 │   ├── sse.mjs             # Server-Sent Events manager
 │   ├── service-manager.mjs # ComfyUI/Ollama health & launch
@@ -295,22 +297,56 @@ Each media entry contains:
 
 ---
 
-## Migration Scripts
+## Data Versioning
 
-Located in `scripts/migrate/`, these handle legacy data format upgrades:
+Each managed data file carries a top-level `"version"` field. On startup, `migrateAll()` in `server/core/migrator.mjs` inspects every registered domain, runs any needed migration scripts, and refuses to start if a migration chain cannot be completed or if the data is newer than the server expects.
 
-| Script | Purpose |
-|--------|---------|
-| `1-add-workflow-types-to-db.mjs` | Migrates `imageData` → `mediaData` naming, adds `type` field |
-| `2-backfill-media-types.mjs` | Backfills missing `type` fields based on file extensions |
-| `3-media-data-schema-cleanup.mjs` | Removes deprecated fields from media entries |
-| `4-anytale-plot-page-shape.mjs` | Migrates plot page structure to current shape |
-| `5-anytale-parts-type-to-array.mjs` | Converts part `type` field from string to array |
-| `6-anytale-parts-attributes-merge.mjs` | Merges split attribute maps into unified `attributes` array |
-| `7-media-data-parts-attributes-merge.mjs` | Applies attribute merge to parts snapshots stored in media entries |
-| `8-anytale-uid-to-uuid.mjs` | Migrates AnyTale entity IDs from numeric to UUID format |
-| `9-anytale-remove-hidden-parts.mjs` | Removes deprecated `hidden` field from parts |
-| `10-migrate-anytale-attribute-keys.mjs` | Renames attribute value keys to current naming convention |
-| `11-media-format-to-core-fields.mjs` | Promotes `imageFormat`/`audioFormat` from extraInputs to top-level fields |
+### Domain Registry
 
-Run manually with `node scripts/migrate/<script>.mjs` when upgrading from older versions.
+Tracked domains are defined in `server/core/data-versions.mjs`. A missing `"version"` field in a data file is treated as version `0`.
+
+| Domain | File | Current Version |
+|--------|------|-----------------|
+| `config` | `server/config.json` | 0 |
+| `anytale-data` | `server/database/anytale-data.json` | 0 |
+| `media-data` | `server/database/media-data.json` | 0 |
+| `brew-data` | `server/database/brew-data.json` | 0 |
+| `sound-sources` | `server/database/sound-sources.json` | 0 |
+
+`queue-data` is excluded — it is transient and not schema-versioned.
+
+### Startup Behavior
+
+1. Read each domain file; treat a missing `"version"` field as version `0`.
+2. **Versions match** → no-op.
+3. **Data version > expected** → server refuses to start; user is asked to update the server.
+4. **Data version < expected** → write a timestamped backup to `scripts/migrate/backups/`, then run the migration chain. If the chain fails or has a gap, restore the backup and refuse to start.
+
+### Migration Script Interface
+
+Scripts live at `scripts/migrate/<domain>/<N>-to-<M>.mjs`:
+
+```js
+export const fromVersion = 0;
+export const toVersion = 1;
+
+export function migrate(data) {
+  // transform data from fromVersion shape to toVersion shape
+  return data;
+}
+```
+
+The migrator writes the `"version"` field after each step — scripts do not set it themselves.
+
+### Adding a Migration
+
+1. Create `scripts/migrate/<domain>/<N>-to-<M>.mjs` following the interface above.
+2. Bump `currentVersion` for that domain in `server/core/data-versions.mjs`.
+
+### Backup Naming
+
+```
+scripts/migrate/backups/<domain>-v<version>-<timestamp>.json
+```
+
+Example: `anytale-data-v0-20260521T143200.json`

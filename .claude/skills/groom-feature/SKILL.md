@@ -105,6 +105,32 @@ A feature may affect multiple docs — list all that apply. When in doubt, err t
 - [ ] Create `docs/features/<section>.md` documenting the user flow, component interactions, server endpoints, and key data shapes for the <section> feature area
 ```
 
+## Data Migration Tasks
+
+If a feature changes the schema of any tracked data file (`server/config.json`, `server/database/anytale-data.json`, `server/database/media-data.json`, `server/database/brew-data.json`, `server/database/sound-sources.json`), the task list **must** include:
+
+1. A migration script at `scripts/migrate/<domain>/<N>-to-<M>.mjs` (where `<domain>` matches the filename without `.json`, `<N>` is the current version, `<M>` is `<N>+1`).
+2. A task to bump `currentVersion` for that domain in `server/core/data-versions.mjs`.
+
+Migration scripts export a fixed interface — include this in the Implementation Details section when a migration is required:
+
+```js
+// scripts/migrate/<domain>/<N>-to-<M>.mjs
+export const fromVersion = N;
+export const toVersion = M;
+
+/**
+ * @param {Object} data - Parsed JSON data (do not set data.version — the migrator handles that)
+ * @returns {Object} The migrated data object
+ */
+export function migrate(data) {
+  // ... transform data ...
+  return data;
+}
+```
+
+The migrator (`server/core/migrator.mjs`) runs all required scripts automatically on server startup, backs up data before migrating, and restores on failure. Migration scripts do **not** set `data.version` — the migrator writes the final version after each step.
+
 ## Rules
 
 - Do **not** modify any code.
