@@ -60,8 +60,11 @@ const TEMPLATE_FILES = [
  * @type {string[]}
  */
 const EMPTY_DIRS = [
-  'docs/feature-history',
-  'docs/groomed-features',
+  'project-management/planned',
+  'project-management/groomed',
+  'project-management/in-progress',
+  'project-management/archived',
+  'project-management/abandoned',
   'server/features',
   'server/database',
   'public/js/app-ui',

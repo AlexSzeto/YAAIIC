@@ -17,8 +17,7 @@ The backend is organized into **Feature Domains** to avoid monolithic files. Eac
     - **`generation/`**:
         - `router.mjs`: Endpoints for `/generate`.
         - `orchestrator.mjs`: Manages the generation lifecycle (pre-tasks -> comfy -> post-tasks).
-        - `comfy-service.mjs`: Wraps ComfyUI API and WebSocket interactions.
-        - `processors/`: Individual task handlers (e.g., `extract-text.mjs`, `crossfade.mjs`).
+        - `comfy-client.mjs`: Wraps ComfyUI API and WebSocket interactions.
     - **`upload/`**:
         - `router.mjs`: Endpoints for `/upload/*`.
         - `service.mjs`: File processing and storage logic.
@@ -26,7 +25,6 @@ The backend is organized into **Feature Domains** to avoid monolithic files. Eac
 ### Design Patterns
 - **Service Layer**: Routes should **never** contain business logic. They should extract parameters and call a Service.
 - **Repository Pattern**: Data access is isolated. `server.mjs` should not touch `globalData` directly; usage of a specific `MediaRepository` is required.
-- **Strategy Pattern for Generation Tasks**: `generate.mjs` currently uses a giant switch/map. This must be refactored into individual processor modules loaded dynamically or registered explicitly.
 - **Dependency Injection**: Services should accept their dependencies (like config or other services) in their constructor or factory function, rather than importing global singletons, to facilitate testing and modularity.
 
 ### Path Handling

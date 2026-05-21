@@ -75,6 +75,7 @@ Pages are independent HTML files (not a SPA router):
 | Main App | `/` | Generation, gallery, media management |
 | Workflow Editor | `/workflow-editor.html` | Configure ComfyUI workflows |
 | Brew Editor | `/brew-editor.html` | Create ambient sound mixes |
+| AnyTale | `/anytale.html` | Character creation and scene generation |
 | Inpaint | `/inpaint.html` | Draw masks for image inpainting |
 | Loading | `/loading.html` | Service readiness checkpoint |
 
@@ -100,14 +101,17 @@ server/
 │   ├── llm.mjs             # Ollama API wrapper
 │   └── index.mjs           # Barrel exports
 └── features/               # Feature domains
-    ├── media/              # Gallery & tag management
-    ├── generation/         # ComfyUI orchestration
-    ├── upload/             # File upload processing
-    ├── export/             # Media export to external targets
-    ├── workflows/          # Workflow CRUD & auto-detection
+    ├── anytale/            # Character, parts, plot, outfit data
     ├── brew/               # Brew recipe management
+    ├── chat/               # LLM chat endpoint
+    ├── export/             # Media export to external targets
+    ├── generation/         # ComfyUI orchestration
+    ├── llm/                # LLM model listing
+    ├── media/              # Gallery & tag management
+    ├── queue/              # Generation task queue
     ├── sound-sources/      # Audio source library
-    └── llm/                # LLM model listing
+    ├── upload/             # File upload processing
+    └── workflows/          # Workflow CRUD & auto-detection
 ```
 
 ### Domain Module Pattern
@@ -137,8 +141,11 @@ app.use(generationRouter);
 app.use(exportRouter);
 app.use(workflowsRouter);
 app.use(llmRouter);
+app.use(chatRouter);
 app.use(brewRouter);
 app.use(soundSourcesRouter);
+app.use(anytaleRouter);
+app.use(queueRouter);
 ```
 
 ### Middleware
@@ -254,10 +261,12 @@ All data is stored as JSON files in `server/database/`:
 | File | Contents |
 |------|----------|
 | `media-data.json` | Generated media history (images, videos, audio) with metadata, tags, folders |
+| `anytale-data.json` | AnyTale characters, parts library, plots, and outfits |
 | `brew-data.json` | Saved ambient brew recipes |
 | `sound-sources.json` | Global sound source definitions |
 
-Workflow configurations are stored separately in `server/resource/workflows/comfyui-workflows.json`.
+Workflow configurations are stored separately in `server/resource/comfyui-workflows.json`.
+Individual ComfyUI workflow JSON files live in `server/resource/workflows/`.
 
 ### Media Data Schema
 
@@ -269,7 +278,7 @@ Each media entry contains:
   "name": "Unnamed",
   "description": "AI-generated prose description...",
   "summary": "Objective visual inventory...",
-  "tags": ["portrait", "anime", "female"],
+  "tags": "portrait, anime, female",
   "prompt": "user prompt text...",
   "imageUrl": "/media/image_1.png",
   "audioUrl": "/media/audio_1.mp3",
@@ -279,7 +288,7 @@ Each media entry contains:
   "inpaint": false,
   "inpaintArea": null,
   "folder": "folder-123",
-  "timeTaken": 45000,
+  "timeTaken": 45,
   "timestamp": "2025-12-28T00:00:00.000Z"
 }
 ```
@@ -294,5 +303,14 @@ Located in `scripts/migrate/`, these handle legacy data format upgrades:
 |--------|---------|
 | `1-add-workflow-types-to-db.mjs` | Migrates `imageData` → `mediaData` naming, adds `type` field |
 | `2-backfill-media-types.mjs` | Backfills missing `type` fields based on file extensions |
+| `3-media-data-schema-cleanup.mjs` | Removes deprecated fields from media entries |
+| `4-anytale-plot-page-shape.mjs` | Migrates plot page structure to current shape |
+| `5-anytale-parts-type-to-array.mjs` | Converts part `type` field from string to array |
+| `6-anytale-parts-attributes-merge.mjs` | Merges split attribute maps into unified `attributes` array |
+| `7-media-data-parts-attributes-merge.mjs` | Applies attribute merge to parts snapshots stored in media entries |
+| `8-anytale-uid-to-uuid.mjs` | Migrates AnyTale entity IDs from numeric to UUID format |
+| `9-anytale-remove-hidden-parts.mjs` | Removes deprecated `hidden` field from parts |
+| `10-migrate-anytale-attribute-keys.mjs` | Renames attribute value keys to current naming convention |
+| `11-media-format-to-core-fields.mjs` | Promotes `imageFormat`/`audioFormat` from extraInputs to top-level fields |
 
 Run manually with `node scripts/migrate/<script>.mjs` when upgrading from older versions.

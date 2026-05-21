@@ -16,6 +16,9 @@ This document describes all API endpoints provided by the YAAIIC server.
 - [Brew API](#brew-api)
 - [Sound Sources API](#sound-sources-api)
 - [LLM API](#llm-api)
+- [AnyTale API](#anytale-api)
+- [Queue API](#queue-api)
+- [Chat API](#chat-api)
 - [SSE Progress Stream](#sse-progress-stream)
 
 ## Base URL
@@ -155,7 +158,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "name": "Unnamed",
     "description": "AI-generated prose description...",
     "summary": "Objective visual inventory...",
-    "tags": ["portrait", "anime", "female"],
+    "tags": "portrait, anime, female",
     "prompt": "user prompt text...",
     "imageUrl": "/media/image_1.png",
     "audioUrl": "/media/audio_1.mp3",
@@ -165,7 +168,7 @@ All endpoints are relative to the server's base URL (default: `http://localhost:
     "inpaint": false,
     "inpaintArea": null,
     "folder": "folder-123",
-    "timeTaken": 45000,
+    "timeTaken": 45,
     "timestamp": "2025-12-28T00:00:00.000Z"
   }
   ```
@@ -526,7 +529,7 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
           "audioUrl": "/media/audio_1.mp3",
           "description": "AI-generated prose description...",
           "summary": "Objective visual inventory...",
-          "tags": ["portrait", "anime"],
+          "tags": "portrait, anime",
           "prompt": "positive prompt text...",
           "seed": 12345,
           "name": "Generated Name",
@@ -536,7 +539,7 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
           "inpaintArea": null,
           "folder": "folder-123",
           "uid": 1715000000000,
-          "timeTaken": 45000
+          "timeTaken": 45
         },
         "timestamp": "2025-12-28T00:00:00.000Z"
       }
@@ -748,7 +751,7 @@ These endpoints manage workflow configurations (CRUD). For the client-facing wor
 
 ## Brew API
 
-These endpoints manage ambient sound "brew" recipes. Each brew contains channels, tracks, and mixing configuration.
+These endpoints manage ambient sound "brew" recipes. Each brew contains sources, channels, and mixing configuration.
 
 ### List Brews
 - **Endpoint**: `GET /api/brews`
@@ -772,9 +775,9 @@ These endpoints manage ambient sound "brew" recipes. Each brew contains channels
     "uid": 1234567890,
     "name": "Ambient Coffee Shop",
     "data": {
-      "channels": [...],
-      "tracks": [...],
-      "masterVolume": 0.8
+      "label": "Ambient Coffee Shop",
+      "sources": [...],
+      "channels": [...]
     }
   }
   ```
@@ -789,9 +792,9 @@ These endpoints manage ambient sound "brew" recipes. Each brew contains channels
     "uid": 1234567890,
     "name": "Ambient Coffee Shop",
     "data": {
-      "channels": [...],
-      "tracks": [...],
-      "masterVolume": 0.8
+      "label": "Ambient Coffee Shop",
+      "sources": [...],
+      "channels": [...]
     }
   }
   ```
@@ -857,11 +860,116 @@ These endpoints manage the global audio source library used by the Brew Editor.
 - **Endpoint**: `GET /api/llm/models`
 - **Use Case**: List installed Ollama models. Used by the Workflow Editor to populate the LLM model selector for post-generation tasks.
 - **Payload**: None
-- **Output**: Array of model objects as returned by the Ollama API.
+- **Output**: Object wrapping the model list.
   ```json
-  [
-    { "name": "llama3:8b", "size": 4661211136, ... },
-    { "name": "qwen3-vl:8b-instruct", "size": 5368709120, ... }
-  ]
+  {
+    "models": [
+      { "name": "llama3:8b", "size": 4661211136, ... },
+      { "name": "qwen3-vl:8b-instruct", "size": 5368709120, ... }
+    ]
+  }
   ```
 - **Error State**: 500 if Ollama is unreachable.
+
+## AnyTale API
+
+These endpoints manage AnyTale data: the parts library, plots, characters, and outfits.
+
+### Get AnyTale Config
+- **Endpoint**: `GET /anytale/config`
+- **Use Case**: Returns the server-side AnyTale configuration (portrait workflow, part matchers, etc.) and the contents of `anytale-rules.txt` as `slotRules`.
+- **Output**: Config object merged with `{ slotRules: string }`.
+
+### Parts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/anytale/parts` | List all part configs |
+| `POST` | `/anytale/parts` | Create a new part (server assigns UUID); returns `{ saved }` |
+| `PUT` | `/anytale/parts/:uid` | Update an existing part |
+| `DELETE` | `/anytale/parts/:uid` | Delete a part |
+
+### Plots
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/anytale/plot` | List all plots as summaries `{ uid, name, section }` |
+| `GET` | `/anytale/plot/:uid` | Get a single plot by UID |
+| `PUT` | `/anytale/plot/:uid` | Upsert a full plot block |
+| `DELETE` | `/anytale/plot/:uid` | Delete a plot |
+
+### Characters
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/anytale/characters` | List all characters |
+| `POST` | `/anytale/characters` | Create a new character (server assigns UUID); returns `{ saved }` |
+| `PUT` | `/anytale/characters/:uid` | Update an existing character |
+| `DELETE` | `/anytale/characters/:uid` | Delete a character |
+
+### Generate Portrait
+- **Endpoint**: `POST /anytale/characters/:uid/generate-portrait`
+- **Use Case**: Enqueues a portrait image generation for a character. Assembles the prompt from the character's part attribute values filtered by `portraitParts` matchers in config.
+- **Payload**: JSON body `{ parts: CharacterPart[] }` — the character's current part list.
+- **Query**: `queueOnly=true` to add to queue without auto-starting.
+- **Output**: `202 {}` — result arrives via queue SSE.
+
+### Generate Voice
+- **Endpoint**: `POST /anytale/characters/:uid/generate-voice`
+- **Use Case**: Enqueues a voice audio generation for a character using the configured voice workflow.
+- **Payload**: JSON body `{ personality: string, name: string }`.
+- **Query**: `queueOnly=true` to add to queue without auto-starting.
+- **Output**: `202 {}` — result arrives via queue SSE.
+
+### Outfits
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/anytale/outfits` | List all outfits |
+| `POST` | `/anytale/outfits` | Create a new outfit (server assigns UUID); returns `{ saved }` |
+| `PUT` | `/anytale/outfits/:uid` | Update an existing outfit |
+| `DELETE` | `/anytale/outfits/:uid` | Delete an outfit |
+
+### Part Preview
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/anytale/generate-part-preview` | Enqueue generation of a part preview image for a given prompt; hash-named file for idempotency |
+| `POST` | `/anytale/request-part-preview` | Check if a cached preview image already exists for a prompt; returns `{ found, portraitUrl? }` |
+
+## Queue API
+
+The queue serializes generation tasks so only one runs at a time. All AnyTale generation endpoints push items onto the queue.
+
+### Queue SSE Stream
+- **Endpoint**: `GET /queue/sse`
+- **Use Case**: Subscribe to real-time queue state changes.
+- **Output**: `text/event-stream`. On connect, immediately emits the current state. Subsequent events are emitted whenever the queue changes.
+  - `queue:updated` — payload is the full queue status object (same shape as `GET /queue/status`).
+  - Heartbeat: `: heartbeat` every 30s.
+
+### Get Queue Status
+- **Endpoint**: `GET /queue/status`
+- **Use Case**: Snapshot of current queue state.
+- **Output**:
+  ```json
+  {
+    "state": "stopped",
+    "items": [
+      { "id": "uuid", "status": "queued", "type": "image", "source": "anytale", "name": "MyChar", "subLabel": "Portrait" }
+    ]
+  }
+  ```
+  `state` is one of: `stopped`, `paused`, `running`, `cancelling`, `skipping`, `pausing`.
+
+### Queue Controls
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/queue/start` | Start the queue; `409` if already running |
+| `POST` | `/queue/pause` | Pause after current item; `409` if not running |
+| `POST` | `/queue/skip` | Cancel the current item and advance; `409` if not running |
+| `POST` | `/queue/clear` | Remove all non-running items |
+| `DELETE` | `/queue/item/:id` | Remove a specific item by ID; `404` if not found |
+| `PATCH` | `/queue/reorder` | Move an item to a new position; body `{ id, toIndex }` |
+

@@ -9,7 +9,7 @@ node scripts/scaffold.mjs <outputFolder> [projectName]
 ```
 
 - **`outputFolder`** (required): Path where the new project will be created.
-- **`projectName`** (optional): Human-readable project name. If omitted, the tool will prompt for one interactively.
+- **`projectName`** (optional): Human-readable project name. If omitted, the tool derives it from the folder name and prompts to confirm.
 
 ### Example
 
@@ -28,17 +28,16 @@ The scaffold copies and generates the following structure:
 ├── .agents/                     # AI agent configurations
 ├── .claude/                     # Claude rules and skills
 ├── .github/                     # GitHub Actions workflows
-├── scripts/                     # Build tools (download-libs, scaffold, lib-sync config)
-│   ├── download-libs.mjs
-│   ├── lib.config.json
-│   └── scaffold-template/
+├── .gitignore
+├── scripts/                     # Build tools (download-libs, scaffold, lib.config.json)
+│   └── scaffold-template/       # Template files used by scaffold.mjs
 ├── public/
 │   ├── index.html               # Entry point (with project name)
 │   ├── fonts/                   # Downloaded Google Fonts
 │   ├── js/
 │   │   ├── app.mjs              # Starter app component
 │   │   ├── util.mjs             # Utility functions
-│   │   ├── custom-ui/           # Full component library
+│   │   ├── custom-ui/           # Full reusable component library
 │   │   └── app-ui/              # (empty, for project-specific components)
 │   ├── css/
 │   ├── lib/                     # Downloaded JS libraries
@@ -52,11 +51,13 @@ The scaffold copies and generates the following structure:
 │   │   └── index.mjs            # Barrel exports
 │   ├── features/                # (empty, for domain modules)
 │   └── database/                # (empty, for JSON data files)
-├── docs/
-│   ├── feature-history/         # (empty)
-│   └── groomed-features/        # (empty)
-├── package.json                 # With project name and scripts
-└── task.md                      # (if applicable)
+├── project-management/
+│   ├── planned/                 # (empty) Freeform ideas not yet fully specified
+│   ├── groomed/                 # (empty) Fully specified features ready to implement
+│   ├── in-progress/             # (empty) Features currently being implemented
+│   ├── archived/                # (empty) Completed features preserved as history
+│   └── abandoned/               # (empty) Shelved features
+└── package.json                 # With project name and scripts
 ```
 
 ## Template Placeholders
@@ -87,14 +88,16 @@ These are copied recursively from YAAIIC:
 | `public/js/custom-ui/` | Full reusable component library |
 | `public/fonts/` | Downloaded font files |
 
+Also copies `.gitignore` from the project root.
+
 ### Template Files
 
-These come from `scripts/scaffold-template/` with placeholder substitution:
+These come from `scripts/scaffold-template/` with placeholder substitution where noted:
 
 | Template | Purpose |
 |----------|---------|
-| `package.json` | Project manifest with name and scripts |
-| `public/index.html` | HTML entry point with importmap and script tags |
+| `package.json` | Project manifest with name and scripts *(placeholders applied)* |
+| `public/index.html` | HTML entry point with importmap and script tags *(placeholders applied)* |
 | `public/js/app.mjs` | Minimal "Hello World" Preact app |
 | `public/js/util.mjs` | Starter utilities |
 | `server/server.mjs` | Minimal Express server with static file serving |
@@ -109,8 +112,11 @@ Created to establish the project structure:
 
 | Directory | Purpose |
 |-----------|---------|
-| `docs/feature-history/` | Archived feature specifications |
-| `docs/groomed-features/` | Backlog of planned features |
+| `project-management/planned/` | Freeform ideas, not yet fully specified |
+| `project-management/groomed/` | Fully specified features, ready to implement |
+| `project-management/in-progress/` | Features currently being implemented |
+| `project-management/archived/` | Completed features preserved as development record |
+| `project-management/abandoned/` | Shelved features |
 | `server/features/` | Domain-driven feature modules |
 | `server/database/` | JSON data files |
 | `public/js/app-ui/` | Project-specific UI components |
@@ -143,6 +149,7 @@ From this starting point, add feature domains in `server/features/`, each with t
 
 1. `cd <outputFolder>`
 2. `npm install`
-3. `npm start` — starts the server on port 3000
-4. Add new features by creating domain folders in `server/features/` and `public/js/app-ui/`
-5. Use `npm run pull` / `npm run push` to sync the custom-ui library with other projects
+3. `node scripts/download-libs.mjs` — downloads JS libraries and fonts into `public/lib/` and `public/fonts/`
+4. `npm start` — starts the server on port 3000
+5. Add new features by creating domain folders in `server/features/` and `public/js/app-ui/`
+6. Use `npm run pull` / `npm run push` to sync the custom-ui library with other projects in the same family

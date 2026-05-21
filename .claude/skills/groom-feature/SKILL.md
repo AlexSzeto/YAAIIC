@@ -39,7 +39,7 @@ On confirmation, ask: **"Save to `groomed/` for later, or start implementing now
 1. Prompt the user for a filename (suggest the kebab-case slug).
 2. Write the spec **and task list** to `project-management/in-progress/<filename>.md` using the structure below, including a fully populated `## Tasks` section organized into phases (see Task List Standards).
 3. If a source `planned/` file existed, delete it.
-4. Tell the user to run `/implement-feature <filename>.md` to begin.
+4. Invoke the `implement-feature` skill with `<filename>.md` as the argument — do not just tell the user to run it manually.
 
 ## Output file structure
 
@@ -72,6 +72,38 @@ On confirmation, ask: **"Save to `groomed/` for later, or start implementing now
 - Phases end at a user-visible or testable milestone. Maintenance and server-only features may use a single flat list.
 - Every answer from the Q&A that affects implementation must be captured somewhere in the spec — no context should be lost between sessions.
 - Leave all task checkboxes unchecked.
+- **Always append a docs-review task** as the final task of the last phase (or flat list). See below.
+
+## Docs-Review Task (always append)
+
+Every generated task list must end with a docs-review task. Infer which living docs are likely affected from the feature spec content, and name them explicitly in the task description:
+
+```
+- [ ] Review and update affected living docs: <comma-separated list of likely affected docs>
+```
+
+**Mapping feature scope → affected docs:**
+
+| Feature touches… | Likely affected docs |
+|---|---|
+| AnyTale (characters, parts, plots, outfits) | `docs/features/anytale.md` |
+| Ambient brew / sound sources | `docs/features/ambient-brew.md` |
+| Main gallery, generation form, inpaint | `docs/features/main-gallery.md` |
+| ComfyUI workflow config, pre/post tasks | `docs/workflow.md` |
+| New or changed API endpoints | `docs/server.md` |
+| New `custom-ui` components | `docs/components.md` |
+| New pages (changes to `hamburger-menu.mjs`) | `docs/scaffolding.md` |
+| Backend architecture, new feature domains | `docs/architecture.md` |
+| Client-side patterns, component strategy | `.claude/rules/client.md` |
+| Server-side patterns, domain structure | `.claude/rules/server.md` |
+
+A feature may affect multiple docs — list all that apply. When in doubt, err toward listing more rather than fewer.
+
+**Feature doc creation:** If the feature touches a named app section (anytale, brew, main/inpaint/workflow-editor) and that section's `docs/features/<section>.md` file does not yet exist, prepend a task before the docs-review task to create it:
+
+```
+- [ ] Create `docs/features/<section>.md` documenting the user flow, component interactions, server endpoints, and key data shapes for the <section> feature area
+```
 
 ## Rules
 

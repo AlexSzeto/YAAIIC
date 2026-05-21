@@ -314,6 +314,34 @@ Popup list overlay for selecting from many options. Useful for file pickers and 
 
 Low-level imperative dialog API (`show()` / `dismiss()`).
 
+### Tooltip (`overlays/tooltip.mjs`)
+
+Cursor-anchored tooltip with a 600ms hover delay. Uses the context/provider pattern.
+
+```javascript
+// Wrap app in provider
+html`<${TooltipProvider}><${App} /><//>`
+
+// Use in any child component
+const tooltip = useTooltip();
+// onMouseEnter=${(e) => tooltip.show('Help text', e.clientX, e.clientY)}
+// onMouseLeave=${() => tooltip.hide()}
+```
+
+### Search Select (`overlays/search-select.mjs`)
+
+Full-screen modal for selecting from large datasets with real-time search filtering. Supports single and multi-select modes. Items can be strings or `{ label, value }` objects.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `isOpen` | boolean | — | Controls visibility |
+| `title` | string | — | Modal title |
+| `items` | array | — | `string[]` or `{ label, value }[]` |
+| `mode` | string | `'single'` | `'single'` or `'multi'` |
+| `initialSelected` | array | `[]` | Pre-selected values (multi mode) |
+| `onSelect` | function | — | `(value) => void` or `(value[]) => void` |
+| `onClose` | function | — | Close handler |
+
 ---
 
 ## Message & Feedback Components
@@ -412,6 +440,19 @@ const StyledDiv = styled('div')`
   padding: ${props => props.theme.spacing.medium.padding};
 `;
 StyledDiv.className = 'styled-div';
+```
+
+**File**: `global-audio-player.mjs`
+
+Singleton audio state manager (`GlobalAudioPlayer`) that wraps a single shared `<audio>` element. Ensures only one audio clip plays at a time across the entire app. Supports region playback (start/end times) and notifies subscribed listeners on play/pause/end events.
+
+```javascript
+import { globalAudioPlayer } from '/js/custom-ui/global-audio-player.mjs';
+
+globalAudioPlayer.play(url, instanceId);
+globalAudioPlayer.stop();
+globalAudioPlayer.subscribe(callback);   // called on any state change
+globalAudioPlayer.unsubscribe(callback);
 ```
 
 ---

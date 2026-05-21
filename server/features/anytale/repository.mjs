@@ -11,6 +11,79 @@
 import fs from 'fs';
 import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
 
+// ---------------------------------------------------------------------------
+// Type Definitions
+// ---------------------------------------------------------------------------
+
+/**
+ * A reusable part definition in the parts library (body part, clothing, accessory, etc.).
+ * @typedef {Object} PartConfig
+ * @property {string} uid - UUID assigned by server
+ * @property {string} name - Display name (e.g. 'head', 'shirt')
+ * @property {string[]} type - Category tags (e.g. ['head'], ['outer upper body'])
+ * @property {string} [baseline=''] - Tags always included in generation prompts when this part is active
+ * @property {string} [previewBaseline=''] - Tags used in part preview image prompts
+ * @property {PartAttribute[]} attributes - User-selectable attributes for this part
+ * @property {boolean} [isRevealing=false] - Marks part as containing revealing content
+ */
+
+/**
+ * A single selectable attribute within a PartConfig.
+ * @typedef {Object} PartAttribute
+ * @property {string} name - Attribute label (e.g. 'hair color')
+ * @property {string} options - Comma-separated list of selectable tag values
+ */
+
+/**
+ * A full plot block stored in the database (and edited in the plot section).
+ * @typedef {Object} PlotBlock
+ * @property {string} uid
+ * @property {string} name - Display name
+ * @property {string} [section=''] - Section/category grouping for organisation
+ * @property {string} [description='']
+ * @property {PlotPage[]} pages - Ordered list of plot pages
+ * @property {string[]} [progressionSections=[]] - Progression section order
+ */
+
+/**
+ * A single page within a PlotBlock.
+ * @typedef {Object} PlotPage
+ * @property {string} [tags=''] - Prompt tags injected during generation for this page
+ * @property {string} [dialogPrompt=''] - Prompt for generating dialog on this page
+ * @property {string[]} [actions=[]] - Available action labels
+ * @property {string[]} [requirements=[]] - Conditions that must be met to reach this page
+ */
+
+/**
+ * A saved character in the characters database.
+ * @typedef {Object} Character
+ * @property {string} uid - UUID assigned by server
+ * @property {string} name
+ * @property {string} [personality=''] - Personality description (used for voice generation)
+ * @property {string} [portraitUrl=''] - Relative URL to generated portrait image
+ * @property {string} [audioUrl=''] - Relative URL to generated voice audio
+ * @property {string} [introTranscript=''] - Transcript of the generated voice intro
+ * @property {CharacterPart[]} [parts=[]] - Parts assigned to this character
+ * @property {string[]} [preferredOutfits=[]] - UIDs of preferred outfits
+ */
+
+/**
+ * A part reference attached to a Character, with the user's chosen attribute values.
+ * @typedef {Object} CharacterPart
+ * @property {string} partUid - UID of the PartConfig this references
+ * @property {boolean} [enabled=true]
+ * @property {{ [attributeName: string]: string }} [attributeValues={}] - Selected value per attribute
+ * @property {string} [previewImageUrl=''] - Cached preview image URL for this combination
+ */
+
+/**
+ * A saved outfit in the outfits database.
+ * @typedef {Object} Outfit
+ * @property {string} uid - UUID assigned by server
+ * @property {string} name
+ * @property {CharacterPart[]} parts - Part overrides for this outfit
+ */
+
 function readData() {
   try {
     const raw = fs.readFileSync(ANYTALE_DATA_PATH, 'utf8');

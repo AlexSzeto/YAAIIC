@@ -12,6 +12,108 @@ import fs from 'fs';
 import { WORKFLOWS_PATH } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
+// Type Definitions
+// ---------------------------------------------------------------------------
+
+/**
+ * @typedef {Object} WorkflowsConfig
+ * @property {WorkflowDefinition[]} workflows
+ * @property {(LLMTask|MathTask)[]} [defaultImageGenerationTasks] - LLM/math tasks that run after every image generation unless a workflow overrides them
+ */
+
+/**
+ * @typedef {Object} WorkflowDefinition
+ * @property {string} name - Unique display name shown in the UI
+ * @property {string} base - Filename of the ComfyUI workflow JSON in server/resource/
+ * @property {WorkflowOptions} options - UI behaviour and input validation
+ * @property {boolean} [hidden=false] - Hide from client workflow lists
+ * @property {(DirectReplacement|ConditionalReplacement)[]} [replace] - Modifications applied to the workflow JSON before submission
+ * @property {(LLMTask|MathTask)[]} [preGenerationTasks] - Tasks to run before ComfyUI execution
+ * @property {(LLMTask|MathTask)[]} [postGenerationTasks] - Tasks to run after ComfyUI execution (overrides defaultImageGenerationTasks)
+ * @property {string} [extractOutputPathFromTextFile] - For video workflows that write an output path to a text file
+ * @property {string[]} [extractOutputTexts] - Property names to read from storage-folder text files (e.g. ['summary'] reads summary.txt → generationData.summary)
+ */
+
+/**
+ * @typedef {Object} WorkflowOptions
+ * @property {'image'|'video'|'audio'|'inpaint'} type - Generation mode
+ * @property {boolean} [autocomplete=false] - Enable Danbooru tag autocompletion for the prompt field
+ * @property {number} [inputImages=0] - Number of input images required
+ * @property {number} [inputAudios=0] - Number of input audio clips required
+ * @property {boolean} [optionalPrompt=false] - Allow an empty prompt
+ * @property {boolean} [nameRequired=false] - Require a name before generation starts
+ * @property {'portrait'|'landscape'|'detect'} [orientation] - Output orientation handling
+ * @property {ExtraInput[]} [extraInputs] - Additional input fields rendered in the generation form
+ */
+
+/**
+ * @typedef {Object} ExtraInput
+ * @property {string} id - Field name in generationData and extraInputs
+ * @property {'text'|'number'|'select'|'checkbox'|'textarea'} type
+ * @property {string} label - Display label
+ * @property {*} [default] - Default value
+ * @property {{ label: string, value: * }[]} [options] - Choices for select inputs
+ */
+
+/**
+ * Direct replacement: maps a generationData field to a ComfyUI workflow node input.
+ * @typedef {Object} DirectReplacement
+ * @property {string} from - Source field in generationData (e.g. 'prompt', 'seed', 'saveImagePath', 'image_0_filename')
+ * @property {[string, string, string]} to - Target path [NodeID, 'inputs', keyName]
+ */
+
+/**
+ * Conditional replacement: sets a workflow node input to a fixed value when a condition is true.
+ * @typedef {Object} ConditionalReplacement
+ * @property {Condition} condition
+ * @property {*} value - Value to set when condition is true
+ * @property {[string, string, string]} to - Target path [NodeID, 'inputs', keyName]
+ */
+
+/**
+ * LLM inference, template expansion, or field copy task. Exactly one of `model`, `template`, or `from` must be set.
+ * @typedef {Object} LLMTask
+ * @property {string} to - Target field in generationData to write the result
+ * @property {string} [model] - Ollama model name for LLM inference (mutually exclusive with template/from)
+ * @property {string} [prompt] - Prompt with {{variableName}} placeholders (used with model)
+ * @property {string} [imagePath] - generationData field containing the image path for vision tasks
+ * @property {string} [template] - Template string with {{variableName}} placeholders (mutually exclusive with model/from)
+ * @property {string} [from] - Source field to copy (mutually exclusive with model/template)
+ * @property {Condition} [condition] - Task is skipped when condition is false
+ */
+
+/**
+ * Chains arithmetic formula steps on a generationData field.
+ * @typedef {Object} MathTask
+ * @property {string} from - Source field in generationData
+ * @property {string} to - Target field in generationData
+ * @property {MathFormulaStep[]} math - Ordered steps; each step receives the output of the previous
+ * @property {Condition} [condition]
+ */
+
+/**
+ * Single arithmetic step: `result = (value + offset) * scale + bias`, then optionally rounded.
+ * @typedef {Object} MathFormulaStep
+ * @property {number} [offset=0]
+ * @property {number} [scale=1]
+ * @property {number} [bias=0]
+ * @property {'none'|'floor'|'ceil'} [round='none']
+ */
+
+/**
+ * @typedef {SimpleCondition|OrCondition|AndCondition} Condition
+ */
+
+/**
+ * @typedef {Object} SimpleCondition
+ * @property {{ data?: string, generationData?: string }} where - Names the field to inspect (undefined/null/whitespace treated as empty string when comparing with '')
+ * @property {{ value: * }} equals - The expected value
+ */
+
+/** @typedef {{ or: Condition[] }} OrCondition - True if any sub-condition is true */
+/** @typedef {{ and: Condition[] }} AndCondition - True only if all sub-conditions are true */
+
+// ---------------------------------------------------------------------------
 // Workflow Loading
 // ---------------------------------------------------------------------------
 
