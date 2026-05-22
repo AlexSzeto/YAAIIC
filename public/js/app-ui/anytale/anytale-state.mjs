@@ -123,6 +123,7 @@ export function createBlankPlot() {
     description: '',
     pages: [{ tags: '', dialogPrompt: '', actions: [], requirements: [] }],
     progressionSections: [],
+    slotRequirements: {},
   };
 }
 
@@ -154,6 +155,7 @@ export function loadPlot() {
       description: parsed.description ?? '',
       pages,
       progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
+      slotRequirements: (parsed.slotRequirements && typeof parsed.slotRequirements === 'object' && !Array.isArray(parsed.slotRequirements)) ? parsed.slotRequirements : {},
     };
   } catch {
     return createBlankPlot();

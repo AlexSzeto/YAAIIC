@@ -106,7 +106,10 @@ export function LibraryPartPicker({
       <${SearchSelectModal}
         isOpen=${modalOpen}
         title=${modalTitle}
-        items=${libraryParts.map(part => ({ label: part.name || part.uid, value: part.uid }))}
+        items=${libraryParts.map(part => {
+          const types = Array.isArray(part.type) && part.type.length > 0 ? ` (${part.type.join(', ')})` : '';
+          return { label: (part.name || part.uid) + types, value: part.uid };
+        })}
         mode="single"
         onSelect=${handleModalSelect}
         onClose=${() => setModalOpen(false)}

@@ -871,7 +871,18 @@ export function CharacterSection({
           <${SearchSelectModal}
             isOpen=${loadCharModalOpen}
             title="Load Character"
-            items=${characterList.map(c => ({ label: c.name || c.uid, value: c.uid }))}
+            items=${characterList.map(c => {
+              const personality = c.personality?.trim();
+              let suffix = '';
+              if (personality) {
+                const truncated = personality.length <= 60 ? personality
+                  : (personality.lastIndexOf(' ', 60) > 0
+                    ? personality.slice(0, personality.lastIndexOf(' ', 60))
+                    : personality.slice(0, 60)) + '…';
+                suffix = ` (${truncated})`;
+              }
+              return { label: (c.name || c.uid) + suffix, value: c.uid };
+            })}
             mode="single"
             onSelect=${handleCharacterSelect}
             onClose=${() => setLoadCharModalOpen(false)}
@@ -880,7 +891,10 @@ export function CharacterSection({
           <${SearchSelectModal}
             isOpen=${loadPartModalOpen}
             title="Load Part"
-            items=${libraryParts.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+            items=${libraryParts.map(p => {
+              const types = Array.isArray(p.type) && p.type.length > 0 ? ` (${p.type.join(', ')})` : '';
+              return { label: (p.name || p.uid) + types, value: p.uid };
+            })}
             mode="single"
             onSelect=${handlePartLoadSelect}
             onClose=${() => setLoadPartModalOpen(false)}

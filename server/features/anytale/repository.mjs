@@ -43,6 +43,14 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} [description='']
  * @property {PlotPage[]} pages - Ordered list of plot pages
  * @property {string[]} [progressionSections=[]] - Progression section order
+ * @property {Record<string, 'covering'|'revealing'|'removed'>} [slotRequirements={}] - Entry requirements for the entire plot; maps slot type string to required status for play mode bootstrap
+ */
+
+/**
+ * A slot transition action applied when a plot page is reached.
+ * @typedef {Object} PlotPageAction
+ * @property {string} slot - Slot type string (e.g. 'outer upper body') to transition
+ * @property {'covering'|'revealing'|'removed'} status - Target slot status after this page loads
  */
 
 /**
@@ -50,8 +58,8 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @typedef {Object} PlotPage
  * @property {string} [tags=''] - Prompt tags injected during generation for this page
  * @property {string} [dialogPrompt=''] - Prompt for generating dialog on this page
- * @property {string[]} [actions=[]] - Available action labels
- * @property {string[]} [requirements=[]] - Conditions that must be met to reach this page
+ * @property {PlotPageAction[]} [actions=[]] - Slot transitions applied when this page is reached; replayed in order by resolveSlotStatuses
+ * @property {string[]} [requirements=[]] - Gate conditions: each entry is either a slot type string or a part name; all must be satisfied for this page to be reachable
  */
 
 /**

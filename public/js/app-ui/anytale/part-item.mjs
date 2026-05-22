@@ -22,7 +22,8 @@ import { createDefaultAttribute } from './anytale-state.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { ImagePreview } from './image-preview.mjs';
-import { getCategoryTree, getAllTagNames, tagExist, getTagDefinition } from '../tags/tag-data.mjs';
+import { getCategoryTree, tagDefinitionExists, getTagDefinition } from '../tags/tag-data.mjs';
+import { getTags, tagExists } from '../tags/tags.mjs';
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
@@ -223,7 +224,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     const kw = keyword.trim().toLowerCase();
     const validTags = categorizedOptions
       .map(option => `${option} ${kw}`)
-      .filter(tag => tagExist(tag));
+      .filter(tag => tagExists(tag));
     if (validTags.length === 0) {
       toast.info(`No ${promptTitle.toLowerCase()} variations found for "${kw}"`);
       return;
@@ -242,6 +243,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const handlePatternAction = useCallback(async (attr, attrIndex) => {
     generateCategorizedOptions(attrIndex, 'Pattern Keyword', 'e.g. shirt', COMMON_PATTERNS, 'pattern');
   }, [config.attributes, config.name, handleAttrsChange, toast]);
+
 
   const BANNED_VARIATION_KEYWORDS = ['holding', 'holding unworn', 'mismatched', 'no', 'removing', 'adjusting', 'torn', 'see-through', 'layered', 'impossible', 'gradient', 'two-tone', 'multicolored', 'unworn', 'wet']
 
@@ -264,7 +266,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       coveredTags.add(`${banned} ${kw}`);
     }
 
-    const validTags = getAllTagNames().filter(tag => {
+    const validTags = getTags().filter(tag => {
       const normalised = tag.replace(/_/g, ' ');
       return (normalised.endsWith(`-${kw}`) || normalised.endsWith(` ${kw}`)) && !coveredTags.has(normalised);
     }).map(tag => tag.replace(/_/g, ' '));

@@ -19,14 +19,13 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
-import { Select } from '../../custom-ui/io/select.mjs';
-import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
-import { H2, H3, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
-import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { Select } from '../../custom-ui/io/select.mjs';
+import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
-import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
+import { resolveSlotStatuses } from './slot-resolver.mjs';
+import { PlotPagePills } from './plot-page-pills.mjs';
 
 // ============================================================================
 // Styled Components
@@ -56,38 +55,37 @@ const NavRow = styled('div')`
 `;
 NavRow.className = 'plot-nav-row';
 
-const ActionChipRow = styled('div')`
+const PlotReqPillRow = styled('div')`
   display: flex;
   flex-wrap: wrap;
   gap: ${() => currentTheme.value.spacing.small.gap};
   align-items: center;
 `;
-ActionChipRow.className = 'plot-action-chip-row';
+PlotReqPillRow.className = 'plot-req-pill-row';
 
-const SlotPillRow = styled('div')`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${() => currentTheme.value.spacing.small.gap};
-  align-items: center;
-`;
-SlotPillRow.className = 'slot-pill-row';
-
-const SlotPill = styled('div')`
+const PlotReqPill = styled('button')`
   display: inline-flex;
   align-items: center;
   padding: 2px 10px;
   border-radius: 9999px;
+  border: 1px solid ${() => currentTheme.value.colors.border.primary};
   font-size: ${() => currentTheme.value.typography.fontSize.small};
   white-space: nowrap;
+  cursor: pointer;
+  color: ${() => currentTheme.value.colors.text.primary};
+  &:hover {
+    filter: brightness(0.92);
+  }
 `;
-SlotPill.className = 'slot-pill';
+PlotReqPill.className = 'plot-req-pill';
 
-const RequirementsHeader = styled('div')`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-RequirementsHeader.className = 'requirements-header';
+const SLOT_REQ_STATUSES = ['covering', 'revealing', 'removed'];
+
+const SLOT_REQ_BG = {
+  covering: () => currentTheme.value.colors.primary.backgroundLight,
+  revealing: () => currentTheme.value.colors.warning.backgroundLight,
+  removed:   () => currentTheme.value.colors.danger.backgroundLight,
+};
 
 // ============================================================================
 // Component
@@ -329,9 +327,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageChange && onPageChange(Math.min(currentPageIndex, plot.pages.length - 2));
   }, [plot.pages.length, currentPageIndex, pageCount, onPageChange, toast, pageLocked, onPageLockedChange]);
 
-  // ── Part modifier helpers are handled inline by DynamicList ─────────────
-
-  // Build sorted slot options from all library part types, excluding character slot types
+  // ── Slot options for the add-slot-requirement control ────────────────────
   const slotOptions = useMemo(() => {
     const seen = new Set();
     const out = [];
@@ -348,69 +344,23 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return out.sort((a, b) => a.localeCompare(b));
   }, [libraryParts, characterSlotTypes]);
 
-  const STATUS_OPTIONS = ['covering', 'revealing', 'removed'];
-
-  const [selectedSlot, setSelectedSlot] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('covering');
-  const [slotTrackerExpanded, setSlotTrackerExpanded] = useState(false);
+  const [addReqSlot, setAddReqSlot] = useState('');
+  const [addReqStatus, setAddReqStatus] = useState('covering');
 
   // ── Pre-page slot statuses (before current page's actions) ────────────────
-  const priorSlotStatuses = useMemo(() => {
-    const enabledParts = parts.filter(p => p.data?.enabled !== false);
-    return resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1);
-  }, [parts, plot.pages, currentPageIndex]);
-
-  // ── Slot tracker: sorted [name, status] pairs, excluding character slot types
-  const trackerSlots = useMemo(() => {
-    const entries = [...priorSlotStatuses.entries()].filter(([slot]) => !characterSlotTypes.includes(slot));
-    return entries.sort((a, b) => a[0].localeCompare(b[0]));
-  }, [priorSlotStatuses, characterSlotTypes]);
-
-  // ── Whether current page's requirements are all satisfied ─────────────────
   const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
-  const requirementsMet = useMemo(
-    () => checkPageRequirements(currentPage, priorSlotStatuses, enabledParts),
-    [currentPage, priorSlotStatuses, enabledParts]
-  );
+  const priorSlotStatuses = useMemo(() => {
+    return resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1);
+  }, [enabledParts, plot.pages, currentPageIndex]);
 
-  // ── Requirement suggestions: all part names + slot types ──────────────────
-  const requirementsSuggestions = useMemo(() => {
-    const seen = new Set();
-    const out = [];
-    for (const p of libraryParts) {
-      const name = (p.config?.name || '').trim();
-      if (name && !seen.has(name.toLowerCase())) {
-        seen.add(name.toLowerCase());
-        out.push(name);
-      }
+  // ── Slot statuses visible in the pill list: exclude character slot types ───
+  const filteredSlotStatuses = useMemo(() => {
+    const filtered = new Map();
+    for (const [slot, status] of priorSlotStatuses.entries()) {
+      if (!characterSlotTypes.includes(slot)) filtered.set(slot, status);
     }
-    for (const slot of slotOptions) {
-      if (!seen.has(slot.toLowerCase())) {
-        seen.add(slot.toLowerCase());
-        out.push(slot);
-      }
-    }
-    return out;
-  }, [libraryParts, slotOptions]);
-
-  const STATUS_PILL_COLOR = {
-    covering: () => currentTheme.value.colors.secondary.backgroundLight,
-    revealing: () => currentTheme.value.colors.warning.backgroundLight,
-    removed: () => currentTheme.value.colors.danger.backgroundLight,
-  };
-
-  const progressionSectionsSuggestions = useMemo(() => {
-    const seen = new Set();
-    const out = [];
-    for (const p of plotList) {
-      const s = (p.section || '').trim();
-      if (s && !seen.has(s.toLowerCase())) {
-        seen.add(s.toLowerCase());
-        out.push(s);
-      }
-    }
-    return out;
-  }, [plotList]);
+    return filtered;
+  }, [priorSlotStatuses, characterSlotTypes]);
 
   // ── Import handler: load a plot from a media entry's stored plot data ──
   const importLoadPlot = useCallback(async ({ uid, name, page }) => {
@@ -477,6 +427,29 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageLockedChange(next);
   }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);  
 
+  // ── Plot-level slot requirements handlers ────────────────────────────────
+  const cycleSlotRequirement = useCallback((slot) => {
+    const current = (plot.slotRequirements || {})[slot];
+    const idx = SLOT_REQ_STATUSES.indexOf(current);
+    const next = SLOT_REQ_STATUSES[idx + 1]; // undefined when at end → remove
+    const updated = { ...(plot.slotRequirements || {}) };
+    if (next === undefined) {
+      delete updated[slot];
+    } else {
+      updated[slot] = next;
+    }
+    setPlot(prev => ({ ...prev, slotRequirements: updated }));
+  }, [plot.slotRequirements]);
+
+  const addSlotRequirement = useCallback(() => {
+    const slot = addReqSlot || slotOptions[0] || '';
+    if (!slot) return;
+    setPlot(prev => ({
+      ...prev,
+      slotRequirements: { ...(prev.slotRequirements || {}), [slot]: addReqStatus }
+    }));
+  }, [addReqSlot, addReqStatus, slotOptions]);
+
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
   const saveLabel = isInLibrary ? 'Update' : 'Save';
@@ -532,98 +505,52 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       <${VerticalLayout} gap="medium">
         <${H2}>Page</${H2}>
 
-        <!-- Slot tracker panel -->
-        <${Panel} variant="outlined" padding="small">
-          <div style=${{ overflow: 'hidden', maxHeight: slotTrackerExpanded ? 'none' : '36px', transition: 'max-height 0.2s ease' }}>
-            <${Button}
-              variant="small-icon"
-              icon=${slotTrackerExpanded ? 'collapse-right' : 'expand-right'}
-              style=${{ float: 'right' }}
-              onClick=${() => setSlotTrackerExpanded(v => !v)}
-            />
-            <${SlotPillRow}>
-              ${trackerSlots.map(([slot, status]) => html`
-                <${SlotPill}
-                  key=${slot}
-                  style=${{ backgroundColor: (STATUS_PILL_COLOR[status] || STATUS_PILL_COLOR.covering)() }}
-                >
-                  ${slot}
-                </${SlotPill}>
-              `)}
-            </${SlotPillRow}>
-          </div>
-        </${Panel}>
-
-        <!-- Page Requirements -->
+        <!-- Plot-level slot requirements -->
         <${VerticalLayout} gap="small">
-          <${RequirementsHeader}>
-            <${H3}>Page Requirements</${H3}>
-            <${SlotPill} style=${{ backgroundColor: requirementsMet
-              ? currentTheme.value.colors.secondary.backgroundLight
-              : currentTheme.value.colors.danger.backgroundLight
-            }}>
-              ${requirementsMet ? 'pass' : 'fail'}
-            </${SlotPill}>
-          </${RequirementsHeader}>
-          <${ChipAutocompleteInput}
-            placeholder="Add a part name or slot type..."
-            suggestions=${requirementsSuggestions}
-            values=${currentPage.requirements || []}
-            onValuesChange=${(newValues) => updatePage(currentPageIndex, { ...currentPage, requirements: newValues })}
-            disabled=${isCurrentPageLocked}
-          />
-        </${VerticalLayout}>
-
-        <!-- Actions -->
-        <${VerticalLayout} gap="small">
-          <${H3}>Actions</${H3}>
-          <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
-            <${Select}
-              label="Status"
-              heightScale="compact"
-              disabled=${isCurrentPageLocked}
-              value=${selectedStatus}
-              options=${STATUS_OPTIONS.map(s => ({ label: s, value: s }))}
-              onChange=${(e) => setSelectedStatus(e.target.value)}
-            />
-            <${Select}
-              label="Slot"
-              widthScale="full"
-              heightScale="compact"
-              disabled=${isCurrentPageLocked || slotOptions.length === 0}
-              value=${selectedSlot || slotOptions[0] || ''}
-              options=${slotOptions.map(s => ({ label: s, value: s }))}
-              onChange=${(e) => setSelectedSlot(e.target.value)}
-            />
-            <${Button}
-              variant="medium-icon"
-              icon="plus"
-              title="Add action"
-              disabled=${isCurrentPageLocked || slotOptions.length === 0}
-              onClick=${() => {
-                const slot = selectedSlot || slotOptions[0] || '';
-                if (!slot) return;
-                const actions = [...(currentPage.actions || []), { slot, status: selectedStatus }];
-                updatePage(currentPageIndex, { ...currentPage, actions });
-              }}
-            />
-          </${HorizontalLayout}>
-          <${ActionChipRow}>
-            ${(currentPage.actions || []).map((action, i) => html`
-              <${Button}
-                key=${i}
-                variant="chip"
-                color="primary"
-                icon="x"
-                disabled=${isCurrentPageLocked}
-                onClick=${() => {
-                  const actions = (currentPage.actions || []).filter((_, j) => j !== i);
-                  updatePage(currentPageIndex, { ...currentPage, actions });
-                }}
-              >${action.slot} → ${action.status}</${Button}>
+          <${PlotReqPillRow}>
+            ${Object.entries(plot.slotRequirements || {}).map(([slot, status]) => html`
+              <${PlotReqPill}
+                key=${slot}
+                style=${{ backgroundColor: (SLOT_REQ_BG[status] || SLOT_REQ_BG.covering)() }}
+                onClick=${() => cycleSlotRequirement(slot)}
+                title="Click to cycle status; cycles off to remove"
+              >
+                ${slot}: ${status}
+              </${PlotReqPill}>
             `)}
-          </${ActionChipRow}>
+            ${slotOptions.length > 0 && html`
+              <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
+                <${Select}
+                  heightScale="compact"
+                  value=${addReqSlot || slotOptions[0] || ''}
+                  options=${slotOptions.map(s => ({ label: s, value: s }))}
+                  onChange=${(e) => setAddReqSlot(e.target.value)}
+                />
+                <${Select}
+                  heightScale="compact"
+                  value=${addReqStatus}
+                  options=${SLOT_REQ_STATUSES.map(s => ({ label: s, value: s }))}
+                  onChange=${(e) => setAddReqStatus(e.target.value)}
+                />
+                <${Button}
+                  variant="medium-icon"
+                  icon="plus"
+                  title="Add slot requirement"
+                  onClick=${addSlotRequirement}
+                />
+              </${HorizontalLayout}>
+            `}
+          </${PlotReqPillRow}>
         </${VerticalLayout}>
+
+        <!-- Unified slot/part pill list -->
+        <${PlotPagePills}
+          slotStatuses=${filteredSlotStatuses}
+          activeParts=${enabledParts}
+          page=${currentPage}
+          onChange=${(updatedPage) => updatePage(currentPageIndex, updatedPage)}
+          disabled=${isCurrentPageLocked}
+        />
 
         <!-- Action Description -->
         <${Input}
@@ -686,22 +613,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         </${HorizontalEdgesLayout}>
       </${VerticalLayout}>
 
-      <!-- TODO (AnyTale play mode): Revisit whether progressionSections is the right
-           data model before surfacing this UI. The field may need to be redesigned once
-           the play mode flow (how plots are sequenced and navigated by the player) is
-           specced out. Uncomment when that work begins.
-      <${VerticalLayout} gap="medium">
-        <${H2}>Progression</${H2}>
-        <${ChipAutocompleteInput}
-          label="Progression Sections"
-          placeholder="Add a section name..."
-          suggestions=${progressionSectionsSuggestions}
-          values=${plot.progressionSections || []}
-          onValuesChange=${(newValues) => setPlot(prev => ({ ...prev, progressionSections: newValues }))}
-        />
-      </${VerticalLayout}>
-      -->
-
       <${ButtonRow}>
         <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
           ${saveLabel}
@@ -720,7 +631,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       <${SearchSelectModal}
         isOpen=${loadModalOpen}
         title="Load Plot"
-        items=${plotList.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+        items=${plotList.map(p => {
+          const suffix = p.section?.trim() ? ` (${p.section.trim()})` : '';
+          return { label: (p.name || p.uid) + suffix, value: p.uid };
+        })}
         mode="single"
         onSelect=${handleLoadPlot}
         onClose=${() => setLoadModalOpen(false)}

@@ -999,7 +999,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       <${SearchSelectModal}
         isOpen=${loadPartModalOpen}
         title="Load Part"
-        items=${libraryParts.map(p => ({ label: p.name || p.uid, value: p.uid }))}
+        items=${libraryParts.map(p => {
+          const types = Array.isArray(p.type) && p.type.length > 0 ? ` (${p.type.join(', ')})` : '';
+          return { label: (p.name || p.uid) + types, value: p.uid };
+        })}
         mode="single"
         onSelect=${handlePartLoadSelect}
         onClose=${() => setLoadPartModalOpen(false)}
@@ -1086,7 +1089,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             <${SearchSelectModal}
               isOpen=${previewPlotModalOpen}
               title="Preview Plot"
-              items=${charTabPlotList.map(plot => ({ label: plot.name || plot.uid, value: plot.uid }))}
+              items=${charTabPlotList.map(plot => {
+                const suffix = plot.section?.trim() ? ` (${plot.section.trim()})` : '';
+                return { label: (plot.name || plot.uid) + suffix, value: plot.uid };
+              })}
               mode="single"
               onSelect=${handleCharTabPlotSelect}
               onClose=${() => setPreviewPlotModalOpen(false)}

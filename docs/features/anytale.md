@@ -89,6 +89,19 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 
 See `@typedef` declarations in `server/features/anytale/repository.mjs` for authoritative types: `PartConfig`, `PartAttribute`, `PlotBlock`, `PlotPage`, `Character`, `CharacterPart`, `Outfit`.
 
+### PlotPage shape
+
+```js
+{
+  tags: string,              // prompt tags injected during generation for this page
+  dialogPrompt: string,      // prompt for generating dialog on this page
+  requirements: string[],    // gate conditions: slot type strings or part names; all must be met for the page to be reachable
+  actions: [                 // slot transitions applied when this page is reached (replayed by resolveSlotStatuses)
+    { slot: string, status: 'covering' | 'revealing' | 'removed' }
+  ],
+}
+```
+
 ### Outfit shape
 
 ```js

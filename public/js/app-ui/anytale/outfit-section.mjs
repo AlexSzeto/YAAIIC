@@ -690,7 +690,13 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
           <${SearchSelectModal}
             isOpen=${loadOutfitModalOpen}
             title="Load Outfit"
-            items=${outfitList.map(o => ({ label: o.name || o.uid, value: o.uid }))}
+            items=${outfitList.map(o => {
+              const locs = (o.preferredLocations || [])
+                .map(uid => libraryParts.find(p => p.uid === uid)?.name)
+                .filter(Boolean);
+              const suffix = locs.length > 0 ? ` (${locs.join(', ')})` : '';
+              return { label: (o.name || o.uid) + suffix, value: o.uid };
+            })}
             mode="single"
             onSelect=${handleOutfitSelect}
             onClose=${() => setLoadOutfitModalOpen(false)}

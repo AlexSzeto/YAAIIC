@@ -57,6 +57,7 @@ app.locals.config = {
   anytale: {
     portraitWorkflow: 'Text to Image (Illustrious Portrait)',
     portraitBasePrompt: '1girl, solo',
+    outfitBasePrompt: '1girl, solo',
     portraitParts: ['head'],
     partPreviewWorkflow: 'Text to Image (Illustrious Part Preview)',
   },

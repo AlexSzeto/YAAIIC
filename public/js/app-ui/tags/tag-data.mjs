@@ -138,9 +138,9 @@ export function getAllTagNames() {
 }
 
 /**
- * Check if a tag exists in definition. Case-insensitive and treats spaces/underscores as equivalent.
+ * Check if a tag exists in definitions. Case-insensitive and treats spaces/underscores as equivalent.
  */
-export function tagExist(tagName) {
+export function tagDefinitionExists(tagName) {
   if (!tagName) return false;
   const normalized = tagName.trim().toLowerCase().replace(/\s+/g, '_');
   return Object.keys(definitions).some(def => def.toLowerCase() === normalized);
