@@ -486,7 +486,7 @@ The generation process uses an asynchronous workflow with Server-Sent Events (SS
 
 2.  **Subscribe to Updates**:
     - Client opens an EventSource connection to `/progress/:taskId`.
-    - Server buffers messages if the client hasn't connected yet.
+    - Server buffers all messages until the task is cleaned up (5 minutes after completion). Every connecting client receives a full replay of the buffer, so late-connecting tabs (e.g. after a page refresh) receive the complete event history and will not miss a completion event.
 
 3.  **Process Stages (Server-Side)**:
     - **VRAM Management**: If the requested workflow differs from the last used workflow, the server calls ComfyUI's `/free` endpoint to unload models and maximize VRAM. Similarly, if a different Ollama model is needed, the previous model is unloaded.

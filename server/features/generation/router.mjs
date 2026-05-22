@@ -187,6 +187,7 @@ router.post('/generate', upload.any(), async (req, res) => {
     const queueItem = queueService.enqueue({
       type,
       source,
+      clientId: req.body.clientId || null,
       name: req.body.name || '',
       subLabel: null,
       endpointKey: 'generate',
@@ -294,6 +295,7 @@ router.post('/regenerate', async (req, res) => {
     const queueItem = queueService.enqueue({
       type,
       source: 'yaaiic',
+      clientId: req.body.clientId || null,
       name: imageEntry.name || String(uid),
       subLabel: null,
       endpointKey: 'regenerate',
@@ -542,6 +544,7 @@ router.post('/generate/inpaint', upload.fields([
       const queueItem = queueService.enqueue({
         type: 'image',
         source: 'yaaiic-inpaint',
+        clientId: req.body.clientId || null,
         name: req.body.name || '',
         subLabel: null,
         endpointKey: 'generate-inpaint',

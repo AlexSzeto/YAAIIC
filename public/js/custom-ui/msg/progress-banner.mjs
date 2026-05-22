@@ -194,9 +194,15 @@ export function ProgressBanner({
   onCancelledRef.current = onCancelled;
   onDismissRef.current = onDismiss;
 
+  // Tracks whether any progress event arrived for this subscription; used by the
+  // fast-complete bypass to skip the banner entirely for already-done tasks.
+  const hadProgressRef = useRef(false);
+
   // Effect for SSE subscription — only re-runs when taskId or sseManager changes.
   useEffect(() => {
     if (!sseManager || !taskId) return;
+
+    hadProgressRef.current = false;
 
     const originalTitle = document.title;
     const pageTitleManager = new PageTitleManager(originalTitle);
@@ -204,6 +210,7 @@ export function ProgressBanner({
 
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
+      hadProgressRef.current = true;
 
       const message = data.progress.currentStep || 'Processing...';
 
@@ -230,6 +237,15 @@ export function ProgressBanner({
     const handleComplete = (data) => {
       console.log(`[ProgressBanner] handleComplete fired for taskId=${taskId}`);
       pageTitleManager.reset();
+
+      if (!hadProgressRef.current) {
+        // Task was already done when banner mounted (replay delivered only the terminal).
+        // Skip the banner display entirely and fire callbacks immediately.
+        if (onCompleteRef.current) onCompleteRef.current(data);
+        if (onDismissRef.current) onDismissRef.current();
+        return;
+      }
+
       setState(prev => ({
         ...prev,
         status: 'completed',

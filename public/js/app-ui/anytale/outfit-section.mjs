@@ -27,6 +27,7 @@ import { H2, H3, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/t
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
+import { getClientId } from '../client-id.mjs';
 import { fetchOutfitList, createOutfit, saveOutfit, deleteOutfit, renderOutfit } from './outfit-api.mjs';
 import { ImagePreview } from './image-preview.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
@@ -152,7 +153,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'outfit', partUid }),
+        body: JSON.stringify({ prompt, partContext: 'outfit', partUid, clientId: getClientId() }),
       });
     } catch (err) {
       console.error('[OutfitSection] requestPartPreviewCache error:', err);
@@ -308,8 +309,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // Persistent subscription: pick up Part Preview task-started events initiated by this section
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData, clientId }) => {
         if (source !== 'anytale' || subLabel !== 'Part Preview') return;
+        if (clientId !== getClientId()) return;
         if (taskData?.partContext !== 'outfit') return;
         const prompt = taskData.prompt;
         const currentParts = outfitRef.current.parts || [];
@@ -354,8 +356,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // Persistent subscription: pick up Outfit Render task-started events
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel }) => {
+      'queue:task-started': ({ taskId, source, subLabel, clientId }) => {
         if (source !== 'anytale' || subLabel !== 'Outfit Render') return;
+        if (clientId !== getClientId()) return;
         setRenderTaskId(taskId);
         progressShow(taskId, {
           entityType: 'anytale-render-outfit',
@@ -426,7 +429,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'outfit' }),
+        body: JSON.stringify({ prompt, partContext: 'outfit', clientId: getClientId() }),
       });
 
       if (!response.ok) {

@@ -6,7 +6,7 @@
  */
 class SSEManager {
   constructor() {
-    // Map of taskId -> { eventSource, callbacks }
+    // Map of taskId -> { eventSource, callbacks, timeoutTimer, timeoutMs, pendingEvents, flushTimer }
     this.activeConnections = new Map();
     // Cached result from the last fetchActiveTasks() call
     this._activeTasksCache = null;
@@ -50,7 +50,9 @@ class SSEManager {
         onCancelled: callbacks.onCancelled || (() => {})
       },
       timeoutTimer: null,
-      timeoutMs
+      timeoutMs,
+      pendingEvents: [],
+      flushTimer: null,
     });
 
     eventSource.addEventListener('open', () => {
@@ -114,11 +116,8 @@ class SSEManager {
   }
 
   /**
-   * Handle incoming SSE messages and route to appropriate callbacks
+   * Receive an incoming SSE message, manage the timeout, and queue for coalesced dispatch.
    * @private
-   * @param {string} taskId - Task identifier
-   * @param {MessageEvent} event - SSE message event
-   * @param {string} type - Message type (progress, complete, error)
    */
   _handleMessage(taskId, event, type) {
     const connection = this.activeConnections.get(taskId);
@@ -127,21 +126,83 @@ class SSEManager {
       return;
     }
 
-    // Clear and restart timeout on each message
+    // Clear and restart timeout on each message arrival
     this._clearTimeout(taskId);
     if (type !== 'complete' && type !== 'error' && type !== 'cancelled') {
       this._startTimeout(taskId);
     }
 
+    this._queueEvent(taskId, event, type);
+  }
+
+  /**
+   * Push an event onto the pending queue and schedule a flush.
+   * @private
+   */
+  _queueEvent(taskId, event, type) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection) return;
+    connection.pendingEvents.push({ type, event });
+    this._scheduleFlush(taskId);
+  }
+
+  /**
+   * Schedule a flush for the next macro-task, if one isn't already pending.
+   * @private
+   */
+  _scheduleFlush(taskId) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection || connection.flushTimer !== null) return;
+    connection.flushTimer = setTimeout(() => this._flushEvents(taskId), 0);
+  }
+
+  /**
+   * Apply the terminal-pruning rule to pendingEvents and dispatch the survivors.
+   *
+   * Pruning rule:
+   *   - If a terminal (complete/error/cancelled) is present: discard all progress events,
+   *     dispatch only the terminal.
+   *   - If no terminal: discard all progress events except the last, dispatch that one.
+   * @private
+   */
+  _flushEvents(taskId) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection) return;
+
+    connection.flushTimer = null;
+    const events = connection.pendingEvents.splice(0);
+
+    const TERMINALS = new Set(['complete', 'error', 'cancelled']);
+    const lastTerminalIdx = events.reduce((acc, e, i) => (TERMINALS.has(e.type) ? i : acc), -1);
+
+    if (lastTerminalIdx !== -1) {
+      // Terminal found: skip all progress, dispatch the terminal only
+      const { event, type } = events[lastTerminalIdx];
+      this._dispatch(taskId, event, type);
+    } else {
+      // No terminal: dispatch last progress only
+      const lastProgress = [...events].reverse().find(e => e.type === 'progress');
+      if (lastProgress) {
+        this._dispatch(taskId, lastProgress.event, lastProgress.type);
+      }
+    }
+  }
+
+  /**
+   * Route a single event to its callback and clean up on terminal types.
+   * @private
+   */
+  _dispatch(taskId, event, type) {
+    const connection = this.activeConnections.get(taskId);
+    if (!connection) return;
+
     try {
-      // Parse the JSON data from the event
       const data = JSON.parse(event.data);
 
       if (type === 'complete') {
-        console.log(`[SSE] _handleMessage: routing 'complete' to onComplete callback for ${taskId}`);
+        console.log(`[SSE] _dispatch: routing 'complete' to onComplete callback for ${taskId}`);
       }
 
-      // Route to appropriate callback based on message type
       switch (type) {
         case 'progress':
           connection.callbacks.onProgress(data);
@@ -149,27 +210,24 @@ class SSEManager {
 
         case 'complete':
           connection.callbacks.onComplete(data);
-          // Auto-cleanup after completion
           this.unsubscribe(taskId, 'complete-event');
           break;
 
         case 'error':
           connection.callbacks.onError(data);
-          // Auto-cleanup after error
           this.unsubscribe(taskId, 'error-event');
           break;
 
         case 'cancelled':
           connection.callbacks.onCancelled(data);
-          // Auto-cleanup after cancellation
           this.unsubscribe(taskId, 'cancelled-event');
           break;
 
         default:
-          console.warn(`[SSE] _handleMessage: unknown type '${type}' for ${taskId}`);
+          console.warn(`[SSE] _dispatch: unknown type '${type}' for ${taskId}`);
       }
     } catch (error) {
-      console.error(`[SSE] _handleMessage: JSON parse error for ${taskId}:`, error);
+      console.error(`[SSE] _dispatch: JSON parse error for ${taskId}:`, error);
       connection.callbacks.onError({
         taskId,
         status: 'error',
@@ -268,6 +326,10 @@ class SSEManager {
   _cleanup(taskId) {
     console.log(`[SSE] _cleanup: removing ${taskId} from map`);
     this._clearTimeout(taskId);
+    const connection = this.activeConnections.get(taskId);
+    if (connection && connection.flushTimer !== null) {
+      clearTimeout(connection.flushTimer);
+    }
     this.activeConnections.delete(taskId);
   }
 

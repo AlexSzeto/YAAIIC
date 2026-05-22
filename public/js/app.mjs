@@ -35,6 +35,7 @@ import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { backfillMissingProperties } from './util.mjs';
 import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
 import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
+import { getClientId } from './app-ui/client-id.mjs';
 
 // =========================================================================
 // Styled Components
@@ -493,6 +494,7 @@ function App() {
           }
         }
         
+        formData.append('clientId', getClientId());
         response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           body: formData
@@ -522,7 +524,7 @@ function App() {
         response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({ ...requestBody, clientId: getClientId() })
         });
       }
       
@@ -840,7 +842,7 @@ function App() {
       const response = await fetchJson('/regenerate?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, fields: [field] })
+        body: JSON.stringify({ uid, fields: [field], clientId: getClientId() })
       });
 
     } catch (err) {
@@ -885,8 +887,9 @@ function App() {
   // Persistent subscription: bridge queue task-started events to progress tracking
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, endpointKey }) => {
+      'queue:task-started': ({ taskId, source, endpointKey, clientId }) => {
         if (source !== 'yaaiic') return;
+        if (clientId !== getClientId()) return;
         if (endpointKey === 'regenerate') {
           setRegenerateTaskId(taskId);
           progressShow(taskId, {

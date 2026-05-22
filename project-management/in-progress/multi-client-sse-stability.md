@@ -7,30 +7,33 @@ Two browser tabs open to the same section of the site should coexist without bre
 ## Tasks
 
 ### Phase 1 — Server: reliable replay + clientId threading
-- [ ] Remove the buffer-clear in `handleSSEConnection` so the message buffer is replayed to every connecting client and is only discarded at task cleanup (`scheduleTaskCleanup`)
-- [ ] Accept an optional `clientId` field in queue submission request bodies and store it on the queue item record in `enqueue()`
-- [ ] Include `clientId` in the `queue:task-started` SSE event payload so clients can determine ownership
+- [x] Remove the buffer-clear in `handleSSEConnection` so the message buffer is replayed to every connecting client and is only discarded at task cleanup (`scheduleTaskCleanup`)
+- [x] Accept an optional `clientId` field in queue submission request bodies and store it on the queue item record in `enqueue()`
+- [x] Include `clientId` in the `queue:task-started` SSE event payload so clients can determine ownership
 
 ### Phase 2 — Client: persistent tab identity
-- [ ] Create `public/js/app-ui/client-id.mjs` exporting `getClientId()`, which reads from `sessionStorage` and generates + stores a `crypto.randomUUID()` on first call
-- [ ] Pass `clientId` (from `getClientId()`) in the request body of every queue submission fetch across all callers
+- [x] Create `public/js/app-ui/client-id.mjs` exporting `getClientId()`, which reads from `sessionStorage` and generates + stores a `crypto.randomUUID()` on first call
+- [x] Pass `clientId` (from `getClientId()`) in the request body of every queue submission fetch across all callers
 
 ### Phase 3 — Client: SSEManager event coalescing
-- [ ] Add `pendingEvents` (array) and `flushTimer` (timer handle) to each `activeConnections` entry
-- [ ] Replace the immediate-dispatch path in `_handleMessage` with a `_queueEvent` → `_scheduleFlush` pipeline; implement `_flushEvents` with the terminal-pruning rule and `_dispatch` containing the existing switch logic
-- [ ] Clear and cancel `flushTimer` in `_cleanup` to prevent flushes firing after unsubscribe
+- [x] Add `pendingEvents` (array) and `flushTimer` (timer handle) to each `activeConnections` entry
+- [x] Replace the immediate-dispatch path in `_handleMessage` with a `_queueEvent` → `_scheduleFlush` pipeline; implement `_flushEvents` with the terminal-pruning rule and `_dispatch` containing the existing switch logic
+- [x] Clear and cancel `flushTimer` in `_cleanup` to prevent flushes firing after unsubscribe
 
 ### Phase 4 — Client: ownership-gated task SSE subscriptions
-- [ ] In all `queue:task-started` handlers, only call `sseManager.subscribe()` when the event's `clientId` matches `getClientId()`
-- [ ] Fix the stale-event race in `useQueueTaskId`: after subscribing to `queue:task-started`, immediately fetch `/queue/status` and resolve the promise if the target item already has a `taskId` (i.e. it started running before the hook subscribed)
+- [x] In all `queue:task-started` handlers, only call `sseManager.subscribe()` when the event's `clientId` matches `getClientId()`
+- [x] Fix the stale-event race in `useQueueTaskId`: after subscribing to `queue:task-started`, immediately fetch `/queue/status` and resolve the promise if the target item already has a `taskId` (i.e. it started running before the hook subscribed)
 
 ### Phase 5 — Client: ProgressBanner fast-complete bypass
-- [ ] In `handleComplete`, if `state.status` is still `'starting'` (no prior `progress` event was received), call `onComplete` and `onDismiss` immediately without the 2-second wait and without updating banner state — the task was already done when the banner mounted
+- [x] In `handleComplete`, if `state.status` is still `'starting'` (no prior `progress` event was received), call `onComplete` and `onDismiss` immediately without the 2-second wait and without updating banner state — the task was already done when the banner mounted
 
 ### Phase 6 — Verification and docs
-- [ ] Verify the two-tab scenario end-to-end: queue a generation in Tab A, confirm Tab B shows no progress banner and no unsolicited gallery refresh; confirm Tab A receives completion normally
-- [ ] Verify the refresh scenario: queue a generation in Tab A, refresh Tab A mid-generation, confirm Tab A reconnects and receives the completion event
-- [ ] Review and update affected living docs: `docs/server.md` (SSE buffer behaviour change), `.claude/rules/client.md` (clientId pattern, coalescing pattern)
+- [x] Verify the two-tab scenario end-to-end: queue a generation in Tab A, confirm Tab B shows no progress banner and no unsolicited gallery refresh; confirm Tab A receives completion normally
+- [x] Verify the refresh scenario: queue a generation in Tab A, refresh Tab A mid-generation, confirm Tab A reconnects and receives the completion event
+- [x] Review and update affected living docs: `docs/server.md` (SSE buffer behaviour change), `.claude/rules/client.md` (clientId pattern, coalescing pattern)
+
+#### Fixes and Changes
+- [ ] Add PM2-based remote restart: run server under PM2, expose `POST /admin/restart` endpoint that flushes a response then calls `process.exit(0)` so PM2 auto-restarts the process
 
 ## Implementation Details
 

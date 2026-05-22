@@ -234,6 +234,7 @@ async function _runNext() {
     emit('queue:task-started', {
       id: next.id,
       taskId,
+      clientId: next.clientId || null,
       type: next.type,
       source: next.source,
       name: next.name,

@@ -35,6 +35,7 @@ import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { getClientId } from '../client-id.mjs';
 
 // ============================================================================
 // Styled Components
@@ -232,8 +233,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   // Persistent subscription: route anytale task-started events to progress tracking
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData, clientId }) => {
         if (source !== 'anytale') return;
+        if (clientId !== getClientId()) return;
 
         if (subLabel === 'Portrait') {
           setPortraitTaskId(taskId);
@@ -384,7 +386,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         fetch('/anytale/generate-part-preview?queueOnly=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, partContext: 'parts-list', partUid }),
+          body: JSON.stringify({ prompt, partContext: 'parts-list', partUid, clientId: getClientId() }),
         })
           .then(r => r.json())
           .then(r => console.log('[auto-preview] enqueue response:', r))
@@ -582,7 +584,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'parts-list' }),
+        body: JSON.stringify({ prompt, partContext: 'parts-list', clientId: getClientId() }),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));

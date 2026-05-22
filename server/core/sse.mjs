@@ -445,8 +445,6 @@ export function handleSSEConnection(req, res) {
         console.error(`Failed to replay buffered message for task ${taskId}:`, error);
       }
     });
-    // Clear the buffer after sending
-    task.messageBuffer = [];
   } else {
     // Send initial progress state if no buffered messages
     const initialMessage = createProgressResponse(

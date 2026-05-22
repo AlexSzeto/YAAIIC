@@ -22,6 +22,7 @@ import { createDefaultAttribute } from './anytale-state.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
+import { getClientId } from '../client-id.mjs';
 import { ImagePreview } from './image-preview.mjs';
 import { getCategoryTree, tagDefinitionExists, getTagDefinition } from '../tags/tag-data.mjs';
 import { getTags, tagExists } from '../tags/tags.mjs';
@@ -164,7 +165,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       const enqRes = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'parts-list', partUid }),
+        body: JSON.stringify({ prompt, partContext: 'parts-list', partUid, clientId: getClientId() }),
       });
       console.log('[auto-preview] enqueue response status:', enqRes.status);
     } catch (err) {

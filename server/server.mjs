@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import os from 'os';
 import { initializeOrchestrator, setAddMediaDataEntry } from './features/generation/orchestrator.mjs';
 import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
@@ -29,6 +30,7 @@ import brewRouter from './features/brew/router.mjs';
 import soundSourcesRouter from './features/sound-sources/router.mjs';
 import anytaleRouter from './features/anytale/router.mjs';
 import queueRouter from './features/queue/router.mjs';
+import adminRouter from './features/admin/router.mjs';
 import * as queueService from './features/queue/service.mjs';
 import { executeQueuedTask } from './features/generation/orchestrator.mjs';
 
@@ -108,6 +110,7 @@ app.use(brewRouter);
 app.use(soundSourcesRouter);
 app.use(anytaleRouter);
 app.use(queueRouter);
+app.use(adminRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)
@@ -173,7 +176,9 @@ async function startServer() {
 
   const port = config.serverPort || 3000;
   app.listen(port, () => {
-    console.log(`🌐 Server running at http://localhost:${port}`);
+    const nets = os.networkInterfaces();
+    const localIp = Object.values(nets).flat().find(n => n.family === 'IPv4' && !n.internal)?.address ?? 'localhost';
+    console.log(`🌐 Server running at http://${localIp}:${port}`);
   });
 }
 

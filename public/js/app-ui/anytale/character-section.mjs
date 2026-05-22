@@ -27,6 +27,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { loadCharacter, saveCharacterState, createBlankCharacter } from './anytale-state.mjs';
+import { getClientId } from '../client-id.mjs';
 import { fetchCharacterList, createCharacter, saveCharacter, deleteCharacter, generateCharacterPortrait, generateCharacterVoice } from './character-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { CharacterPartItem } from './character-part-item.mjs';
@@ -205,7 +206,7 @@ export function CharacterSection({
       await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'character', partUid }),
+        body: JSON.stringify({ prompt, partContext: 'character', partUid, clientId: getClientId() }),
       });
     } catch (err) {
       console.error('[CharacterSection] requestPartPreviewCache error:', err);
@@ -389,8 +390,9 @@ export function CharacterSection({
   // Persistent subscription: pick up Part Preview task-started events initiated by this section
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel, taskData }) => {
+      'queue:task-started': ({ taskId, source, subLabel, taskData, clientId }) => {
         if (source !== 'anytale' || subLabel !== 'Part Preview') return;
+        if (clientId !== getClientId()) return;
         if (taskData?.partContext !== 'character') return;
         const prompt = taskData.prompt;
         const currentParts = characterRef.current.parts || [];
@@ -482,7 +484,7 @@ export function CharacterSection({
       const response = await fetch('/anytale/generate-part-preview?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, partContext: 'character' }),
+        body: JSON.stringify({ prompt, partContext: 'character', clientId: getClientId() }),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));

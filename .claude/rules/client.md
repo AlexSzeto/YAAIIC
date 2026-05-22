@@ -51,6 +51,22 @@ description: when working on the client facing (i.e. /public) side of the websit
     - Keep styles local to the component file whenever possible.
     - Avoid generic class names like `.container` or `.wrapper` in global CSS; scope them within the styled component.
 
+## Multi-Tab / Queue SSE Patterns
+
+### Per-tab client identity
+- `public/js/app-ui/client-id.mjs` exports `getClientId()`, which returns a stable UUID stored in `sessionStorage` (isolated per tab, survives page refresh within the same tab).
+- Every queue-submission fetch must include `clientId: getClientId()` in its request body (or `formData.append('clientId', getClientId())` for FormData requests). This lets the server associate each queue item with the submitting tab.
+
+### Ownership-gated task SSE subscriptions
+- The `queue:task-started` SSE event carries a `clientId` field.
+- Every `queue:task-started` handler that opens a task SSE connection (directly or via `progressShow`) must check `if (clientId !== getClientId()) return;` before subscribing. This prevents idle tabs from opening task SSE connections for tasks they didn't submit.
+- Idle tabs may still consume `queue:task-started` for UI display purposes (queue dashboard), but must not call `sseManager.subscribe()` or `progressShow()` for tasks they don't own.
+
+### SSEManager event coalescing
+- `SSEManager` (in `public/js/app-ui/sse-manager.mjs`) batches events via `setTimeout(0)` before dispatching. This prevents replayed completed tasks from firing multiple `onComplete` calls.
+- Pruning rule in `_flushEvents`: if a terminal event (`complete`/`error`/`cancelled`) is present in the batch, discard all `progress` events and dispatch only the terminal. If no terminal: discard all `progress` except the last, dispatch that one.
+- `ProgressBanner` fast-complete bypass: if `handleComplete` fires before any `progress` event was received (`hadProgressRef.current === false`), skip the banner display and call `onComplete`/`onDismiss` immediately — the task was already done when the subscription opened.
+
 ## Testing
 - **Custom UI components**: Every new component added to `public/js/custom-ui/` must have a render entry added to `public/js/custom-ui/test.vitest.mjs`. The entry should render the component with minimal props and assert no `console.error` calls.
 - **Passing definition**: At phase boundaries, "passing" means `npx vitest run` (full suite) exits 0 — not just `--changed`. All tests, including pre-existing ones, must be green before a phase is considered complete.

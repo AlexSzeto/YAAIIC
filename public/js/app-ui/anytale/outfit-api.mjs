@@ -3,6 +3,7 @@
  *
  * Mirrors the character-api.mjs usage pattern.
  */
+import { getClientId } from '../client-id.mjs';
 
 /**
  * Fetch the list of saved outfits.
@@ -61,7 +62,7 @@ export async function renderOutfit(uid, visiblePartUids) {
   const response = await fetch(`/anytale/outfits/${encodeURIComponent(uid)}/render-outfit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(visiblePartUids ? { visiblePartUids } : {}),
+    body: JSON.stringify(visiblePartUids ? { visiblePartUids, clientId: getClientId() } : { clientId: getClientId() }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

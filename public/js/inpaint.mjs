@@ -27,6 +27,7 @@ import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
 import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
+import { getClientId } from './app-ui/client-id.mjs';
 
 /**
  * Helper function to generate random seed
@@ -334,8 +335,9 @@ function InpaintApp() {
         });
       }
       
+      formData.append('clientId', getClientId());
       toast.show('Sending inpaint request...');
-      
+
       // Send request
       const response = await fetchWithRetry('/generate/inpaint?queueOnly=false', {
         method: 'POST',
@@ -428,8 +430,9 @@ function InpaintApp() {
   // Persistent subscription: bridge queue task-started events to progress tracking
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source }) => {
+      'queue:task-started': ({ taskId, source, clientId }) => {
         if (source !== 'yaaiic-inpaint') return;
+        if (clientId !== getClientId()) return;
         setTaskId(taskId);
         progressShow(taskId, {
           onComplete: (data) => handleGenerationCompleteRef.current(data),

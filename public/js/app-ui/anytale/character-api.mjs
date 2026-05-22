@@ -3,6 +3,7 @@
  *
  * Mirrors the plot-api.mjs usage pattern.
  */
+import { getClientId } from '../client-id.mjs';
 
 /**
  * Fetch the list of saved characters.
@@ -76,7 +77,7 @@ export async function generateCharacterPortrait(uid, parts) {
   const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/render-portrait?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parts }),
+    body: JSON.stringify({ parts, clientId: getClientId() }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -96,7 +97,7 @@ export async function generateCharacterVoice(uid, personality, name) {
   const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-voice?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ personality, name }),
+    body: JSON.stringify({ personality, name, clientId: getClientId() }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

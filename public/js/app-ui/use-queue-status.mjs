@@ -50,5 +50,13 @@ export function useQueueTaskId() {
         }
       },
     });
+    // Race: item may have already started before this hook subscribed
+    fetch('/queue/status')
+      .then(r => r.json())
+      .then(({ items }) => {
+        const item = items.find(i => i.id === queueId && i.taskId);
+        if (item) { unsubscribe(); resolve(item.taskId); }
+      })
+      .catch(() => {});
   });
 }

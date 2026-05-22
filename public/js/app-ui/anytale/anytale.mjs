@@ -26,6 +26,7 @@ import { AnyTaleForm } from './anytale-form.mjs';
 import { createGalleryPreview } from '../main/gallery-preview.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { QueueStatusBanner } from '../queue-status-banner.mjs';
+import { getClientId } from '../client-id.mjs';
 
 const TwoColumn = styled('div')`
   display: flex;
@@ -182,8 +183,9 @@ export function AnyTalePage() {
   // Persistent subscription: pick up story image task-started events (subLabel null = story image)
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel }) => {
+      'queue:task-started': ({ taskId, source, subLabel, clientId }) => {
         if (source !== 'anytale' || subLabel !== null) return;
+        if (clientId !== getClientId()) return;
         setTaskId(taskId);
         progressShow(taskId, {
           onComplete: handleGenerationComplete,
@@ -285,7 +287,7 @@ export function AnyTalePage() {
       const response = await fetchJson('/generate?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, clientId: getClientId() })
       });
       toast.show('Generation queued...', 'info');
     } catch (err) {

@@ -287,6 +287,7 @@ router.post('/anytale/characters/:uid/render-portrait', async (req, res) => {
     const queueItem = queueService.enqueue({
       type: 'image',
       source: 'anytale',
+      clientId: req.body.clientId || null,
       name: charName,
       subLabel: 'Portrait',
       endpointKey: 'anytale-render-portrait',
@@ -344,6 +345,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     const queueItem = queueService.enqueue({
       type: 'audio',
       source: 'anytale',
+      clientId: req.body.clientId || null,
       name,
       subLabel: 'Voice',
       endpointKey: 'anytale-voice',
@@ -398,6 +400,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
     queueService.enqueue({
       type: 'image',
       source: 'anytale',
+      clientId: req.body.clientId || null,
       name: prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt,
       subLabel: 'Part Preview',
       endpointKey: 'anytale-part-preview',
@@ -540,6 +543,7 @@ router.post('/anytale/outfits/:uid/render-outfit', async (req, res) => {
     queueService.enqueue({
       type: 'image',
       source: 'anytale',
+      clientId: req.body?.clientId || null,
       name: outfit.name || uid,
       subLabel: 'Outfit Render',
       endpointKey: 'anytale-render-outfit',
