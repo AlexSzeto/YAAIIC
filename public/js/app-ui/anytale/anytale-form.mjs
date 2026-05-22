@@ -350,8 +350,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
   const requestPartPreviewCacheForFormPart = useCallback((newPart) => {
     const prompt = assemblePartPreviewPrompt(newPart);
+    console.log('[auto-preview] requestPartPreviewCacheForFormPart called, prompt:', prompt || '(empty)');
     if (!prompt) return;
     const partUid = newPart.config?.uid || null;
+    console.log('[auto-preview] partUid:', partUid);
     fetch('/anytale/request-part-preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -359,6 +361,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     })
       .then(r => r.json())
       .then(async result => {
+        console.log('[auto-preview] cache lookup result:', result);
         if (result.found) {
           setParts(prev => prev.map(p =>
             p.id === newPart.id
@@ -373,16 +376,21 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               i => i.endpointKey === 'anytale-part-preview' && i.taskData?.partUid === partUid
             )
           : [];
+        console.log('[auto-preview] stale queue items to delete:', stale.length, stale.map(i => i.id));
         await Promise.all(stale.map(i =>
           fetch(`/queue/item/${encodeURIComponent(i.id)}`, { method: 'DELETE' }).catch(() => {})
         ));
-        fetch('/anytale/generate-part-preview?queueOnly=true', {
+        console.log('[auto-preview] enqueueing fresh preview for prompt:', prompt, 'partUid:', partUid);
+        fetch('/anytale/generate-part-preview?queueOnly=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, partContext: 'parts-list', partUid }),
-        }).catch(() => {});
+        })
+          .then(r => r.json())
+          .then(r => console.log('[auto-preview] enqueue response:', r))
+          .catch(err => console.error('[auto-preview] enqueue failed:', err));
       })
-      .catch(() => {});
+      .catch(err => console.error('[auto-preview] cache lookup failed:', err));
   }, []);
 
   const handleLibrarySelect = useCallback((match) => {

@@ -82,6 +82,24 @@ export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerat
     });
   }, [part, onPartChange]);
 
+  const handleRandom = useCallback(() => {
+    if (attributes.length === 0) return;
+    const newValues = {};
+    for (const attr of attributes) newValues[attr.name] = '';
+    const count = Math.ceil(attributes.length / 3);
+    const shuffled = attributes.map((_, i) => i);
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    for (const idx of shuffled.slice(0, count)) {
+      const attr = attributes[idx];
+      const opts = getAttributeOptions(attr.options).filter(o => o.value !== '');
+      if (opts.length > 0) newValues[attr.name] = opts[Math.floor(Math.random() * opts.length)].value;
+    }
+    onPartChange({ ...part, attributeValues: newValues, previewImageUrl: '' });
+  }, [attributes, part, onPartChange]);
+
   return html`
     <${VerticalLayout} gap="small">
       <${TopRow}>
@@ -100,6 +118,15 @@ export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerat
               disabled=${isGenerating}
             >
               ${isGenerating ? 'Generating...' : 'Preview'}
+            </${Button}>
+            <${Button}
+              variant="small-text"
+              color="primary"
+              icon="dice-3"
+              onClick=${handleRandom}
+              disabled=${isGenerating}
+            >
+              Random
             </${Button}>
           ` : null}
         </div>

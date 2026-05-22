@@ -19,6 +19,7 @@ import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { createDefaultAttribute } from './anytale-state.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
 import { ImagePreview } from './image-preview.mjs';
@@ -96,6 +97,11 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const { config, data } = part;
   const toast = useToast();
 
+  // ── Queue items ref for stale-preview cleanup ───────────────────────────
+  const { items: queueItems } = useQueueStatus();
+  const queueItemsRef = useRef(queueItems);
+  queueItemsRef.current = queueItems;
+
   // ── Tag import panel state (for the import-from-category helper) ────────
   const [selectorPanelOpen, setSelectorPanelOpen] = useState(false);
   const [editingAttrIndex, setEditingAttrIndex] = useState(-1);
@@ -127,19 +133,43 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     onChange({ ...part, data: { ...data, ...patch } });
   }, [part, onChange]);
 
-  const requestPortraitCache = useCallback((updatedPart) => {
+  const requestPortraitCache = useCallback(async (updatedPart) => {
     const prompt = assemblePartPreviewPrompt(updatedPart);
+    console.log('[auto-preview] requestPortraitCache called, prompt:', prompt || '(empty)');
     if (!prompt) return;
-    fetch('/anytale/request-part-preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-      .then(r => r.json())
-      .then(result => {
-        if (result.found) onChange({ ...updatedPart, data: { ...updatedPart.data, previewImageUrl: result.portraitUrl } });
-      })
-      .catch(() => {});
+    const partUid = updatedPart.config?.uid || null;
+    try {
+      const r = await fetch('/anytale/request-part-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const result = await r.json();
+      console.log('[auto-preview] cache lookup result:', result, 'partUid:', partUid);
+      if (result.found) {
+        onChange({ ...updatedPart, data: { ...updatedPart.data, previewImageUrl: result.portraitUrl } });
+        return;
+      }
+      // Cache miss — cancel stale queued previews for this part and re-enqueue
+      const stale = partUid
+        ? queueItemsRef.current.filter(
+            i => i.endpointKey === 'anytale-part-preview' && i.taskData?.partUid === partUid
+          )
+        : [];
+      console.log('[auto-preview] stale queue items:', stale.length, stale.map(i => i.id));
+      await Promise.all(stale.map(i =>
+        fetch(`/queue/item/${encodeURIComponent(i.id)}`, { method: 'DELETE' }).catch(() => {})
+      ));
+      console.log('[auto-preview] enqueueing fresh preview, prompt:', prompt, 'partUid:', partUid);
+      const enqRes = await fetch('/anytale/generate-part-preview?queueOnly=false', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, partContext: 'parts-list', partUid }),
+      });
+      console.log('[auto-preview] enqueue response status:', enqRes.status);
+    } catch (err) {
+      console.error('[auto-preview] requestPortraitCache error:', err);
+    }
   }, [onChange]);
 
   // When a new type is added and previewBaseline is empty, auto-fill from previewBasePromptByType.
@@ -183,6 +213,27 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
         previewImageUrl: '',
       },
     };
+    onChange(updatedPart);
+    requestPortraitCache(updatedPart);
+  }, [part, data, config.attributes, onChange, requestPortraitCache]);
+
+  const handleRandom = useCallback(() => {
+    const attrs = config.attributes || [];
+    if (attrs.length === 0) return;
+    const newValues = {};
+    for (let i = 0; i < attrs.length; i++) newValues[attrs[i].name ?? String(i)] = '';
+    const count = Math.ceil(attrs.length / 3);
+    const shuffled = attrs.map((_, i) => i);
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    for (const idx of shuffled.slice(0, count)) {
+      const attr = attrs[idx];
+      const opts = getAttrOptions(attr.options).filter(o => o.value !== '');
+      if (opts.length > 0) newValues[attr.name ?? String(idx)] = opts[Math.floor(Math.random() * opts.length)].value;
+    }
+    const updatedPart = { ...part, data: { ...data, attributeValues: newValues, previewImageUrl: '' } };
     onChange(updatedPart);
     requestPortraitCache(updatedPart);
   }, [part, data, config.attributes, onChange, requestPortraitCache]);
@@ -410,6 +461,15 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
               disabled=${isGeneratingPreview}
             >
               ${isGeneratingPreview ? 'Generating...' : 'Preview'}
+            </${Button}>
+            <${Button}
+              variant="small-text"
+              color="primary"
+              icon="dice-3"
+              onClick=${handleRandom}
+              disabled=${isGeneratingPreview}
+            >
+              Random
             </${Button}>
           ` : null}
         </div>

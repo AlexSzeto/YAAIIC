@@ -136,6 +136,8 @@ const ICON_MAP = {
   'flag': 'flag',
   'tag': 'label',
   'tags': 'local_offer',
+  'dice-5': 'casino',
+  'dice-3': 'ifl',
 
   /*
   Verified: These mappings have been manually checked and confirmed to be accurate

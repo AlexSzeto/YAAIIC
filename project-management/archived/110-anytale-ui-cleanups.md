@@ -109,6 +109,14 @@ Polish the AnyTale editor UI for clarity and usability across four areas: richer
 
 - [x] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
 
+### Phase 5 — Part attribute quick-edit controls
+
+#### Fixes and Changes
+
+- [x] Add a Random button (dice-3 icon, "Random" label, same size as Preview button) beneath each Preview button in `PartItem` and `CharacterPartItem` — resets all attribute values to blank, then randomly selects `ceil(total / 3)` attributes and assigns each a random value from its options list; triggers auto-preview via the existing `requestPortraitCache` / `requestPartPreviewCache` pipeline.
+
+- [x] Replicate the Phase 4 auto-regen behaviour in `character-section.mjs` and `outfit-section.mjs`: on cache miss, cancel stale queued previews matching `partUid` via `DELETE /queue/item/:id`, then re-enqueue with `partContext: 'character'` / `'outfit'` and `partUid`; add `queueItemsRef` to each section for stable access inside the async callback.
+
 ## Implementation Details
 
 ### Phase 1 — Label formatting

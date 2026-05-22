@@ -162,7 +162,10 @@ export function CharacterSection({
   // declared BEFORE that useEffect in the function body. Hook dep arrays are evaluated
   // immediately on render, so any const/useCallback below the useEffect causes a TDZ
   // ReferenceError. If you add hooks that are deps of the effects below, declare them here.
-  const requestPartPreviewCache = useCallback((index, updatedPart) => {
+  const queueItemsRef = useRef(queueItems);
+  queueItemsRef.current = queueItems;
+
+  const requestPartPreviewCache = useCallback(async (index, updatedPart) => {
     const libConfig = libraryParts.find(p => p.uid === updatedPart.partUid);
     if (!libConfig) return;
     const prompt = assemblePartPreviewPrompt({
@@ -175,14 +178,14 @@ export function CharacterSection({
       data: { enabled: true, attributeValues: updatedPart.attributeValues, previewImageUrl: '' },
     });
     if (!prompt) return;
-    fetch('/anytale/request-part-preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-      .then(r => r.json())
-      .then(result => {
-        if (!result.found) return;
+    try {
+      const r = await fetch('/anytale/request-part-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const result = await r.json();
+      if (result.found) {
         setCharacter(prev => {
           const parts = [...(prev.parts || [])];
           if (parts[index]?.partUid === updatedPart.partUid) {
@@ -190,8 +193,23 @@ export function CharacterSection({
           }
           return { ...prev, parts };
         });
-      })
-      .catch(() => {});
+        return;
+      }
+      const partUid = updatedPart.partUid;
+      const stale = queueItemsRef.current.filter(
+        i => i.endpointKey === 'anytale-part-preview' && i.taskData?.partUid === partUid
+      );
+      await Promise.all(stale.map(i =>
+        fetch(`/queue/item/${encodeURIComponent(i.id)}`, { method: 'DELETE' }).catch(() => {})
+      ));
+      await fetch('/anytale/generate-part-preview?queueOnly=false', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, partContext: 'character', partUid }),
+      });
+    } catch (err) {
+      console.error('[CharacterSection] requestPartPreviewCache error:', err);
+    }
   }, [libraryParts]);
 
   // Reload from localStorage when parent signals an import (refreshKey changes)
@@ -734,7 +752,7 @@ export function CharacterSection({
                 icon="image"
                 onClick=${handleGeneratePortrait}
                 loading=${isPortraitDuplicate}
-                disabled=${isPortraitDuplicate}
+                disabled=${hasChanges || isPortraitDuplicate}
               >
                 ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Portrait' : 'Generate Portrait'}
               <//>
@@ -744,7 +762,7 @@ export function CharacterSection({
                 icon="microphone"
                 onClick=${handleGenerateVoice}
                 loading=${isVoiceDuplicate}
-                disabled=${!character.personality?.trim() || isVoiceDuplicate}
+                disabled=${hasChanges || !character.personality?.trim() || isVoiceDuplicate}
               >
                 ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Voice' : 'Generate Voice'}
               <//>
