@@ -9,6 +9,17 @@ import { styled } from 'goober';
 import { currentTheme } from './theme.mjs';
 
 /**
+ * Label - A simple text label
+ * Usage: Form labels, section labels
+ */
+export const Label = styled('label')`
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.secondary};
+`;
+Label.className = 'themed-label';
+
+/**
  * H1 - Large page heading
  * Size: 2rem (32px)
  * Weight: 600 (bold)

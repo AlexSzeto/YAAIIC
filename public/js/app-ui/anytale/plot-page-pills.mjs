@@ -21,6 +21,7 @@ import { useCallback } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
+import { Label, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,11 @@ const PillBody = styled('div')`
   gap: 4px;
   padding: 2px 10px 2px 4px;
   color: ${() => currentTheme.value.colors.text.primary};
+  user-select: none;
+  
+  &:hover {
+    filter: ${({ disabled }) => disabled ? 'none' : 'brightness(0.8)'};
+  }
 `;
 PillBody.className = 'plot-page-pill-body';
 
@@ -139,64 +145,67 @@ export function PlotPagePills({ slotStatuses, allSlots = [], activeParts = [], p
   )];
 
   return html`
-    <${PillRow}>
-      ${mergedSlots.map(slot => {
-        const status = statusMap.get(slot) || null;
-        const isActive = statusMap.has(slot);
-        const isLocked = requirements.includes(slot);
-        const action = actions.find(a => a.slot === slot);
-        const transition = action ? action.status : null;
-        const iconColor = disabled ? currentTheme.value.colors.text.secondary
-          : isLocked ? currentTheme.value.colors.danger.background
-          : currentTheme.value.colors.text.secondary;
+    <${VerticalLayout} gap="small">
+      <${Label}>Page Requirements</${Label}>
+      <${PillRow}>
+        ${mergedSlots.map(slot => {
+          const status = statusMap.get(slot) || null;
+          const isActive = statusMap.has(slot);
+          const isLocked = requirements.includes(slot);
+          const action = actions.find(a => a.slot === slot);
+          const transition = action ? action.status : null;
+          const iconColor = disabled ? currentTheme.value.colors.text.secondary
+            : isLocked ? currentTheme.value.colors.danger.background
+            : currentTheme.value.colors.text.secondary;
 
-        const pillStyle = isActive
-          ? { backgroundColor: (STATUS_BG[status] || STATUS_BG.covering)() }
-          : { backgroundColor: 'transparent', border: '1px solid ' + currentTheme.value.colors.border.primary };
+          const pillStyle = isActive
+            ? { backgroundColor: (STATUS_BG[status] || STATUS_BG.covering)() }
+            : { backgroundColor: 'transparent', border: '1px solid ' + currentTheme.value.colors.border.primary };
 
-        return html`
-          <${Pill} key=${slot} style=${pillStyle}>
-            <${LockZone}
-              disabled=${disabled}
-              title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
-              onClick=${() => toggleRequirement(slot)}
-            >
-              <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
-            </${LockZone}>
-            <${PillBody}
-              style=${{ cursor: disabled ? 'default' : 'pointer' }}
-              onClick=${() => !disabled && cycleSlotTransition(slot, status)}
-              title="Click to cycle transition"
-            >
-              <${SlotText}>${slot}</${SlotText}>
-              ${transition && html` → <${TransitionLabel} status=${transition}>${transition}</${TransitionLabel}>`}
-            </${PillBody}>
-          </${Pill}>
-        `;
-      })}
+          return html`
+            <${Pill} key=${slot} style=${pillStyle}>
+              <${LockZone}
+                disabled=${disabled}
+                title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
+                onClick=${() => toggleRequirement(slot)}
+              >
+                <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
+              </${LockZone}>
+              <${PillBody}
+                style=${{ cursor: disabled ? 'default' : 'pointer' }}
+                onClick=${() => !disabled && cycleSlotTransition(slot, status)}
+                title="Click to cycle transition"
+              >
+                <${SlotText}>${slot}</${SlotText}>
+                ${transition && html` → <${TransitionLabel} status=${transition}>${transition}</${TransitionLabel}>`}
+              </${PillBody}>
+            </${Pill}>
+          `;
+        })}
 
-      ${activePartNames.map(name => {
-        const isLocked = requirements.includes(name);
-        const bg = currentTheme.value.colors.secondary.background;
-        const iconColor = disabled ? currentTheme.value.colors.text.secondary
-          : isLocked ? currentTheme.value.colors.warning.background
-          : currentTheme.value.colors.text.secondary;
+        ${activePartNames.map(name => {
+          const isLocked = requirements.includes(name);
+          const bg = currentTheme.value.colors.secondary.background;
+          const iconColor = disabled ? currentTheme.value.colors.text.secondary
+            : isLocked ? currentTheme.value.colors.warning.background
+            : currentTheme.value.colors.text.secondary;
 
-        return html`
-          <${Pill} key=${name} style=${{ backgroundColor: bg }}>
-            <${LockZone}
-              disabled=${disabled}
-              title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
-              onClick=${() => toggleRequirement(name)}
-            >
-              <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
-            </${LockZone}>
-            <${PillBody}>
-              ${name}
-            </${PillBody}>
-          </${Pill}>
-        `;
-      })}
-    </${PillRow}>
+          return html`
+            <${Pill} key=${name} style=${{ backgroundColor: bg }}>
+              <${LockZone}
+                disabled=${disabled}
+                title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
+                onClick=${() => toggleRequirement(name)}
+              >
+                <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
+              </${LockZone}>
+              <${PillBody}>
+                ${name}
+              </${PillBody}>
+            </${Pill}>
+          `;
+        })}
+      </${PillRow}>
+    </${VerticalLayout}>
   `;
 }

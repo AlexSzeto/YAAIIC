@@ -55,7 +55,53 @@ Polish the AnyTale editor UI for clarity and usability across four areas: richer
 
 - [x] Restore the page requirements pass/fail pill indicator; place it inline next to the Page H2 heading.
 
+### Phase 3.5 — Plot-level requirements editor rewrite
+
+- [x] Update `slotRequirements` typedef in `server/features/anytale/repository.mjs`: change value type from `'covering'|'revealing'|'removed'` to `'present'|'absent'`; document that keys are either slot type strings or part UIDs.
+
+- [x] Update `loadPlot()` in `anytale-state.mjs`: strip any entries whose value is not `'present'` or `'absent'` (forward-compat guard against the old status strings).
+
+- [x] Create `public/js/app-ui/anytale/plot-requirements-editor.mjs` — a self-contained component with two regions:
+  - **Top — Add Part from Library:** a `SearchSelectModal`-driven control that accepts a library part selection and adds its UID to `plot.slotRequirements` as `'present'`.
+  - **Bottom — Pill list:** renders all non-character slot types (from `slotOptions`) always, plus any UID-keyed entries currently in `slotRequirements`. Each pill cycles through three visual states on click:
+    - **ignore** (key absent from requirements): secondary outline, no background fill, label is just `[name]`.
+    - **present** (value `'present'`): secondary/gray background, label `[name] → covering/revealing`.
+    - **absent** (value `'absent'`): danger background, label `[name] → removed/missing`.
+  - For slot-type pills, cycling through to ignore removes the key from `slotRequirements` but keeps the pill visible (it is always shown). For part-UID pills, cycling to ignore removes the entry from `slotRequirements` **and** from the displayed list (re-add via the top control).
+
+- [x] Remove the inline `PlotReqPillRow` / `PlotReqPill` / `SLOT_REQ_STATUSES` / `SLOT_REQ_BG` styled components and the `cycleSlotRequirement` / `addSlotRequirement` handlers from `plot-section.mjs`; replace with `<PlotRequirementsEditor>` positioned between the plot description inputs and the Page section heading.
+
+### Phase 3.5 — Implementation Details
+
+**Data shape (updated):**
+```js
+// slotRequirements: Record<string, 'present'|'absent'>
+// Keys: slot type string (e.g. 'outer upper body') OR part UID
+// 'present': slot is considered present when any active part with that slot type
+//            has status 'covering' or 'revealing'
+// 'absent':  slot is considered absent when no active part with that type is
+//            covering or revealing (status is 'removed' or slot not in use)
+```
+
+**PlotRequirementsEditor props:**
+```js
+{
+  plot,          // full plot object (reads slotRequirements, calls onChange with updated plot)
+  onChange,      // (updatedPlot) => void
+  libraryParts,  // for resolving UID keys to display names and populating the add modal
+  slotOptions,   // string[] — all known non-character slot types (same list as PlotPagePills)
+}
+```
+
+**Pill cycle for slot-type keys:** ignore → present → absent → ignore (pill always remains visible)
+
+**Pill cycle for part-UID keys:** present → absent → ignore (on ignore: key is removed and pill disappears; user re-adds via the top control)
+
+**Label resolution for UID keys:** `libraryParts.find(p => p.uid === key)?.config?.name ?? key`
+
 ### Phase 4 — Auto-regen part previews on empty cache response
+
+- [ ] In the part editor, change `baseline` and `previewBaseline` tag inputs to update the part data object `onBlur` instead of on every keystroke, so that preview regen requests are not triggered while the user is still typing.
 
 - [ ] Server: pass `partUid` in the request body to `POST /anytale/generate-part-preview` and include it in the enqueued `taskData` so clients can match queue items to a specific part.
 

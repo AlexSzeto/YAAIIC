@@ -20,12 +20,12 @@ import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
-import { Select } from '../../custom-ui/io/select.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 import { PlotPagePills } from './plot-page-pills.mjs';
+import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 
 // ============================================================================
@@ -55,38 +55,6 @@ const NavRow = styled('div')`
   flex-wrap: wrap;
 `;
 NavRow.className = 'plot-nav-row';
-
-const PlotReqPillRow = styled('div')`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${() => currentTheme.value.spacing.small.gap};
-  align-items: center;
-`;
-PlotReqPillRow.className = 'plot-req-pill-row';
-
-const PlotReqPill = styled('button')`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  border: 1px solid ${() => currentTheme.value.colors.border.primary};
-  font-size: ${() => currentTheme.value.typography.fontSize.small};
-  white-space: nowrap;
-  cursor: pointer;
-  color: ${() => currentTheme.value.colors.text.primary};
-  &:hover {
-    filter: brightness(0.92);
-  }
-`;
-PlotReqPill.className = 'plot-req-pill';
-
-const SLOT_REQ_STATUSES = ['covering', 'revealing', 'removed'];
-
-const SLOT_REQ_BG = {
-  covering: () => currentTheme.value.colors.primary.backgroundLight,
-  revealing: () => currentTheme.value.colors.warning.backgroundLight,
-  removed:   () => currentTheme.value.colors.danger.backgroundLight,
-};
 
 // ============================================================================
 // Component
@@ -345,9 +313,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return out.sort((a, b) => a.localeCompare(b));
   }, [libraryParts, characterSlotTypes]);
 
-  const [addReqSlot, setAddReqSlot] = useState('');
-  const [addReqStatus, setAddReqStatus] = useState('covering');
-
   // ── Pre-page slot statuses (before current page's actions) ────────────────
   const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
 
@@ -440,29 +405,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageLockedChange(next);
   }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);  
 
-  // ── Plot-level slot requirements handlers ────────────────────────────────
-  const cycleSlotRequirement = useCallback((slot) => {
-    const current = (plot.slotRequirements || {})[slot];
-    const idx = SLOT_REQ_STATUSES.indexOf(current);
-    const next = SLOT_REQ_STATUSES[idx + 1]; // undefined when at end → remove
-    const updated = { ...(plot.slotRequirements || {}) };
-    if (next === undefined) {
-      delete updated[slot];
-    } else {
-      updated[slot] = next;
-    }
-    setPlot(prev => ({ ...prev, slotRequirements: updated }));
-  }, [plot.slotRequirements]);
-
-  const addSlotRequirement = useCallback(() => {
-    const slot = addReqSlot || slotOptions[0] || '';
-    if (!slot) return;
-    setPlot(prev => ({
-      ...prev,
-      slotRequirements: { ...(prev.slotRequirements || {}), [slot]: addReqStatus }
-    }));
-  }, [addReqSlot, addReqStatus, slotOptions]);
-
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
   const saveLabel = isInLibrary ? 'Update' : 'Save';
@@ -514,6 +456,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
       </${VerticalLayout}>
 
+      <!-- Plot-level requirements editor -->
+      <${PlotRequirementsEditor}
+        plot=${plot}
+        onChange=${setPlot}
+        libraryParts=${libraryParts}
+        slotOptions=${slotOptions}
+      />
+
       <!-- Page section -->
       <${VerticalLayout} gap="medium">
         <${HorizontalLayout} gap="small" style="align-items: center;">
@@ -533,44 +483,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             ${requirementsMet ? 'requirements met - rendering' : 'requirements failed - skipping'}
           </span>
         </${HorizontalLayout}>
-
-        <!-- Plot-level slot requirements -->
-        <${VerticalLayout} gap="small">
-          <${PlotReqPillRow}>
-            ${Object.entries(plot.slotRequirements || {}).map(([slot, status]) => html`
-              <${PlotReqPill}
-                key=${slot}
-                style=${{ backgroundColor: (SLOT_REQ_BG[status] || SLOT_REQ_BG.covering)() }}
-                onClick=${() => cycleSlotRequirement(slot)}
-                title="Click to cycle status; cycles off to remove"
-              >
-                ${slot}: ${status}
-              </${PlotReqPill}>
-            `)}
-            ${slotOptions.length > 0 && html`
-              <${HorizontalLayout} gap="small" style="align-items: flex-end; flex-wrap: wrap;">
-                <${Select}
-                  heightScale="compact"
-                  value=${addReqSlot || slotOptions[0] || ''}
-                  options=${slotOptions.map(s => ({ label: s, value: s }))}
-                  onChange=${(e) => setAddReqSlot(e.target.value)}
-                />
-                <${Select}
-                  heightScale="compact"
-                  value=${addReqStatus}
-                  options=${SLOT_REQ_STATUSES.map(s => ({ label: s, value: s }))}
-                  onChange=${(e) => setAddReqStatus(e.target.value)}
-                />
-                <${Button}
-                  variant="medium-icon"
-                  icon="plus"
-                  title="Add slot requirement"
-                  onClick=${addSlotRequirement}
-                />
-              </${HorizontalLayout}>
-            `}
-          </${PlotReqPillRow}>
-        </${VerticalLayout}>
 
         <!-- Unified slot/part pill list -->
         <${PlotPagePills}

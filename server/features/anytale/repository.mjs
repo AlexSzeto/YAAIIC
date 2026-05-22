@@ -43,7 +43,7 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} [description='']
  * @property {PlotPage[]} pages - Ordered list of plot pages
  * @property {string[]} [progressionSections=[]] - Progression section order
- * @property {Record<string, 'covering'|'revealing'|'removed'>} [slotRequirements={}] - Entry requirements for the entire plot; maps slot type string to required status for play mode bootstrap
+ * @property {Record<string, 'present'|'absent'>} [slotRequirements={}] - Entry requirements for the entire plot; keys are slot type strings or part UIDs; 'present' means covering or revealing, 'absent' means removed or not in use
  */
 
 /**

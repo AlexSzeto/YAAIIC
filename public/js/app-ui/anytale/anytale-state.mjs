@@ -155,7 +155,9 @@ export function loadPlot() {
       description: parsed.description ?? '',
       pages,
       progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
-      slotRequirements: (parsed.slotRequirements && typeof parsed.slotRequirements === 'object' && !Array.isArray(parsed.slotRequirements)) ? parsed.slotRequirements : {},
+      slotRequirements: (parsed.slotRequirements && typeof parsed.slotRequirements === 'object' && !Array.isArray(parsed.slotRequirements))
+        ? Object.fromEntries(Object.entries(parsed.slotRequirements).filter(([, v]) => v === 'present' || v === 'absent'))
+        : {},
     };
   } catch {
     return createBlankPlot();
