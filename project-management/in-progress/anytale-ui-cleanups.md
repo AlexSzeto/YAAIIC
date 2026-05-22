@@ -101,13 +101,13 @@ Polish the AnyTale editor UI for clarity and usability across four areas: richer
 
 ### Phase 4 — Auto-regen part previews on empty cache response
 
-- [ ] In the part editor, change `baseline` and `previewBaseline` tag inputs to update the part data object `onBlur` instead of on every keystroke, so that preview regen requests are not triggered while the user is still typing.
+- [x] In the part editor, change `baseline` and `previewBaseline` tag inputs to update the part data object `onBlur` instead of on every keystroke, so that preview regen requests are not triggered while the user is still typing.
 
-- [ ] Server: pass `partUid` in the request body to `POST /anytale/generate-part-preview` and include it in the enqueued `taskData` so clients can match queue items to a specific part.
+- [x] Server: pass `partUid` in the request body to `POST /anytale/generate-part-preview` and include it in the enqueued `taskData` so clients can match queue items to a specific part.
 
-- [ ] Client: in the `request-part-preview` response handler, when `found: false` is returned, scan the current queue state for items where `endpointKey === 'anytale-part-preview'` and `taskData.partUid` matches the part's UID; delete each matched item via `DELETE /queue/item/:id`, then re-enqueue a preview for the part's current tag combination by calling the generate-part-preview endpoint with `?queueOnly=true`.
+- [x] Client: in the `request-part-preview` response handler, when `found: false` is returned, scan the current queue state for items where `endpointKey === 'anytale-part-preview'` and `taskData.partUid` matches the part's UID; delete each matched item via `DELETE /queue/item/:id`, then re-enqueue a preview for the part's current tag combination by calling the generate-part-preview endpoint with `?queueOnly=true`.
 
-- [ ] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
+- [x] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
 
 ## Implementation Details
 

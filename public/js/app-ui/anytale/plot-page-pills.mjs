@@ -146,7 +146,7 @@ export function PlotPagePills({ slotStatuses, allSlots = [], activeParts = [], p
 
   return html`
     <${VerticalLayout} gap="small">
-      <${Label}>Page Requirements</${Label}>
+      <${Label}>Page Requirements and Changes</${Label}>
       <${PillRow}>
         ${mergedSlots.map(slot => {
           const status = statusMap.get(slot) || null;

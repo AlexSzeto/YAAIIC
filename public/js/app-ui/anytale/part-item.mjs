@@ -9,7 +9,7 @@
  *   Below:   Type, Preview Baseline, Baseline, Attributes
  */
 import { html } from 'htm/preact';
-import { useState, useCallback } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -103,6 +103,20 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   // ── Library action loading states ───────────────────────────────────────
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ── Local baseline state — committed to parent on blur, not per keystroke ─
+  const [localPreviewBaseline, setLocalPreviewBaseline] = useState(config.previewBaseline || '');
+  const [localBaseline, setLocalBaseline] = useState(config.baseline || '');
+  const previewBaselineFocusedRef = useRef(false);
+  const baselineFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!previewBaselineFocusedRef.current) setLocalPreviewBaseline(config.previewBaseline || '');
+  }, [config.previewBaseline]);
+
+  useEffect(() => {
+    if (!baselineFocusedRef.current) setLocalBaseline(config.baseline || '');
+  }, [config.baseline]);
 
   // ── Update helpers ──────────────────────────────────────────────────────
   const updateConfig = useCallback((patch) => {
@@ -426,9 +440,12 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <!-- Preview Baseline Tags -->
       <${TagInput}
         label="Preview Baseline Tags"
-        value=${config.previewBaseline}
-        onInput=${(text) => {
-          const updatedPart = { ...part, config: { ...config, previewBaseline: text } };
+        value=${localPreviewBaseline}
+        onInput=${setLocalPreviewBaseline}
+        onFocus=${() => { previewBaselineFocusedRef.current = true; }}
+        onBlur=${() => {
+          previewBaselineFocusedRef.current = false;
+          const updatedPart = { ...part, config: { ...config, previewBaseline: localPreviewBaseline } };
           onChange(updatedPart);
           requestPortraitCache(updatedPart);
         }}
@@ -439,9 +456,12 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       <!-- Baseline Tags -->
       <${TagInput}
         label="Baseline Tags"
-        value=${config.baseline}
-        onInput=${(text) => {
-          const updatedPart = { ...part, config: { ...config, baseline: text } };
+        value=${localBaseline}
+        onInput=${setLocalBaseline}
+        onFocus=${() => { baselineFocusedRef.current = true; }}
+        onBlur=${() => {
+          baselineFocusedRef.current = false;
+          const updatedPart = { ...part, config: { ...config, baseline: localBaseline } };
           onChange(updatedPart);
           requestPortraitCache(updatedPart);
         }}

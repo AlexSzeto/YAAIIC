@@ -22,24 +22,26 @@ Parts Library → Character Builder → Generate Portrait / Voice
 
 ```
 app-ui/anytale/
-  anytale.mjs              — page root; mounts all three sections
-  anytale-form.mjs         — top-level form layout (tabs/panels)
-  anytale-viewer.mjs       — read-only character viewer panel
-  character-section.mjs    — character CRUD + part assignment UI
-  character-part-item.mjs  — single part row within character editor
-  outfit-section.mjs       — outfit CRUD + part-override editor
-  part-item.mjs            — single part row in the parts library editor
-  library-part-picker.mjs  — modal to pick a part from the library
-  category-input.mjs       — tag-type input for part categories
-  plot-section.mjs         — plot block list + page editor
-  plot-api.mjs             — client-side API calls for plot CRUD
-  character-api.mjs        — client-side API calls for character CRUD
-  outfit-api.mjs           — client-side API calls for outfit CRUD
-  anytale-state.mjs        — localStorage persistence for active character/plot/outfit
-  prompt-assembler.mjs     — builds final prompt string from parts + plot
-  prompt-import.mjs        — imports prompt tags back into part attribute values
-  slot-resolver.mjs        — resolves which parts fill which body slots
-  image-preview.mjs        — part preview image (hash-based idempotent caching)
+  anytale.mjs                  — page root; mounts all three sections
+  anytale-form.mjs             — top-level form layout (tabs/panels)
+  anytale-viewer.mjs           — read-only character viewer panel
+  character-section.mjs        — character CRUD + part assignment UI
+  character-part-item.mjs      — single part row within character editor
+  outfit-section.mjs           — outfit CRUD + part-override editor
+  part-item.mjs                — single part row in the parts library editor
+  library-part-picker.mjs      — modal to pick a part from the library
+  category-input.mjs           — tag-type input for part categories
+  plot-section.mjs             — plot block list + page editor
+  plot-page-pills.mjs          — unified slot/part pill UI for per-page transitions and requirements
+  plot-requirements-editor.mjs — plot-level slot/part entry requirements editor
+  plot-api.mjs                 — client-side API calls for plot CRUD
+  character-api.mjs            — client-side API calls for character CRUD
+  outfit-api.mjs               — client-side API calls for outfit CRUD
+  anytale-state.mjs            — localStorage persistence for active character/plot/outfit
+  prompt-assembler.mjs         — builds final prompt string from parts + plot
+  prompt-import.mjs            — imports prompt tags back into part attribute values
+  slot-resolver.mjs            — resolves which parts fill which body slots
+  image-preview.mjs            — part preview image (hash-based idempotent caching)
 ```
 
 ### State architecture
@@ -89,6 +91,17 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 
 See `@typedef` declarations in `server/features/anytale/repository.mjs` for authoritative types: `PartConfig`, `PartAttribute`, `PlotBlock`, `PlotPage`, `Character`, `CharacterPart`, `Outfit`.
 
+### PlotBlock shape (selected fields)
+
+```js
+{
+  slotRequirements: Record<string, 'present'|'absent'>,
+  // Keys are slot type strings (e.g. 'outer upper body') or part UIDs.
+  // 'present': slot must be covering or revealing; 'absent': slot must be removed or not in use.
+  // Used as plot-level entry requirements for play mode bootstrap.
+}
+```
+
 ### PlotPage shape
 
 ```js
@@ -134,17 +147,25 @@ Parts are matched against `portraitParts` matchers (config) by name or type, cas
 
 Preview images are named `portrait_<hash>.png` where hash = `portraitPromptHash(prompt)`. The endpoint checks if the file exists before queuing, making generation idempotent for identical prompts.
 
+When `POST /anytale/request-part-preview` returns `found: false`, the client automatically:
+1. Scans the queue for stale `anytale-part-preview` items whose `taskData.partUid` matches the part's library UID.
+2. Deletes each stale item via `DELETE /queue/item/:id`.
+3. Re-enqueues a fresh preview via `POST /anytale/generate-part-preview?queueOnly=true` with the part's current prompt and `partUid`.
+
+This only applies to parts that have been saved to the library (i.e., have a `config.uid`).
+
 ### Queue integration
 
-Portrait, voice, and outfit render generation are queued via the standard queue service. `endpointKey` values:
+Portrait, voice, outfit render, and part preview generation are queued via the standard queue service. `endpointKey` values:
 
 | endpointKey | Trigger | Orchestrator completion action |
 |---|---|---|
 | `anytale-render-portrait` | `POST /anytale/characters/:uid/render-portrait` | Sets `character.portraitUrl` |
 | `anytale-voice` | `POST /anytale/characters/:uid/generate-voice` | Sets `character.audioUrl` + `introTranscript` |
 | `anytale-render-outfit` | `POST /anytale/outfits/:uid/render-outfit` | Sets `outfit.renderUrl` |
+| `anytale-part-preview` | `POST /anytale/generate-part-preview` | Saves `portrait_<hash>.png`; client matches via `taskData.partUid` |
 
-All three are in the orchestrator's `silent` set (no global notification popup on completion).
+Portrait, voice, and outfit render are in the orchestrator's `silent` set (no global notification popup on completion).
 
 ## Persistence
 

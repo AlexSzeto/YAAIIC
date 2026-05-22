@@ -942,6 +942,13 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 | `POST` | `/anytale/generate-part-preview` | Enqueue generation of a part preview image for a given prompt; hash-named file for idempotency |
 | `POST` | `/anytale/request-part-preview` | Check if a cached preview image already exists for a prompt; returns `{ found, portraitUrl? }` |
 
+**`POST /anytale/generate-part-preview` body fields:**
+- `prompt` (string, required): Tag prompt for the preview image.
+- `partContext` (string, optional): Context label forwarded into `taskData` (e.g. `'parts-list'`).
+- `partUid` (string|null, optional): Library UID of the part being previewed. Stored in `taskData.partUid` so clients can match stale queue items for auto-regen cleanup.
+
+**Query:** `queueOnly=true` adds to queue without auto-starting (used by auto-regen on cache miss).
+
 ## Queue API
 
 The queue serializes generation tasks so only one runs at a time. All AnyTale generation endpoints push items onto the queue.

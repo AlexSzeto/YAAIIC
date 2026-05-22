@@ -13,7 +13,7 @@
     "portraitBasePrompt": "1girl, solo, portrait, facing forward, looking at viewer, outdoors",
     "outfitBasePrompt": "general, 1girl, solo, head out of frame, upper body, lower body, facing viewer, simple background, dressing room",
     "previewBasePromptByType": {
-      "location": "no humans",
+      "location": "no humans, loaded interior",
       "head": "1girl, solo, simple background, grey background, cropped head, facing viewer",
       "outer upper body": "1girl, solo, simple background, grey background, cropped torso, head out of frame, facing viewer",
       "outer lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",

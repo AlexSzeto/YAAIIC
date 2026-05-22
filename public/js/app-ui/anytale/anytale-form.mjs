@@ -121,6 +121,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   // Always-current parts ref for use in persistent subscription closures
   const partsRef = useRef(parts);
   partsRef.current = parts;
+  // Always-current queue items ref for use in async callbacks
+  const queueItemsRef = useRef(queueItems);
+  queueItemsRef.current = queueItems;
   const [isImporting, setIsImporting] = useState(false);
   const [activePlotPage, setActivePlotPage] = useState(() => loadState().activePlotPage);
   const [pageLocked, setPageLocked] = useState([]);
@@ -348,19 +351,36 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const requestPartPreviewCacheForFormPart = useCallback((newPart) => {
     const prompt = assemblePartPreviewPrompt(newPart);
     if (!prompt) return;
+    const partUid = newPart.config?.uid || null;
     fetch('/anytale/request-part-preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     })
       .then(r => r.json())
-      .then(result => {
-        if (!result.found) return;
-        setParts(prev => prev.map(p =>
-          p.id === newPart.id
-            ? { ...p, data: { ...p.data, previewImageUrl: result.portraitUrl } }
-            : p
+      .then(async result => {
+        if (result.found) {
+          setParts(prev => prev.map(p =>
+            p.id === newPart.id
+              ? { ...p, data: { ...p.data, previewImageUrl: result.portraitUrl } }
+              : p
+          ));
+          return;
+        }
+        // Cache miss — cancel any stale queued previews for this part and re-enqueue
+        const stale = partUid
+          ? queueItemsRef.current.filter(
+              i => i.endpointKey === 'anytale-part-preview' && i.taskData?.partUid === partUid
+            )
+          : [];
+        await Promise.all(stale.map(i =>
+          fetch(`/queue/item/${encodeURIComponent(i.id)}`, { method: 'DELETE' }).catch(() => {})
         ));
+        fetch('/anytale/generate-part-preview?queueOnly=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, partContext: 'parts-list', partUid }),
+        }).catch(() => {});
       })
       .catch(() => {});
   }, []);

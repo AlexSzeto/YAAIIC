@@ -361,7 +361,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
 
 router.post('/anytale/generate-part-preview', async (req, res) => {
   try {
-    const { prompt, partContext } = req.body;
+    const { prompt, partContext, partUid } = req.body;
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'prompt is required' });
     }
@@ -382,6 +382,7 @@ router.post('/anytale/generate-part-preview', async (req, res) => {
       workflow: partPreviewWorkflow,
       prompt,
       partContext: partContext || null,
+      partUid: partUid || null,
       seed: Math.floor(Math.random() * 4294967295),
       orientation: 'square',
       imageFormat: 'png',
