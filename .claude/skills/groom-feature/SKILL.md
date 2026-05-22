@@ -48,15 +48,15 @@ On confirmation, ask: **"Save to `groomed/` for later, or start implementing now
 
 ### Option A — Save to groomed/
 1. Derive a kebab-case slug from the feature name.
-2. Write the spec to `project-management/groomed/<slug>.md` using the structure below.
-3. If a source `planned/` file existed, delete it.
-4. Tell the user to run `/implement-feature <slug>.md` when ready to begin.
+2. If a source `planned/` file existed, move it to the destination path with `git mv project-management/planned/<source> project-management/groomed/<slug>.md`, then overwrite its content using the Write tool.
+   If there is no source file, write the spec directly to `project-management/groomed/<slug>.md` with the Write tool.
+3. Tell the user to run `/implement-feature <slug>.md` when ready to begin.
 
 ### Option B — Start now (in-progress/)
 1. Prompt the user for a filename (suggest the kebab-case slug).
-2. Write the spec **and task list** to `project-management/in-progress/<filename>.md` using the structure below, including a fully populated `## Tasks` section organized into phases (see Task List Standards).
-3. If a source `planned/` file existed, delete it.
-4. Invoke the `implement-feature` skill with `<filename>.md` as the argument — do not just tell the user to run it manually.
+2. If a source `planned/` file existed, move it to the destination path with `git mv project-management/planned/<source> project-management/in-progress/<filename>.md`, then overwrite its content using the Write tool.
+   If there is no source file, write the spec directly to `project-management/in-progress/<filename>.md` with the Write tool.
+3. Invoke the `implement-feature` skill with `<filename>.md` as the argument — do not just tell the user to run it manually.
 
 ## Output file structure
 

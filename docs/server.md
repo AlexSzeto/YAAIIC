@@ -20,6 +20,7 @@ This document describes all API endpoints provided by the YAAIIC server.
 - [Queue API](#queue-api)
 - [Chat API](#chat-api)
 - [SSE Progress Stream](#sse-progress-stream)
+- [Admin API](#admin-api)
 
 ## Base URL
 
@@ -984,4 +985,21 @@ The queue serializes generation tasks so only one runs at a time. All AnyTale ge
 | `POST` | `/queue/clear` | Remove all non-running items |
 | `DELETE` | `/queue/item/:id` | Remove a specific item by ID; `404` if not found |
 | `PATCH` | `/queue/reorder` | Move an item to a new position; body `{ id, toIndex }` |
+
+## Admin API
+
+The admin endpoints are intended for local / LAN use only. No authentication is enforced — do not expose them on a public network.
+
+### Restart Server
+
+- **Endpoint**: `POST /admin/restart`
+- **Use Case**: Remotely trigger a clean server restart. The server flushes its response, then calls `process.exit(0)`. PM2 detects the exit and restarts the process automatically.
+- **Payload**: None
+- **Output**:
+  ```json
+  { "ok": true }
+  ```
+- **Notes**:
+  - The server must be running under PM2 (`npm start`) for the restart to be automatic. If started with `node` directly, the process exits and does not come back.
+  - The `/restart-server` Claude skill wraps this endpoint: it POSTs to `/admin/restart` then polls `/status` until the server is back up.
 

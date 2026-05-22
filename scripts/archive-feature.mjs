@@ -39,7 +39,6 @@ const nextNumber = highest + 1;
 const destName = `${nextNumber}-${filename}`;
 const destPath = path.join(ARCHIVED_DIR, destName);
 
-fs.copyFileSync(sourcePath, destPath);
-fs.unlinkSync(sourcePath);
+fs.renameSync(sourcePath, destPath);
 
 console.log(`Archived as project-management/archived/${destName}`);

@@ -23,7 +23,7 @@ Run `git status --short` to detect staged and unstaged changes.
 
 Apply these rules in order, using the first source that yields a meaningful message:
 
-**A. task.md newly-checked items** — Read `task.md`. Look for tasks that were checked (`[x]`) as part of the current session. Summarise those tasks into a concise imperative phrase (e.g. `add drag-and-drop list rearrangement`). Use multiple phrases joined by `;` if more than one distinct task was completed.
+**A. In-progress file newly-checked items** — Glob `project-management/in-progress/*.md` and read any files that appear in `git diff --name-only`. Look for tasks that were checked (`[x]`) as part of the current session. Summarise those tasks into a concise imperative phrase (e.g. `add drag-and-drop list rearrangement`). Use multiple phrases joined by `;` if more than one distinct task was completed.
 
 **B. Skill argument** — If the user supplied text as a skill argument, use it directly as the commit message (apply light formatting: lowercase first word, trim trailing punctuation).
 

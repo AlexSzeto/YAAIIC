@@ -33,7 +33,7 @@ Two browser tabs open to the same section of the site should coexist without bre
 - [x] Review and update affected living docs: `docs/server.md` (SSE buffer behaviour change), `.claude/rules/client.md` (clientId pattern, coalescing pattern)
 
 #### Fixes and Changes
-- [ ] Add PM2-based remote restart: run server under PM2, expose `POST /admin/restart` endpoint that flushes a response then calls `process.exit(0)` so PM2 auto-restarts the process
+- [x] Add PM2-based remote restart: run server under PM2, expose `POST /admin/restart` endpoint that flushes a response then calls `process.exit(0)` so PM2 auto-restarts the process
 
 ## Implementation Details
 
