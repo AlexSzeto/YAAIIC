@@ -103,9 +103,10 @@ function readData() {
       plot: Array.isArray(parsed.plot) ? parsed.plot : [],
       characters: Array.isArray(parsed.characters) ? parsed.characters : [],
       outfits: Array.isArray(parsed.outfits) ? parsed.outfits : [],
+      genres: Array.isArray(parsed.genres) ? parsed.genres : [],
     };
   } catch {
-    return { parts: [], plot: [], characters: [], outfits: [] };
+    return { parts: [], plot: [], characters: [], outfits: [], genres: [] };
   }
 }
 
@@ -229,4 +230,48 @@ export function deleteOutfit(uid) {
   }
   data.outfits.splice(idx, 1);
   writeData(data);
+}
+
+// ── Genres CRUD ────────────────────────────────────────────────────────────
+
+export function listGenres() {
+  return readData().genres;
+}
+
+export function upsertGenre(uid, genre) {
+  const data = readData();
+  const idx = data.genres.findIndex(g => g.uid === uid);
+  if (idx >= 0) {
+    data.genres[idx] = genre;
+  } else {
+    data.genres.push(genre);
+  }
+  writeData(data);
+  return genre;
+}
+
+export function deleteGenre(uid) {
+  const data = readData();
+  const idx = data.genres.findIndex(g => g.uid === uid);
+  if (idx < 0) {
+    const err = new Error(`Genre not found: ${uid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  data.genres.splice(idx, 1);
+  writeData(data);
+}
+
+export function appendTrackToGenre(genreUid, track) {
+  const data = readData();
+  const genre = data.genres.find(g => g.uid === genreUid);
+  if (!genre) {
+    const err = new Error(`Genre not found: ${genreUid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  if (!Array.isArray(genre.tracks)) genre.tracks = [];
+  genre.tracks.push(track);
+  writeData(data);
+  return track;
 }

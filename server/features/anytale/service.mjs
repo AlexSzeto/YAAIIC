@@ -2,7 +2,7 @@
  * AnyTale Service – Business logic for the parts library, plot data, and characters.
  */
 import { randomUUID } from 'crypto';
-import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit } from './repository.mjs';
+import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit, listGenres, upsertGenre, deleteGenre, appendTrackToGenre } from './repository.mjs';
 
 export function getAllParts() {
   return listParts();
@@ -118,4 +118,33 @@ export function updateOutfitField(uid, field, value) {
   const outfit = listOutfits().find(o => o.uid === uid);
   if (!outfit) throw new Error(`Outfit ${uid} not found`);
   upsertOutfit(uid, { ...outfit, [field]: value });
+}
+
+// ── Genres ─────────────────────────────────────────────────────────────────
+
+export function getAllGenres() {
+  return listGenres();
+}
+
+export function createGenre(genre) {
+  const uid = randomUUID();
+  return upsertGenre(uid, { ...genre, uid, tracks: genre.tracks ?? [] });
+}
+
+export function saveGenre(uid, genre) {
+  if (!uid || typeof uid !== 'string') {
+    const err = new Error('uid is required and must be a string');
+    err.code = 'EINVAL';
+    throw err;
+  }
+  return upsertGenre(uid, genre);
+}
+
+export function removeGenreByUid(uid) {
+  // throws with code ENOENT if not found
+  deleteGenre(uid);
+}
+
+export function addTrackToGenre(genreUid, track) {
+  return appendTrackToGenre(genreUid, track);
 }

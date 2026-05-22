@@ -1,5 +1,5 @@
 /**
- * AnyTale Router – REST endpoints for the parts library, plot data, characters, and outfits.
+ * AnyTale Router – REST endpoints for the parts library, plot data, characters, outfits, and genres.
  *
  * Routes:
  *   GET    /anytale/parts         – returns array of all saved part configs
@@ -23,12 +23,18 @@
  *   PUT    /anytale/outfits/:uid               – update an existing outfit by uid
  *   DELETE /anytale/outfits/:uid               – delete an outfit
  *   POST   /anytale/outfits/:uid/render-outfit – render an image for an outfit
+ *
+ *   GET    /anytale/genres                          – returns array of all genres
+ *   POST   /anytale/genres                          – create a new genre; server assigns UUID; returns { saved }
+ *   PUT    /anytale/genres/:uid                     – update an existing genre by uid
+ *   DELETE /anytale/genres/:uid                     – delete a genre and all nested tracks
+ *   POST   /anytale/genres/:uid/generate-track      – queue AceStep generation for a genre
  */
 import { Router } from 'express';
 import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
-import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField } from './service.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField, getAllGenres, createGenre, saveGenre, removeGenreByUid } from './service.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 import * as queueService from '../queue/service.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
@@ -554,6 +560,123 @@ router.post('/anytale/outfits/:uid/render-outfit', async (req, res) => {
   } catch (error) {
     console.error('Error starting outfit render:', error);
     res.status(500).json({ error: 'Failed to start outfit render', details: error.message });
+  }
+});
+
+// ── Genre endpoints ───────────────────────────────────────────────────────
+
+router.get('/anytale/genres', (_req, res) => {
+  try {
+    res.json(getAllGenres());
+  } catch (error) {
+    console.error('Error listing anytale genres:', error);
+    res.status(500).json({ error: 'Failed to list genres' });
+  }
+});
+
+router.post('/anytale/genres', (req, res) => {
+  try {
+    const genre = req.body;
+    if (!genre || typeof genre !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a genre object' });
+    }
+    const saved = createGenre(genre);
+    res.status(201).json({ saved });
+  } catch (error) {
+    console.error('Error creating anytale genre:', error);
+    res.status(500).json({ error: 'Failed to create genre' });
+  }
+});
+
+router.put('/anytale/genres/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    const genre = req.body;
+    if (!genre || typeof genre !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a genre object' });
+    }
+    const saved = saveGenre(uid, { ...genre, uid });
+    res.json({ saved });
+  } catch (error) {
+    if (error.code === 'EINVAL') return res.status(400).json({ error: error.message });
+    console.error('Error saving anytale genre:', error);
+    res.status(500).json({ error: 'Failed to save genre' });
+  }
+});
+
+router.delete('/anytale/genres/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    removeGenreByUid(uid);
+    res.json({ deleted: uid });
+  } catch (error) {
+    if (error.code === 'ENOENT') return res.status(404).json({ error: 'Genre not found' });
+    console.error('Error deleting anytale genre:', error);
+    res.status(500).json({ error: 'Failed to delete genre' });
+  }
+});
+
+// ── Generate track for a genre ────────────────────────────────────────────
+
+router.post('/anytale/genres/:uid/generate-track', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const musicWorkflow = anytaleConfig.musicWorkflow || 'AceStep Music Generation';
+    const defaultMusicLength = anytaleConfig.defaultMusicLength ?? 120;
+
+    const genre = getAllGenres().find(g => g.uid === uid);
+    if (!genre) return res.status(404).json({ error: 'Genre not found' });
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === musicWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Music workflow '${musicWorkflow}' not found` });
+    }
+
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const variation = genre.variations?.length ? pick(genre.variations) : '';
+    const prompt = (genre.musicPrompt || '').replace('{{variation}}', variation);
+    const key = genre.keys?.length ? pick(genre.keys) : 'C major';
+    const bpm = randomInt(genre.bpmMin ?? 80, genre.bpmMax ?? 120);
+    const timeSignature = genre.timeSignatures?.length ? pick(genre.timeSignatures) : '4/4';
+    const adjective = genre.adjectives?.length ? pick(genre.adjectives) : 'New';
+    const noun = genre.nouns?.length ? pick(genre.nouns) : 'Track';
+    const name = `${adjective} ${noun}`;
+
+    const requestData = {
+      workflow: musicWorkflow,
+      name,
+      prompt,
+      lyrics: '',
+      bpm,
+      key,
+      time_signature: timeSignature,
+      length: defaultMusicLength,
+      seed: Math.floor(Math.random() * 4294967295),
+      tags: '',
+      description: '',
+      summary: '',
+      genreUid: uid,
+    };
+
+    const autoStart = req.query.queueOnly !== 'true';
+    queueService.enqueue({
+      type: 'audio',
+      source: 'anytale',
+      clientId: req.body.clientId || null,
+      name,
+      subLabel: genre.name || 'Music',
+      endpointKey: 'anytale-music',
+      taskData: requestData,
+    }, { autoStart });
+
+    res.status(202).json({});
+  } catch (error) {
+    console.error('Error starting music generation for genre:', error);
+    res.status(500).json({ error: 'Failed to start music generation', details: error.message });
   }
 });
 

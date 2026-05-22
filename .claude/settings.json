@@ -14,7 +14,10 @@
       "Bash(Select-Object -First 20)",
       "PowerShell(head -20)",
       "Bash(Get-ChildItem -Path \"f:\\\\YAAIIC\\\\server\\\\features\\\\generation\\\\processors\\\\\" -File)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(git mv *)",
+      "Bash(curl -X POST http://localhost:3000/admin/restart)",
+      "Bash(Get-ChildItem -Path \"f:\\\\YAAIIC\\\\scripts\\\\migrate\\\\anytale-data\\\\\" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)"
     ]
   }
 }

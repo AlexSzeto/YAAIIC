@@ -5,7 +5,7 @@
  *   1. No console.error was called (Preact validates prop types and misuse here)
  *   2. No uncaught exception during render
  */
-import { vi, describe, test, expect, afterEach } from 'vitest'
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/preact'
 import { html } from 'htm/preact'
 
@@ -155,4 +155,99 @@ describe('ToggleSwitch', () => {
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
+})
+
+// ── AudioPlayer demo usages (mirrors test.html) ───────────────────────────
+
+import { AudioPlayer } from './media/audio-player.mjs'
+
+describe('AudioPlayer (test.html usages)', () => {
+  test('renders as overlay on album art without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <div style="position: relative; width: 300px; height: 150px;">
+        <img src="/js/custom-ui/demo/sample-album-cover-1.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
+          <${AudioPlayer} audioUrl="/js/custom-ui/demo/sample-music-track-1.mp3" />
+        </div>
+      </div>
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  test('renders standalone full-width without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`<${AudioPlayer} audioUrl="/js/custom-ui/demo/sample-music-track-3.mp3" />`)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  test('renders normal widthScale without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`<${AudioPlayer} widthScale="normal" audioUrl="/js/custom-ui/demo/sample-music-track-4.mp3" />`)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
+// ── BgmPlayerDemo — Panel glass + controls (mirrors test.html) ────────────
+
+import { globalBgmPlayer } from './global-audio-player.mjs'
+
+function makeMockBgmGainNode() {
+  return { gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() }, connect: vi.fn() }
+}
+function makeMockBgmContext() {
+  return {
+    currentTime: 0, state: 'running', destination: {},
+    resume: vi.fn(),
+    createGain: vi.fn().mockImplementation(makeMockBgmGainNode),
+    createMediaElementSource: vi.fn().mockImplementation(() => ({ connect: vi.fn() })),
+  }
+}
+class MockBgmAudio {
+  constructor() {
+    this.src = ''; this.currentTime = 0; this.duration = 30;
+    this.crossOrigin = null; this.preload = 'auto';
+    this.play = vi.fn().mockResolvedValue(undefined);
+    this.pause = vi.fn();
+    this.addEventListener = vi.fn(); this.removeEventListener = vi.fn();
+  }
+}
+
+describe('BgmPlayerDemo (test.html usages)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    window.AudioContext = function MockBgmAudioContext() { return makeMockBgmContext(); }
+    window.Audio = MockBgmAudio
+    globalBgmPlayer.stop()
+    globalBgmPlayer._context = null
+    globalBgmPlayer._slots = [{ audio: null, source: null, gain: null }, { audio: null, source: null, gain: null }]
+    globalBgmPlayer._activeSlot = 0
+    globalBgmPlayer._playId = 0
+  })
+
+  afterEach(() => {
+    globalBgmPlayer.stop()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  test('Panel glass variant with style object renders without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <${Panel} variant="glass" padding="small" style=${{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <${Button} variant="medium-icon" icon="play" />
+        <div style="flex: 1; display: flex; align-items: center; gap: 6px;">
+          <span>0:00</span>
+          <div style="flex: 1; height: 6px; border-radius: 3px; background: #333;"><div style="height: 100%; width: 0%;"></div></div>
+          <span>0:00</span>
+        </div>
+      </${Panel}>
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
 })

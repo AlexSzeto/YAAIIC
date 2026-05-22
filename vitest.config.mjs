@@ -14,7 +14,7 @@ export default defineConfig({
       {
         test: {
           name: 'client',
-          include: ['public/js/**/*.test.mjs'],
+          include: ['public/js/**/*.test.mjs', 'public/js/**/*.vitest.mjs'],
           environment: 'happy-dom',
         },
       },

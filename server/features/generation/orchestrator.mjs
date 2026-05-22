@@ -29,7 +29,8 @@ import { modifyDataWithPrompt, resetPromptLog } from '../../core/llm.mjs';
 import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR, SERVER_DIR } from '../../core/paths.mjs';
 import { loadWorkflows } from './workflow-validator.mjs';
 import { findMediaByUid, getAllMediaData, saveMediaData } from '../../core/database.mjs';
-import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField } from '../anytale/service.mjs';
+import { randomUUID } from 'crypto';
+import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField, addTrackToGenre } from '../anytale/service.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -850,7 +851,8 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
   const silent = endpointKey === 'anytale-part-preview' ||
                  endpointKey === 'anytale-render-portrait' ||
                  endpointKey === 'anytale-render-outfit' ||
-                 endpointKey === 'anytale-voice';
+                 endpointKey === 'anytale-voice' ||
+                 endpointKey === 'anytale-music';
 
   const { taskId } = initializeGenerationTask(taskData, workflowData, config);
 
@@ -876,6 +878,17 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
           if (result?.summary) updates.introTranscript = result.summary;
           if (Object.keys(updates).length) saveCharacter(taskData.characterUid, { ...char, ...updates });
         }
+      }
+      if (endpointKey === 'anytale-music' && taskData.genreUid && result?.audioUrl) {
+        const track = {
+          uid: randomUUID(),
+          name: taskData.name || 'Track',
+          key: taskData.key || '',
+          bpm: taskData.bpm || 0,
+          timeSignature: taskData.time_signature || '4/4',
+          audioUrl: result.audioUrl,
+        };
+        try { addTrackToGenre(taskData.genreUid, track); } catch { /* genre may have been deleted */ }
       }
     })
     .catch(err => console.error(`[queue] executeQueuedTask(${endpointKey}) post-processing failed:`, err));

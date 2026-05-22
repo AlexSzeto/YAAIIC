@@ -46,12 +46,13 @@
     import { ImageSelect } from './media/image-select.mjs';
     import { AudioSelect } from './media/audio-select.mjs';
     import { AudioPlayer } from './media/audio-player.mjs';
+    import { globalBgmPlayer } from './global-audio-player.mjs';
     import { ProgressProvider, useProgress } from './msg/progress-context.mjs';
     import { ToastProvider, useToast } from './msg/toast.mjs';
     import { showDialog, showTextPrompt } from './overlays/dialog.mjs';
     import { Modal, createImageModal, showModal } from './overlays/modal.mjs';
     import { HoverPanelProvider, useHoverPanel } from './overlays/hover-panel.mjs';
-    import { useRef } from 'preact/hooks';
+    import { useRef, useState, useEffect } from 'preact/hooks';
     import { Icon } from './layout/icon.mjs';
     import { RangeSlider } from './io/range-slider.mjs';
     import { Slider } from './io/slider.mjs';
@@ -469,6 +470,141 @@
     }
     
     // =========================================================================
+    // GlobalBgmPlayer Demo Component
+    // =========================================================================
+
+    const CROSSFADE_DURATION = 3;
+
+    const DEMO_PLAYLIST = [
+      '/js/custom-ui/demo/sample-music-track-1.mp3',
+      '/js/custom-ui/demo/sample-music-track-2.mp3',
+      '/js/custom-ui/demo/sample-music-track-3.mp3',
+      '/js/custom-ui/demo/sample-music-track-4.mp3',
+    ];
+
+    function BgmPlayerDemo() {
+      const [playing, setPlaying] = useState(false);
+      const [track, setTrack] = useState(null);
+      const [currentTime, setCurrentTime] = useState(0);
+      const [duration, setDuration] = useState(0);
+      const timeUpdateHandlerRef = useRef(null);
+      const prevAudioRef = useRef(null);
+
+      // Subscribe to player events
+      useEffect(() => {
+        return globalBgmPlayer.subscribe((e) => {
+          if (e.event === 'track-start') {
+            setTrack(e);
+            setDuration(globalBgmPlayer.getDuration());
+            setCurrentTime(0);
+          }
+          if (e.event === 'stop') {
+            setPlaying(false);
+            setTrack(null);
+            setCurrentTime(0);
+            setDuration(0);
+          }
+        });
+      }, []);
+
+      // Attach timeupdate listener to the current audio element when track changes
+      useEffect(() => {
+        if (!playing) return;
+        const update = () => {
+          setCurrentTime(globalBgmPlayer.getCurrentTime());
+          setDuration(globalBgmPlayer.getDuration());
+        };
+        const attachToCurrentAudio = () => {
+          const audio = globalBgmPlayer.getCurrentAudioElement();
+          if (!audio) return;
+          if (prevAudioRef.current && prevAudioRef.current !== audio) {
+            prevAudioRef.current.removeEventListener('timeupdate', timeUpdateHandlerRef.current);
+          }
+          timeUpdateHandlerRef.current = update;
+          prevAudioRef.current = audio;
+          audio.addEventListener('timeupdate', update);
+        };
+        attachToCurrentAudio();
+        return () => {
+          if (prevAudioRef.current && timeUpdateHandlerRef.current) {
+            prevAudioRef.current.removeEventListener('timeupdate', timeUpdateHandlerRef.current);
+          }
+        };
+      }, [playing, track]);
+
+      const handlePlay = () => {
+        if (globalBgmPlayer.isPlaying()) {
+          globalBgmPlayer.stop();
+          setPlaying(false);
+        } else {
+          globalBgmPlayer.setPlaylist(DEMO_PLAYLIST);
+          globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: CROSSFADE_DURATION });
+          globalBgmPlayer.play();
+          setPlaying(true);
+        }
+      };
+
+      const formatTime = (s) => {
+        if (!isFinite(s) || s < 0) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return m + ':' + String(sec).padStart(2, '0');
+      };
+
+      const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+      const theme = currentTheme.value;
+
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px; width: 340px;">
+
+          <!-- Status / track info row -->
+          <div style="font-size: 13px; color: ${theme.colors.text.secondary}; min-height: 18px;">
+            ${track
+              ? html`<span><strong>${track.label}</strong> · ${track.index + 1} / ${track.total}</span>`
+              : 'Ready · 4 local tracks'}
+          </div>
+
+          <!-- Panel: play button + progress bar + times -->
+          <${Panel} variant="glass" padding="small" style=${{ display: 'flex', alignItems: 'center', gap: theme.spacing.small.gap }}>
+            <${Button}
+              variant="medium-icon"
+              color="secondary"
+              icon=${playing ? 'stop' : 'play'}
+              disabled=${false}
+              onClick=${handlePlay}
+              title=${playing ? 'Stop' : 'Play'}
+            />
+
+            <!-- Progress bar -->
+            <div style="flex: 1; display: flex; align-items: center; gap: 6px;">
+              <span style="font-family: monospace; font-size: ${theme.typography.fontSize.small}; color: ${theme.colors.text.secondary}; min-width: 36px; text-align: center;">
+                ${formatTime(currentTime)}
+              </span>
+              <div style="
+                flex: 1; height: 6px; border-radius: 3px; overflow: hidden;
+                background: ${theme.colors.overlay.background};
+              ">
+                <div style="
+                  height: 100%; border-radius: 3px;
+                  width: ${progress}%;
+                  background: ${theme.colors.primary.background};
+                  transition: width 0.1s linear;
+                "></div>
+              </div>
+              <span style="font-family: monospace; font-size: ${theme.typography.fontSize.small}; color: ${theme.colors.text.secondary}; min-width: 36px; text-align: center;">
+                ${formatTime(duration)}
+              </span>
+            </div>
+          </${Panel}>
+
+          <div style="font-size: 11px; opacity: 0.45;">
+            Crossfade ${CROSSFADE_DURATION} s · loops playlist · backed by HTMLAudioElement + Web Audio gain
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
     // Test Application
     // =========================================================================
     
@@ -500,10 +636,10 @@
           itemNavSelected: null,
           // ImageSelect states
           imageSelectValue1: null,
-          imageSelectValue2: 'https://picsum.photos/200',
+          imageSelectValue2: '/js/custom-ui/demo/sample-album-cover-1.jpg',
           // AudioSelect states
           audioSelectValue1: null,
-          audioSelectValue2: { audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', name: 'SoundHelix Song 1', imageUrl: 'https://picsum.photos/150' },
+          audioSelectValue2: { audioUrl: '/js/custom-ui/demo/sample-music-track-1.mp3', name: 'Sample Track 1', imageUrl: '/js/custom-ui/demo/sample-album-cover-1.jpg' },
           // ProgressBanner states
           progressBannerVisible: false,
           progressBannerKey: 0,
@@ -1496,27 +1632,31 @@
                 <p style="margin-bottom: 16px; opacity: 0.7;">Audio player overlay with play/pause, progress bar, and time display</p>
                 
                 <${ComponentGrid}>
-                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
-                      Album Art Area
-                    </div>
+                  <div style="position: relative; width: 300px; height: 150px; border-radius: 8px; overflow: hidden;">
+                    <img src="/js/custom-ui/demo/sample-album-cover-1.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
                     <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
-                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" />
+                      <${AudioPlayer} audioUrl="/js/custom-ui/demo/sample-music-track-1.mp3" />
                     </div>
                   </div>
-                  <div style="position: relative; width: 300px; height: 150px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 8px; overflow: hidden;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.5;">
-                      Album Art Area
-                    </div>
+                  <div style="position: relative; width: 300px; height: 150px; border-radius: 8px; overflow: hidden;">
+                    <img src="/js/custom-ui/demo/sample-album-cover-2.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
                     <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 8px;">
-                      <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                      <${AudioPlayer} audioUrl="/js/custom-ui/demo/sample-music-track-2.mp3" />
                     </div>
                   </div>
-                  <${AudioPlayer} audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
-                  <${AudioPlayer} widthScale="normal" audioUrl="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" />
+                  <${AudioPlayer} audioUrl="/js/custom-ui/demo/sample-music-track-3.mp3" />
+                  <${AudioPlayer} widthScale="normal" audioUrl="/js/custom-ui/demo/sample-music-track-4.mp3" />
                 </${ComponentGrid}>
               </${Section}>
-              
+
+              <${Section}>
+                <${SectionTitle}>globalBgmPlayer — BGM Looping Player</${SectionTitle}>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Web Audio API–based background music player with crossfade/fade transitions. Voice (AudioPlayer) and BGM coexist independently.</p>
+                <${ComponentGrid}>
+                  <${BgmPlayerDemo} />
+                </${ComponentGrid}>
+              </${Section}>
+
               <${CategoryHeader}>Message/Notification Components<//>
               
               <${Section}>
@@ -1578,7 +1718,7 @@
                     <${Button} 
                       variant="medium-text"
                       color="secondary"
-                      onClick=${() => createImageModal('https://picsum.photos/800/600', false, 'Sample Image')}
+                      onClick=${() => createImageModal('/js/custom-ui/demo/sample-album-cover-1.jpg', false, 'Sample Image')}
                     >
                       Show Image Modal
                     <//>
@@ -1586,7 +1726,7 @@
                       variant="medium-text"
                       color="success"
                       onClick=${() => createImageModal(
-                        'https://picsum.photos/800/600',
+                        '/js/custom-ui/demo/sample-album-cover-1.jpg',
                         true,
                         'Selectable Image',
                         () => alert('Image selected!'),

@@ -194,7 +194,7 @@
           ]
         }
       ],
-      "hidden": true
+      "hidden": false
     },
     {
       "name": "Text to Image (Illustrious Part Preview)",
