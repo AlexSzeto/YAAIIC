@@ -45,6 +45,16 @@ Polish the AnyTale editor UI for clarity and usability across four areas: richer
 
 - [x] Add a plot-level slot requirements editor above the page pill list: a read-only pill row derived from `plot.slotRequirements` where each pill shows the slot and required status; clicking a pill cycles through the valid statuses and removes the entry on "none"; an "add slot requirement" control lets the user add a new slot → status pair to `plot.slotRequirements`.
 
+#### Fixes and Changes
+
+- [x] Show all known slots in PlotPagePills (not just active ones); pass `allSlots` from `slotOptions`; inactive slots render as outline-only pills with no background.
+
+- [x] Hide name pills for parts where every type is in `recommendedCharacterPartTypes`; filter in `plot-section.mjs` before passing `activeParts`.
+
+- [x] Transition label background color must match the target status color (use `STATUS_BG[transition]` instead of hardcoded red).
+
+- [x] Restore the page requirements pass/fail pill indicator; place it inline next to the Page H2 heading.
+
 ### Phase 4 — Auto-regen part previews on empty cache response
 
 - [ ] Server: pass `partUid` in the request body to `POST /anytale/generate-part-preview` and include it in the enqueued `taskData` so clients can match queue items to a specific part.

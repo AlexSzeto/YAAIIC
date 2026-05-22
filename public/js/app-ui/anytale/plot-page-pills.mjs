@@ -9,8 +9,9 @@
  * transition controls.
  *
  * Props:
- *   @param {Map<string, 'covering'|'revealing'|'removed'>} props.slotStatuses
- *   @param {Array}    props.activeParts  – enabled parts ({ config: { name } })
+ *   @param {Map<string, 'covering'|'revealing'|'removed'>} props.slotStatuses – currently active slots and their resolved status
+ *   @param {string[]} [props.allSlots=[]] – all known slot types; inactive ones render as outline-only pills
+ *   @param {Array}    props.activeParts  – enabled parts ({ config: { name } }); character-type-only parts already filtered out by caller
  *   @param {Object}   props.page         – current PlotPage { requirements, actions }
  *   @param {Function} props.onChange     – called with updated page object
  *   @param {boolean}  [props.disabled]
@@ -84,24 +85,36 @@ const TransitionLabel = styled('span')`
   border-radius: 9999px;
   padding: 2px 6px 2px 8px;
   margin-left: 2px;
-  background: red;
+  background: ${({ status }) => (STATUS_BG[status] || STATUS_BG.covering)()};
 `;
 TransitionLabel.className = 'pill-transition-label';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function nextTransition(currentStatus, currentTransition) {
-  // Available targets are all statuses except the slot's current status, plus null (no transition).
-  const available = [...ALL_STATUSES.filter(s => s !== currentStatus), null];
+  // Inactive slots (no currentStatus) can transition to any status.
+  const available = currentStatus
+    ? [...ALL_STATUSES.filter(s => s !== currentStatus), null]
+    : [...ALL_STATUSES, null];
   const idx = available.indexOf(currentTransition);
   return available[(idx + 1) % available.length];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlotPagePills({ slotStatuses, activeParts = [], page = {}, onChange, disabled = false }) {
+export function PlotPagePills({ slotStatuses, allSlots = [], activeParts = [], page = {}, onChange, disabled = false }) {
   const requirements = page.requirements || [];
   const actions = page.actions || [];
+
+  const statusMap = slotStatuses instanceof Map
+    ? slotStatuses
+    : new Map(Object.entries(slotStatuses || {}));
+
+  // Merged slot list: all known slots (preserves allSlots order), plus any active
+  // slots not in allSlots (edge case: part types not represented in the library list).
+  const seenSlots = new Set(allSlots);
+  const extraActiveSlots = [...statusMap.keys()].filter(s => !seenSlots.has(s));
+  const mergedSlots = [...allSlots, ...extraActiveSlots];
 
   const toggleRequirement = useCallback((label) => {
     if (disabled) return;
@@ -121,34 +134,34 @@ export function PlotPagePills({ slotStatuses, activeParts = [], page = {}, onCha
     onChange({ ...page, actions: newActions });
   }, [disabled, actions, page, onChange]);
 
-  const slotEntries = slotStatuses instanceof Map
-    ? [...slotStatuses.entries()]
-    : Object.entries(slotStatuses || {});
-
   const activePartNames = [...new Set(
     activeParts.map(p => (p.config?.name || '').trim()).filter(Boolean)
   )];
 
-  const iconColor = disabled
-    ? currentTheme.value.colors.warning.background
-    : currentTheme.value.colors.text.secondary;
-
   return html`
     <${PillRow}>
-      ${slotEntries.map(([slot, status]) => {
-        const bg = (STATUS_BG[status] || STATUS_BG.covering)();
+      ${mergedSlots.map(slot => {
+        const status = statusMap.get(slot) || null;
+        const isActive = statusMap.has(slot);
         const isLocked = requirements.includes(slot);
         const action = actions.find(a => a.slot === slot);
         const transition = action ? action.status : null;
+        const iconColor = disabled ? currentTheme.value.colors.text.secondary
+          : isLocked ? currentTheme.value.colors.danger.background
+          : currentTheme.value.colors.text.secondary;
+
+        const pillStyle = isActive
+          ? { backgroundColor: (STATUS_BG[status] || STATUS_BG.covering)() }
+          : { backgroundColor: 'transparent', border: '1px solid ' + currentTheme.value.colors.border.primary };
 
         return html`
-          <${Pill} key=${slot} style=${{ backgroundColor: bg }}>
+          <${Pill} key=${slot} style=${pillStyle}>
             <${LockZone}
               disabled=${disabled}
               title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
               onClick=${() => toggleRequirement(slot)}
             >
-              <${Icon} name=${isLocked ? 'check' : 'radio-circle'} size="14px" color=${iconColor} />
+              <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
             </${LockZone}>
             <${PillBody}
               style=${{ cursor: disabled ? 'default' : 'pointer' }}
@@ -156,7 +169,7 @@ export function PlotPagePills({ slotStatuses, activeParts = [], page = {}, onCha
               title="Click to cycle transition"
             >
               <${SlotText}>${slot}</${SlotText}>
-              ${transition && html` → <${TransitionLabel}>${transition}</${TransitionLabel}>`}
+              ${transition && html` → <${TransitionLabel} status=${transition}>${transition}</${TransitionLabel}>`}
             </${PillBody}>
           </${Pill}>
         `;
@@ -165,6 +178,9 @@ export function PlotPagePills({ slotStatuses, activeParts = [], page = {}, onCha
       ${activePartNames.map(name => {
         const isLocked = requirements.includes(name);
         const bg = currentTheme.value.colors.secondary.background;
+        const iconColor = disabled ? currentTheme.value.colors.text.secondary
+          : isLocked ? currentTheme.value.colors.warning.background
+          : currentTheme.value.colors.text.secondary;
 
         return html`
           <${Pill} key=${name} style=${{ backgroundColor: bg }}>
@@ -173,7 +189,7 @@ export function PlotPagePills({ slotStatuses, activeParts = [], page = {}, onCha
               title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
               onClick=${() => toggleRequirement(name)}
             >
-              <${Icon} name=${isLocked ? 'check' : 'radio-circle'} size="14px" color=${iconColor} />
+              <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
             </${LockZone}>
             <${PillBody}>
               ${name}

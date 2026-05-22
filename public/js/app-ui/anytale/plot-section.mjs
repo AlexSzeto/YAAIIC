@@ -24,7 +24,7 @@ import { Select } from '../../custom-ui/io/select.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
-import { resolveSlotStatuses } from './slot-resolver.mjs';
+import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 import { PlotPagePills } from './plot-page-pills.mjs';
 
 // ============================================================================
@@ -349,9 +349,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   // ── Pre-page slot statuses (before current page's actions) ────────────────
   const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
+
+  // Parts whose every type is a character slot type are excluded from name pills.
+  const nonCharacterParts = useMemo(() => enabledParts.filter(p => {
+    const types = Array.isArray(p.config?.type) ? p.config.type.map(t => t.trim().toLowerCase()) : [];
+    return types.length === 0 || !types.every(t => characterSlotTypes.includes(t));
+  }), [enabledParts, characterSlotTypes]);
   const priorSlotStatuses = useMemo(() => {
     return resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1);
   }, [enabledParts, plot.pages, currentPageIndex]);
+
+  // ── Whether current page's requirements are all satisfied ─────────────────
+  const requirementsMet = useMemo(
+    () => checkPageRequirements(currentPage, priorSlotStatuses, enabledParts),
+    [currentPage, priorSlotStatuses, enabledParts]
+  );
 
   // ── Slot statuses visible in the pill list: exclude character slot types ───
   const filteredSlotStatuses = useMemo(() => {
@@ -503,7 +515,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
       <!-- Page section -->
       <${VerticalLayout} gap="medium">
-        <${H2}>Page</${H2}>
+        <${HorizontalLayout} gap="small" style="align-items: center;">
+          <${H2}>Page</${H2}>
+          <span style=${{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '2px 10px',
+            borderRadius: '9999px',
+            fontSize: currentTheme.value.typography.fontSize.small,
+            backgroundColor: requirementsMet
+              ? currentTheme.value.colors.secondary.backgroundLight
+              : currentTheme.value.colors.danger.backgroundLight,
+          }}>
+            ${requirementsMet ? 'requirements met - rendering' : 'requirements failed - skipping'}
+          </span>
+        </${HorizontalLayout}>
 
         <!-- Plot-level slot requirements -->
         <${VerticalLayout} gap="small">
@@ -546,7 +572,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         <!-- Unified slot/part pill list -->
         <${PlotPagePills}
           slotStatuses=${filteredSlotStatuses}
-          activeParts=${enabledParts}
+          allSlots=${slotOptions}
+          activeParts=${nonCharacterParts}
           page=${currentPage}
           onChange=${(updatedPage) => updatePage(currentPageIndex, updatedPage)}
           disabled=${isCurrentPageLocked}
