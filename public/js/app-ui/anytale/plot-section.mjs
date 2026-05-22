@@ -26,6 +26,7 @@ import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 import { PlotPagePills } from './plot-page-pills.mjs';
+import { Icon } from '../../custom-ui/layout/icon.mjs';
 
 // ============================================================================
 // Styled Components
@@ -519,6 +520,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           <${H2}>Page</${H2}>
           <span style=${{
             display: 'inline-flex',
+            gap: '8px',
             alignItems: 'center',
             padding: '2px 10px',
             borderRadius: '9999px',
@@ -527,6 +529,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               ? currentTheme.value.colors.secondary.backgroundLight
               : currentTheme.value.colors.danger.backgroundLight,
           }}>
+            <${Icon} name=${requirementsMet ? 'radio-circle-marked' : 'radio-circle'} size="14px" ></${Icon}>
             ${requirementsMet ? 'requirements met - rendering' : 'requirements failed - skipping'}
           </span>
         </${HorizontalLayout}>
