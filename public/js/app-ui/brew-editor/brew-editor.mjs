@@ -10,7 +10,8 @@
  *  - Action bar: Record / Preview / Stop / Export / Save / Delete
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
+import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -163,6 +164,8 @@ export function BrewEditor() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [brew, setBrew] = useState(null);
+  // Last version loaded from or saved to the server — used for dirty detection.
+  const [savedBrew, setSavedBrew] = useState(null);
   const [savedBrews, setSavedBrews] = useState([]);
   const [isListOpen, setIsListOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -423,7 +426,9 @@ export function BrewEditor() {
       const { globals, mergedBrew } = await mergeGlobalSources(resolved);
       setGlobalSources(globals);
       // Prune brew sources to only those used by tracks
-      setBrew(pruneBrewSources(mergedBrew));
+      const loadedBrew = pruneBrewSources(mergedBrew);
+      setBrew(loadedBrew);
+      setSavedBrew(loadedBrew);
       setShowSources(false);
       setIsListOpen(false);
     } catch (e) {
@@ -450,6 +455,7 @@ export function BrewEditor() {
         body: JSON.stringify({ uid, name: brewWithUid.label, data: brewWithUid }),
       });
       if (!res.ok) throw new Error(await res.text());
+      setSavedBrew(brewWithUid);
       await loadBrewList();
       toast.success('Brew saved');
     } catch (e) {
@@ -806,6 +812,13 @@ export function BrewEditor() {
   // Used to show lock icons on the Sound Sources list.
   const usedSourceLabels = brew ? getUsedSourceLabels(brew) : new Set();
 
+  const brewRecorded = savedBrews.some(b => b.id === brew?.uid);
+  const brewDirty = useMemo(
+    () => !savedBrew || JSON.stringify(brew) !== JSON.stringify(savedBrew),
+    [brew, savedBrew]
+  );
+  const { saveLabel: brewSaveLabel, saveEnabled: brewSaveEnabled } = formButtonStates(brewRecorded, brewDirty);
+
   // Disable the brew-level preview when any channel has no tracks or any track lacks a source
   function trackHasSource(track) {
     if (track.type === 'loop') return Boolean(track.source);
@@ -886,7 +899,7 @@ export function BrewEditor() {
           },
         ]}
         onSelectItem=${handleOpenBrew}
-        onAction=${() => { setBrew(createDefaultBrew()); setShowSources(false); setIsListOpen(false); }}
+        onAction=${() => { setBrew(createDefaultBrew()); setSavedBrew(null); setShowSources(false); setIsListOpen(false); }}
         onClose=${() => setIsListOpen(false)}
         emptyMessage="No saved brews yet"
       />
@@ -1047,10 +1060,10 @@ export function BrewEditor() {
               variant="medium-icon-text"
               icon="save"
               color="primary"
-              disabled=${isSaving}
+              disabled=${isSaving || !brewSaveEnabled}
               onClick=${handleSave}
             >
-              ${isSaving ? 'Saving…' : 'Save Brew'}
+              ${isSaving ? 'Saving…' : brewSaveLabel}
             </${Button}>
           </${HorizontalLayout}>
         </${Panel}>

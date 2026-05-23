@@ -27,6 +27,7 @@ import { H2, H3, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/t
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
+import { formButtonStates } from '../forms.mjs';
 import { getClientId } from '../client-id.mjs';
 import { fetchOutfitList, createOutfit, saveOutfit, deleteOutfit, renderOutfit } from './outfit-api.mjs';
 import { ImagePreview } from './image-preview.mjs';
@@ -485,7 +486,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // ── Outfit CRUD actions ──────────────────────────────────────────────
 
   const isInLibrary = !!(outfit.uid && outfitList.some(o => o.uid === outfit.uid));
-  const hasChanges = !isInLibrary || !outfitsEqual(outfit, libraryOutfit);
+  const dirty = !isInLibrary || !outfitsEqual(outfit, libraryOutfit);
+  const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(isInLibrary, dirty);
 
   const handleSave = useCallback(async () => {
     try {
@@ -667,16 +669,16 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               color="primary"
               icon="save"
               onClick=${handleSave}
-              disabled=${!outfit.name || (isInLibrary && !hasChanges)}
+              disabled=${!outfit.name || !saveEnabled}
             >
-              ${isInLibrary ? 'Update' : 'Save'}
+              ${saveLabel}
             <//>
             <${Button}
               variant="small-text"
               color="secondary"
               icon="undo"
               onClick=${handleRevert}
-              disabled=${!isInLibrary || !hasChanges}
+              disabled=${!revertEnabled}
             >
               Revert
             <//>
@@ -694,7 +696,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               color="danger"
               icon="trash"
               onClick=${handleDelete}
-              disabled=${!isInLibrary}
+              disabled=${!deleteEnabled}
             >
               Delete
             <//>

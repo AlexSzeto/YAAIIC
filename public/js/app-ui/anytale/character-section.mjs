@@ -27,6 +27,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
 import { loadCharacter, saveCharacterState, createBlankCharacter } from './anytale-state.mjs';
+import { formButtonStates } from '../forms.mjs';
 import { getClientId } from '../client-id.mjs';
 import { fetchCharacterList, createCharacter, saveCharacter, deleteCharacter, generateCharacterPortrait, generateCharacterVoice } from './character-api.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
@@ -533,7 +534,8 @@ export function CharacterSection({
   // ── Character CRUD actions ───────────────────────────────────────────────
 
   const isInLibrary = !!(character.uid && characterList.some(c => c.uid === character.uid));
-  const hasChanges = !isInLibrary || !charactersEqual(character, libraryCharacter);
+  const dirty = !isInLibrary || !charactersEqual(character, libraryCharacter);
+  const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(isInLibrary, dirty);
 
   const handleSave = useCallback(async () => {
     try {
@@ -754,7 +756,7 @@ export function CharacterSection({
                 icon="image"
                 onClick=${handleGeneratePortrait}
                 loading=${isPortraitDuplicate}
-                disabled=${hasChanges || isPortraitDuplicate}
+                disabled=${dirty || isPortraitDuplicate}
               >
                 ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Portrait' : 'Generate Portrait'}
               <//>
@@ -764,7 +766,7 @@ export function CharacterSection({
                 icon="microphone"
                 onClick=${handleGenerateVoice}
                 loading=${isVoiceDuplicate}
-                disabled=${hasChanges || !character.personality?.trim() || isVoiceDuplicate}
+                disabled=${dirty || !character.personality?.trim() || isVoiceDuplicate}
               >
                 ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Voice' : 'Generate Voice'}
               <//>
@@ -847,16 +849,16 @@ export function CharacterSection({
               color="primary"
               icon="save"
               onClick=${handleSave}
-              disabled=${isInLibrary && !hasChanges}
+              disabled=${!saveEnabled}
             >
-              ${isInLibrary ? 'Update' : 'Save'}
+              ${saveLabel}
             <//>
             <${Button}
               variant="small-text"
               color="secondary"
               icon="undo"
               onClick=${handleRevert}
-              disabled=${!isInLibrary || !hasChanges}
+              disabled=${!revertEnabled}
             >
               Revert
             <//>
@@ -874,7 +876,7 @@ export function CharacterSection({
               color="danger"
               icon="trash"
               onClick=${handleDelete}
-              disabled=${!isInLibrary}
+              disabled=${!deleteEnabled}
             >
               Delete
             <//>

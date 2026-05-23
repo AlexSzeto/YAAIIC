@@ -8,7 +8,8 @@
  *  - Toast notifications on save/error
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
+import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -425,6 +426,8 @@ export function WorkflowEditor() {
 
   // Currently loaded full workflow object
   const [workflow,        setWorkflow]        = useState(null);
+  // Last version loaded from or saved to the server — used for dirty detection.
+  const [savedWorkflow,   setSavedWorkflow]   = useState(null);
   const [workflowJson,    setWorkflowJson]    = useState({}); // raw ComfyUI JSON
   const [isSaving,        setIsSaving]        = useState(false);
   const [isDeleting,      setIsDeleting]      = useState(false);
@@ -469,6 +472,7 @@ export function WorkflowEditor() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
 
       // Load the raw ComfyUI JSON for the node selector
       if (data.workflow.base) {
@@ -521,6 +525,7 @@ export function WorkflowEditor() {
       const copyName = `${baseName} (copy)`;
 
       setWorkflow({ ...fetchedWorkflow, name: copyName });
+      setSavedWorkflow(null);
 
       // Load raw ComfyUI JSON for the copied workflow's base file
       if (fetchedWorkflow.base) {
@@ -552,6 +557,7 @@ export function WorkflowEditor() {
       }
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
       // Upload response includes the workflowJson directly
       setWorkflowJson(data.workflowJson || {});
 
@@ -581,6 +587,7 @@ export function WorkflowEditor() {
       }
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
       await loadWorkflowList();
       toast.success('Workflow saved');
     } catch (e) {
@@ -603,6 +610,7 @@ export function WorkflowEditor() {
       if (!res.ok) throw new Error(await res.text());
       if (workflow?.name === name) {
         setWorkflow(null);
+        setSavedWorkflow(null);
         setWorkflowJson({});
       }
       await loadWorkflowList();
@@ -629,6 +637,12 @@ export function WorkflowEditor() {
 
   const validationErrors = validateWorkflowFrontend(workflow);
   const canSave = validationErrors.length === 0;
+  const workflowDirty = useMemo(
+    () => !savedWorkflow || JSON.stringify(workflow) !== JSON.stringify(savedWorkflow),
+    [workflow, savedWorkflow]
+  );
+  const workflowRecorded = savedWorkflow !== null;
+  const { saveLabel: workflowSaveLabel, saveEnabled: workflowSaveEnabled } = formButtonStates(workflowRecorded, workflowDirty);
 
   // ──────────────────────────────────────────────────────────────────────────
   // Dynamic-list helpers
@@ -818,10 +832,10 @@ export function WorkflowEditor() {
                 color="primary"
                 icon="save"
                 loading=${isSaving}
-                disabled=${!canSave || isSaving}
+                disabled=${!canSave || !workflowSaveEnabled || isSaving}
                 onClick=${handleSave}
               >
-                Save Workflow
+                ${workflowSaveLabel}
               </${Button}>
               ${!canSave && html`
                 <${SaveTooltip} theme=${theme} visible=${showTooltip}>

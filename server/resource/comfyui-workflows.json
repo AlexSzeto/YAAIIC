@@ -1283,7 +1283,7 @@
     },
     {
       "uid": "caf5d8c2-c02b-46bc-8180-588c08dd43e4",
-      "name": "Text to Image (WAI-Anima Characters)",
+      "name": "Text to Image (CottonAnima Characters)",
       "options": {
         "type": "image",
         "autocomplete": true,
@@ -1428,7 +1428,7 @@
           }
         }
       ],
-      "base": "wai-anima-text-to-image.json",
+      "base": "cottonanima-text-to-image.json",
       "replace": [
         {
           "from": "enhancedPrompt",

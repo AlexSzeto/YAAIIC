@@ -22,6 +22,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
+import { formButtonStates } from '../forms.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 import { PlotPagePills } from './plot-page-pills.mjs';
@@ -407,10 +408,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
-  const saveLabel = isInLibrary ? 'Update' : 'Save';
-  const isSaveDisabled = isInLibrary && savedPlot !== null && JSON.stringify(plot) === JSON.stringify(savedPlot);
-  const isDeleteDisabled = !isInLibrary;
-  const isRevertDisabled = !isInLibrary || savedPlot === null || isSaveDisabled;
+  const plotDirty = !(isInLibrary && savedPlot !== null && JSON.stringify(plot) === JSON.stringify(savedPlot));
+  const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(isInLibrary, plotDirty);
 
   const handleRevert = useCallback(async () => {
     if (!savedPlot) return;
@@ -556,13 +555,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       </${VerticalLayout}>
 
       <${ButtonRow}>
-        <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${isSaveDisabled}>
+        <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${!saveEnabled}>
           ${saveLabel}
         <//>
-        <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${isRevertDisabled}>
+        <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${!revertEnabled}>
           Revert
         <//>
-        <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${isDeleteDisabled}>
+        <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!deleteEnabled}>
           Delete
         <//>
         <${Button} variant="small-text" color="danger" icon="x" onClick=${handleClear}>

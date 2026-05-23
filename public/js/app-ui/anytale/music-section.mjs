@@ -710,7 +710,7 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
           loading=${saving}
           onClick=${handleSave}
         >
-          ${dirty ? 'Update' : 'Save'}
+          Save
         <//>
         <${Button}
           variant="small-text"

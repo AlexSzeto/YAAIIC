@@ -30,6 +30,7 @@ import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { ToggleSwitch } from '../../custom-ui/io/toggle-switch.mjs';
+import { formButtonStates } from '../forms.mjs';
 
 // ============================================================================
 // Styled Components
@@ -436,7 +437,6 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     onChange({ ...part, config: { ...libraryPart } });
   }, [libraryPart, part, onChange]);
 
-  // Library save button is disabled when nothing has changed vs. library
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
     name: config.name, type: config.type, baseline: config.baseline,
     previewBaseline: config.previewBaseline, attributes: config.attributes,
@@ -446,6 +446,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     previewBaseline: libraryPart.previewBaseline, attributes: libraryPart.attributes,
     isRevealing: libraryPart.isRevealing ?? false,
   });
+  const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(!!libraryPart, !isUnchangedFromLibrary);
 
   return html`
     <${VerticalLayout} gap="small">
@@ -602,16 +603,16 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
           color="primary"
           icon="save"
           onClick=${handleSaveToLibrary}
-          disabled=${isSaving || isDeleting || isUnchangedFromLibrary}
+          disabled=${isSaving || isDeleting || !saveEnabled}
         >
-          ${isSaving ? 'Saving...' : (libraryPart ? 'Update' : 'Save')}
+          ${isSaving ? 'Saving...' : saveLabel}
         </${Button}>
         <${Button}
           variant="small-text"
           color="secondary"
           icon="undo"
           onClick=${handleRevertToLibrary}
-          disabled=${isSaving || isDeleting || !libraryPart || isUnchangedFromLibrary}
+          disabled=${isSaving || isDeleting || !revertEnabled}
         >
           Revert
         </${Button}>
@@ -620,7 +621,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
           color="danger"
           icon="trash"
           onClick=${handleDeleteFromLibrary}
-          disabled=${isSaving || isDeleting || !libraryPart}
+          disabled=${isSaving || isDeleting || !deleteEnabled}
         >
           ${isDeleting ? 'Deleting...' : 'Delete'}
         </${Button}>

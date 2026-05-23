@@ -84,11 +84,13 @@ HorizontalEdgesLayout.className = 'horizontal-edges-layout';
  * Usage: Layout elements in a row with consistent spacing
  * @param {Object} props
  * @param {'small'|'medium'|'large'} [props.gap='medium'] - Spacing size
+ * @param {'flex-start'|'center'|'flex-end'} [props.justifyContent='flex-start'] - Horizontal alignment of children
  */
 export const HorizontalLayout = styled('div')`
   display: flex;
   flex-direction: row;
   align-items: ${props => props.alignItems || 'flex-end'};
+  justify-content: ${props => props.justifyContent || 'flex-start'};
   gap: ${props => currentTheme.value.spacing[props.gap && ['small', 'medium', 'large'].includes(props.gap) ? props.gap : 'medium'].gap};
 `;
 HorizontalLayout.className = 'horizontal-layout';
