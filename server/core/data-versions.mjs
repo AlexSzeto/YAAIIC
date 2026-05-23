@@ -9,7 +9,7 @@
  * queue-data is excluded — it is transient and not schema-versioned.
  */
 import path from 'path';
-import { CONFIG_PATH, DATABASE_DIR } from './paths.mjs';
+import { CONFIG_PATH, DATABASE_DIR, WORKFLOWS_PATH } from './paths.mjs';
 
 export const DATA_DOMAINS = {
   'config':        { currentVersion: 0, filePath: CONFIG_PATH },
@@ -17,4 +17,5 @@ export const DATA_DOMAINS = {
   'media-data':    { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'media-data.json') },
   'brew-data':     { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'brew-data.json') },
   'sound-sources': { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'sound-sources.json') },
+  'workflows':     { currentVersion: 1, filePath: WORKFLOWS_PATH },
 };

@@ -10,6 +10,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { WORKFLOWS_PATH, COMFYUI_WORKFLOWS_DIR } from '../../core/paths.mjs';
 
 // ---------------------------------------------------------------------------
@@ -446,16 +447,23 @@ export function saveWorkflow(workflowData) {
   }
 
   const data = readWorkflowsFile();
-  const existingIndex = data.workflows.findIndex(w => w.name === workflowData.name);
+
+  // Identify by uid so renaming a workflow doesn't create a duplicate entry.
+  const existingIndex = workflowData.uid
+    ? data.workflows.findIndex(w => w.uid === workflowData.uid)
+    : -1;
+
+  // Ensure every entry has a uid (new entries that haven't been through migration).
+  const entry = workflowData.uid ? workflowData : { uid: randomUUID(), ...workflowData };
 
   if (existingIndex !== -1) {
-    data.workflows[existingIndex] = workflowData;
+    data.workflows[existingIndex] = entry;
   } else {
-    data.workflows.push(workflowData);
+    data.workflows.push(entry);
   }
 
   writeWorkflowsFile(data);
-  return { success: true, workflow: workflowData, errors: [] };
+  return { success: true, workflow: entry, errors: [] };
 }
 
 /**

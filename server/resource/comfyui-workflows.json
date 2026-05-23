@@ -36,6 +36,7 @@
   "defaultAudioGenerationWorkflow": "Text to Image (Album)",
   "workflows": [
     {
+      "uid": "45929bf4-c161-433e-aaab-878d8766c112",
       "name": "Text to Image (Album)",
       "hidden": true,
       "options": {
@@ -88,6 +89,7 @@
       "base": "album-text-to-image.json"
     },
     {
+      "uid": "649f5584-e538-4f3b-9c34-7a7389171c56",
       "name": "Text to Image (Illustrious Portrait)",
       "options": {
         "type": "image",
@@ -197,6 +199,7 @@
       "hidden": true
     },
     {
+      "uid": "da4e4ff9-4ef8-49d4-a680-df14b47f8c93",
       "name": "Text to Image (Illustrious Part Preview)",
       "options": {
         "type": "image",
@@ -318,6 +321,7 @@
       "hidden": true
     },
     {
+      "uid": "2c06e0f5-253f-4d4b-998b-14521b5e337c",
       "name": "Personality to Voice Design (Qwen3-TTS)",
       "options": {
         "type": "audio",
@@ -425,6 +429,7 @@
       "hidden": true
     },
     {
+      "uid": "13fe4803-5779-4d17-a6e0-468804b31cdc",
       "name": "Text to Background Track (ACE-Step 1.5 XL)",
       "options": {
         "type": "audio",
@@ -745,6 +750,7 @@
       "hidden": true
     },
     {
+      "uid": "d2f011fb-30a9-4ce1-bbe0-0a6556ac1d05",
       "name": "Text to Background Track (Stable Audio 3 Medium)",
       "options": {
         "type": "audio",
@@ -1001,6 +1007,7 @@
       "hidden": true
     },
     {
+      "uid": "e615a571-1bd8-4b2a-b783-d460d0e39b72",
       "name": "Text to Image (Illustrious Characters)",
       "options": {
         "type": "image",
@@ -1104,6 +1111,7 @@
       ]
     },
     {
+      "uid": "7e0aae95-d520-4bbf-8c63-df03eee61109",
       "name": "Text to Image (Illustrious Background)",
       "options": {
         "type": "image",
@@ -1274,6 +1282,7 @@
       ]
     },
     {
+      "uid": "caf5d8c2-c02b-46bc-8180-588c08dd43e4",
       "name": "Text to Image (WAI-Anima Characters)",
       "options": {
         "type": "image",
@@ -1448,6 +1457,7 @@
       ]
     },
     {
+      "uid": "5487f83c-5795-44bc-a9c1-09d724cb7580",
       "name": "Text to Image (ZImage Fantasy Landscape)",
       "options": {
         "type": "image",
@@ -1608,6 +1618,7 @@
       ]
     },
     {
+      "uid": "f7039a31-f0d2-4976-ae16-780ae5a6294f",
       "name": "Text to Image (ZImage Fantasy Portrait)",
       "options": {
         "type": "image",
@@ -1796,6 +1807,7 @@
       ]
     },
     {
+      "uid": "0b88e020-312f-4e50-82e6-2b9625f361d8",
       "name": "Inpaint (Waifu Anime)",
       "options": {
         "type": "inpaint",
@@ -1860,6 +1872,7 @@
       ]
     },
     {
+      "uid": "eaed1d1a-c5ed-4cda-af4d-6e44b9aee429",
       "name": "Inpaint (Realistic Vision Fantasy)",
       "options": {
         "type": "inpaint",
@@ -1924,6 +1937,7 @@
       ]
     },
     {
+      "uid": "a8e6ab3f-db00-4849-b306-20d344067916",
       "name": "Text to Image (Flux Klein Fantasy Landscape)",
       "options": {
         "type": "image",
@@ -2084,6 +2098,7 @@
       ]
     },
     {
+      "uid": "6dc37002-f603-48cd-90f0-8d41c5a7e483",
       "name": "Text to Image (Flux Klein Fantasy Portrait)",
       "options": {
         "type": "image",
@@ -2244,6 +2259,7 @@
       ]
     },
     {
+      "uid": "ca84bee5-2b82-4364-874a-fa099df16ef8",
       "name": "Image Edit (Flux Klein)",
       "options": {
         "type": "image",
@@ -2500,6 +2516,7 @@
       ]
     },
     {
+      "uid": "eba62cf0-af1a-44f3-880f-86097e46ea0a",
       "name": "Multi Source Image Edit (Flux Klein)",
       "options": {
         "type": "image",
@@ -2764,6 +2781,7 @@
       ]
     },
     {
+      "uid": "70218583-c744-403d-aae2-d3cd12597658",
       "name": "Remove Background (RMBG)",
       "options": {
         "type": "image",
@@ -2836,6 +2854,7 @@
       ]
     },
     {
+      "uid": "ea9cf29f-d595-4ad4-8769-af176437459f",
       "name": "Image to Video (WAN5b)",
       "options": {
         "type": "video",
@@ -3073,6 +3092,7 @@
       ]
     },
     {
+      "uid": "ab5032e4-e5ae-41f8-b1e3-329220293d5b",
       "name": "Image to Video Loop (WAN5b)",
       "options": {
         "type": "video",
@@ -3300,6 +3320,7 @@
       ]
     },
     {
+      "uid": "c7e5c475-3d9d-4b51-a2ed-bc8cc50c60e2",
       "name": "Image to Video (WAN22)",
       "options": {
         "type": "video",
@@ -3549,6 +3570,7 @@
       ]
     },
     {
+      "uid": "13b13ba5-edc2-453e-a07f-d673fbb03a5d",
       "name": "Image to Video Loop (WAN22)",
       "options": {
         "type": "video",
@@ -3776,6 +3798,7 @@
       ]
     },
     {
+      "uid": "ca6bdc2b-c2ac-4a9a-8d41-7ed80f76d43e",
       "name": "Text to Music (StableAudio 3 Medium)",
       "options": {
         "type": "audio",
@@ -4054,6 +4077,7 @@
       ]
     },
     {
+      "uid": "b26a2ee6-6371-49ef-bec0-60f2099d1bff",
       "name": "Text to Music (ACE-Step 1.5 XL)",
       "options": {
         "type": "audio",
@@ -4426,6 +4450,7 @@
       ]
     },
     {
+      "uid": "05475d70-3560-48dc-a02d-fd4af88f39c5",
       "name": "Text to Sound (StableAudio)",
       "options": {
         "type": "audio",
@@ -4591,6 +4616,7 @@
       ]
     },
     {
+      "uid": "fc0dee95-9a12-487e-b7f8-102e63004780",
       "name": "Text to Voice Design (Qwen3-TTS)",
       "options": {
         "type": "audio",
@@ -4715,6 +4741,7 @@
       ]
     },
     {
+      "uid": "700189be-395e-4f3f-ba65-908c6a652f4e",
       "name": "Text to Speech (Chatterbox)",
       "options": {
         "type": "audio",
@@ -4825,6 +4852,7 @@
       ]
     },
     {
+      "uid": "ff03fec8-e345-4aac-95c9-bc593ad226aa",
       "name": "Text to Speech (Qwen3-TTS)",
       "options": {
         "type": "audio",
@@ -4931,6 +4959,7 @@
       ]
     },
     {
+      "uid": "94a76e78-e707-4d94-aaf0-a360634d545b",
       "name": "Illustrious Image Analysis (For Archival)",
       "options": {
         "type": "image",
@@ -5130,6 +5159,7 @@
       "hidden": true
     },
     {
+      "uid": "69602ca1-2231-4467-bd72-f4bc378ed845",
       "name": "Text to Image (Lustify XL Characters)",
       "options": {
         "type": "image",
@@ -5209,6 +5239,7 @@
       ]
     },
     {
+      "uid": "aa6a4b68-6ba9-463b-a57d-7dcb9cafabeb",
       "name": "Image to Video (Desiwa Q3)",
       "options": {
         "type": "video",
@@ -5442,6 +5473,7 @@
       ]
     },
     {
+      "uid": "681ac9d8-1525-44c4-a6b9-335e9484faeb",
       "name": "Image to Video Loop (Desiwa Q3)",
       "options": {
         "type": "video",
@@ -5669,6 +5701,7 @@
       ]
     },
     {
+      "uid": "e1e04497-689d-478c-94f6-2a061c9330f2",
       "name": "TEST",
       "options": {
         "type": "video",
@@ -5896,5 +5929,6 @@
       ],
       "hidden": true
     }
-  ]
+  ],
+  "version": 1
 }

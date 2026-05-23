@@ -7,7 +7,7 @@
  * @module app-ui/anytale/music-section
  */
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
@@ -550,7 +550,7 @@ function PlaylistModal({ isOpen, onClose, genres }) {
 // GenreCard
 // ============================================================================
 
-function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) {
+function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, onDirtyChange }) {
   const [edit, setEdit] = useState(() => genreToEdit(genre));
   const [sliderKey, setSliderKey] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -558,6 +558,14 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) 
   const cleanKey = useMemo(() => makeEditKey(genreToEdit(genre)), [genre]);
   const currentKey = makeEditKey(edit);
   const dirty = cleanKey !== currentKey;
+
+  const prevDirtyRef = useRef(dirty);
+  useEffect(() => {
+    if (prevDirtyRef.current !== dirty) {
+      prevDirtyRef.current = dirty;
+      onDirtyChange?.(genre.uid, dirty);
+    }
+  });
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -697,20 +705,12 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) 
         <${Button}
           variant="small-text"
           color="primary"
-          icon="music"
-          onClick=${() => onGenerateTrack(genre.uid, editToGenre(edit, genre))}
-        >
-          Generate Track
-        <//>
-        <${Button}
-          variant="small-text"
-          color="primary"
           icon="save"
           disabled=${!dirty || saving}
           loading=${saving}
           onClick=${handleSave}
         >
-          ${genre.uid ? 'Update' : 'Save'}
+          ${dirty ? 'Update' : 'Save'}
         <//>
         <${Button}
           variant="small-text"
@@ -725,6 +725,17 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) 
       <${HorizontalEdgesLayout}>
         <${H2}>Tracks</${H2}>
       </${HorizontalEdgesLayout}>
+
+      <div>
+      <${Button}
+        variant="small-text"
+        color="primary"
+        icon="music"
+        onClick=${() => onGenerateTrack(genre.uid, editToGenre(edit, genre))}
+      >
+        Generate Track
+      <//>
+      </div>
 
       <${PlaylistScrollArea}>
         <${DynamicList}
@@ -743,7 +754,7 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) 
           onChange=${handleTrackListChange}
           showDragButton=${false}
           hideAddItem=${true}
-          deleteIcon="x"
+          deleteIcon="trash"
         />
       </${PlaylistScrollArea}>
     </${VerticalLayout}>
@@ -766,6 +777,7 @@ export function MusicSection() {
   const [loading, setLoading] = useState(true);
   const [generatingFor, setGeneratingFor] = useState(new Set());
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [dirtyUids, setDirtyUids] = useState(new Set());
 
   useEffect(() => {
     fetchGenres()
@@ -855,6 +867,15 @@ export function MusicSection() {
 
   const handleGenreDeleted = useCallback((uid) => {
     setGenres(prev => prev.filter(g => g.uid !== uid));
+    setDirtyUids(prev => { const s = new Set(prev); s.delete(uid); return s; });
+  }, []);
+
+  const handleDirtyChange = useCallback((uid, isDirty) => {
+    setDirtyUids(prev => {
+      const s = new Set(prev);
+      isDirty ? s.add(uid) : s.delete(uid);
+      return s;
+    });
   }, []);
 
   const handleGenresChange = useCallback((newGenres) => {
@@ -882,7 +903,7 @@ export function MusicSection() {
         <${DynamicList}
           title="Genres"
           items=${genres}
-          getTitle=${(genre) => genre.name || 'Unnamed Genre'}
+          getTitle=${(genre) => `${genre.name || 'Unnamed Genre'}${dirtyUids.has(genre.uid) ? ' *' : ''}`}
           renderItem=${(genre) => html`
             <${GenreCard}
               genre=${genre}
@@ -890,6 +911,7 @@ export function MusicSection() {
               onDeleted=${handleGenreDeleted}
               onGenerateTrack=${handleGenerateTrack}
               onTrackPlay=${handleTrackPlay}
+              onDirtyChange=${handleDirtyChange}
             />
           `}
           createItem=${() => null}

@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "pm2 start server/server.mjs --name yaaiic",
+    "start": "pm2 start server/server.mjs --name yaaiic --attach",
     "restart": "pm2 restart yaaiic",
     "stop": "pm2 stop yaaiic",
     "logs": "pm2 logs yaaiic",

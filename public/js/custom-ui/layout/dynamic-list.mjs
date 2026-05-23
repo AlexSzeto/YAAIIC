@@ -19,6 +19,7 @@ import { Button } from '../io/button.mjs';
 import { Checkbox } from '../io/checkbox.mjs';
 import { Select } from '../io/select.mjs';
 import { Icon } from '../layout/icon.mjs';
+import { HorizontalLayout } from '../themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -309,7 +310,7 @@ function CondensedDynamicListItem({
       <${CondensedItemContent}>
         ${renderItem(item, index)}
       </${CondensedItemContent}>
-      <div style="display:flex;gap:4px;flex-shrink:0;align-self:flex-end;">
+      <${HorizontalLayout} gap="small">
         ${headerActions && headerActions.map(action => html`
           <${Button}
             variant="small-icon"
@@ -352,7 +353,7 @@ function CondensedDynamicListItem({
             tooltip=${deleteLabel ?? 'Delete'}
           />
         `}
-      </div>
+      </${HorizontalLayout}>
     </${CondensedItemRow}>
   `;
 }

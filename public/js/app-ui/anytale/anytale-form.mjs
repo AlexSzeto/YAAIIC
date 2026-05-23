@@ -992,40 +992,41 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       </${PartsScrollArea}>
 
       <!-- Generation section: prompt preview + merged generate button -->
-      <${VerticalLayout} gap="medium">
-        <${H2}>Generation</${H2}>
-        <${Input}
-          label="Preview Image Name"
-          value=${previewImageName}
-          onInput=${(e) => setPreviewImageName(e.target.value)}
-          placeholder="Name for generated preview images"
-          widthScale="full"
-        />
-        ${previewPrompt ? html`
-          <${PromptPreview}>
-            <strong>Prompt preview:</strong> ${previewPrompt}
-          </${PromptPreview}>
-        ` : html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}>No character or outfit parts yet.</div>`}
-      </${VerticalLayout}>
-
-      <${ButtonRow}>
-        <${Button}
-          variant="large-text"
-          color="primary"
-          icon="play"
-          onClick=${handleGenerate}
-        >
-          ${queueCount > 0 ? 'Queue' : 'Generate'}
-        <//>
-        <${Button}
-          variant="large-text"
-          color="primary"
-          icon="play"
-          onClick=${handleFullPlotTest}
-        >
-          ${'Queue Plot'}
-        <//>        
-      </${ButtonRow}>
+      <${Panel} variant="default" style=${{ flex: 'none' }}>
+        <${VerticalLayout} gap="medium">
+          <${H2}>Generation</${H2}>
+          <${Input}
+            label="Preview Image Name"
+            value=${previewImageName}
+            onInput=${(e) => setPreviewImageName(e.target.value)}
+            placeholder="Name for generated preview images"
+            widthScale="full"
+          />
+          ${previewPrompt ? html`
+            <${PromptPreview}>
+              <strong>Prompt preview:</strong> ${previewPrompt}
+            </${PromptPreview}>
+          ` : html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}>No character or outfit parts yet.</div>`}
+          <${ButtonRow}>
+            <${Button}
+              variant="large-text"
+              color="primary"
+              icon="play"
+              onClick=${handleGenerate}
+            >
+              ${queueCount > 0 ? 'Queue' : 'Generate'}
+            <//>
+            <${Button}
+              variant="large-text"
+              color="primary"
+              icon="play"
+              onClick=${handleFullPlotTest}
+            >
+              ${'Queue Plot'}
+            <//>
+          </${ButtonRow}>
+        </${VerticalLayout}>
+      </${Panel}>
 
       <${SearchSelectModal}
         isOpen=${loadPartModalOpen}
@@ -1078,57 +1079,59 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             />
           </div>
           <!-- Sticky Generate section -->
-          <div style=${{ flex: 'none', display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, paddingTop: currentTheme.value.spacing.small.padding }}>
-            <${H2}>Generation</${H2}>
-            <${Input}
-              label="Preview Image Name"
-              value=${previewImageName}
-              onInput=${(e) => setPreviewImageName(e.target.value)}
-              placeholder="Name for generated preview images"
-              widthScale="full"
-            />
-            <${PickerRow}>
-              <${PickerInputFlex}>
-                <${AutocompleteInput}
-                  label="Preview Plot"
-                  placeholder="Type to search saved plots..."
-                  suggestions=${charTabPlotList.map(p => p.name)}
-                  onSelect=${handleCharTabPlotSelect}
-                />
-              </${PickerInputFlex}>
-              <${SearchButtonWrapper}>
+          <${Panel} variant="default" style=${{ flex: 'none' }}>
+            <${VerticalLayout} gap="small">
+              <${H2}>Generation</${H2}>
+              <${Input}
+                label="Preview Image Name"
+                value=${previewImageName}
+                onInput=${(e) => setPreviewImageName(e.target.value)}
+                placeholder="Name for generated preview images"
+                widthScale="full"
+              />
+              <${PickerRow}>
+                <${PickerInputFlex}>
+                  <${AutocompleteInput}
+                    label="Preview Plot"
+                    placeholder="Type to search saved plots..."
+                    suggestions=${charTabPlotList.map(p => p.name)}
+                    onSelect=${handleCharTabPlotSelect}
+                  />
+                </${PickerInputFlex}>
+                <${SearchButtonWrapper}>
+                  <${Button}
+                    variant="medium-icon"
+                    icon="search"
+                    title="Browse saved plots"
+                    disabled=${charTabPlotList.length === 0}
+                    onClick=${() => setPreviewPlotModalOpen(true)}
+                  />
+                </${SearchButtonWrapper}>
+              </${PickerRow}>
+              ${charTabPlotName ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${charTabPlotName}</div>` : null}
+              <${ButtonRow}>
                 <${Button}
-                  variant="medium-icon"
-                  icon="search"
-                  title="Browse saved plots"
-                  disabled=${charTabPlotList.length === 0}
-                  onClick=${() => setPreviewPlotModalOpen(true)}
-                />
-              </${SearchButtonWrapper}>
-            </${PickerRow}>
-            ${charTabPlotName ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${charTabPlotName}</div>` : null}
-            <${ButtonRow}>
-              <${Button}
-                variant="large-text"
-                color="primary"
-                icon="play"
-                onClick=${handleCharTabGenerate}
-              >
-                ${queueCount > 0 ? 'Queue' : 'Generate'}
-              <//>
-            </${ButtonRow}>
-            <${SearchSelectModal}
-              isOpen=${previewPlotModalOpen}
-              title="Preview Plot"
-              items=${charTabPlotList.map(plot => {
-                const suffix = plot.section?.trim() ? ` (${plot.section.trim()})` : '';
-                return { label: (plot.name || plot.uid) + suffix, value: plot.uid };
-              })}
-              mode="single"
-              onSelect=${handleCharTabPlotSelect}
-              onClose=${() => setPreviewPlotModalOpen(false)}
-            />
-          </div>
+                  variant="large-text"
+                  color="primary"
+                  icon="play"
+                  onClick=${handleCharTabGenerate}
+                >
+                  ${queueCount > 0 ? 'Queue' : 'Generate'}
+                <//>
+              </${ButtonRow}>
+              <${SearchSelectModal}
+                isOpen=${previewPlotModalOpen}
+                title="Preview Plot"
+                items=${charTabPlotList.map(plot => {
+                  const suffix = plot.section?.trim() ? ` (${plot.section.trim()})` : '';
+                  return { label: (plot.name || plot.uid) + suffix, value: plot.uid };
+                })}
+                mode="single"
+                onSelect=${handleCharTabPlotSelect}
+                onClose=${() => setPreviewPlotModalOpen(false)}
+              />
+            </${VerticalLayout}>
+          </${Panel}>
         </div>
       `,
     },
