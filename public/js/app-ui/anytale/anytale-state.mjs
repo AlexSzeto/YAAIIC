@@ -1,5 +1,5 @@
 /**
- * anytale-state.mjs – localStorage persistence for the AnyTale page.
+ * anytale-state.mjs – sessionStorage persistence for the AnyTale page.
  *
  * State shape:
  * {
@@ -33,12 +33,12 @@ const DEFAULT_STATE = {
 };
 
 /**
- * Load persisted state from localStorage.
+ * Load persisted state from sessionStorage.
  * @returns {Object} The saved state, or the default empty state.
  */
 export function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE, parts: [] };
     const parsed = JSON.parse(raw);
     return {
@@ -58,12 +58,12 @@ export function loadState() {
 }
 
 /**
- * Save state to localStorage.
+ * Save state to sessionStorage.
  * @param {Object} state
  */
 export function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     console.error('Failed to save anytale state:', err);
   }
@@ -73,7 +73,7 @@ export function saveState(state) {
  * Clear persisted state.
  */
 export function clearState() {
-  localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(STORAGE_KEY);
 }
 
 /**
@@ -128,13 +128,13 @@ export function createBlankPlot() {
 }
 
 /**
- * Load the active plot block from localStorage.
+ * Load the active plot block from sessionStorage.
  * Falls back to a blank plot block if nothing is stored.
  * @returns {Object}
  */
 export function loadPlot() {
   try {
-    const raw = localStorage.getItem(PLOT_STORAGE_KEY);
+    const raw = sessionStorage.getItem(PLOT_STORAGE_KEY);
     if (!raw) return createBlankPlot();
     const parsed = JSON.parse(raw);
     // Ensure at least one page
@@ -165,22 +165,22 @@ export function loadPlot() {
 }
 
 /**
- * Persist the active plot block to localStorage.
+ * Persist the active plot block to sessionStorage.
  * @param {Object} plot
  */
 export function savePlotState(plot) {
   try {
-    localStorage.setItem(PLOT_STORAGE_KEY, JSON.stringify(plot));
+    sessionStorage.setItem(PLOT_STORAGE_KEY, JSON.stringify(plot));
   } catch (err) {
     console.error('Failed to save anytale plot state:', err);
   }
 }
 
 /**
- * Clear the active plot block from localStorage.
+ * Clear the active plot block from sessionStorage.
  */
 export function clearPlotState() {
-  localStorage.removeItem(PLOT_STORAGE_KEY);
+  sessionStorage.removeItem(PLOT_STORAGE_KEY);
 }
 
 // ── Character State ───────────────────────────────────────────────────────
@@ -202,13 +202,13 @@ export function createBlankCharacter() {
 }
 
 /**
- * Load the active character from localStorage.
+ * Load the active character from sessionStorage.
  * Falls back to a blank character if nothing is stored.
  * @returns {Object}
  */
 export function loadCharacter() {
   try {
-    const raw = localStorage.getItem(CHARACTER_STORAGE_KEY);
+    const raw = sessionStorage.getItem(CHARACTER_STORAGE_KEY);
     if (!raw) return createBlankCharacter();
     const parsed = JSON.parse(raw);
     return {
@@ -227,22 +227,22 @@ export function loadCharacter() {
 }
 
 /**
- * Persist the active character state to localStorage.
+ * Persist the active character state to sessionStorage.
  * @param {Object} character
  */
 export function saveCharacterState(character) {
   try {
-    localStorage.setItem(CHARACTER_STORAGE_KEY, JSON.stringify(character));
+    sessionStorage.setItem(CHARACTER_STORAGE_KEY, JSON.stringify(character));
   } catch (err) {
     console.error('Failed to save anytale character state:', err);
   }
 }
 
 /**
- * Clear the active character from localStorage.
+ * Clear the active character from sessionStorage.
  */
 export function clearCharacterState() {
-  localStorage.removeItem(CHARACTER_STORAGE_KEY);
+  sessionStorage.removeItem(CHARACTER_STORAGE_KEY);
 }
 
 // ── Outfit State ────────────────────────────────────────────────
@@ -261,13 +261,13 @@ export function createBlankOutfit() {
 }
 
 /**
- * Load the active outfit from localStorage.
+ * Load the active outfit from sessionStorage.
  * Falls back to a blank outfit if nothing is stored.
  * @returns {Object}
  */
 export function loadOutfit() {
   try {
-    const raw = localStorage.getItem(OUTFIT_STORAGE_KEY);
+    const raw = sessionStorage.getItem(OUTFIT_STORAGE_KEY);
     if (!raw) return createBlankOutfit();
     const parsed = JSON.parse(raw);
     return {
@@ -283,20 +283,20 @@ export function loadOutfit() {
 }
 
 /**
- * Persist the active outfit state to localStorage.
+ * Persist the active outfit state to sessionStorage.
  * @param {Object} outfit
  */
 export function saveOutfitState(outfit) {
   try {
-    localStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfit));
+    sessionStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfit));
   } catch (err) {
     console.error('Failed to save anytale outfit state:', err);
   }
 }
 
 /**
- * Clear the active outfit from localStorage.
+ * Clear the active outfit from sessionStorage.
  */
 export function clearOutfitState() {
-  localStorage.removeItem(OUTFIT_STORAGE_KEY);
+  sessionStorage.removeItem(OUTFIT_STORAGE_KEY);
 }

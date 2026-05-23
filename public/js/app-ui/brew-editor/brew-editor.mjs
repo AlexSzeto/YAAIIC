@@ -177,6 +177,7 @@ export function BrewEditor() {
   // Global sound sources — separate from the brew's own sources array.
   // The Sound Sources panel edits these; the brew's sources array mirrors them.
   const [globalSources, setGlobalSources] = useState([]);
+  const [savedGlobalSources, setSavedGlobalSources] = useState(null);
   // Cached effective playback lengths keyed by source label (not persisted).
   const [sourceLengths, setSourceLengths] = useState({});
   // Runtime channel enable/disable state — never saved, resets on each preview start.
@@ -240,7 +241,9 @@ export function BrewEditor() {
         const sources = await res.json();
         // Assign UIDs to any existing source that predates the uid field.
         // These are held in memory and persisted the next time the user saves globals.
-        setGlobalSources(sources.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i }));
+        const mapped = sources.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i });
+        setGlobalSources(mapped);
+        setSavedGlobalSources(mapped);
       }
     } catch {
       // Non-fatal: sources will be empty
@@ -463,6 +466,12 @@ export function BrewEditor() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleBrewRevert() {
+    const result = await showDialog('Discard all unsaved changes to this brew?', 'Revert Brew', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
+    setBrew(savedBrew);
   }
 
   async function handleDelete(item) {
@@ -817,7 +826,11 @@ export function BrewEditor() {
     () => !savedBrew || JSON.stringify(brew) !== JSON.stringify(savedBrew),
     [brew, savedBrew]
   );
-  const { saveLabel: brewSaveLabel, saveEnabled: brewSaveEnabled } = formButtonStates(brewRecorded, brewDirty);
+  const { saveLabel: brewSaveLabel, saveEnabled: brewSaveEnabled, revertEnabled: brewRevertEnabled } = formButtonStates(brewRecorded, brewDirty);
+  const globalSourcesDirty = useMemo(
+    () => !savedGlobalSources || JSON.stringify(globalSources) !== JSON.stringify(savedGlobalSources),
+    [globalSources, savedGlobalSources]
+  );
 
   // Disable the brew-level preview when any channel has no tracks or any track lacks a source
   function trackHasSource(track) {
@@ -920,8 +933,10 @@ export function BrewEditor() {
             `}
             getTitle=${(item) => {
               const label = item.label || 'Source';
+              const savedVersion = savedGlobalSources?.find(s => s.uid === item.uid);
+              const sourceDirty = !savedVersion || JSON.stringify(item) !== JSON.stringify(savedVersion);
               const len = sourceLengths[item.label];
-              const text = len != null ? `${label} (${len}s)` : label;
+              const text = `${len != null ? `${label} (${len}s)` : label}${sourceDirty ? ' *' : ''}`;
               // lock = used by a channel in the current brew, lock-open = not used or no brew
               const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open-alt';
               return html`
@@ -953,6 +968,7 @@ export function BrewEditor() {
             variant="medium-icon-text"
             icon="save"
             color="primary"
+            disabled=${!globalSourcesDirty}
             onClick=${async () => {
               try {
                 for (const src of globalSources) {
@@ -962,6 +978,7 @@ export function BrewEditor() {
                     body: JSON.stringify(src),
                   });
                 }
+                setSavedGlobalSources([...globalSources]);
                 toast.success('Global sources saved');
               } catch (e) {
                 toast.error(`Save failed: ${e.message}`);
@@ -1054,8 +1071,17 @@ export function BrewEditor() {
               ${String(Math.floor(playbackSeconds / 60)).padStart(2, '0')}:${String(playbackSeconds % 60).padStart(2, '0')}
             </${TimerPanel}>
 
-            <!-- Right edge: Save -->
+            <!-- Right edge: Revert / Save -->
             <div style="flex:1" />
+            <${Button}
+              variant="medium-icon-text"
+              icon="undo"
+              color="secondary"
+              disabled=${!brewRevertEnabled}
+              onClick=${handleBrewRevert}
+            >
+              Revert
+            </${Button}>
             <${Button}
               variant="medium-icon-text"
               icon="save"

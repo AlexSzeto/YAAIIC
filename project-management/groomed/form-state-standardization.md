@@ -32,11 +32,11 @@ Establish a consistent two-state model (`dirty` / `recorded`) for every signific
 - [x] Final grep for `'Update'` in button labels across `public/js/` — no stragglers found.
 
 ### Phase 6 - Inconsistency fixes
-- [] Workflow Editor: missing revert button.
-- [] Brew Editor: global sound sources is a special case. Save Global button needs to tracks dirty state based on the entire global sound source array, individual sound sources needs to show asterisk when its own record is dirty.
-- [] Brew Editor: brew section missing revert button.
-- [] AnyTale Editor: music tab items missing revert button, Save button label not updating according to dirty/recorded status - mainly due to a record being created when an entry is being added to this list. Stop creating new records on add, and disable the `generate track` button before an entry has a record/uid.
-- [] AnyTale Editor: move all persistent local data out of local storage into session storage.
+- [x] Workflow Editor: missing revert button.
+- [x] Brew Editor: global sound sources is a special case. Save Global button needs to tracks dirty state based on the entire global sound source array, individual sound sources needs to show asterisk when its own record is dirty.
+- [x] Brew Editor: brew section missing revert button.
+- [x] AnyTale Editor: music tab items missing revert button, Save button label not updating according to dirty/recorded status - mainly due to a record being created when an entry is being added to this list. Stop creating new records on add, and disable the `generate track` button before an entry has a record/uid.
+- [x] AnyTale Editor: move all persistent local data out of local storage into session storage.
 
 ## Implementation Details
 

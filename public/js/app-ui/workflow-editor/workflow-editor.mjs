@@ -622,6 +622,12 @@ export function WorkflowEditor() {
     }
   }
 
+  async function handleRevertWorkflow() {
+    const result = await showDialog('Discard all unsaved changes to this workflow?', 'Revert Workflow', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
+    setWorkflow(savedWorkflow);
+  }
+
   async function handleBaseChange(filename) {
     try {
       const res = await fetch(`/api/workflows/base-files/${encodeURIComponent(filename)}`);
@@ -642,7 +648,7 @@ export function WorkflowEditor() {
     [workflow, savedWorkflow]
   );
   const workflowRecorded = savedWorkflow !== null;
-  const { saveLabel: workflowSaveLabel, saveEnabled: workflowSaveEnabled } = formButtonStates(workflowRecorded, workflowDirty);
+  const { saveLabel: workflowSaveLabel, saveEnabled: workflowSaveEnabled, revertEnabled: workflowRevertEnabled } = formButtonStates(workflowRecorded, workflowDirty);
 
   // ──────────────────────────────────────────────────────────────────────────
   // Dynamic-list helpers
@@ -843,6 +849,15 @@ export function WorkflowEditor() {
                 </${SaveTooltip}>
               `}
             </${DisabledWrapper}>
+            <${Button}
+              variant="medium-text"
+              color="secondary"
+              icon="undo"
+              disabled=${!workflowRevertEnabled}
+              onClick=${handleRevertWorkflow}
+            >
+              Revert
+            </${Button}>
             <${Button}
               variant="medium-text"
               color="danger"

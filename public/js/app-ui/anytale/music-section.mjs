@@ -8,6 +8,7 @@
  */
 import { html } from 'htm/preact';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
+import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
@@ -55,11 +56,11 @@ async function fetchGenres() {
   return res.json();
 }
 
-async function apiCreateGenre() {
+async function apiCreateGenre(data) {
   const res = await fetch('/anytale/genres', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'New Genre' }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -145,6 +146,20 @@ function makeEditKey(edit) {
     timeSignatures: [...(edit.timeSignatures || [])].sort(),
   });
 }
+
+// Stable key representing a completely blank genre edit — used as the baseline
+// for newly-added local genres that have no server record yet.
+const BLANK_GENRE_EDIT_KEY = makeEditKey({
+  name: '',
+  musicPrompt: '',
+  variationsStr: '',
+  adjectivesStr: '',
+  nounsStr: '',
+  keys: [],
+  bpmMin: 60,
+  bpmMax: 120,
+  timeSignatures: [],
+});
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
@@ -555,33 +570,64 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
   const [sliderKey, setSliderKey] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const cleanKey = useMemo(() => makeEditKey(genreToEdit(genre)), [genre]);
-  const currentKey = makeEditKey(edit);
-  const dirty = cleanKey !== currentKey;
+  const recorded = !!genre.uid;
+  const genreId = genre.uid || genre._localId;
+  const savedKey = useMemo(
+    () => recorded ? makeEditKey(genreToEdit(genre)) : BLANK_GENRE_EDIT_KEY,
+    [genre, recorded]
+  );
+  const dirty = makeEditKey(edit) !== savedKey;
+  const { saveLabel, saveEnabled, revertEnabled } = formButtonStates(recorded, dirty);
 
   const prevDirtyRef = useRef(dirty);
   useEffect(() => {
     if (prevDirtyRef.current !== dirty) {
       prevDirtyRef.current = dirty;
-      onDirtyChange?.(genre.uid, dirty);
+      onDirtyChange?.(genreId, dirty);
     }
   });
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      const data = editToGenre(edit, genre);
-      const result = await apiSaveGenre(genre.uid, data);
-      onSaved(result.saved);
+      let saved;
+      if (genre.uid) {
+        const data = editToGenre(edit, genre);
+        const result = await apiSaveGenre(genre.uid, data);
+        saved = result.saved;
+      } else {
+        const data = editToGenre(edit, { ...genre, tracks: [] });
+        const result = await apiCreateGenre(data);
+        saved = result.saved;
+      }
+      onSaved(saved, genreId);
       setSliderKey(k => k + 1);
     } catch (err) {
       console.error('[GenreCard] Save failed:', err);
     } finally {
       setSaving(false);
     }
-  }, [edit, genre, onSaved]);
+  }, [edit, genre, genreId, onSaved]);
+
+  const handleRevert = useCallback(async () => {
+    const result = await showDialog(
+      'Discard all unsaved changes to this genre?',
+      'Revert Genre',
+      ['Revert', 'Cancel']
+    );
+    if (result !== 'Revert') return;
+    setEdit(recorded ? genreToEdit(genre) : {
+      name: '', musicPrompt: '', variationsStr: '', adjectivesStr: '',
+      nounsStr: '', keys: [], bpmMin: 60, bpmMax: 120, timeSignatures: [],
+    });
+    setSliderKey(k => k + 1);
+  }, [genre, recorded]);
 
   const handleDelete = useCallback(async () => {
+    if (!genre.uid) {
+      onDeleted(genreId);
+      return;
+    }
     const result = await showDialog(
       `Delete "${genre.name || 'this genre'}" and all its tracks? This cannot be undone.`,
       'Delete Genre',
@@ -590,17 +636,18 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
     if (result !== 'Delete') return;
     try {
       await apiDeleteGenre(genre.uid);
-      onDeleted(genre.uid);
+      onDeleted(genreId);
     } catch (err) {
       console.error('[GenreCard] Delete failed:', err);
     }
-  }, [genre.uid, genre.name, onDeleted]);
+  }, [genre.uid, genre.name, genreId, onDeleted]);
 
   const handleTrackListChange = useCallback(async (newTracks) => {
+    if (!genre.uid) return;
     try {
       const data = { ...editToGenre(edit, genre), tracks: newTracks };
       const result = await apiSaveGenre(genre.uid, data);
-      onSaved(result.saved);
+      onSaved(result.saved, genre.uid);
     } catch (err) {
       console.error('[GenreCard] Track list update failed:', err);
     }
@@ -706,11 +753,20 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
           variant="small-text"
           color="primary"
           icon="save"
-          disabled=${!dirty || saving}
+          disabled=${!saveEnabled || saving}
           loading=${saving}
           onClick=${handleSave}
         >
-          Save
+          ${saveLabel}
+        <//>
+        <${Button}
+          variant="small-text"
+          color="secondary"
+          icon="undo"
+          disabled=${!revertEnabled}
+          onClick=${handleRevert}
+        >
+          Revert
         <//>
         <${Button}
           variant="small-text"
@@ -731,6 +787,7 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
         variant="small-text"
         color="primary"
         icon="music"
+        disabled=${!genre.uid}
         onClick=${() => onGenerateTrack(genre.uid, editToGenre(edit, genre))}
       >
         Generate Track
@@ -852,28 +909,39 @@ export function MusicSection() {
     });
   }, [activeTasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleGenreAdd = useCallback(async () => {
-    try {
-      const result = await apiCreateGenre();
-      if (result.saved) setGenres(prev => [...prev, result.saved]);
-    } catch (err) {
-      console.error('[MusicSection] Create genre failed:', err);
-    }
+  const handleGenreAdd = useCallback(() => {
+    const localGenre = {
+      _localId: String(Date.now()),
+      name: 'New Genre',
+      musicPrompt: '',
+      variations: [],
+      adjectives: [],
+      nouns: [],
+      keys: [],
+      bpmMin: 60,
+      bpmMax: 120,
+      timeSignatures: [],
+      tracks: [],
+    };
+    setGenres(prev => [...prev, localGenre]);
   }, []);
 
-  const handleGenreSaved = useCallback((savedGenre) => {
-    setGenres(prev => prev.map(g => g.uid === savedGenre.uid ? savedGenre : g));
+  const handleGenreSaved = useCallback((savedGenre, idOrLocalId) => {
+    setGenres(prev => prev.map(g =>
+      (g.uid === idOrLocalId || g._localId === idOrLocalId) ? savedGenre : g
+    ));
+    setDirtyUids(prev => { const s = new Set(prev); s.delete(idOrLocalId); return s; });
   }, []);
 
-  const handleGenreDeleted = useCallback((uid) => {
-    setGenres(prev => prev.filter(g => g.uid !== uid));
-    setDirtyUids(prev => { const s = new Set(prev); s.delete(uid); return s; });
+  const handleGenreDeleted = useCallback((id) => {
+    setGenres(prev => prev.filter(g => (g.uid || g._localId) !== id));
+    setDirtyUids(prev => { const s = new Set(prev); s.delete(id); return s; });
   }, []);
 
-  const handleDirtyChange = useCallback((uid, isDirty) => {
+  const handleDirtyChange = useCallback((id, isDirty) => {
     setDirtyUids(prev => {
       const s = new Set(prev);
-      isDirty ? s.add(uid) : s.delete(uid);
+      isDirty ? s.add(id) : s.delete(id);
       return s;
     });
   }, []);
@@ -903,7 +971,7 @@ export function MusicSection() {
         <${DynamicList}
           title="Genres"
           items=${genres}
-          getTitle=${(genre) => `${genre.name || 'Unnamed Genre'}${dirtyUids.has(genre.uid) ? ' *' : ''}`}
+          getTitle=${(genre) => `${genre.name || 'Unnamed Genre'}${dirtyUids.has(genre.uid || genre._localId) ? ' *' : ''}`}
           renderItem=${(genre) => html`
             <${GenreCard}
               genre=${genre}
