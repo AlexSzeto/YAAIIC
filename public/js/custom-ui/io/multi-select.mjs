@@ -45,7 +45,7 @@ const TriggerButton = styled('button')`
   width: 100%;
   height: 44px;
   padding: 0 12px;
-  background-color: ${props => props.theme.colors.background.primary};
+  background-color: ${props => props.theme.colors.background.tertiary};
   border: 2px solid ${props => props.theme.colors.border.primary};
   border-radius: 6px;
   color: ${props => props.theme.colors.text.primary};

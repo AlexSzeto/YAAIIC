@@ -39,6 +39,11 @@ const MUSICAL_KEYS = [
 // Numeric values expected by the AceStep workflow: 2=2/4, 3=3/4, 4=4/4, 6=6/8
 const TIME_SIGNATURES = ['2', '3', '4', '6'];
 const TIME_SIGNATURE_LABELS = ['2/4', '3/4', '4/4', '6/8'];
+const TIME_SIGNATURE_MAP = { '2': '2/4', '3': '3/4', '4': '4/4', '6': '6/8' };
+
+function formatTimeSignature(value) {
+  return TIME_SIGNATURE_MAP[value] || value;
+}
 
 // ============================================================================
 // API helpers
@@ -178,7 +183,7 @@ const StyledTextarea = styled('textarea')`
   padding: ${() => currentTheme.value.spacing.small.padding};
   border-radius: 6px;
   border: 2px solid ${() => currentTheme.value.colors.border.primary};
-  background-color: ${() => currentTheme.value.colors.background.primary};
+  background-color: ${() => currentTheme.value.colors.background.tertiary};
   color: ${() => currentTheme.value.colors.text.primary};
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
   font-family: ${() => currentTheme.value.typography.fontFamily};
@@ -465,7 +470,7 @@ function BgmPlayerBar({ onPlaylistOpen, genres }) {
       </${BgmControlsRow}>
       <${Button}
         variant="small-icon"
-        icon="list"
+        icon="arrow-out-up-right-square"
         tooltip="Manage playlist"
         onClick=${onPlaylistOpen}
       />
@@ -524,12 +529,12 @@ function PlaylistModal({ isOpen, onClose, genres }) {
           ? html`<div style=${{ color: currentTheme.value.colors.text.secondary, padding: '16px 0' }}>Queue is empty.</div>`
           : items.map((item, index) => html`
             <${PlaylistRowItem} key=${index}>
-              ${index === 0 ? html`<${NowPlayingBadge}>Playing</${NowPlayingBadge}>` : null}
               <${PlaylistItemName}>${getTrackLabel(item)}</${PlaylistItemName}>
+              ${index === 0 ? html`<${NowPlayingBadge}>Playing</${NowPlayingBadge}>` : null}
               <${Button}
                 variant="small-icon"
                 icon="x"
-                color=${index === 0 ? 'secondary' : 'danger'}
+                color="danger"
                 onClick=${() => handleDelete(index)}
                 tooltip=${index === 0 ? 'Skip track' : 'Remove from queue'}
               />
@@ -730,7 +735,7 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay }) 
               <${TrackName}>${track.name}</${TrackName}>
               ${track.key ? html`<${MetaChip}>${track.key}</${MetaChip}>` : null}
               ${track.bpm ? html`<${MetaChip}>${track.bpm} BPM</${MetaChip}>` : null}
-              ${track.timeSignature ? html`<${MetaChip}>${track.timeSignature}</${MetaChip}>` : null}
+              ${track.timeSignature ? html`<${MetaChip}>${formatTimeSignature(track.timeSignature)}</${MetaChip}>` : null}
             </${TrackRowContent}>
           `}
           headerActions=${trackHeaderActions}

@@ -1048,11 +1048,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       content: editContent,
     },
     {
-      id: 'music',
-      label: 'Music',
-      content: html`<${MusicSection} />`,
-    },
-    {
       id: 'character-outfits',
       label: 'Character & Outfits',
       content: html`
@@ -1136,6 +1131,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
           </div>
         </div>
       `,
+    },
+    {
+      id: 'music',
+      label: 'Music',
+      content: html`<${MusicSection} />`,
     },
   ];
 

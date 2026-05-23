@@ -883,9 +883,9 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
         const track = {
           uid: randomUUID(),
           name: taskData.name || 'Track',
-          key: taskData.key || '',
+          key: taskData.keyscale || '',
           bpm: taskData.bpm || 0,
-          timeSignature: taskData.time_signature || '4/4',
+          timeSignature: taskData.timesignature || '4',
           audioUrl: result.audioUrl,
         };
         try { addTrackToGenre(taskData.genreUid, track); } catch { /* genre may have been deleted */ }
