@@ -373,6 +373,6 @@ export function AnyTalePage() {
     </${VerticalLayout}>
     </${TooltipProvider}>
 
-    <${QueueStatusBanner} progressVisible=${!!taskId} />
+    <${QueueStatusBanner} progressVisible=${activeTasks.length > 0} />
   `;
 }

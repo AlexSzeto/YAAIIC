@@ -27,7 +27,7 @@
     "portraitParts": ["head"],
     "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"],
-    "musicWorkflow": "AceStep Music Generation",
+    "musicWorkflow": "Text to Background Track (ACE-Step 1.5 XL)",
     "defaultMusicLength": 120
   },
   "exports": [

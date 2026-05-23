@@ -625,8 +625,13 @@ router.post('/anytale/genres/:uid/generate-track', async (req, res) => {
     const musicWorkflow = anytaleConfig.musicWorkflow || 'AceStep Music Generation';
     const defaultMusicLength = anytaleConfig.defaultMusicLength ?? 120;
 
-    const genre = getAllGenres().find(g => g.uid === uid);
-    if (!genre) return res.status(404).json({ error: 'Genre not found' });
+    const { clientId, genreOverrides } = req.body || {};
+
+    const dbGenre = getAllGenres().find(g => g.uid === uid);
+    if (!dbGenre) return res.status(404).json({ error: 'Genre not found' });
+
+    // Client may supply current (possibly unsaved) form values to override stale DB data
+    const genre = genreOverrides ? { ...dbGenre, ...genreOverrides } : dbGenre;
 
     const comfyuiWorkflows = loadWorkflows();
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === musicWorkflow);
@@ -660,13 +665,14 @@ router.post('/anytale/genres/:uid/generate-track', async (req, res) => {
       description: '',
       summary: '',
       genreUid: uid,
+      audioFormat: 'mp3',
     };
 
     const autoStart = req.query.queueOnly !== 'true';
     queueService.enqueue({
       type: 'audio',
       source: 'anytale',
-      clientId: req.body.clientId || null,
+      clientId: clientId || null,
       name,
       subLabel: genre.name || 'Music',
       endpointKey: 'anytale-music',

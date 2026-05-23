@@ -28,6 +28,7 @@ import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/theme
 import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
 import { OutfitSection } from './outfit-section.mjs';
+import { MusicSection } from './music-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
@@ -1045,6 +1046,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       id: 'parts-plot',
       label: 'Parts & Plot',
       content: editContent,
+    },
+    {
+      id: 'music',
+      label: 'Music',
+      content: html`<${MusicSection} />`,
     },
     {
       id: 'character-outfits',

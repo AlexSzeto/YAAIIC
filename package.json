@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "pm2 start server/server.mjs --name yaaiic",
+    "restart": "pm2 restart yaaiic",
     "stop": "pm2 stop yaaiic",
+    "logs": "pm2 logs yaaiic",
     "pull": "node public/js/custom-ui/lib-sync.mjs pull",
     "push": "node public/js/custom-ui/lib-sync.mjs push",
     "sync:codex-skills": "node scripts/sync-codex-skills.mjs",

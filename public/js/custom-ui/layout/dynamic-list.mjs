@@ -167,6 +167,7 @@ function DynamicListItem({
   getHeaderSelectTooltip,
   deleteIcon = 'trash',
   deleteLabel,
+  hideDelete = false,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -243,13 +244,15 @@ function DynamicListItem({
               tooltip="Move down"
             />
           `}
-          <${Button}
-            variant="small-icon"
-            icon=${deleteIcon}
-            color="danger"
-            onClick=${onDelete}
-            tooltip=${deleteLabel ?? 'Delete'}
-          />
+          ${!hideDelete && html`
+            <${Button}
+              variant="small-icon"
+              icon=${deleteIcon}
+              color="danger"
+              onClick=${onDelete}
+              tooltip=${deleteLabel ?? 'Delete'}
+            />
+          `}
         </div>
       </${ItemHeader}>
       <${ItemBody} theme=${theme} collapsed=${collapsed}>
@@ -285,6 +288,7 @@ function CondensedDynamicListItem({
   onToggleEnabled,
   deleteIcon = 'trash',
   deleteLabel,
+  hideDelete = false,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -339,13 +343,15 @@ function CondensedDynamicListItem({
             tooltip="Move down"
           />
         `}
-        <${Button}
-          variant="small-icon"
-          icon=${deleteIcon}
-          color="danger"
-          onClick=${onDelete}
-          tooltip=${deleteLabel ?? 'Delete'}
-        />
+        ${!hideDelete && html`
+          <${Button}
+            variant="small-icon"
+            icon=${deleteIcon}
+            color="danger"
+            onClick=${onDelete}
+            tooltip=${deleteLabel ?? 'Delete'}
+          />
+        `}
       </div>
     </${CondensedItemRow}>
   `;
@@ -382,6 +388,7 @@ function CondensedDynamicListItem({
  * @param {boolean}  [props.showDragButton=true] - Show the drag-to-reorder handle button.
  * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
  * @param {boolean}  [props.hideAddItem=false]   - Hide the add button entirely.
+ * @param {boolean}  [props.hideDelete=false]    - Hide the per-item delete button entirely.
  * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
  * @param {string}   [props.deleteIcon='trash']  - Icon name for the delete button.
  * @param {string}   [props.deleteLabel]         - Text label for the delete button. When set, renders as `small-text` variant instead of icon-only.
@@ -418,6 +425,7 @@ export function DynamicList({
   showDragButton = true,      // show the swap-vertical drag handle
   showMoveUpDownButtons = false, // show the up/down arrow buttons
   hideAddItem = false,         // hide the add button entirely
+  hideDelete = false,          // hide the per-item delete button entirely
   headerActions,               // custom header action buttons
   getEnabled,                  // optional: (item, index) => boolean – enables per-item toggle checkbox
   onToggleEnabled,             // optional: (item, index) => void – called when enabled checkbox changes
@@ -682,6 +690,7 @@ export function DynamicList({
                 onToggleEnabled=${onToggleEnabled}
                 deleteIcon=${deleteIcon}
                 deleteLabel=${deleteLabel}
+                hideDelete=${hideDelete}
                 theme=${theme}
               />
             `
@@ -710,6 +719,7 @@ export function DynamicList({
                 getHeaderSelectTooltip=${getHeaderSelectTooltip}
                 deleteIcon=${deleteIcon}
                 deleteLabel=${deleteLabel}
+                hideDelete=${hideDelete}
                 theme=${theme}
               />
             `
@@ -763,6 +773,7 @@ export function DynamicList({
             onToggleEnabled=${onToggleEnabled}
             deleteIcon=${deleteIcon}
             deleteLabel=${deleteLabel}
+            hideDelete=${hideDelete}
             theme=${theme}
           />
         `
@@ -790,6 +801,7 @@ export function DynamicList({
             getHeaderSelectTooltip=${getHeaderSelectTooltip}
             deleteIcon=${deleteIcon}
             deleteLabel=${deleteLabel}
+            hideDelete=${hideDelete}
             theme=${theme}
           />
         `;

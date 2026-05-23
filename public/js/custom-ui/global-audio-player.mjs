@@ -233,13 +233,13 @@ class GlobalBgmPlayer {
   }
 
   _normalise(item) {
-    if (typeof item === 'string') return { url: item, startTime: 0, duration: null };
-    return { url: item.url, startTime: item.startTime ?? 0, duration: item.duration ?? null };
+    if (typeof item === 'string') return { url: item, startTime: 0, duration: null, label: null };
+    return { url: item.url, startTime: item.startTime ?? 0, duration: item.duration ?? null, label: item.label ?? null };
   }
 
   /**
-   * Set the playlist. Each item is a URL string or `{ url, startTime?, duration? }`.
-   * @param {(string|{ url:string, startTime?:number, duration?:number })[]} items
+   * Set the playlist. Each item is a URL string or `{ url, startTime?, duration?, label? }`.
+   * @param {(string|{ url:string, startTime?:number, duration?:number, label?:string })[]} items
    */
   setPlaylist(items) {
     this._playlist = items.map(i => this._normalise(i));
@@ -259,6 +259,35 @@ class GlobalBgmPlayer {
     this._isPlaying = true;
     this._initSlots();
     await this._playTrackAt(0);
+  }
+
+  /**
+   * Append a track to the end of the queue. Starts playback immediately if not already playing.
+   * @param {string|{ url:string, startTime?:number, duration?:number, label?:string }} item
+   */
+  async appendToPlaylist(item) {
+    this._playlist.push(this._normalise(item));
+    if (!this._isPlaying) {
+      this._isPlaying = true;
+      this._initSlots();
+      await this._playTrackAt(0);
+    } else {
+      this._notifyListeners({ event: 'playlist-updated', total: this._playlist.length });
+    }
+  }
+
+  /**
+   * Skip the currently playing track and immediately crossfade/fade into the next.
+   * Stops playback if the queue has no next track.
+   */
+  skipCurrent() {
+    if (!this._isPlaying || this._playlist.length === 0) return;
+    if (this._advanceTimer !== null) {
+      clearTimeout(this._advanceTimer);
+      this._advanceTimer = null;
+    }
+    this._playId++;
+    this._consumeAndAdvance();
   }
 
   /** Stop playback and reset the playlist. */
@@ -290,7 +319,7 @@ class GlobalBgmPlayer {
   getCurrentTrack() {
     if (!this._isPlaying || this._currentIndex < 0) return null;
     const item = this._playlist[this._currentIndex];
-    return { url: item.url, label: this._urlToLabel(item.url), index: this._currentIndex, total: this._playlist.length };
+    return { url: item.url, label: item.label || this._urlToLabel(item.url), index: this._currentIndex, total: this._playlist.length };
   }
 
   /**
@@ -341,6 +370,24 @@ class GlobalBgmPlayer {
   _urlToLabel(url) {
     if (!url) return '';
     return decodeURIComponent(url.split('/').pop().replace(/\.[^.]+$/, ''));
+  }
+
+  _consumeAndAdvance() {
+    this._playlist.splice(0, 1);
+    if (this._playlist.length > 0) {
+      this._playTrackAt(0);
+    } else {
+      const ctx = this._context;
+      const now = ctx ? ctx.currentTime : 0;
+      for (const { audio, gain } of this._slots) {
+        if (audio) { try { audio.pause(); } catch (e) {} }
+        if (gain && ctx) { try { gain.gain.setValueAtTime(0, now); } catch (e) {} }
+      }
+      this._isPlaying = false;
+      this._currentIndex = -1;
+      this._currentDuration = 0;
+      this._notifyListeners({ event: 'stop' });
+    }
   }
 
   async _playTrackAt(index) {
@@ -396,7 +443,7 @@ class GlobalBgmPlayer {
       : (isFinite(audio.duration) ? audio.duration : 0);
     this._currentDuration = effectiveDuration;
 
-    this._notifyListeners({ event: 'track-start', url: item.url, label: this._urlToLabel(item.url), index, total: this._playlist.length });
+    this._notifyListeners({ event: 'track-start', url: item.url, label: item.label || this._urlToLabel(item.url), index, total: this._playlist.length });
 
     // Schedule advance
     if (this._advanceTimer !== null) clearTimeout(this._advanceTimer);
@@ -410,14 +457,14 @@ class GlobalBgmPlayer {
       this._advanceTimer = setTimeout(() => {
         this._advanceTimer = null;
         if (this._playId !== capturedPlayId) return;
-        this._playTrackAt((index + 1) % this._playlist.length);
+        this._consumeAndAdvance();
       }, advanceAfterMs);
     } else {
       // Duration unknown yet — fall back to audio ended event
       const capturedPlayId = playId;
       audio.addEventListener('ended', () => {
         if (this._playId !== capturedPlayId || this._activeSlot !== slot) return;
-        this._playTrackAt((index + 1) % this._playlist.length);
+        this._consumeAndAdvance();
       }, { once: true });
     }
   }

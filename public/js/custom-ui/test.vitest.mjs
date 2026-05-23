@@ -216,6 +216,21 @@ describe('MultiSelect', () => {
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
+
+  test('renders with optionLabels without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <${MultiSelect}
+        label="Time Signatures"
+        options=${['2', '3', '4', '6']}
+        optionLabels=${['2/4', '3/4', '4/4', '6/8']}
+        value=${['4', '3']}
+        onChange=${() => {}}
+      />
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
 })
 
 // ── BgmPlayerDemo — Panel glass + controls (mirrors test.html) ────────────

@@ -1488,9 +1488,10 @@
                       onChange=${(v) => this.setState({ multiSelectKeys: v })}
                     />
                     <${MultiSelect}
-                      label="Time Signatures (none selected)"
+                      label="Time Signatures (optionLabels demo)"
                       placeholder="Select time signatures…"
-                      options=${['4/4','3/4','6/8','2/4','5/4','7/8','12/8']}
+                      options=${['2', '3', '4', '6']}
+                      optionLabels=${['2/4', '3/4', '4/4', '6/8']}
                       value=${this.state.multiSelectSig}
                       onChange=${(v) => this.setState({ multiSelectSig: v })}
                     />

@@ -45,15 +45,17 @@ import {
  *   <p>Are you sure you want to proceed?</p>
  * </Modal>
  */
-export function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
+export function Modal({
+  isOpen,
+  onClose,
+  title,
   showHeader = true,
-  size = 'medium', 
+  hideCloseButton = false,
+  size = 'medium',
   width,
+  minWidth,
   height,
-  children, 
+  children,
   footer,
   className = ''
 }) {
@@ -122,33 +124,36 @@ export function Modal({
         textColor=${theme.colors.text.primary}
         borderRadius=${theme.spacing.medium.borderRadius}
         width=${width}
+        minWidth=${minWidth}
         height=${height}
         maxWidth=${!width ? getSizeMaxWidth() : undefined}
         maxHeight=${!height ? getSizeMaxHeight() : undefined}
         shadowColor=${theme.shadow.colorStrong}
         class=${className}
-        role="dialog" 
-        aria-modal="true" 
+        role="dialog"
+        aria-modal="true"
         aria-labelledby=${showHeader ? "modal-title" : undefined}
       >
         ${showHeader && html`
           <${BaseHeader} marginBottom="16px">
-            <${BaseTitle} 
-              id="modal-title" 
+            <${BaseTitle}
+              id="modal-title"
               color=${theme.colors.text.primary}
               fontFamily=${theme.typography.fontFamily}
               fontWeight=${theme.typography.fontWeight.bold}
             >
               ${title}
             </${BaseTitle}>
-            <${CloseButton}
-              onClick=${onClose}
-              color=${theme.colors.text.secondary}
-              transition=${theme.transitions.fast}
-              aria-label="Close"
-            >
-              <${Icon} name='x' color=${theme.colors.text.secondary} />
-            </${CloseButton}>
+            ${!hideCloseButton && html`
+              <${CloseButton}
+                onClick=${onClose}
+                color=${theme.colors.text.secondary}
+                transition=${theme.transitions.fast}
+                aria-label="Close"
+              >
+                <${Icon} name='x' color=${theme.colors.text.secondary} />
+              </${CloseButton}>
+            `}
           </${BaseHeader}>
         `}
         

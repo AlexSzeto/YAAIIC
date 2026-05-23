@@ -99,6 +99,7 @@ function readData() {
     const raw = fs.readFileSync(ANYTALE_DATA_PATH, 'utf8');
     const parsed = JSON.parse(raw);
     return {
+      version: parsed.version,
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
       plot: Array.isArray(parsed.plot) ? parsed.plot : [],
       characters: Array.isArray(parsed.characters) ? parsed.characters : [],

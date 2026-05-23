@@ -121,27 +121,35 @@ OptionLabel.className = 'multi-select-option-label';
  * MultiSelect – Button that opens a popover checklist below (or above, if near viewport bottom).
  *
  * @param {Object}   props
- * @param {string[]} props.options        - Available option strings.
- * @param {string[]} props.value          - Currently selected values.
- * @param {Function} props.onChange       - `(values: string[]) => void`
- * @param {string}   [props.label]        - Label displayed above the button.
- * @param {string}   [props.placeholder]  - Shown when nothing is selected (default: "Select…").
- * @param {string}   [props.widthScale]   - 'full' → flex:1 + 100% width; default → inline.
+ * @param {string[]} props.options          - Available option values (stored in `value`).
+ * @param {string[]} [props.optionLabels]   - Display labels for each option. If omitted, options are used as labels.
+ * @param {string[]} props.value            - Currently selected values.
+ * @param {Function} props.onChange         - `(values: string[]) => void`
+ * @param {string}   [props.label]          - Label displayed above the button.
+ * @param {string}   [props.placeholder]    - Shown when nothing is selected (default: "Select…").
+ * @param {string}   [props.widthScale]     - 'full' → flex:1 + 100% width; default → inline.
  *
  * @example
  * html`
  *   <${MultiSelect}
- *     label="Keys"
- *     options=${MUSICAL_KEYS}
- *     value=${genre.keys}
- *     onChange=${(keys) => setField('keys', keys)}
+ *     label="Time Signatures"
+ *     options=${['2', '3', '4', '6']}
+ *     optionLabels=${['2/4', '3/4', '4/4', '6/8']}
+ *     value=${genre.timeSignatures}
+ *     onChange=${(sigs) => setField('timeSignatures', sigs)}
  *   />
  * `
  */
-export function MultiSelect({ options = [], value = [], onChange, label, placeholder = 'Select…', widthScale }) {
+export function MultiSelect({ options = [], optionLabels, value = [], onChange, label, placeholder = 'Select…', widthScale }) {
   const theme = currentTheme.value;
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState(null); // { top, left, width, triggerBottom, triggerTop }
+
+  const getLabel = useCallback((opt) => {
+    if (!optionLabels) return opt;
+    const i = options.indexOf(opt);
+    return i >= 0 ? optionLabels[i] : opt;
+  }, [options, optionLabels]);
 
   const handleTriggerClick = useCallback((e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -176,7 +184,7 @@ export function MultiSelect({ options = [], value = [], onChange, label, placeho
     };
   }, [open, close]);
 
-  const displayText = value.length === 0 ? placeholder : value.join(', ');
+  const displayText = value.length === 0 ? placeholder : value.map(getLabel).join(', ');
 
   const width = widthScale === 'full' ? '100%' : undefined;
   const flex = widthScale === 'full' ? '1' : undefined;
@@ -201,7 +209,7 @@ export function MultiSelect({ options = [], value = [], onChange, label, placeho
         style=${popoverStyle}
         onMouseDown=${(e) => e.stopPropagation()}
       >
-        ${options.map(opt => html`
+        ${options.map((opt, i) => html`
           <${OptionRow}
             key=${opt}
             theme=${theme}
@@ -211,7 +219,7 @@ export function MultiSelect({ options = [], value = [], onChange, label, placeho
               checked=${value.includes(opt)}
               onChange=${() => {}}
             />
-            <${OptionLabel} theme=${theme}>${opt}</${OptionLabel}>
+            <${OptionLabel} theme=${theme}>${optionLabels ? optionLabels[i] : opt}</${OptionLabel}>
           </${OptionRow}>
         `)}
       </${Popover}>

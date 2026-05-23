@@ -179,15 +179,56 @@ Linear slider with label and value display.
 
 ### Range Slider (`io/range-slider.mjs`)
 
-Dual-handle range selector for selecting a value range.
+Dual-handle range selector for selecting a value range. **Class component** (uncontrolled after mount — does not re-sync to `min`/`max` prop changes; use a `key` prop to force remount when a saved value needs to reload).
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `min` | number | — | Minimum bound |
-| `max` | number | — | Maximum bound |
-| `start` | number | — | Left handle value |
-| `end` | number | — | Right handle value |
-| `onChange` | function | — | `({ start, end }) => void` |
+| `minAllowed` | number | `0` | Lower bound of the slider track |
+| `maxAllowed` | number | `100` | Upper bound of the slider track |
+| `min` | number | — | Initial left-handle value (defaults to `minAllowed`) |
+| `max` | number | — | Initial right-handle value (defaults to `maxAllowed`) |
+| `snap` | number | `1` | Step increment |
+| `widthScale` | string | `'normal'` | `'normal'`, `'compact'`, `'full'` |
+| `onChange` | function | — | `({ min, max }) => void` |
+
+### MultiSelect (`io/multi-select.mjs`)
+
+Button that opens a portal-rendered popover checklist below (or above, if near viewport bottom). Selection is tracked as an array of string values. Closes on outside click or Escape.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `options` | string[] | `[]` | Available option values (stored in `value`) |
+| `optionLabels` | string[] | — | Display labels for each option; if omitted, `options` are used as labels |
+| `value` | string[] | `[]` | Currently selected values |
+| `onChange` | function | — | `(values: string[]) => void` |
+| `label` | string | — | Label displayed above the button |
+| `placeholder` | string | `'Select…'` | Shown when nothing is selected |
+| `widthScale` | string | — | `'full'` → flex:1 + 100% width; omit for inline |
+
+```javascript
+// Basic usage — options are both values and display text
+html`
+  <${MultiSelect}
+    label="Keys"
+    options=${MUSICAL_KEYS}
+    value=${genre.keys}
+    onChange=${(keys) => setField('keys', keys)}
+    widthScale="full"
+  />
+`
+
+// With optionLabels — values and display text differ
+html`
+  <${MultiSelect}
+    label="Time Signatures"
+    options=${['2', '3', '4', '6']}
+    optionLabels=${['2/4', '3/4', '4/4', '6/8']}
+    value=${genre.timeSignatures}
+    onChange=${(sigs) => setField('timeSignatures', sigs)}
+    widthScale="full"
+  />
+`
+```
 
 ### Discrete Slider (`io/discrete-slider.mjs`)
 

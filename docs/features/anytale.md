@@ -42,6 +42,7 @@ app-ui/anytale/
   prompt-import.mjs            — imports prompt tags back into part attribute values
   slot-resolver.mjs            — resolves which parts fill which body slots
   image-preview.mjs            — part preview image (hash-based idempotent caching)
+  music-section.mjs            — Music tab: genre CRUD, track sub-lists, BGM player bar, playlist modal
 ```
 
 ### State architecture
@@ -76,6 +77,11 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | DELETE | `/anytale/outfits/:uid` | Delete outfit |
 | POST | `/anytale/generate-part-preview` | Queue part preview image (hash-named, idempotent) |
 | POST | `/anytale/request-part-preview` | Check if cached preview exists for a prompt |
+| GET | `/anytale/genres` | List all genres (with nested tracks) |
+| POST | `/anytale/genres` | Create genre (server assigns UUID) |
+| PUT | `/anytale/genres/:uid` | Update genre (including nested tracks array) |
+| DELETE | `/anytale/genres/:uid` | Delete genre and all nested tracks |
+| POST | `/anytale/genres/:uid/generate-track` | Queue AceStep track generation; result auto-saved to genre |
 
 ### Config keys (`config.json` → `anytale` block)
 
@@ -86,6 +92,8 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | `portraitParts` | Array of part names/types to include in portrait prompts |
 | `voiceWorkflow` | Workflow name for voice generation |
 | `partPreviewWorkflow` | Workflow name for part preview images |
+| `musicWorkflow` | Workflow name for AceStep music generation (default: `'AceStep Music Generation'`) |
+| `defaultMusicLength` | Default generated track length in seconds (default: `120`) |
 
 ## Key Data Shapes
 
@@ -124,6 +132,37 @@ See `@typedef` declarations in `server/features/anytale/repository.mjs` for auth
   parts: CharacterPart[],          // same part-override format as character parts
   preferredLocations: string[],    // UIDs of preferred location-typed parts; used by play mode bootstrap
   renderUrl: string,               // URL of the generated render image (server-set via render-outfit)
+}
+```
+
+### Genre shape
+
+```js
+{
+  uid: string,
+  name: string,
+  musicPrompt: string,      // template; use {{variation}} as insertion point
+  variations: string[],     // one picked randomly at track generation
+  adjectives: string[],     // one picked randomly for track name
+  nouns: string[],          // one picked randomly for track name
+  keys: string[],           // subset of musical keys
+  bpmMin: number,
+  bpmMax: number,
+  timeSignatures: string[], // subset of time signatures
+  tracks: Track[],
+}
+```
+
+### Track shape
+
+```js
+{
+  uid: string,
+  name: string,       // "[adjective] [noun]" assigned at generation
+  key: string,
+  bpm: number,
+  timeSignature: string,
+  audioUrl: string,
 }
 ```
 

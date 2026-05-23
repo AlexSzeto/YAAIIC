@@ -250,7 +250,7 @@ describe('AnyTale Router', () => {
         keys: ['C major'],
         bpmMin: 60,
         bpmMax: 80,
-        timeSignatures: ['4/4'],
+        timeSignatures: ['4'],
         tracks: [],
       }])
       loadWorkflows.mockReturnValue({
@@ -301,7 +301,7 @@ describe('AnyTale Router', () => {
         keys: ['C major'],
         bpmMin: 70,
         bpmMax: 70,
-        timeSignatures: ['4/4'],
+        timeSignatures: ['4'],
         tracks: [],
       }])
       loadWorkflows.mockReturnValue({
@@ -317,9 +317,49 @@ describe('AnyTale Router', () => {
       expect(callArgs.taskData.name).toBe('Serene Drift')
       expect(callArgs.taskData.bpm).toBe(70)
       expect(callArgs.taskData.key).toBe('C major')
-      expect(callArgs.taskData.time_signature).toBe('4/4')
+      expect(callArgs.taskData.time_signature).toBe('4')
       expect(callArgs.taskData.lyrics).toBe('')
       expect(callArgs.taskData.length).toBe(120)
+    })
+
+    test('uses genreOverrides from request body over DB values', async () => {
+      getAllGenres.mockReturnValue([{
+        uid: 'g-1',
+        name: 'Ambient',
+        musicPrompt: 'calm {{variation}} music',
+        variations: ['forest'],
+        adjectives: ['Serene'],
+        nouns: ['Drift'],
+        keys: ['C major'],
+        bpmMin: 70,
+        bpmMax: 70,
+        timeSignatures: ['4'],
+        tracks: [],
+      }])
+      loadWorkflows.mockReturnValue({
+        workflows: [{ name: 'AceStep Music Generation', options: {} }],
+      })
+
+      await request(app)
+        .post('/anytale/genres/g-1/generate-track')
+        .send({
+          genreOverrides: {
+            musicPrompt: 'energetic {{variation}} beats',
+            variations: ['city'],
+            adjectives: ['Urban'],
+            nouns: ['Pulse'],
+            keys: ['A minor'],
+            bpmMin: 140,
+            bpmMax: 140,
+            timeSignatures: ['4'],
+          },
+        })
+
+      const callArgs = enqueue.mock.calls[0][0]
+      expect(callArgs.taskData.prompt).toBe('energetic city beats')
+      expect(callArgs.taskData.name).toBe('Urban Pulse')
+      expect(callArgs.taskData.bpm).toBe(140)
+      expect(callArgs.taskData.key).toBe('A minor')
     })
   })
 })
