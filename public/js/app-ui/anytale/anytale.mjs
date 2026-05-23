@@ -145,7 +145,7 @@ export function AnyTalePage() {
   // Generation callbacks
   const handleGenerationComplete = useCallback(async (data) => {
     setIsGenerating(false);
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     if (data.result && data.result.uid) {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
@@ -161,8 +161,8 @@ export function AnyTalePage() {
 
   const handleGenerationError = useCallback((data) => {
     setIsGenerating(false);
-    setTaskId(null);
-    toast.error(data.error?.message || 'Generation failed');
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+    toast.error(data?.error?.message || 'Generation failed');
   }, []);
 
   // Reconnect-resume: restore in-progress anytale image generation tasks on page load
@@ -175,7 +175,7 @@ export function AnyTalePage() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
-        onCancelled: () => { setIsGenerating(false); setTaskId(null); },
+        onCancelled: (data) => { setIsGenerating(false); setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev); },
       });
     }
   }, [activeTasks]);
@@ -190,7 +190,7 @@ export function AnyTalePage() {
         progressShow(taskId, {
           onComplete: handleGenerationComplete,
           onError: handleGenerationError,
-          onCancelled: () => { setIsGenerating(false); setTaskId(null); },
+          onCancelled: (data) => { setIsGenerating(false); setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev); },
         });
       },
     });

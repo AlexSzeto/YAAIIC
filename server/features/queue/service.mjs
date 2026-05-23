@@ -309,6 +309,7 @@ function _handleTaskCompleted(taskId, result) {
   runningTaskId = null;
   saveQueue(items);
   emit('queue:task-complete', { id: runningItem?.id });
+  emitUpdated();
   _runNext();
 }
 

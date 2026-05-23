@@ -58,6 +58,7 @@
     import { Slider } from './io/slider.mjs';
     import { DiscreteSlider } from './io/discrete-slider.mjs';
     import { ToggleSwitch } from './io/toggle-switch.mjs';
+    import { MultiSelect } from './io/multi-select.mjs';
     import { TabPanels } from './nav/tab-panels.mjs';
     import { FloatingPanel } from './overlays/floating-panel.mjs';
     import { DynamicList } from './layout/dynamic-list.mjs';
@@ -659,6 +660,9 @@
           toggle1: false,
           toggle2: true,
           toggle3Disabled: false,
+          // MultiSelect states
+          multiSelectKeys: ['C major', 'A minor'],
+          multiSelectSig: [],
           // Tabs states
           activeTab: 'tab1',
           activeTabVariant: 'tab1',
@@ -1468,6 +1472,35 @@
                   </div>
                 <//>
               <//>
+
+              <!-- IO: MultiSelect -->
+              <${Section}>
+                <${SectionTitle}>MultiSelect Component<//>
+                <p style="margin-bottom: 16px; opacity: 0.7;">Button that opens a portal-rendered popover checklist anchored below (or above) the trigger</p>
+
+                <${ComponentGrid}>
+                  <div style="display: flex; flex-direction: column; gap: 16px; min-width: 240px;">
+                    <${MultiSelect}
+                      label="Musical Keys"
+                      placeholder="Select keys…"
+                      options=${['C major','D major','E major','F major','G major','A major','B major','C minor','D minor','E minor','F minor','G minor','A minor','B minor']}
+                      value=${this.state.multiSelectKeys}
+                      onChange=${(v) => this.setState({ multiSelectKeys: v })}
+                    />
+                    <${MultiSelect}
+                      label="Time Signatures (none selected)"
+                      placeholder="Select time signatures…"
+                      options=${['4/4','3/4','6/8','2/4','5/4','7/8','12/8']}
+                      value=${this.state.multiSelectSig}
+                      onChange=${(v) => this.setState({ multiSelectSig: v })}
+                    />
+                    <div style="font-size: 12px; opacity: 0.6;">
+                      Keys: ${JSON.stringify(this.state.multiSelectKeys)}<br/>
+                      Sig: ${JSON.stringify(this.state.multiSelectSig)}
+                    </div>
+                  </div>
+                </${ComponentGrid}>
+              </${Section}>
 
               <${CategoryHeader}>Navigation Components<//>
 

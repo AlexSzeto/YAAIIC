@@ -62,6 +62,11 @@ description: when working on the client facing (i.e. /public) side of the websit
 - Every `queue:task-started` handler that opens a task SSE connection (directly or via `progressShow`) must check `if (clientId !== getClientId()) return;` before subscribing. This prevents idle tabs from opening task SSE connections for tasks they didn't submit.
 - Idle tabs may still consume `queue:task-started` for UI display purposes (queue dashboard), but must not call `sseManager.subscribe()` or `progressShow()` for tasks they don't own.
 
+### Queue SSE reconnect recovery
+- `QueueSSEManager` exposes `onConnect(fn)` which fires every time the SSE connection (re)opens. Use it to re-fetch `/queue/status` so the client recovers its view of the queue after a dropped connection.
+- `use-queue-status.mjs` already wires this up — new callers of `useQueueStatus()` get recovery for free.
+- Any component or hook that subscribes directly to `queueSSEManager` and caches queue state should also call `onConnect` and refresh from the REST endpoint.
+
 ### SSEManager event coalescing
 - `SSEManager` (in `public/js/app-ui/sse-manager.mjs`) batches events via `setTimeout(0)` before dispatching. This prevents replayed completed tasks from firing multiple `onComplete` calls.
 - Pruning rule in `_flushEvents`: if a terminal event (`complete`/`error`/`cancelled`) is present in the batch, discard all `progress` events and dispatch only the terminal. If no terminal: discard all `progress` except the last, dispatch that one.

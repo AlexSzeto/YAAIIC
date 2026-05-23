@@ -357,7 +357,7 @@ function InpaintApp() {
 
   // Handle generation complete
   const handleGenerationComplete = async (data) => {
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     console.log('Inpaint complete:', data);
     
     if (data.result && data.result.uid) {
@@ -402,7 +402,7 @@ function InpaintApp() {
 
   // Handle generation error
   const handleGenerationError = (data) => {
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     console.error('Inpaint generation failed:', data);
     toast.error(data.error?.message || 'Inpaint generation failed');
   };
@@ -416,7 +416,7 @@ function InpaintApp() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
-        onCancelled: () => setTaskId(null),
+        onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
       });
     }
   }, [activeTasks]);
@@ -437,7 +437,7 @@ function InpaintApp() {
         progressShow(taskId, {
           onComplete: (data) => handleGenerationCompleteRef.current(data),
           onError: (data) => handleGenerationErrorRef.current(data),
-          onCancelled: () => setTaskId(null),
+          onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
         });
       },
     });

@@ -191,6 +191,33 @@ describe('AudioPlayer (test.html usages)', () => {
   })
 })
 
+// ── MultiSelect ────────────────────────────────────────────────────────────
+
+import { MultiSelect } from './io/multi-select.mjs'
+
+describe('MultiSelect', () => {
+  test('renders with empty selection without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`<${MultiSelect} options=${['A', 'B', 'C']} value=${[]} onChange=${() => {}} />`)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  test('renders with pre-selected values and label without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <${MultiSelect}
+        label="Keys"
+        options=${['C major', 'A minor', 'G major']}
+        value=${['C major', 'G major']}
+        onChange=${() => {}}
+      />
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
 // ── BgmPlayerDemo — Panel glass + controls (mirrors test.html) ────────────
 
 import { globalBgmPlayer } from './global-audio-player.mjs'

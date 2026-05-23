@@ -537,7 +537,7 @@ function App() {
   };
 
   const handleGenerationComplete = async (data) => {
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
 
     if (data.result && data.result.uid) {
       try {
@@ -555,8 +555,8 @@ function App() {
   };
 
   const handleGenerationError = (data) => {
-    setTaskId(null);
-    toast.error(data.error?.message || 'Generation failed');
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+    toast.error(data?.error?.message || 'Generation failed');
   };
 
   // Reconnect-resume: restore in-progress yaaiic generation tasks on page load
@@ -568,7 +568,7 @@ function App() {
       progressShow(task.taskId, {
         onComplete: handleGenerationComplete,
         onError: handleGenerationError,
-        onCancelled: () => setTaskId(null),
+        onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
       });
     }
   }, [activeTasks]);
@@ -800,7 +800,7 @@ function App() {
     progressShow(taskId, {
       onComplete: handleGenerationComplete,
       onError: handleGenerationError,
-      onCancelled: () => setTaskId(null),
+      onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
     });
   }, [progressShow]);
 
@@ -853,7 +853,7 @@ function App() {
 
   const handleRegenerateComplete = async (data) => {
     console.log('Regenerate complete:', data);
-    setRegenerateTaskId(null);
+    setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     
     if (data.mediaData) {
       // Update the generated image display with complete data
@@ -870,8 +870,8 @@ function App() {
 
   const handleRegenerateError = (data) => {
     console.error('Regenerate error:', data);
-    setRegenerateTaskId(null);
-    toast.error(data.error?.message || 'Regeneration failed');
+    setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+    toast.error(data?.error?.message || 'Regeneration failed');
   };
 
   // Refs to always call the latest callback versions from the persistent subscription
@@ -895,14 +895,14 @@ function App() {
           progressShow(taskId, {
             onComplete: (data) => handleRegenerateCompleteRef.current(data),
             onError: (data) => handleRegenerateErrorRef.current(data),
-            onCancelled: () => setRegenerateTaskId(null),
+            onCancelled: (data) => setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
           });
         } else {
           setTaskId(taskId);
           progressShow(taskId, {
             onComplete: (data) => handleGenerationCompleteRef.current(data),
             onError: (data) => handleGenerationErrorRef.current(data),
-            onCancelled: () => setTaskId(null),
+            onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
           });
         }
       },
@@ -1066,7 +1066,7 @@ function App() {
         progressShow(result.taskId, {
           onComplete: handleGenerationComplete,
           onError: handleGenerationError,
-          onCancelled: () => setTaskId(null),
+          onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
         });
         toast.show('Uploading...', 'info');
       }

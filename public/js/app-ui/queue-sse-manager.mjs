@@ -12,34 +12,65 @@ class QueueSSEManager {
     this._nextId = 1;
     this._reconnectTimer = null;
     this._connected = false;
+    this._connectListeners = [];
   }
 
   _connect() {
-    if (this._eventSource) return;
+    if (this._eventSource) {
+      console.log('[QueueSSE] _connect called but _eventSource already exists');
+      return;
+    }
 
+    console.log('[QueueSSE] Connecting to /queue/sse...');
     this._eventSource = new EventSource('/queue/sse');
 
     this._eventSource.addEventListener('queue:updated', (e) => {
-      this._broadcast('queue:updated', JSON.parse(e.data));
+      try {
+        const data = JSON.parse(e.data);
+        console.log(`[QueueSSE] Event 'queue:updated' received. State: ${data.state}, Items count: ${data.items?.length}`);
+        this._broadcast('queue:updated', data);
+      } catch (err) {
+        console.error('[QueueSSE] Error parsing queue:updated data:', err);
+      }
     });
 
     this._eventSource.addEventListener('queue:task-started', (e) => {
-      this._broadcast('queue:task-started', JSON.parse(e.data));
+      try {
+        const data = JSON.parse(e.data);
+        console.log(`[QueueSSE] Event 'queue:task-started' received. TaskId: ${data.taskId}, subLabel: ${data.subLabel}`);
+        this._broadcast('queue:task-started', data);
+      } catch (err) {
+        console.error('[QueueSSE] Error parsing queue:task-started data:', err);
+      }
     });
 
     this._eventSource.onopen = () => {
+      console.log(`[QueueSSE] EventSource connection opened. readyState=${this._eventSource?.readyState}`);
       this._connected = true;
       if (this._reconnectTimer) {
         clearTimeout(this._reconnectTimer);
         this._reconnectTimer = null;
       }
+      console.log(`[QueueSSE] Triggering ${this._connectListeners.length} onConnect listener(s)`);
+      for (const fn of this._connectListeners) {
+        try {
+          fn();
+        } catch (err) {
+          console.error('[QueueSSE] Error in onConnect listener:', err);
+        }
+      }
     };
 
-    this._eventSource.onerror = () => {
+    this._eventSource.onerror = (err) => {
+      const state = this._eventSource ? this._eventSource.readyState : 'null';
+      console.error(`[QueueSSE] EventSource error. readyState=${state}, connected=${this._connected}, subscribers=${this._subscribers.size}`, err);
       this._connected = false;
-      this._eventSource.close();
-      this._eventSource = null;
+      if (this._eventSource) {
+        this._eventSource.close();
+        this._eventSource = null;
+      }
       if (this._subscribers.size > 0 && !this._reconnectTimer) {
+        console.log('[QueueSSE] Scheduling reconnect in 5000ms');
         this._reconnectTimer = setTimeout(() => {
           this._reconnectTimer = null;
           this._connect();
@@ -49,6 +80,7 @@ class QueueSSEManager {
   }
 
   _disconnect() {
+    console.log('[QueueSSE] Disconnecting EventSource...');
     if (this._reconnectTimer) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = null;
@@ -61,10 +93,28 @@ class QueueSSEManager {
   }
 
   _broadcast(event, payload) {
-    for (const { callbacks } of this._subscribers.values()) {
+    for (const [id, { callbacks }] of this._subscribers.entries()) {
       const fn = callbacks[event];
-      if (typeof fn === 'function') fn(payload);
+      if (typeof fn === 'function') {
+        try {
+          fn(payload);
+        } catch (err) {
+          console.error(`[QueueSSE] Error in subscriber callback for ID ${id}, event ${event}:`, err);
+        }
+      }
     }
+  }
+
+  /**
+   * Register a listener that fires whenever the SSE connection (re)opens.
+   * @param {Function} fn
+   * @returns {Function} unregister function
+   */
+  onConnect(fn) {
+    this._connectListeners.push(fn);
+    return () => {
+      this._connectListeners = this._connectListeners.filter(f => f !== fn);
+    };
   }
 
   /**
@@ -76,13 +126,18 @@ class QueueSSEManager {
   subscribe(callbacks) {
     const id = this._nextId++;
     this._subscribers.set(id, { callbacks });
+    console.log(`[QueueSSE] Subscribed ID ${id}. Active subscribers count: ${this._subscribers.size}`);
     if (this._subscribers.size === 1) this._connect();
     return () => this.unsubscribe(id);
   }
 
   unsubscribe(id) {
-    this._subscribers.delete(id);
-    if (this._subscribers.size === 0) this._disconnect();
+    const existed = this._subscribers.delete(id);
+    console.log(`[QueueSSE] Unsubscribing ID ${id}. Existed: ${existed}. Remaining subscribers: ${this._subscribers.size}`);
+    if (this._subscribers.size === 0) {
+      console.log('[QueueSSE] No subscribers left. Disconnecting...');
+      this._disconnect();
+    }
   }
 }
 

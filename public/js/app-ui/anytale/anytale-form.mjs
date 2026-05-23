@@ -195,11 +195,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               applyPortraitRef.current(data.result.imageUrl);
             }
           }
-          setPortraitTaskId(null);
+          setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
         },
-        onCancelled: () => setPortraitTaskId(null),
-        onError: () => setPortraitTaskId(null),
-        onDismiss: () => setPortraitTaskId(null),
+        onCancelled: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        onError: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        onDismiss: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
       });
     }
     if (voiceTask && !voiceTaskId) {
@@ -213,15 +213,15 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
             }
           }
-          setVoiceTaskId(null);
+          setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
         },
-        onCancelled: () => setVoiceTaskId(null),
-        onError: () => setVoiceTaskId(null),
-        onDismiss: () => setVoiceTaskId(null),
+        onCancelled: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        onError: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        onDismiss: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
       });
     }
   }, [activeTasks]);
-  // �"��"� Plot list for Character & Outfits tab generate section �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+  // ── Plot list for Character & Outfits tab generate section ─────────────────
   const [charTabPlotList, setCharTabPlotList] = useState([]);
   const [charTabPlotName, setCharTabPlotName] = useState('');
   const [charTabPlotUid, setCharTabPlotUid] = useState('');
@@ -248,11 +248,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                   applyPortraitRef.current(data.result.imageUrl);
                 }
               }
-              setPortraitTaskId(null);
+              setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
             },
-            onCancelled: () => setPortraitTaskId(null),
-            onError: () => setPortraitTaskId(null),
-            onDismiss: () => setPortraitTaskId(null),
+            onCancelled: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+            onError: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+            onDismiss: (data) => setPortraitTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
           });
 
         } else if (subLabel === 'Voice') {
@@ -266,11 +266,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                   applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
                 }
               }
-              setVoiceTaskId(null);
+              setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
             },
-            onCancelled: () => setVoiceTaskId(null),
-            onError: () => setVoiceTaskId(null),
-            onDismiss: () => setVoiceTaskId(null),
+            onCancelled: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+            onError: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+            onDismiss: (data) => setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
           });
 
         } else if (subLabel === 'Part Preview') {
