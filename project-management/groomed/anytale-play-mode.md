@@ -25,7 +25,7 @@ Ship a highly guided, tap-only **AnyTale play** experience on a dedicated page a
 - Extend `public/js/custom-ui/io/button.mjs` with AnyTale-play-only **glass button variants** (for example glass icon, glass icon-text, glass text) that use the same visual material as `Panel variant="glass"` without wrapping buttons in `Panel`.
 - The main play choices are **custom page-local components**, not generic `Button` instances. They should share the same glass effect and be designed for the portrait panel layout.
 - Do **not** show an audio player UI in play mode. Dialog voice and background music are automatic; the only visible audio controls are dialog mute/unmute and music play/stop or mute/unmute.
-- Do **not** use `globalAudioPlayer` or `AudioPlayer` in AnyTale play mode; build a new play-mode audio runtime.
+- Use `globalBgmPlayer` for background music and `globalAudioPlayer` for dialog voice playback. Do **not** build a custom audio runtime.
 
 ### Layout and UX
 
@@ -139,8 +139,9 @@ When the user enters a new chapter (plot block), **all media is queued at once**
 - Random **character** (from library).
 - Random **outfit** from the selected character's **preferred outfits** list.
 - **Location part**: pick a random UID from the selected outfit's `preferredLocations`; if the array is empty or none of the UIDs exist in the library, fall back to a random part from all `location`-typed parts. Then pick random attribute selections (respect category/custom attribute rules from part config).
-- Random **music genre** from the database, then random **track** from that genre's playlist.
-- Random **plot** whose plot block **`section`** is **`prelude`** (case-insensitive match per product convention). This plot is **pre-selected and stored** but not entered until the user chooses "Begin the tale".
+- **Initial slot state**: computed from the selected character parts + outfit parts. A slot is `removed` if no part has that slot type; `revealing` if every part with that slot type has `isRevealing: true` on its outfit part entry; `covered` otherwise.
+- Random **music genre** from the database. Tracks from the selected genre populate `globalBgmPlayer`'s playlist on chapter entry.
+- **Prelude plot**: from all plots whose `section` is `prelude` (case-insensitive), filter to those whose `slotRequirements` are fully satisfied by the initial slot state (`present` → slot is `covered` or `revealing`; `absent` → slot is `removed`). Pick randomly from valid candidates. If none satisfy slot requirements, fall back to any prelude-section plot (softlock prevention). This plot is **pre-selected and stored** but not entered until the user chooses "Begin the tale".
 - After bootstrap, show the **introduction** using the **introduction plot** (see below).
 - If the library has no usable prelude plot, no usable epilogue plot, no introduction plot, no character, no `location`-typed part, or no music tracks, fail the play page load with a simple message asking the user to create the missing data in the editor before entering play mode.
 
@@ -180,7 +181,7 @@ Show **three** random characters (name, personality profile, preview portrait). 
 
 Show **three** random outfits (name, preview image). Fourth: **"Nevermind"** → no change, return to mood page. On pick, update session outfit.
 
-#### 5. Background change
+#### 5. Location change
 
 Show **three** random parts with type **`location`**. On pick, walk **each attribute**: three concrete options + fourth **"None of these"** leaves that attribute **unset / null**. Then return to the intro main page.
 
@@ -194,12 +195,24 @@ While moving through pages, **no choice UI** — only the normal page layout (im
 
 #### 8. End-of-chapter branching
 
-When the user reaches the last page, a **decision page** is shown:
-- Image is **reused from the last page** of the current chapter.
+When the user reaches the last **visible** page of a chapter, a **decision page** is shown:
+- Image is **reused from the last visible page** of the current chapter.
 - Decision hint text and choice options are displayed.
-- Offer **three** plots whose **`section`** matches one of the current plot's **`progressionSections`** entries.
-- Fourth: **"Let's say goodbye for now"** → jumps to a **random** plot with **`section === epilogue`** (case-insensitive).
-- If no progression section is defined or no matching plot exists, show **only** the epilogue option.
+
+**Computing the post-chapter slot state:**
+
+All pages in the chapter are processed in order. Pages whose `requirements` were not met are invisible to the user but their `actions` are still applied. The resulting slot state is used for all plot selection below.
+
+**Selecting next plots:**
+
+Using the current plot's `progressionSections` and the post-chapter slot state:
+
+1. **Primary candidates**: plots whose `section` matches one of the current plot's `progressionSections` entries AND whose `slotRequirements` are fully satisfied by the current slot state. Offer **three** randomly from these.
+2. **Softlock fallback**: if no primary candidates exist, fall back to any plot matching the section requirement alone (ignore slot requirements) to prevent a dead end.
+3. **Hardlock / error screen**: if no plots match even the section requirement, display a blocking error screen telling the user the session cannot continue and directing them to add more plots in the editor.
+4. **Fourth option — epilogue**: "Let's say goodbye for now" → a random epilogue plot (`section === 'epilogue'`, case-insensitive) whose `slotRequirements` are satisfied by the current slot state. If none satisfy slot requirements, fall back to any epilogue plot. If no epilogue plots exist, omit the fourth option entirely.
+
+If the current plot has no `progressionSections`, primary candidates are empty and softlock fallback activates immediately.
 
 **After the user makes a choice:**
 
@@ -255,12 +268,11 @@ Not supported in this version. Character, outfit, location, and music choices ar
 
 ### Background music
 
-- Music library is stored in the **anytale database** (not hard-coded config). Genres, genre settings, and track playlists are managed via the **AnyTale editor Music tab** (a dependency feature).
-- On first run, the library is **seeded** with one piece of music per genre, generated through the AceStep workflow. New tracks are generated in the editor and permanently added to the genre's playlist.
+- Music library is stored in the **anytale database** (not hard-coded config). Genres, genre settings, and track playlists are managed via the **AnyTale editor Music tab**.
 - Play mode **only consumes** the existing library — no generation happens in the play UI.
-- Music **loops indefinitely** and persists for the entire session (does not change between chapters).
-- Do not use `globalAudioPlayer`. Build a play-mode audio runtime with two independent channels: one for dialog voice and one for background music. It must support immediate stop/mute, independent volume/mute state, background looping with graceful **fade-in and fade-out** for seamless loops, and reset/leave cleanup.
-- AmbientBrew / `AmbientCoffee` can be considered for the background music channel only. Current assessment: it is useful for dynamic ambient recipes and channel effects, but is too heavy and recipe-oriented to replace the required two-channel play-mode runtime. Prefer a small dedicated two-channel runtime now, with optional AmbientBrew adapter later for richer ambient tracks.
+- Music selection is **genre-based**: when a genre is chosen (on cold start or via music change flow), random tracks from that genre's playlist are loaded into `globalBgmPlayer` to maintain continuous playback. `globalBgmPlayer` handles seamless looping via periodic playlist insertions.
+- Music persists for the entire session and does not change between chapters.
+- Use **`globalBgmPlayer`** for all background music playback. Use **`globalAudioPlayer`** for dialog voice (TTS) playback. No custom audio runtime is needed.
 
 ### Reset
 
@@ -269,13 +281,14 @@ Not supported in this version. Character, outfit, location, and music choices ar
 ### Persistence
 
 - **One** `localStorage` JSON object (distinct key from editor keys `anytale-state`, `anytale-plot`, `anytale-character` — **do not clobber** editor storage). Contents: selected **character** (uid + snapshot fields needed for UI), **outfit** uid, **location part** uid + **attribute map**, **music genre** + **track id**, **linear plot timeline**, **generated asset cache**, **current plot uid**, **current page index**, UI mode / phase (intro vs mood vs character picker vs plot vs end-of-chapter vs end screen), toggles (mute, music on), navigation mode (manual vs autoplay). **Always restore** on `/anytale.html` load.
-- Store timeline as ordered entries rather than only uids, e.g. `{ plotUid, startedAt, pageCount, progressionDisabledPartsApplied }`, so future save/load/share features have room to grow.
+- Store timeline as ordered entries rather than only uids, e.g. `{ plotUid, startedAt, pageCount, slotStateAtEntry }`, so future save/load/share features have room to grow.
 - Store generated assets keyed by a stable signature containing plot uid, page index, character uid, outfit uid, location part uid, location attribute signature, and relevant prompt/page inputs. Cache entries hold image URL/task id/status, dialog text/status, voice URL/status, errors, and generated timestamps. Character/outfit/location changes should naturally invalidate old generated entries by changing the signature.
 
 ### Plot data model (editor-aligned)
 
-- Plot blocks: **`uid`**, **`name`**, **`section`**, **`pages[]`** (each page: **`tags`**, **`dialogPrompt`**, **`hiddenParts`**), **`progressionSections`**, **`progressionDisabledParts`** — see `createBlankPlot` / `loadPlot` in `public/js/app-ui/anytale/anytale-state.mjs` and server `GET /anytale/plot/:uid`.
-- During plot progression, apply the selected/current plot's `progressionDisabledParts` to subsequent prompt assembly by suppressing matching part names/types until reset or until a future rule explicitly re-enables them.
+- Plot blocks: **`uid`**, **`name`**, **`section`**, **`description`**, **`progressionSections`**, **`slotRequirements`** (`Record<string, 'present'|'absent'>` — `'present'` means `covered` or `revealing`; `'absent'` means `removed`), **`pages[]`** — see the `PlotBlock` typedef in `server/features/anytale/repository.mjs`.
+- Each page: **`tags`**, **`dialogPrompt`**, **`actions[]`** (`{ slot: string, status: 'covering'|'revealing'|'removed' }` — applied when the page is processed, even if the page is invisible), **`requirements[]`** (slot type strings that must be `covered` or `revealing` for the page to render to the user).
+- **Page visibility**: at chapter entry, simulate slot state evolution page-by-page. Pages whose `requirements` fail are invisible to the user but their `actions` are still applied to advance slot state for all subsequent pages.
 - Missing character/part/plot fields are treated as empty fallbacks (empty strings, empty arrays, empty objects) except for the hard load failures listed under cold start.
 - Do not show character portrait preview imagery when a character has no saved portrait image.
 
@@ -287,14 +300,15 @@ Not supported in this version. Character, outfit, location, and music choices ar
 
 ## Tasks
 
-This feature is broken into 6 sequential, testable rollouts. Each rollout document contains its own task checklist and implementation details.
+This feature is broken into 7 sequential, testable rollouts. Each rollout document contains its own task checklist and implementation details.
 
-1. [Rollout 1: Foundation & Routing](file:///f:/YAAIIC/docs/groomed-features/anytale-play-1-foundation.md) — Editor rename, play shell, hamburger, config workflow, data migration, fetch layer.
-2. [Rollout 2: Play UI Components & Session](file:///f:/YAAIIC/docs/groomed-features/anytale-play-2-ui-components.md) — Glass buttons, speech/caption bubbles, decision options, progress bar, portrait panel, session module.
-3. [Rollout 3: Introduction Flow & Image Generation](file:///f:/YAAIIC/docs/groomed-features/anytale-play-3-introduction.md) — Cold start, introduction plot, character/outfit/location/music change flows, blocking image regen.
-4. [Rollout 4: Chapter Navigation & Queue](file:///f:/YAAIIC/docs/groomed-features/anytale-play-4-chapter-navigation.md) — Chapter entry, page navigation, autoplay, queue strategy, progress bar, asset cache.
-5. [Rollout 5: Dialog, Voice & Audio](file:///f:/YAAIIC/docs/groomed-features/anytale-play-5-dialog-voice-audio.md) — LLM dialog, TTS endpoint, two-channel audio runtime, music, queue expansion, voice reprioritization.
-6. [Rollout 6: Branching, Completion & Polish](file:///f:/YAAIIC/docs/groomed-features/anytale-play-6-branching-completion.md) — End-of-chapter branching, chapter transitions, epilogue, cancellation, reset, regression.
+0. [Rollout 0: Visual Mockup](anytale-play-0-mockup.md) — All play-mode UI components + two static mockup screens (character change, plot page with dialog). No business logic.
+1. [Rollout 1: Foundation & Routing](anytale-play-1-foundation.md) — Progression sections editor field, editor rename, play shell, hamburger, config workflow, data migration, fetch layer.
+2. [Rollout 2: Session Module](anytale-play-2-ui-components.md) — Session persistence module (`localStorage`, typed shape, load/save/patch helpers).
+3. [Rollout 3: Introduction Flow & Image Generation](anytale-play-3-introduction.md) — Cold start, slot state bootstrap, introduction plot, character/outfit/location/music change flows, blocking image regen.
+4. [Rollout 4: Chapter Navigation & Queue](anytale-play-4-chapter-navigation.md) — Chapter entry, page visibility simulation, slot state tracking, page navigation, autoplay, queue strategy, progress bar, asset cache.
+5. [Rollout 5: Dialog, Voice & Audio](anytale-play-5-dialog-voice-audio.md) — LLM dialog, TTS endpoint, `globalAudioPlayer` voice, `globalBgmPlayer` music, queue expansion, voice reprioritization.
+6. [Rollout 6: Branching, Completion & Polish](anytale-play-6-branching-completion.md) — End-of-chapter branching (slot-requirements-aware), chapter transitions, epilogue, cancellation, reset, regression.
 
 ### External dependencies
 

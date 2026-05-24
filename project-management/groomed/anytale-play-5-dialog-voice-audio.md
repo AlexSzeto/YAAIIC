@@ -14,11 +14,11 @@ Add the dialog (LLM), voice (TTS), and background music systems to play mode. Af
 
 - [ ] **Dialog TTS endpoint (server):** Add a play-mode server endpoint that accepts character uid (or voice sample reference) plus dialog text. Preprocesses inputs for a configured TTS workflow (Chatterbox/Qwen-style), runs ComfyUI generation, returns speech audio URL + metadata. This is NOT the existing personality-to-voice-sample endpoint (`/anytale/characters/:uid/generate-voice`). **Manual test:** POST with character voice sample + dialog text, verify returned audio speaks the provided text.
 
-- [ ] **Two-channel play audio runtime:** Build a play-mode-only audio runtime with two independent channels: dialog voice and background music. Requirements: automatic voice playback on page entry, looped background music with graceful fade-in/fade-out for seamless loops, independent mute/stop per channel, immediate speech stop on mute or page change, reset/leave cleanup, no visible player UI. Do NOT use `globalAudioPlayer` or `AudioPlayer`. **Manual test:** play music and voice simultaneously; mute voice — music continues; stop music — voice continues; reset stops both.
+- [ ] **Audio channel wiring:** Wire `globalBgmPlayer` as the music channel and `globalAudioPlayer` as the voice/dialog channel. On session start, load random tracks from the stored genre into `globalBgmPlayer` and begin playback. On page entry with a generated voice URL, play it via `globalAudioPlayer`. Both players support independent mute/stop. On reset/leave, stop both players and clear the BGM playlist. **Manual test:** play music and voice simultaneously; mute voice — music continues; stop music — voice continues; reset stops both.
 
 - [ ] **Voice integration:** When a page has dialog text and the character has a voice sample, queue TTS generation and play the result through the voice channel. Respect mute (no playback, no new TTS requests while muted). If character has no voice sample, treat as muted for speech (show text only, no TTS request). Store voice URL in session asset cache. **Manual test:** mute during voice playback — audio stops immediately; unmute — next page voice plays; character without voice sample shows text only.
 
-- [ ] **Background music looping + control:** Wire the music play/stop button. On session start, begin looping the selected track with graceful fade-in. Music loops indefinitely and persists across chapters (does not change on chapter transition). Music play/stop toggles the music channel. **Manual test:** start play, verify music loops seamlessly; stop, verify silence; restart, verify fade-in.
+- [ ] **Background music control:** Wire the music play/stop button to `globalBgmPlayer`. On session start, load random tracks from the stored genre into `globalBgmPlayer` and begin playback with fade-in. Music persists across chapters (does not change on chapter transition). Music play/stop toggles `globalBgmPlayer`. **Manual test:** start play, verify music plays continuously; stop, verify silence; restart, verify fade-in.
 
 - [ ] **Queue integration for dialog + voice ordering:** Expand the chapter queue strategy to the full ordering: (1) all dialogs (concurrent, via Ollama), (2) page 1 image (ComfyUI), (3) page 1 voice if applicable (ComfyUI), (4) remaining images (pages 2+), (5) remaining voices (pages 2+). Play cannot proceed until all dialogs AND page 1 image + voice (if applicable) are ready. **Manual test:** enter a chapter, verify queue order in network/server logs matches the specified sequence.
 
@@ -40,13 +40,13 @@ The chat client adapter renders the system message template at call time:
 ```js
 const systemMessage = config.systemMessage
   .replace('{{profile}}', character.personality || '')
-  .replace('{{location}}', backgroundLocationValue || '');
+  .replace('{{location}}', locationAttributeValue || '');
 ```
 
 Skip conditions (any one triggers skip):
 - Page's `dialogPrompt` is empty or blank after trimming
 - Character's `personality` field is missing/empty
-- Background part's location attribute value is not selected
+- Location part's location attribute value is not selected
 
 ### TTS endpoint
 
@@ -62,29 +62,12 @@ Endpoint shape: `POST /anytale/play/generate-speech`
 }
 ```
 
-### Two-channel audio runtime
+### Audio channel architecture
 
-Build as a standalone module (e.g. `public/js/app-ui/anytale/play/audio-runtime.mjs`). Do not depend on AmbientBrew/AmbientCoffee — those remain as optional future adapters for richer ambient tracks.
+No custom audio runtime is needed. Play mode uses two existing players:
 
-Channel API shape:
-```js
-const runtime = createPlayAudioRuntime();
-
-// Voice channel
-runtime.voice.play(audioUrl);
-runtime.voice.stop();       // immediate stop
-runtime.voice.mute();
-runtime.voice.unmute();
-
-// Music channel
-runtime.music.play(audioUrl, { loop: true, fadeIn: 1000 });
-runtime.music.stop({ fadeOut: 1000 });
-runtime.music.mute();
-runtime.music.unmute();
-
-// Cleanup
-runtime.dispose();  // stops all, releases resources
-```
+- **`globalBgmPlayer`** — music channel. Load random tracks from the selected genre on session start (and on reload). The player manages continuous playback via periodic playlist insertions and handles crossfade internally.
+- **`globalAudioPlayer`** — voice/dialog channel. Called with a TTS audio URL on page entry when voice is available and not muted. Stop it immediately on mute or page navigation.
 
 ### Queue ordering
 

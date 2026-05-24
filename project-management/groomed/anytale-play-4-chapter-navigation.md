@@ -8,9 +8,11 @@ Implement the core chapter playthrough experience — entering the prelude chapt
 
 - [ ] **"Begin the tale" chapter entry:** Wire the intro's "Begin the tale" button to: exit intro phase, set UI phase to `plot`, load the pre-selected prelude chapter, set page index to 0 (page 1), and trigger media queuing for the entire chapter. **Manual test:** complete intro, tap "Begin the tale", verify transition to chapter view at page 1.
 
-- [ ] **Prompt assembly for chapter pages:** Build `enabledParts` from session character parts + outfit parts + background part (matching editor part object shape). Pass current page as `activePage`. Apply any active `progressionDisabledParts` from the current plot. Call `assemblePrompt` and use the result for image generation via the config-selected workflow. **Manual test:** generated image reflects the current page's tags combined with character/outfit/background.
+- [ ] **Page visibility simulation and slot state:** At chapter entry, simulate the slot state evolution page-by-page using the current session `slotState`. For each page in order: check `requirements` against the current simulated slot state — if unmet, the page is invisible to the user; apply the page's `actions` to advance the slot state regardless. Store the list of visible page indices and the per-page slot state snapshots. Only queue image/voice generation for visible pages. **Manual test:** create a plot with a page whose requirements won't be met at entry; verify that page is skipped in the UI and the chapter shows the correct reduced page count.
 
-- [ ] **Queue strategy — image batch queuing:** When entering a chapter, queue ALL page images at once in order: page 1 image first, then pages 2+ in sequence. Images go through the existing ComfyUI queue system. Track queue status per page. **Manual test:** enter a multi-page chapter, verify all images are queued in the correct order in the server queue.
+- [ ] **Prompt assembly for chapter pages:** Build `enabledParts` from session character parts + outfit parts + location part. Use the slot state snapshot for the current page to determine which outfit parts are active (skip parts whose slot type is `removed`; pass `isRevealing` from the outfit part entry). Call `assemblePrompt` and use the result for image generation via the config-selected workflow. **Manual test:** generated image reflects the current page's tags combined with character/outfit/location and active slot state.
+
+- [ ] **Queue strategy — image batch queuing:** When entering a chapter, queue images only for **visible** pages (those whose requirements passed during page visibility simulation), page 1 first then remaining in order. Include `clientId: getClientId()` and `requestOrigin: 'anytale-play'` in every enqueue request. Subscribe to `queue:task-started` with ownership gate (`event.clientId === getClientId()`). **Manual test:** open a second tab; verify the second tab does not open SSE task connections for play mode tasks started by the first tab. Images go through the existing ComfyUI queue system. Track queue status per page. **Manual test:** enter a multi-page chapter, verify all images are queued in the correct order in the server queue.
 
 - [ ] **Chapter navigation (forward/back):** Implement prev/next navigation clamped to page count (page 1 to page N). Persist `currentPlotUid` + `pageIndex` in session on every change. Display the generated image for the current page (or loading spinner if not ready). **Manual test:** step through pages, reload, verify resume at same page.
 
@@ -20,7 +22,7 @@ Implement the core chapter playthrough experience — entering the prelude chapt
 
 - [ ] **Progress bar live behavior:** Wire the three-layer progress bar to real chapter data. Loading layer (red) = full bar width representing total pages. Loaded layer (gray) = percentage of pages with image ready (voice readiness added in Rollout 5). Current layer (blue) = current page position. Update on every image completion and page navigation. **Manual test:** enter chapter, watch red bar gradually fill with gray as images complete; navigate forward and see blue indicator move.
 
-- [ ] **Generated asset cache:** Store generated image URLs, task IDs, status, and timestamps by stable signature: plot uid + page index + character uid + outfit uid + background part uid + background attribute signature. On page entry, check cache first before generating. Character/outfit/background changes invalidate entries by signature change (no destructive clearing needed). **Manual test:** navigate back to a previously generated page, verify no re-generation; verify that changing session character in a test scenario causes new generation for the same page index.
+- [ ] **Generated asset cache:** Store generated image URLs, task IDs, status, and timestamps by stable signature: plot uid + page index + character uid + outfit uid + location part uid + location attribute signature + slot state hash for that page. On page entry, check cache first before generating. Character/outfit/location changes invalidate entries by signature change (no destructive clearing needed). **Manual test:** navigate back to a previously generated page, verify no re-generation; verify that changing session character in a test scenario causes new generation for the same page index.
 
 - [ ] **Chapter and page labels:** Display `Chapter X  Page Y` in the bottom-left area below the progress bar. Chapter number derived from timeline position. **Manual test:** verify labels update on navigation and match expected values.
 
@@ -30,7 +32,11 @@ Implement the core chapter playthrough experience — entering the prelude chapt
 
 ### Queue integration
 
-The queue system reuses the existing server queue (`server/features/queue/`). Play mode enqueues image tasks through the standard generation endpoint (`POST /anytale/generate-preview` or equivalent), tracking task IDs per page in the session asset cache. Use the existing SSE queue events (`queue:task-complete`, `queue:task-started`) via `queue-sse-manager.mjs` to update asset cache status and progress bar in real-time.
+The queue system reuses the existing server queue (`server/features/queue/`). Play mode enqueues image tasks through the standard generation endpoint, including `clientId: getClientId()` (from `public/js/app-ui/client-id.mjs`) in every request body so the server can associate each task with the submitting tab.
+
+Subscribe to `queue:task-started` via `queueSSEManager`. Every handler **must** check `if (event.clientId !== getClientId()) return;` before subscribing to task progress or updating the asset cache — idle tabs must not open SSE task connections for tasks they didn't submit.
+
+For reconnect-resume: call `queueSSEManager.onConnect(() => fetch('/queue/status').then(...))` on mount so that if the SSE connection drops and reconnects, play mode re-fetches queue status and restores any in-progress generation state. Use `requestOrigin: 'anytale-play'` on all generation requests so the reconnect handler can filter relevant active tasks.
 
 ### Autoplay pacing
 
@@ -41,7 +47,7 @@ Autoplay advances on content readiness rather than a fixed timer. The system che
 The asset cache lives inside the session `localStorage` object. Each entry is keyed by a composite signature string. Example signature structure:
 
 ```
-`${plotUid}:${pageIndex}:${characterUid}:${outfitUid}:${backgroundPartUid}:${bgAttributeHash}`
+`${plotUid}:${pageIndex}:${characterUid}:${outfitUid}:${locationPartUid}:${locationAttributeHash}:${slotStateHash}`
 ```
 
 Cache entry shape:
@@ -57,9 +63,9 @@ Cache entry shape:
 
 ### Prompt assembly
 
-Reuse `assemblePrompt(enabledParts, activePage)` from `public/js/app-ui/anytale/prompt-assembler.mjs`. The `enabledParts` structure mirrors the editor's shape: an array of part objects with selected `attributeValues`. The `activePage` is the current plot page object containing `tags`, `hiddenParts`, etc.
+Reuse `assemblePrompt(enabledParts, activePage)` from `public/js/app-ui/anytale/prompt-assembler.mjs`. The `enabledParts` structure mirrors the editor's shape: an array of part objects with selected `attributeValues`. The `activePage` is the current plot page object containing `tags`, etc.
 
-When `progressionDisabledParts` is defined on the current plot, suppress matching parts from `enabledParts` before calling `assemblePrompt`.
+Build `enabledParts` using the per-page slot state snapshot computed during page visibility simulation: outfit parts whose slot type is `removed` in the slot state are excluded; the `isRevealing` value is taken from the outfit part entry and passed through to the part object.
 
 ### Dialog and voice
 
