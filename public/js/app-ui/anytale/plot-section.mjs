@@ -22,7 +22,7 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
-import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
+import { loadPlot, savePlotState, createBlankPlot, getPartsCoverage } from './anytale-state.mjs';
 import { formButtonStates } from '../forms.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
@@ -323,7 +323,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return types.length === 0 || !types.every(t => characterSlotTypes.includes(t));
   }), [enabledParts, characterSlotTypes]);
   const priorSlotStatuses = useMemo(() => {
-    return resolveSlotStatuses(enabledParts, plot.pages, currentPageIndex - 1);
+    const coverage = getPartsCoverage();
+    const partsWithCoverage = enabledParts.map(p => ({
+      ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false }
+    }));
+    return resolveSlotStatuses(partsWithCoverage, plot.pages, currentPageIndex - 1);
   }, [enabledParts, plot.pages, currentPageIndex]);
 
   // ── Whether current page's requirements are all satisfied ─────────────────

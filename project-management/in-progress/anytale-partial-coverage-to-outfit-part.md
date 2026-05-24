@@ -18,17 +18,25 @@ Move `isRevealing` from the persisted part definition to a session-only temporar
 
 ### Phase 2 — Temporary session setting in the Parts & Plot editor
 
-- [ ] Add `anytale-parts-coverage` sessionStorage helpers (`getPartsCoverage`, `setPartCoverage`) to `public/js/app-ui/anytale/anytale-state.mjs`, storing a `{ [partUid]: boolean }` map
-- [ ] In `part-item.mjs`, remove the existing `isRevealing` toggle from its current position and add a new toggle at the very top of the form (above preview image and name) labelled "Partial Coverage (temporary setting test)", bound to `anytale-parts-coverage` in sessionStorage
-- [ ] In `anytale-form.mjs`, update `handleGenerate()` to read each part's `isRevealing` from `anytale-parts-coverage` sessionStorage (by `partUid`) instead of `config.isRevealing`
-- [ ] In `plot-section.mjs`, update the `priorSlotStatuses` useMemo to inject `isRevealing` from `anytale-parts-coverage` sessionStorage into each part before passing to `resolveSlotStatuses`
+- [x] Add `anytale-parts-coverage` sessionStorage helpers (`getPartsCoverage`, `setPartCoverage`) to `public/js/app-ui/anytale/anytale-state.mjs`, storing a `{ [partUid]: boolean }` map
+- [x] In `part-item.mjs`, remove the existing `isRevealing` checkbox from its current position and add a new checkbox at the very top of the form (above preview image and name) labelled "Partial Coverage (temporary setting test)", bound to `anytale-parts-coverage` in sessionStorage
+- [x] In `anytale-form.mjs`, update `handleGenerate()` to read each part's `isRevealing` from `anytale-parts-coverage` sessionStorage (by `partUid`) instead of `config.isRevealing`
+- [x] In `plot-section.mjs`, update the `priorSlotStatuses` useMemo to inject `isRevealing` from `anytale-parts-coverage` sessionStorage into each part before passing to `resolveSlotStatuses`
+
+#### Fixes and Changes
+
+- [x] Move the Partial Coverage checkbox to the very top of the part form in `part-item.mjs`, above the preview image and name (before `TopRow`)
 
 ### Phase 3 — Outfit part isRevealing property and rendering
 
-- [ ] In `outfit-section.mjs`, add an `isRevealing` toggle at the top of each outfit part's dynamic item (above preview image and attributes list), labelled "Partial Coverage (reveals parts underneath)", persisted to outfit part data
-- [ ] In `outfit-section.mjs`, update `handleGenerateRender()` to read `isRevealing` from the outfit part (`op.isRevealing ?? false`) instead of the library part config (`lib.isRevealing`)
-- [ ] In `anytale-form.mjs`, update `handleCharTabGenerate()` to include `isRevealing: cp.isRevealing ?? false` from each merged outfit part when building the parts array passed to the slot resolver
-- [ ] Review and update affected living docs: `docs/features/anytale.md`
+- [x] In `outfit-section.mjs`, add a `isRevealing` checkbox at the top of each outfit part's dynamic item (above preview image and attributes list), labelled "Partial Coverage (reveals parts underneath)", persisted to outfit part data
+- [x] In `outfit-section.mjs`, update `handleGenerateRender()` to read `isRevealing` from the outfit part (`op.isRevealing ?? false`) instead of the library part config (`lib.isRevealing`)
+- [x] In `anytale-form.mjs`, update `handleCharTabGenerate()` to include `isRevealing: cp.isRevealing ?? false` from each merged outfit part when building the parts array passed to the slot resolver
+- [x] Review and update affected living docs: `docs/features/anytale.md`
+
+#### Fixes and Changes
+
+- [x] Fix character and outfit sections to preload part previews on load — both showing existing cached images and queuing a new preview when one doesn't exist yet — matching the Parts & Plot tab behavior
 
 ## Implementation Details
 
@@ -98,5 +106,5 @@ Follows the existing `anytale-<category>` pattern in `anytale-state.mjs`. Defaul
 
 ### UI placement
 
-- **Parts & Plot editor** (`part-item.mjs`): Temporary toggle at the very top of the form — above the part name input and preview image. Label: "Partial Coverage (temporary setting test)".
-- **Outfit part dynamic item** (`outfit-section.mjs`): Persistent toggle at the top of each collapsible outfit part entry — above the preview image and attribute list. Label: "Partial Coverage (reveals parts underneath)".
+- **Parts & Plot editor** (`part-item.mjs`): Temporary checkbox at the very top of the form — above the part name input and preview image. Label: "Partial Coverage (temporary setting test)".
+- **Outfit part dynamic item** (`outfit-section.mjs`): Persistent checkbox at the top of each collapsible outfit part entry — above the preview image and attribute list. Label: "Partial Coverage (reveals parts underneath)".

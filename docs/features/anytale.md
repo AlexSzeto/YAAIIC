@@ -47,7 +47,9 @@ app-ui/anytale/
 
 ### State architecture
 
-Active editor state (the character/plot/outfit currently being edited) lives in `localStorage` via `anytale-state.mjs` — not in server DB. Server DB holds the saved records. On save, the client POSTs/PUTs to the server then optionally refreshes the local state.
+Active editor state (the character/plot/outfit currently being edited) lives in `sessionStorage` via `anytale-state.mjs` — not in server DB. Server DB holds the saved records. On save, the client POSTs/PUTs to the server then optionally refreshes the local state.
+
+The `anytale-parts-coverage` key in `sessionStorage` holds a `{ [partKey]: boolean }` map for the temporary partial-coverage setting in the Parts & Plot tab. This is session-local and intentionally not saved to the server.
 
 ## Server Endpoints
 
@@ -169,6 +171,17 @@ See `@typedef` declarations in `server/features/anytale/repository.mjs` for auth
 ### Part types
 
 Parts carry a `type: string[]` array. The `"location"` type identifies background/scene parts used in play mode to pick a scene location. Parts may carry multiple types (e.g. `["outer upper body", "inner upper body"]`).
+
+### Partial Coverage (`isRevealing`)
+
+`isRevealing` controls whether a part's slot starts in `'revealing'` status (partially covers the slot, still shows layers underneath) vs. `'covering'` (fully covers). It is **not** a field on `PartConfig` — it exists in two separate places depending on context:
+
+| Context | Where stored | What drives it |
+|---|---|---|
+| Parts & Plot tab generation | `sessionStorage` key `anytale-parts-coverage` as `{ [partKey]: boolean }` | "Partial Coverage (temporary setting test)" checkbox at the top of each part form; survives page refresh within the tab but not across tabs |
+| Character + Outfit tab generation and outfit renders | `CharacterPart.isRevealing` (persisted with the outfit) | "Partial Coverage (reveals parts underneath)" checkbox at the top of each outfit part's dynamic item |
+
+The `anytale-parts-coverage` map is keyed by `config.uid` (for library parts) or the session-local `id` (for unsaved parts). Defaults to `false` for any key not present.
 
 ### Portrait prompt assembly
 

@@ -12,8 +12,7 @@
  *       type: string[],
  *       previewBaseline: string,
  *       baseline: string,
- *       attributes: Array<{ name: string, options: string }>,
- *       isRevealing: boolean
+ *       attributes: Array<{ name: string, options: string }>
  *     },
  *     data: {
  *       enabled: boolean,
@@ -22,6 +21,9 @@
  *     }
  *   }>
  * }
+ *
+ * Partial-coverage (isRevealing) is stored separately under 'anytale-parts-coverage'
+ * as { [partUid]: boolean }, keyed by config.uid or the part's local id.
  */
 
 const STORAGE_KEY = 'anytale-state';
@@ -44,13 +46,10 @@ export function loadState() {
     return {
       name: parsed.name ?? '',
       activePlotPage: typeof parsed.activePlotPage === 'number' ? parsed.activePlotPage : 0,
-      parts: Array.isArray(parsed.parts) ? parsed.parts.map(p => ({
-        ...p,
-        config: {
-          ...p.config,
-          isRevealing: typeof p.config?.isRevealing === 'boolean' ? p.config.isRevealing : false,
-        },
-      })) : []
+      parts: Array.isArray(parsed.parts) ? parsed.parts.map(p => {
+        const { isRevealing: _dropped, ...restConfig } = p.config ?? {};
+        return { ...p, config: restConfig };
+      }) : []
     };
   } catch {
     return { ...DEFAULT_STATE, parts: [] };
@@ -89,7 +88,6 @@ export function createDefaultPart() {
       previewBaseline: '',
       baseline: '',
       attributes: [],
-      isRevealing: false,
     },
     data: {
       enabled: true,
@@ -299,4 +297,36 @@ export function saveOutfitState(outfit) {
  */
 export function clearOutfitState() {
   sessionStorage.removeItem(OUTFIT_STORAGE_KEY);
+}
+
+// ── Parts Coverage (temporary session setting) ────────────────────────────
+
+const PARTS_COVERAGE_KEY = 'anytale-parts-coverage';
+
+/**
+ * Load the temporary per-part isRevealing map from sessionStorage.
+ * @returns {{ [partUid: string]: boolean }}
+ */
+export function getPartsCoverage() {
+  try {
+    const raw = sessionStorage.getItem(PARTS_COVERAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Set the temporary isRevealing value for a single part.
+ * @param {string} partKey - config.uid or local part id
+ * @param {boolean} isRevealing
+ */
+export function setPartCoverage(partKey, isRevealing) {
+  try {
+    const map = getPartsCoverage();
+    map[partKey] = isRevealing;
+    sessionStorage.setItem(PARTS_COVERAGE_KEY, JSON.stringify(map));
+  } catch (err) {
+    console.error('Failed to save part coverage:', err);
+  }
 }

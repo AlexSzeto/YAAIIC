@@ -17,7 +17,7 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
-import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState } from './anytale-state.mjs';
+import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, getPartsCoverage } from './anytale-state.mjs';
 import { extractImagePrompt, parsePromptTags, processPromptImport, extractRemainingPageTags } from './prompt-import.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs';
@@ -434,7 +434,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
     const plotPageCount = currentPlot.pages.length;
     const activePage = plotPageCount > 0 ? currentPlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const enabledParts = parts.filter(p => p.data?.enabled !== false);
+    const coverage = getPartsCoverage();
+    const enabledParts = parts
+      .filter(p => p.data?.enabled !== false)
+      .map(p => ({ ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false } }));
     const slotVisibility = computeSlotVisibility(enabledParts, currentPlot.pages, activePlotPage);
     const prompt = assemblePrompt(parts, activePage, slotVisibility);
 
@@ -472,10 +475,13 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       }
     }
 
+    const coverage = getPartsCoverage();
+    const enabledPartsWithCoverage = parts
+      .filter(p => p.data?.enabled !== false)
+      .map(p => ({ ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false } }));
     for (let i = 0; i < plotPageCount; i++) {
       const activePage = currentPlot.pages[i];
-      const enabledParts = parts.filter(p => p.data?.enabled !== false);
-      const slotVisibility = computeSlotVisibility(enabledParts, currentPlot.pages, i);
+      const slotVisibility = computeSlotVisibility(enabledPartsWithCoverage, currentPlot.pages, i);
       const prompt = assemblePrompt(parts, activePage, slotVisibility);
       const plotData = (currentPlot.uid || currentPlot.name)
         ? { uid: currentPlot.uid, name: currentPlot.name, page: i }
@@ -502,6 +508,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
           name: lib.name, type: lib.type,
           baseline: lib.baseline, previewBaseline: lib.previewBaseline,
           attributes: lib.attributes,
+          isRevealing: cp.isRevealing ?? false,
         },
         data: {
           attributeValues: cp.attributeValues,
@@ -894,7 +901,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const previewPrompt = useMemo(() => {
     const plotPageCount = livePlot.pages.length;
     const activePage = plotPageCount > 0 ? livePlot.pages[Math.min(activePlotPage, plotPageCount - 1)] : undefined;
-    const enabledParts = parts.filter(p => p.data?.enabled !== false);
+    const coverage = getPartsCoverage();
+    const enabledParts = parts
+      .filter(p => p.data?.enabled !== false)
+      .map(p => ({ ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false } }));
     const slotVisibility = computeSlotVisibility(enabledParts, livePlot.pages, activePlotPage);
     return assemblePrompt(parts, activePage, slotVisibility);
   }, [parts, livePlot, activePlotPage, computeSlotVisibility]);

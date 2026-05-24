@@ -18,6 +18,7 @@ import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { getTagDefinition } from '../tags/tag-data.mjs';
 import { ImagePreview } from './image-preview.mjs';
@@ -82,6 +83,10 @@ export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerat
     });
   }, [part, onPartChange]);
 
+  const handleRevealingChange = useCallback(() => {
+    onPartChange({ ...part, isRevealing: !(part.isRevealing ?? false) });
+  }, [part, onPartChange]);
+
   const handleRandom = useCallback(() => {
     if (attributes.length === 0) return;
     const newValues = {};
@@ -101,7 +106,12 @@ export function CharacterPartItem({ part, libraryConfig, onPartChange, isGenerat
   }, [attributes, part, onPartChange]);
 
   return html`
-    <${VerticalLayout} gap="small">
+    <${VerticalLayout} gap="medium">
+      <${Checkbox}
+        label="Partial Coverage (reveals parts underneath)"
+        checked=${part.isRevealing ?? false}
+        onChange=${handleRevealingChange}
+      />
       <${TopRow}>
         <div style=${{ display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, flexShrink: 0 }}>
           <${ImagePreview}

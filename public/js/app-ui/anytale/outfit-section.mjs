@@ -210,6 +210,16 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }
   }, [activeTasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // One-shot initial preload: fires once when libraryParts first becomes available
+  const initialPreloadDoneRef = useRef(false);
+  useEffect(() => {
+    if (initialPreloadDoneRef.current || libraryParts.length === 0) return;
+    initialPreloadDoneRef.current = true;
+    (outfitRef.current.parts || []).forEach((part, index) => {
+      if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+    });
+  }, [libraryParts, requestPartPreviewCache]);
+
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -461,9 +471,12 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     try {
       // Build active parts for slot resolution (initial state: no plot page actions)
       const activeParts = (outfit.parts || [])
-        .map(op => libraryParts.find(p => p.uid === op.partUid))
-        .filter(Boolean)
-        .map(lib => ({ config: { type: lib.type || [], isRevealing: lib.isRevealing ?? false } }));
+        .map(op => {
+          const lib = libraryParts.find(p => p.uid === op.partUid);
+          if (!lib) return null;
+          return { config: { type: lib.type || [], isRevealing: op.isRevealing ?? false } };
+        })
+        .filter(Boolean);
 
       const slotStatuses = resolveSlotStatuses(activeParts, [], -1);
       const visibility = applyRules(slotStatuses, parsedRules);
@@ -566,7 +579,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     if (!match) return;
     setOutfit(match);
     setLibraryOutfit(match);
-  }, [outfitList]);
+    (match.parts || []).forEach((part, index) => {
+      if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+    });
+  }, [outfitList, requestPartPreviewCache]);
 
   // ============================================================================
   // Render

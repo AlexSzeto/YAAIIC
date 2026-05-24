@@ -215,6 +215,16 @@ export function CharacterSection({
     }
   }, [libraryParts]);
 
+  // One-shot initial preload: fires once when libraryParts first becomes available
+  const initialPreloadDoneRef = useRef(false);
+  useEffect(() => {
+    if (initialPreloadDoneRef.current || libraryParts.length === 0) return;
+    initialPreloadDoneRef.current = true;
+    (characterRef.current.parts || []).forEach((part, index) => {
+      if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+    });
+  }, [libraryParts, requestPartPreviewCache]);
+
   // Reload from localStorage when parent signals an import (refreshKey changes)
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -622,6 +632,9 @@ export function CharacterSection({
           setCharacter(match);
           setSavedCharacterUid(match.uid);
           setLibraryCharacter(match);
+          (match.parts || []).forEach((part, index) => {
+            if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+          });
         }
       }
     } catch (err) {
@@ -631,8 +644,11 @@ export function CharacterSection({
       setCharacter(match);
       setSavedCharacterUid(match.uid);
       setLibraryCharacter(match);
+      (match.parts || []).forEach((part, index) => {
+        if (!part.previewImageUrl) requestPartPreviewCache(index, part);
+      });
     }
-  }, [characterList]);
+  }, [characterList, requestPartPreviewCache]);
 
   // ── Notify parent of currently displayed character uid ───────────────────
   useEffect(() => {

@@ -18,7 +18,7 @@ import { Input } from '../../custom-ui/io/input.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { createDefaultAttribute } from './anytale-state.mjs';
+import { createDefaultAttribute, getPartsCoverage, setPartCoverage } from './anytale-state.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
 import { assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { showDialog, showTextPrompt } from '../../custom-ui/overlays/dialog.mjs';
@@ -111,6 +111,17 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   // ── Library action loading states ───────────────────────────────────────
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ── Temporary partial-coverage setting (session-only, not part of library config) ─
+  const partKey = config.uid || part.id;
+  const [isRevealing, setIsRevealing] = useState(() => getPartsCoverage()[partKey] ?? false);
+  const handleCoverageToggle = useCallback(() => {
+    setIsRevealing(prev => {
+      const next = !prev;
+      setPartCoverage(partKey, next);
+      return next;
+    });
+  }, [partKey]);
 
   // ── Local baseline state — committed to parent on blur, not per keystroke ─
   const [localPreviewBaseline, setLocalPreviewBaseline] = useState(config.previewBaseline || '');
@@ -440,16 +451,19 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
     name: config.name, type: config.type, baseline: config.baseline,
     previewBaseline: config.previewBaseline, attributes: config.attributes,
-    isRevealing: config.isRevealing,
   }) === JSON.stringify({
     name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
     previewBaseline: libraryPart.previewBaseline, attributes: libraryPart.attributes,
-    isRevealing: libraryPart.isRevealing ?? false,
   });
   const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(!!libraryPart, !isUnchangedFromLibrary);
 
   return html`
-    <${VerticalLayout} gap="small">
+    <${VerticalLayout} gap="medium">
+      <${Checkbox}
+        label="Partial Coverage (temporary setting test)"
+        checked=${isRevealing}
+        onChange=${handleCoverageToggle}
+      />
       <!-- Top row: preview image | name + type -->
       <${TopRow}>
         <div style=${{ display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, flexShrink: 0 }}>
@@ -490,11 +504,6 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             suggestions=${allTypes}
             values=${Array.isArray(config.type) ? config.type : []}
             onValuesChange=${handleTypeChange}
-          />
-          <${ToggleSwitch}
-            label="Partial Coverage (reveals parts underneath)"
-            checked=${config.isRevealing === true}
-            onChange=${() => updateConfig({ isRevealing: !config.isRevealing })}
           />
         </${RightFields}>
       </${TopRow}>
