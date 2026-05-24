@@ -397,6 +397,7 @@ function CondensedDynamicListItem({
  * @param {Function} [props.getHeaderSelectValue]    - `(item, index) => string` — current value for the header Select.
  * @param {Function} [props.onHeaderSelectChange]    - `(item, index, value) => void` — called when the header Select changes.
  * @param {Function} [props.getHeaderSelectTooltip]  - `(item, index) => string|null` — optional tooltip for the header Select.
+ * @param {Function} [props.onDelete]              - `(item, index) => void` — when provided, called instead of the built-in item removal. The caller is responsible for updating `items` via `onChange`.
  * @param {Function} [props.canDrop]               - `(fromIndex, toIndex) => bool` — when provided, called before committing a drag-drop or move-up; returning `false` cancels the operation. Also disables the move-up button at index i when `canDrop(i, i-1)` returns `false`.
  * @returns {preact.VNode}
  *
@@ -436,6 +437,7 @@ export function DynamicList({
   getHeaderSelectValue,        // optional: (item, index) => string
   onHeaderSelectChange,        // optional: (item, index, value) => void
   getHeaderSelectTooltip,      // optional: (item, index) => string|null — tooltip for the header Select
+  onDelete,                    // optional: (item, index) => void — replaces built-in removal; caller updates items via onChange
   canDrop,                     // optional: (fromIndex, toIndex) => bool — cancels drag/move-up when false
 }) {
   const theme = currentTheme.value;
@@ -680,7 +682,7 @@ export function DynamicList({
                 renderItem=${renderItem}
                 onMoveUp=${() => handleMoveUp(index)}
                 onMoveDown=${() => handleMoveDown(index)}
-                onDelete=${() => handleDelete(index)}
+                onDelete=${onDelete ? () => onDelete(item, index) : () => handleDelete(index)}
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
                 showDragButton=${showDragButton}
@@ -704,7 +706,7 @@ export function DynamicList({
                 renderItem=${renderItem}
                 onMoveUp=${() => handleMoveUp(index)}
                 onMoveDown=${() => handleMoveDown(index)}
-                onDelete=${() => handleDelete(index)}
+                onDelete=${onDelete ? () => onDelete(item, index) : () => handleDelete(index)}
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
                 initialCollapsed=${!isNew}

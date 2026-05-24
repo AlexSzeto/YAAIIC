@@ -39,6 +39,7 @@ import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 
 // ============================================================================
 // Styled Components
@@ -727,6 +728,7 @@ export function CharacterSection({
     <${VerticalLayout} gap="medium" style=${outerStyle}>
 
       <${ContentWrapper}>
+        <${Panel} variant="outlined">
         <${VerticalLayout} gap="large">
 
           <!-- Character details -->
@@ -844,15 +846,25 @@ export function CharacterSection({
 
           <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
           <${HorizontalEdgesLayout}>
-            <${Button}
-              variant="small-text"
-              color="secondary"
-              icon="send-alt"
-              onClick=${handleEditParts}
-              disabled=${!character.parts.length || !onEditParts}
-            >
-              Edit Parts
-            <//>
+            <${HorizontalLayout} gap="small">
+              <${Button}
+                variant="small-text"
+                color="secondary"
+                icon="send-alt"
+                onClick=${handleEditParts}
+                disabled=${!character.parts.length || !onEditParts}
+              >
+                Edit Parts
+              <//>
+              <${Button}
+                variant="small-text"
+                color="danger"
+                icon="x"
+                onClick=${handleClear}
+              >
+                Clear Parts
+              <//>
+            </${HorizontalLayout}>
             <${HorizontalLayout} gap="small">
               <${Button}
                 variant="small-text"
@@ -880,14 +892,6 @@ export function CharacterSection({
                 disabled=${!deleteEnabled}
               >
                 Delete
-              <//>
-              <${Button}
-                variant="small-text"
-                color="danger"
-                icon="x"
-                onClick=${handleClear}
-              >
-                Clear
               <//>
             </${HorizontalLayout}>
           </${HorizontalEdgesLayout}>
@@ -925,6 +929,7 @@ export function CharacterSection({
           />
 
         </${VerticalLayout}>
+        </${Panel}>
       </${ContentWrapper}>
 
     </${VerticalLayout}>

@@ -9,7 +9,7 @@ Establish a consistent two-state model (`dirty` / `recorded`) for every signific
 ### Phase 1 — Fix AnyTale Music tab (GenreCard)
 
 - [x] Correct `GenreCard` button labels: `recorded` is always `true` for genres (created server-side on Add), so the Create/Save button always reads **'Save'**, enabled only when `dirty`.
-- [ ] Move the genre Delete button out of the `ButtonRow` and into the `DynamicList` header by removing `hideDelete` from the outer DynamicList, adding a `deleteLabel`-less trash icon, and wiring the confirmation dialog through a custom `onDelete` prop instead of the `handleDelete` callback currently in GenreCard.
+- [x] Move the genre Delete button out of the `ButtonRow` and into the `DynamicList` header by removing `hideDelete` from the outer DynamicList, adding a `deleteLabel`-less trash icon, and wiring the confirmation dialog through a custom `onDelete` prop instead of the `handleDelete` callback currently in GenreCard.
 
 ### Phase 2 — Fix AnyTale PlotSection, CharacterSection, OutfitSection
 

@@ -328,7 +328,7 @@ const darkColors = {
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
     card: '#1e1e1e',
-    hover: '#404040',
+    hover: '#333333',
     disabled: '#2a2a2a'
   },
   // Border Colors

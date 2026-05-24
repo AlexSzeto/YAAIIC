@@ -39,6 +39,7 @@ import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useQueueStatus } from '../use-queue-status.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 
 // ============================================================================
 // Styled Components
@@ -578,156 +579,159 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
   const sectionHtml = html`
     <${VerticalLayout} gap="medium" style=${outerStyle}>
-
       <${ContentWrapper}>
-        <${VerticalLayout} gap="large">
+        <${Panel} variant="outlined">
+          <${VerticalLayout} gap="large">
 
-          <!-- Outfit details -->
-          <${VerticalLayout} gap="small">
-            <${HorizontalEdgesLayout}>
-              <${H2}>Outfit</${H2}>
-              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadOutfitModalOpen(true)}>Load<//>
-            </${HorizontalEdgesLayout}>
+            <!-- Outfit details -->
+            <${VerticalLayout} gap="small">
+              <${HorizontalEdgesLayout}>
+                <${H2}>Outfit</${H2}>
+                <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadOutfitModalOpen(true)}>Load<//>
+              </${HorizontalEdgesLayout}>
 
-            <!-- Render preview -->
-            <${ImagePreview} src=${outfit.renderUrl} alt="Outfit render" isGenerating=${isRenderBusy} placeholderText="No render" />
-            <!-- Inline layout to prevent button from going full width -->
-            <div>
-            <${Button}
-              variant="small-text"
-              color="primary"
-              icon="image"
-              onClick=${handleGenerateRender}
-              loading=${isRenderBusy}
-              disabled=${!outfit.uid || isRenderBusy}
-            >
-              ${isRenderBusy ? 'Generating…' : 'Generate Render'}
-            <//>
-            </div>
-
-            <${Input}
-              label="Name"
-              value=${outfit.name}
-              onInput=${(e) => setOutfit(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Outfit name"
-              widthScale="full"
-            />
-
-            <${ChipAutocompleteInput}
-              label="Preferred Locations"
-              placeholder="Type to add a location…"
-              suggestions=${locationParts.map(p => p.name)}
-              values=${preferredLocationNames}
-              onValuesChange=${handlePreferredLocationsChange}
-            />
-          </${VerticalLayout}>
-
-          <!-- Parts -->
-          <${VerticalLayout} gap="small">
-            <${H3}>Parts</${H3}>
-
-            ${missingRecommendedTypes.length > 0
-              && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Outfit Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
-            }
-
-            <${LibraryPartPicker}
-              libraryParts=${libraryParts}
-              onSelectPart=${handleLibrarySelect}
-              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
-            />
-
-            <${DynamicList}
-              title="Outfit Parts"
-              items=${outfit.parts}
-              renderItem=${(item, i) => {
-                const libConfig = libraryParts.find(p => p.uid === item.partUid);
-                return html`
-                  <${CharacterPartItem}
-                    part=${item}
-                    libraryConfig=${libConfig}
-                    onPartChange=${(updated) => handlePartChange(i, updated)}
-                    isGenerating=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
-                    onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
-                  />
-                `;
-              }}
-              getTitle=${(item) => {
-                const lib = libraryParts.find(p => p.uid === item.partUid);
-                return lib ? lib.name : (item.partUid || '(unknown part)');
-              }}
-              createItem=${() => ({ partUid: '', attributeValues: {}, previewImageUrl: '' })}
-              onChange=${(newParts) => setOutfit(prev => ({ ...prev, parts: newParts }))}
-              addLabel="Add Part"
-              hideAddItem
-            />
-          </${VerticalLayout}>
-
-          <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
-          <${HorizontalEdgesLayout}>
-            <${Button}
-              variant="small-text"
-              color="secondary"
-              icon="send-alt"
-              onClick=${handleEditParts}
-              disabled=${!outfit.parts.length || !onEditParts}
-            >
-              Edit Parts
-            <//>
-            <${HorizontalLayout} gap="small">
+              <!-- Render preview -->
+              <${ImagePreview} src=${outfit.renderUrl} alt="Outfit render" isGenerating=${isRenderBusy} placeholderText="No render" />
+              <!-- Inline layout to prevent button from going full width -->
+              <div>
               <${Button}
                 variant="small-text"
                 color="primary"
-                icon="save"
-                onClick=${handleSave}
-                disabled=${!outfit.name || !saveEnabled}
+                icon="image"
+                onClick=${handleGenerateRender}
+                loading=${isRenderBusy}
+                disabled=${!outfit.uid || isRenderBusy}
               >
-                ${saveLabel}
+                ${isRenderBusy ? 'Generating…' : 'Generate Render'}
               <//>
-              <${Button}
-                variant="small-text"
-                color="secondary"
-                icon="undo"
-                onClick=${handleRevert}
-                disabled=${!revertEnabled}
-              >
-                Revert
-              <//>
-              <${Button}
-                variant="small-text"
-                color="danger"
-                icon="trash"
-                onClick=${handleDelete}
-                disabled=${!deleteEnabled}
-              >
-                Delete
-              <//>
-              <${Button}
-                variant="small-text"
-                color="danger"
-                icon="x"
-                onClick=${handleClear}
-              >
-                Clear
-              <//>
-            </${HorizontalLayout}>
-          </${HorizontalEdgesLayout}>
+              </div>
 
-          <${SearchSelectModal}
-            isOpen=${loadOutfitModalOpen}
-            title="Load Outfit"
-            items=${outfitList.map(o => {
-              const locs = (o.preferredLocations || [])
-                .map(uid => libraryParts.find(p => p.uid === uid)?.name)
-                .filter(Boolean);
-              const suffix = locs.length > 0 ? ` (${locs.join(', ')})` : '';
-              return { label: (o.name || o.uid) + suffix, value: o.uid };
-            })}
-            mode="single"
-            onSelect=${handleOutfitSelect}
-            onClose=${() => setLoadOutfitModalOpen(false)}
-          />
+              <${Input}
+                label="Name"
+                value=${outfit.name}
+                onInput=${(e) => setOutfit(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Outfit name"
+                widthScale="full"
+              />
 
-        </${VerticalLayout}>
+              <${ChipAutocompleteInput}
+                label="Preferred Locations"
+                placeholder="Type to add a location…"
+                suggestions=${locationParts.map(p => p.name)}
+                values=${preferredLocationNames}
+                onValuesChange=${handlePreferredLocationsChange}
+              />
+            </${VerticalLayout}>
+
+            <!-- Parts -->
+            <${VerticalLayout} gap="small">
+              <${H3}>Parts</${H3}>
+
+              ${missingRecommendedTypes.length > 0
+                && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Outfit Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
+              }
+
+              <${LibraryPartPicker}
+                libraryParts=${libraryParts}
+                onSelectPart=${handleLibrarySelect}
+                onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
+              />
+
+              <${DynamicList}
+                title="Outfit Parts"
+                items=${outfit.parts}
+                renderItem=${(item, i) => {
+                  const libConfig = libraryParts.find(p => p.uid === item.partUid);
+                  return html`
+                    <${CharacterPartItem}
+                      part=${item}
+                      libraryConfig=${libConfig}
+                      onPartChange=${(updated) => handlePartChange(i, updated)}
+                      isGenerating=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
+                      onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
+                    />
+                  `;
+                }}
+                getTitle=${(item) => {
+                  const lib = libraryParts.find(p => p.uid === item.partUid);
+                  return lib ? lib.name : (item.partUid || '(unknown part)');
+                }}
+                createItem=${() => ({ partUid: '', attributeValues: {}, previewImageUrl: '' })}
+                onChange=${(newParts) => setOutfit(prev => ({ ...prev, parts: newParts }))}
+                addLabel="Add Part"
+                hideAddItem
+              />
+            </${VerticalLayout}>
+
+            <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
+            <${HorizontalEdgesLayout}>
+              <${HorizontalLayout} gap="small">
+                <${Button}
+                  variant="small-text"
+                  color="secondary"
+                  icon="send-alt"
+                  onClick=${handleEditParts}
+                  disabled=${!outfit.parts.length || !onEditParts}
+                >
+                  Edit Parts
+                <//>
+                <${Button}
+                  variant="small-text"
+                  color="danger"
+                  icon="x"
+                  onClick=${handleClear}
+                >
+                  Clear Parts
+                <//>
+              </${HorizontalLayout}>
+              <${HorizontalLayout} gap="small">
+                <${Button}
+                  variant="small-text"
+                  color="primary"
+                  icon="save"
+                  onClick=${handleSave}
+                  disabled=${!outfit.name || !saveEnabled}
+                >
+                  ${saveLabel}
+                <//>
+                <${Button}
+                  variant="small-text"
+                  color="secondary"
+                  icon="undo"
+                  onClick=${handleRevert}
+                  disabled=${!revertEnabled}
+                >
+                  Revert
+                <//>
+                <${Button}
+                  variant="small-text"
+                  color="danger"
+                  icon="trash"
+                  onClick=${handleDelete}
+                  disabled=${!deleteEnabled}
+                >
+                  Delete
+                <//>
+              </${HorizontalLayout}>
+            </${HorizontalEdgesLayout}>
+
+            <${SearchSelectModal}
+              isOpen=${loadOutfitModalOpen}
+              title="Load Outfit"
+              items=${outfitList.map(o => {
+                const locs = (o.preferredLocations || [])
+                  .map(uid => libraryParts.find(p => p.uid === uid)?.name)
+                  .filter(Boolean);
+                const suffix = locs.length > 0 ? ` (${locs.join(', ')})` : '';
+                return { label: (o.name || o.uid) + suffix, value: o.uid };
+              })}
+              mode="single"
+              onSelect=${handleOutfitSelect}
+              onClose=${() => setLoadOutfitModalOpen(false)}
+            />
+
+          </${VerticalLayout}>
+        </${Panel}>
       </${ContentWrapper}>
 
     </${VerticalLayout}>

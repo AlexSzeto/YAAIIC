@@ -565,7 +565,7 @@ function PlaylistModal({ isOpen, onClose, genres }) {
 // GenreCard
 // ============================================================================
 
-function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, onDirtyChange }) {
+function GenreCard({ genre, onSaved, onGenerateTrack, onTrackPlay, onDirtyChange }) {
   const [edit, setEdit] = useState(() => genreToEdit(genre));
   const [sliderKey, setSliderKey] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -622,25 +622,6 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
     });
     setSliderKey(k => k + 1);
   }, [genre, recorded]);
-
-  const handleDelete = useCallback(async () => {
-    if (!genre.uid) {
-      onDeleted(genreId);
-      return;
-    }
-    const result = await showDialog(
-      `Delete "${genre.name || 'this genre'}" and all its tracks? This cannot be undone.`,
-      'Delete Genre',
-      ['Delete', 'Cancel']
-    );
-    if (result !== 'Delete') return;
-    try {
-      await apiDeleteGenre(genre.uid);
-      onDeleted(genreId);
-    } catch (err) {
-      console.error('[GenreCard] Delete failed:', err);
-    }
-  }, [genre.uid, genre.name, genreId, onDeleted]);
 
   const handleTrackListChange = useCallback(async (newTracks) => {
     if (!genre.uid) return;
@@ -768,14 +749,6 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
             onClick=${handleRevert}
           >
             Revert
-          <//>
-          <${Button}
-            variant="small-text"
-            color="danger"
-            icon="trash"
-            onClick=${handleDelete}
-          >
-            Delete
           <//>
         </${ButtonRow}>
       </${HorizontalLayout}>
@@ -948,6 +921,26 @@ export function MusicSection() {
     });
   }, []);
 
+  const handleGenreDeleteFromHeader = useCallback(async (genre) => {
+    const genreId = genre.uid || genre._localId;
+    if (!genre.uid) {
+      handleGenreDeleted(genreId);
+      return;
+    }
+    const result = await showDialog(
+      `Delete "${genre.name || 'this genre'}" and all its tracks? This cannot be undone.`,
+      'Delete Genre',
+      ['Delete', 'Cancel']
+    );
+    if (result !== 'Delete') return;
+    try {
+      await apiDeleteGenre(genre.uid);
+      handleGenreDeleted(genreId);
+    } catch (err) {
+      console.error('[MusicSection] Delete genre failed:', err);
+    }
+  }, [handleGenreDeleted]);
+
   const handleGenresChange = useCallback((newGenres) => {
     setGenres(newGenres);
   }, []);
@@ -978,7 +971,6 @@ export function MusicSection() {
             <${GenreCard}
               genre=${genre}
               onSaved=${handleGenreSaved}
-              onDeleted=${handleGenreDeleted}
               onGenerateTrack=${handleGenerateTrack}
               onTrackPlay=${handleTrackPlay}
               onDirtyChange=${handleDirtyChange}
@@ -987,9 +979,9 @@ export function MusicSection() {
           createItem=${() => null}
           onAdd=${handleGenreAdd}
           onChange=${handleGenresChange}
+          onDelete=${handleGenreDeleteFromHeader}
           addLabel="Add Genre"
           showDragButton=${false}
-          hideDelete=${true}
         />
       </${ScrollArea}>
       <${BgmPlayerBar}
