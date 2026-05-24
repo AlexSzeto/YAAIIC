@@ -966,6 +966,19 @@ export function BrewEditor() {
           </${Button}>
           <${Button}
             variant="medium-icon-text"
+            icon="undo"
+            color="secondary"
+            disabled=${!globalSourcesDirty}
+            onClick=${async () => {
+              const result = await showDialog('Discard all unsaved changes to global sources?', 'Revert Global Sources', ['Revert', 'Cancel']);
+              if (result !== 'Revert') return;
+              setGlobalSources([...savedGlobalSources]);
+            }}
+          >
+            Revert Global
+          </${Button}>
+          <${Button}
+            variant="medium-icon-text"
             icon="save"
             color="primary"
             disabled=${!globalSourcesDirty}

@@ -22,7 +22,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
@@ -842,26 +842,8 @@ export function CharacterSection({
             />
           </${VerticalLayout}>
 
-          <!-- Save / Delete / Clear / Revert / Edit Parts actions -->
-          <${ButtonRow}>
-            <${Button}
-              variant="small-text"
-              color="primary"
-              icon="save"
-              onClick=${handleSave}
-              disabled=${!saveEnabled}
-            >
-              ${saveLabel}
-            <//>
-            <${Button}
-              variant="small-text"
-              color="secondary"
-              icon="undo"
-              onClick=${handleRevert}
-              disabled=${!revertEnabled}
-            >
-              Revert
-            <//>
+          <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
+          <${HorizontalEdgesLayout}>
             <${Button}
               variant="small-text"
               color="secondary"
@@ -871,24 +853,44 @@ export function CharacterSection({
             >
               Edit Parts
             <//>
-            <${Button}
-              variant="small-text"
-              color="danger"
-              icon="trash"
-              onClick=${handleDelete}
-              disabled=${!deleteEnabled}
-            >
-              Delete
-            <//>
-            <${Button}
-              variant="small-text"
-              color="danger"
-              icon="x"
-              onClick=${handleClear}
-            >
-              Clear
-            <//>
-          </${ButtonRow}>
+            <${HorizontalLayout} gap="small">
+              <${Button}
+                variant="small-text"
+                color="primary"
+                icon="save"
+                onClick=${handleSave}
+                disabled=${!saveEnabled}
+              >
+                ${saveLabel}
+              <//>
+              <${Button}
+                variant="small-text"
+                color="secondary"
+                icon="undo"
+                onClick=${handleRevert}
+                disabled=${!revertEnabled}
+              >
+                Revert
+              <//>
+              <${Button}
+                variant="small-text"
+                color="danger"
+                icon="trash"
+                onClick=${handleDelete}
+                disabled=${!deleteEnabled}
+              >
+                Delete
+              <//>
+              <${Button}
+                variant="small-text"
+                color="danger"
+                icon="x"
+                onClick=${handleClear}
+              >
+                Clear
+              <//>
+            </${HorizontalLayout}>
+          </${HorizontalEdgesLayout}>
 
           <${SearchSelectModal}
             isOpen=${loadCharModalOpen}

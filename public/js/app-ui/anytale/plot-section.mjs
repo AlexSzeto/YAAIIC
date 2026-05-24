@@ -20,6 +20,7 @@ import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot } from './anytale-state.mjs';
 import { formButtonStates } from '../forms.mjs';
@@ -37,7 +38,6 @@ const SectionWrapper = styled('div')`
   display: flex;
   flex-direction: column;
   gap: ${() => currentTheme.value.spacing.large.gap};
-  padding-top: ${() => currentTheme.value.spacing.medium.padding};
 `;
 SectionWrapper.className = 'plot-section-wrapper';
 
@@ -423,6 +423,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   // ============================================================================
 
   return html`
+    <${Panel} variant="outlined">
     <${SectionWrapper}>
       <${HorizontalEdgesLayout}>
         <${H2}>Plot</${H2}>
@@ -513,9 +514,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           disabled=${isCurrentPageLocked}
         />
 
-        <!-- Navigation row -->
         <${HorizontalEdgesLayout}>
-          <${HorizontalLayout} gap="small" style="align-items: center;">
+          <${HorizontalLayout} gap="small">
             <${NavigatorControl}
               currentPage=${currentPageIndex}
               totalPages=${pageCount}
@@ -525,22 +525,22 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               onLast=${() => navigateTo(pageCount - 1)}
               showFirstLast=${true}
             />
-            <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage}></${Button}>
+            <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage} />
             <${Button}
               variant="medium-icon"
               icon="unlock"
               disabled=${!isCurrentPageLocked}
               onClick=${handleUnlock}
-            >Reject<//>
+            />
             <${Button}
-            <${Button} 
               variant="medium-icon"
-              icon="trash" color="danger"
-              style=${{ marginLeft: 'auto' }}
+              icon="trash"
+              color="danger"
               onClick=${handleDeletePage}
-              disabled=${pageCount <= 1}></${Button}>
+              disabled=${pageCount <= 1}
+            />
           </${HorizontalLayout}>
-          <${HorizontalLayout} gap="small" style="align-items: center;">
+          <${HorizontalLayout} gap="small">
             <${Button}
               variant="small-text"
               icon="trash"
@@ -548,13 +548,18 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               onClick=${handleReject}
             >Reject<//>
             <${Button}
+              variant="small-text"
+              color="secondary"
+              icon="plus"
               disabled=${!isCurrentPageLocked}
-            variant="small-text" icon="plus" color="secondary" onClick=${handleAddPage}>Extend</${Button}>
+              onClick=${handleAddPage}
+            >Extend<//>
           </${HorizontalLayout}>
         </${HorizontalEdgesLayout}>
       </${VerticalLayout}>
 
-      <${ButtonRow}>
+      <!-- Row 3: Create/Save, Revert, Delete, Clear (right aligned) -->
+      <${HorizontalLayout} gap="small" justifyContent="flex-end">
         <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${!saveEnabled}>
           ${saveLabel}
         <//>
@@ -567,7 +572,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         <${Button} variant="small-text" color="danger" icon="x" onClick=${handleClear}>
           Clear Plot
         <//>
-      </${ButtonRow}>
+      </${HorizontalLayout}>
 
       <${SearchSelectModal}
         isOpen=${loadModalOpen}
@@ -581,5 +586,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         onClose=${() => setLoadModalOpen(false)}
       />
     </${SectionWrapper}>
+    </${Panel}>
   `;
 }

@@ -18,7 +18,7 @@ import { MultiSelect } from '../../custom-ui/io/multi-select.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
 import { Modal } from '../../custom-ui/overlays/modal.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
-import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { globalBgmPlayer } from '../../custom-ui/global-audio-player.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { getClientId } from '../client-id.mjs';
@@ -748,35 +748,37 @@ function GenreCard({ genre, onSaved, onDeleted, onGenerateTrack, onTrackPlay, on
         </${FullSpan}>
       </${GenreFormGrid}>
 
-      <${ButtonRow}>
-        <${Button}
-          variant="small-text"
-          color="primary"
-          icon="save"
-          disabled=${!saveEnabled || saving}
-          loading=${saving}
-          onClick=${handleSave}
-        >
-          ${saveLabel}
-        <//>
-        <${Button}
-          variant="small-text"
-          color="secondary"
-          icon="undo"
-          disabled=${!revertEnabled}
-          onClick=${handleRevert}
-        >
-          Revert
-        <//>
-        <${Button}
-          variant="small-text"
-          color="danger"
-          icon="trash"
-          onClick=${handleDelete}
-        >
-          Delete
-        <//>
-      </${ButtonRow}>
+      <${HorizontalLayout} justifyContent="flex-end">
+        <${ButtonRow}>
+          <${Button}
+            variant="small-text"
+            color="primary"
+            icon="save"
+            disabled=${!saveEnabled || saving}
+            loading=${saving}
+            onClick=${handleSave}
+          >
+            ${saveLabel}
+          <//>
+          <${Button}
+            variant="small-text"
+            color="secondary"
+            icon="undo"
+            disabled=${!revertEnabled}
+            onClick=${handleRevert}
+          >
+            Revert
+          <//>
+          <${Button}
+            variant="small-text"
+            color="danger"
+            icon="trash"
+            onClick=${handleDelete}
+          >
+            Delete
+          <//>
+        </${ButtonRow}>
+      </${HorizontalLayout}>
 
       <${HorizontalEdgesLayout}>
         <${H2}>Tracks</${H2}>

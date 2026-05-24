@@ -38,6 +38,10 @@ Establish a consistent two-state model (`dirty` / `recorded`) for every signific
 - [x] AnyTale Editor: music tab items missing revert button, Save button label not updating according to dirty/recorded status - mainly due to a record being created when an entry is being added to this list. Stop creating new records on add, and disable the `generate track` button before an entry has a record/uid.
 - [x] AnyTale Editor: move all persistent local data out of local storage into session storage.
 
+### Phase 6 Clean up
+- [x] Brew Editor: global sound sources is missing a revert button (similar to its save counterpart, it reverts the entire global sound array)
+- [x] AnyTale Editor: reorganzie button positioning: Create/Save, Revert, Delete, and Clear are right aligned buttons. All other action buttons (Generate, Edit Parts, etc) stay left aligned. If both exist on the same row, use a HorizontalEdgesLayout to split them, otherwise use a HorizontalLayout with justifyContent to right align the items. The page controls are a special case, and is split into 3 rows: 1. reject, extend (right aligned) 2. page navigation, add page, unlock page, delete page (left aligned) 3. Create/Save, Revert, Delete, Clear (right aligned, keeping with convention)
+- [x] Make sure that Panel wrapper around the AnyTale Parts & Plot / Character & Outfits Generation has an outline. If a Panel wrapper doesn't exist yet, add one.
 ## Implementation Details
 
 ### The two states

@@ -24,7 +24,7 @@ import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
-import { H2, VerticalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
 import { OutfitSection } from './outfit-section.mjs';
@@ -904,76 +904,78 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     <${EditLayout}>
       <${PartsScrollArea}>
         <${VerticalLayout} gap="medium">
-          <${VerticalLayout} gap="small">
-            <${HorizontalEdgesLayout}>
-              <${H2}>Parts</${H2}>
-              <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
-            </${HorizontalEdgesLayout}>
-            <${LibraryPartPicker}
-              libraryParts=${libraryParts}
-              onSelectPart=${handleLibrarySelect}
-              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
-            />
-          </${VerticalLayout}>
+          <${Panel} variant="outlined">
+            <${VerticalLayout} gap="small">
+              <${HorizontalEdgesLayout}>
+                <${H2}>Parts</${H2}>
+                <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+              </${HorizontalEdgesLayout}>
+              <${LibraryPartPicker}
+                libraryParts=${libraryParts}
+                onSelectPart=${handleLibrarySelect}
+                onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
+              />
+            </${VerticalLayout}>
 
-          <${DynamicList}
-            title="Parts List"
-            items=${parts}
-            renderItem=${(item, i) => html`
-              <${PartItem}
-                part=${item}
-                onChange=${(updated) => handlePartChange(i, updated)}
-                allTypes=${allTypes}
-                libraryPart=${libraryParts.find(p =>
+            <${DynamicList}
+              title="Parts List"
+              items=${parts}
+              renderItem=${(item, i) => html`
+                <${PartItem}
+                  part=${item}
+                  onChange=${(updated) => handlePartChange(i, updated)}
+                  allTypes=${allTypes}
+                  libraryPart=${libraryParts.find(p =>
+                    (item.config?.uid && p.uid === item.config.uid) ||
+                    (item.config?.name && p.name === item.config.name)
+                  )}
+                  onLibraryChanged=${refreshLibraryParts}
+                  onDeletedFromLibrary=${() => setParts(prev => prev.filter((_, j) => j !== i))}
+                  previewBasePromptByType=${previewBasePromptByType}
+                  onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
+                  isGeneratingPreview=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
+                />
+              `}
+              getTitle=${(item) => {
+                const base = item.config?.name || '(unnamed)';
+                const lib = libraryParts.find(p =>
                   (item.config?.uid && p.uid === item.config.uid) ||
                   (item.config?.name && p.name === item.config.name)
-                )}
-                onLibraryChanged=${refreshLibraryParts}
-                onDeletedFromLibrary=${() => setParts(prev => prev.filter((_, j) => j !== i))}
-                previewBasePromptByType=${previewBasePromptByType}
-                onPreviewGenerate=${() => handlePreviewGenerate(item, i)}
-                isGeneratingPreview=${!!generatingPreviews[i] || isPartPreviewQueued(item)}
-              />
-            `}
-            getTitle=${(item) => {
-              const base = item.config?.name || '(unnamed)';
-              const lib = libraryParts.find(p =>
-                (item.config?.uid && p.uid === item.config.uid) ||
-                (item.config?.name && p.name === item.config.name)
-              );
-              if (!lib) return `${base} *`;
-              const configFields = {
-                name: item.config.name, type: item.config.type,
-                baseline: item.config.baseline, previewBaseline: item.config.previewBaseline,
-                attributes: item.config.attributes,
-              };
-              const libFields = {
-                name: lib.name, type: lib.type,
-                baseline: lib.baseline, previewBaseline: lib.previewBaseline,
-                attributes: lib.attributes,
-              };
-              const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
-              return isModified ? `${base} *` : base;
-            }}
-            getEnabled=${(item) => item.data?.enabled ?? true}
-            onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
-            createItem=${createDefaultPart}
-            onChange=${setParts}
-            addLabel="Add Part"
-            deleteIcon="x"
-            deleteLabel="Remove"
-          />
+                );
+                if (!lib) return `${base} *`;
+                const configFields = {
+                  name: item.config.name, type: item.config.type,
+                  baseline: item.config.baseline, previewBaseline: item.config.previewBaseline,
+                  attributes: item.config.attributes,
+                };
+                const libFields = {
+                  name: lib.name, type: lib.type,
+                  baseline: lib.baseline, previewBaseline: lib.previewBaseline,
+                  attributes: lib.attributes,
+                };
+                const isModified = JSON.stringify(configFields) !== JSON.stringify(libFields);
+                return isModified ? `${base} *` : base;
+              }}
+              getEnabled=${(item) => item.data?.enabled ?? true}
+              onToggleEnabled=${(item, i) => handlePartChange(i, { ...item, data: { ...item.data, enabled: !(item.data?.enabled ?? true) } })}
+              createItem=${createDefaultPart}
+              onChange=${setParts}
+              addLabel="Add Part"
+              deleteIcon="x"
+              deleteLabel="Remove"
+            />
 
-          <${ButtonRow}>
-            <${Button}
-              variant="small-text"
-              color="danger"
-              icon="x"
-              onClick=${handleClear}
-            >
-              Clear Parts
-            <//>
-          </${ButtonRow}>
+            <${HorizontalLayout} gap="small" justifyContent="flex-end">
+              <${Button}
+                variant="small-text"
+                color="danger"
+                icon="x"
+                onClick=${handleClear}
+              >
+                Clear Parts
+              <//>
+            </${HorizontalLayout}>
+          </${Panel}>
 
           <${PlotSection}
             parts=${parts}
@@ -992,7 +994,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       </${PartsScrollArea}>
 
       <!-- Generation section: prompt preview + merged generate button -->
-      <${Panel} variant="default" style=${{ flex: 'none' }}>
+      <${Panel} variant="outlined" style=${{ flex: 'none' }}>
         <${VerticalLayout} gap="medium">
           <${H2}>Generation</${H2}>
           <${Input}
@@ -1079,7 +1081,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             />
           </div>
           <!-- Sticky Generate section -->
-          <${Panel} variant="default" style=${{ flex: 'none' }}>
+          <${Panel} variant="outlined" style=${{ flex: 'none' }}>
             <${VerticalLayout} gap="small">
               <${H2}>Generation</${H2}>
               <${Input}
