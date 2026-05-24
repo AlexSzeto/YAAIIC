@@ -903,9 +903,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const editContent = html`
     <${EditLayout}>
       <${PartsScrollArea}>
-        <${VerticalLayout} gap="medium">
+        <${VerticalLayout} gap="large">
           <${Panel} variant="outlined">
-            <${VerticalLayout} gap="small">
+            <${VerticalLayout} gap="medium">
               <${HorizontalEdgesLayout}>
                 <${H2}>Parts</${H2}>
                 <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
@@ -915,7 +915,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                 onSelectPart=${handleLibrarySelect}
                 onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
               />
-            </${VerticalLayout}>
 
             <${DynamicList}
               title="Parts List"
@@ -975,6 +974,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                 Clear Parts
               <//>
             </${HorizontalLayout}>
+            </${VerticalLayout}>
           </${Panel}>
 
           <${PlotSection}
@@ -1033,10 +1033,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       <${SearchSelectModal}
         isOpen=${loadPartModalOpen}
         title="Load Part"
-        items=${libraryParts.map(p => {
-          const types = Array.isArray(p.type) && p.type.length > 0 ? ` (${p.type.join(', ')})` : '';
-          return { label: (p.name || p.uid) + types, value: p.uid };
-        })}
+        items=${libraryParts.map(p => ({
+          label: p.name || p.uid,
+          value: p.uid,
+          subtitle: Array.isArray(p.type) ? p.type.join(', ') : '',
+        }))}
         mode="single"
         onSelect=${handlePartLoadSelect}
         onClose=${() => setLoadPartModalOpen(false)}
@@ -1124,10 +1125,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               <${SearchSelectModal}
                 isOpen=${previewPlotModalOpen}
                 title="Preview Plot"
-                items=${charTabPlotList.map(plot => {
-                  const suffix = plot.section?.trim() ? ` (${plot.section.trim()})` : '';
-                  return { label: (plot.name || plot.uid) + suffix, value: plot.uid };
-                })}
+                items=${charTabPlotList.map(plot => ({
+                  label: plot.name || plot.uid,
+                  value: plot.uid,
+                  subtitle: plot.section?.trim() || '',
+                }))}
                 mode="single"
                 onSelect=${handleCharTabPlotSelect}
                 onClose=${() => setPreviewPlotModalOpen(false)}

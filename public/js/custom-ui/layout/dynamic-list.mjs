@@ -202,7 +202,7 @@ function DynamicListItem({
           />
         `}
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
-        <div onClick=${stopProp} style="display:flex;gap:4px;align-items:center;">
+        <div onClick=${stopProp} style="display:flex;gap:8px;align-items:center;">
           ${getHeaderSelectOptions && html`
             <${Select}
               options=${getHeaderSelectOptions(item, index)}

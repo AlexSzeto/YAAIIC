@@ -51,6 +51,7 @@ LoadingMessage.className = 'loading-message';
 const List = styled('div')`
   display: flex;
   flex-direction: column;
+  gap: 8px;
 `;
 List.className = 'list';
 
@@ -58,7 +59,7 @@ const ItemContainer = styled('div')`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 10px 20px;
   cursor: ${props => props.unselectable ? 'default' : 'pointer'};
   transition: background-color ${props => props.theme.transitions.fast};
   opacity: ${props => props.unselectable ? 0.5 : 1};
@@ -66,12 +67,13 @@ const ItemContainer = styled('div')`
   ${props => !props.unselectable ? `
     &:hover {
       background-color: ${props.theme.colors.background.hover};
+      border-radius: ${props.theme.spacing.small.borderRadius};
     }
   ` : ''}
 
   ${props => props.isSelected ? `
     background-color: rgba(100, 150, 255, 0.15);
-    border-left: 3px solid ${props.theme.colors.primary.background};
+    border-radius: ${props.theme.spacing.small.borderRadius};
   ` : ''}
 `;
 ItemContainer.className = 'item-container';

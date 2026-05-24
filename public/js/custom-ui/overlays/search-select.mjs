@@ -36,6 +36,8 @@ import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Checkbox } from '../io/checkbox.mjs';
 import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle, BaseFooter } from './modal-base.mjs';
+import { Icon } from '../layout/icon.mjs';
+import { H2, HorizontalLayout } from '../themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -51,7 +53,7 @@ const ModalWrapper = styled('div')`
 ModalWrapper.className = 'search-select-wrapper';
 
 const SearchBar = styled('div')`
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 `;
 SearchBar.className = 'search-select-search-bar';
 
@@ -74,9 +76,11 @@ const SearchInput = styled('input')`
 SearchInput.className = 'search-select-input';
 
 const ItemList = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   flex: 1;
   overflow-y: auto;
-  margin: 0 -16px;
   min-height: 150px;
   max-height: 380px;
 `;
@@ -95,19 +99,22 @@ EmptyMessage.className = 'search-select-empty';
 
 // Single-select item: rectangular clickable button row
 const SingleItem = styled('button')`
-  width: 100%;
+  width: calc(100% - 8px);
   text-align: left;
   background: none;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 12px 10px 20px;
+  margin-right: 8px;
   cursor: pointer;
   color: ${props => props.color};
   font-size: ${props => props.fontSize};
   font-family: ${props => props.fontFamily};
   transition: background-color ${props => props.transition};
+  box-sizing: border-box;
 
   &:hover {
     background-color: ${props => props.hoverBg};
+    border-radius: ${props => props.hoverBorderRadius};
   }
 
   &:focus {
@@ -117,16 +124,39 @@ const SingleItem = styled('button')`
 `;
 SingleItem.className = 'search-select-single-item';
 
+const ItemContentRow = styled('span')`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 28px;
+  gap: 12px;
+`;
+ItemContentRow.className = 'search-select-item-content-row';
+
+const ItemSubtitle = styled('span')`
+  color: ${props => props.color};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  max-width: 55%;
+`;
+ItemSubtitle.className = 'search-select-item-subtitle';
+
 // Multi-select item row
 const MultiItem = styled('div')`
   display: flex;
   align-items: center;
-  padding: 8px 20px;
+  box-sizing: border-box;
+  padding: 10px 12px 10px 16px;
+  margin-right: 8px;
   cursor: pointer;
   transition: background-color ${props => props.transition};
 
   &:hover {
     background-color: ${props => props.hoverBg};
+    border-radius: ${props => props.hoverBorderRadius};
   }
 `;
 MultiItem.className = 'search-select-multi-item';
@@ -136,18 +166,18 @@ MultiItem.className = 'search-select-multi-item';
 // ============================================================================
 
 /**
- * Normalise items: always returns an array of { label: string, value: any }.
- * Accepts string arrays or { label, value } object arrays.
+ * Normalise items: always returns an array of { label: string, value: any, subtitle: string }.
+ * Accepts string arrays or { label, value, subtitle? } object arrays.
  *
- * @param {Array<string|{label:string, value:any}>} items
- * @returns {{ label: string, value: any }[]}
+ * @param {Array<string|{label:string, value:any, subtitle?:string}>} items
+ * @returns {{ label: string, value: any, subtitle: string }[]}
  */
 function normaliseItems(items) {
   if (!Array.isArray(items)) return [];
   return items.map(item =>
     typeof item === 'string'
-      ? { label: item, value: item }
-      : { label: String(item.label ?? item.value ?? ''), value: item.value }
+      ? { label: item, value: item, subtitle: '' }
+      : { label: String(item.label ?? item.value ?? ''), value: item.value, subtitle: item.subtitle ? String(item.subtitle) : '' }
   );
 }
 
@@ -161,7 +191,7 @@ function normaliseItems(items) {
  * @param {Object}   props
  * @param {boolean}  props.isOpen           – Whether modal is visible
  * @param {string}   props.title            – Modal title
- * @param {Array<string|{label,value}>} props.items – Data source
+ * @param {Array<string|{label,value,subtitle?}>} props.items – Data source; subtitle is rendered right-aligned in secondary color
  * @param {'single'|'multi'} [props.mode='single'] – Selection mode
  * @param {number}   [props.displayLimit=100]       – Max items to render
  * @param {string|string[]} [props.initialSelected] – Initially selected value(s)
@@ -232,7 +262,7 @@ export function SearchSelectModal({
   const normalisedItems = normaliseItems(items);
   const lowerFilter = filter.toLowerCase();
   const filtered = normalisedItems
-    .filter(item => item.label.toLowerCase().includes(lowerFilter))
+    .filter(item => item.label.toLowerCase().includes(lowerFilter) || item.subtitle.toLowerCase().includes(lowerFilter))
     .sort((a, b) => a.label.localeCompare(b.label))
     .slice(0, displayLimit);
 
@@ -275,14 +305,8 @@ export function SearchSelectModal({
       >
         <${ModalWrapper}>
           <!-- Header -->
-          <${BaseHeader} marginBottom="12px">
-            <${BaseTitle}
-              color=${theme.colors.text.primary}
-              fontFamily=${theme.typography.fontFamily}
-              fontWeight=${theme.typography.fontWeight.bold}
-            >
-              ${title}
-            </${BaseTitle}>
+          <${BaseHeader} marginBottom="16px">
+            <${H2}>${title}</${H2}>
           </${BaseHeader}>
 
           <!-- Search bar -->
@@ -293,7 +317,7 @@ export function SearchSelectModal({
               placeholder="Search…"
               value=${filter}
               onInput=${(e) => setFilter(e.target.value)}
-              padding=${theme.spacing.small.padding}
+              padding=${theme.spacing.medium.padding}
               border=${`2px ${theme.border.style} ${theme.colors.border.primary}`}
               bgColor=${theme.colors.background.tertiary}
               color=${theme.colors.text.primary}
@@ -319,6 +343,7 @@ export function SearchSelectModal({
                   <${MultiItem}
                     key=${String(item.value)}
                     hoverBg=${theme.colors.background.hover}
+                    hoverBorderRadius=${theme.spacing.small.borderRadius}
                     transition=${theme.transitions.fast}
                     onClick=${() => handleMultiToggle(item.value)}
                   >
@@ -338,10 +363,14 @@ export function SearchSelectModal({
                   fontSize=${theme.typography.fontSize.medium}
                   fontFamily=${theme.typography.fontFamily}
                   hoverBg=${theme.colors.background.hover}
+                  hoverBorderRadius=${theme.spacing.small.borderRadius}
                   transition=${theme.transitions.fast}
                   onClick=${() => handleSingleSelect(item.value)}
                 >
-                  ${item.label}
+                  <${ItemContentRow}>
+                    <span>${item.label}</span>
+                    ${item.subtitle ? html`<${ItemSubtitle} color=${theme.colors.text.secondary}>${item.subtitle}</${ItemSubtitle}>` : null}
+                  </${ItemContentRow}>
                 </${SingleItem}>
               `;
             })}

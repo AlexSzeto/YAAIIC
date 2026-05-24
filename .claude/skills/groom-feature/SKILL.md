@@ -37,6 +37,7 @@ If a `planned/` source file was used, read it before asking the first question.
 
 - Ask **one question at a time**. Each question should build on the previous answer and dig into a relevant detail.
 - Cover: user-facing behavior, edge cases, data shapes, dependencies on existing features, constraints, and anything that would block a developer from starting.
+- **Investigate before asking**: When you are unsure how an existing feature is implemented, search the source code and report your findings to the user instead of asking them. Reserve questions for decisions and intent that cannot be determined from code alone.
 - If a new sub-feature surfaces that is clearly out of scope, do **not** spec it here. Tell the user: *"That sounds like a separate feature — run `/create-feature` to capture it, then we can groom it independently."*
 - Continue until you are confident the spec is thorough enough to hand off.
 

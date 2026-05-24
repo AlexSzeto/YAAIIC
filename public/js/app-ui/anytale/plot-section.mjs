@@ -577,10 +577,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       <${SearchSelectModal}
         isOpen=${loadModalOpen}
         title="Load Plot"
-        items=${plotList.map(p => {
-          const suffix = p.section?.trim() ? ` (${p.section.trim()})` : '';
-          return { label: (p.name || p.uid) + suffix, value: p.uid };
-        })}
+        items=${plotList.map(p => ({
+          label: p.name || p.uid,
+          value: p.uid,
+          subtitle: p.section?.trim() || '',
+        }))}
         mode="single"
         onSelect=${handleLoadPlot}
         onClose=${() => setLoadModalOpen(false)}

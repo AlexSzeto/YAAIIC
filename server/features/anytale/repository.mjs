@@ -24,7 +24,6 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} [baseline=''] - Tags always included in generation prompts when this part is active
  * @property {string} [previewBaseline=''] - Tags used in part preview image prompts
  * @property {PartAttribute[]} attributes - User-selectable attributes for this part
- * @property {boolean} [isRevealing=false] - Marks part as containing revealing content
  */
 
 /**
@@ -82,6 +81,7 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {boolean} [enabled=true]
  * @property {{ [attributeName: string]: string }} [attributeValues={}] - Selected value per attribute
  * @property {string} [previewImageUrl=''] - Cached preview image URL for this combination
+ * @property {boolean} [isRevealing=false] - Whether this part partially covers slots; drives initial slot status for outfit-based generation
  */
 
 /**

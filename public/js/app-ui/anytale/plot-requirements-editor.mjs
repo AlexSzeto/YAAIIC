@@ -178,6 +178,7 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
         items=${libraryParts.map(p => ({
           label: p.config?.name || p.name || p.uid,
           value: p.uid,
+          subtitle: Array.isArray(p.config?.type || p.type) ? (p.config?.type || p.type).join(', ') : '',
         }))}
         mode="single"
         onSelect=${handleAddPart}

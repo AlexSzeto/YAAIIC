@@ -8,9 +8,13 @@ export function getAllParts() {
   return listParts();
 }
 
+function stripPartFields({ isRevealing: _r, ...rest }) {
+  return rest;
+}
+
 export function createPart(config) {
   const uid = randomUUID();
-  return upsertPart(uid, { ...config, uid });
+  return upsertPart(uid, { ...stripPartFields(config), uid });
 }
 
 export function savePart(uid, config) {
@@ -19,7 +23,7 @@ export function savePart(uid, config) {
     err.code = 'EINVAL';
     throw err;
   }
-  return upsertPart(uid, config);
+  return upsertPart(uid, { ...stripPartFields(config), uid });
 }
 
 export function removePartByUid(uid) {

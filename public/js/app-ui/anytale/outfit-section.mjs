@@ -719,11 +719,10 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               isOpen=${loadOutfitModalOpen}
               title="Load Outfit"
               items=${outfitList.map(o => {
-                const locs = (o.preferredLocations || [])
-                  .map(uid => libraryParts.find(p => p.uid === uid)?.name)
+                const partNames = (o.parts || [])
+                  .map(op => libraryParts.find(p => p.uid === op.partUid)?.name)
                   .filter(Boolean);
-                const suffix = locs.length > 0 ? ` (${locs.join(', ')})` : '';
-                return { label: (o.name || o.uid) + suffix, value: o.uid };
+                return { label: o.name || o.uid, value: o.uid, subtitle: partNames.join(', ') };
               })}
               mode="single"
               onSelect=${handleOutfitSelect}
