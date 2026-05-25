@@ -29,12 +29,14 @@
  *   PUT    /anytale/genres/:uid                     – update an existing genre by uid
  *   DELETE /anytale/genres/:uid                     – delete a genre and all nested tracks
  *   POST   /anytale/genres/:uid/generate-track      – queue AceStep generation for a genre
+ *
+ *   POST   /anytale/play/generate-intro  – queue intro image generation for play mode (stored in anytale data, not media-data)
  */
 import { Router } from 'express';
 import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
-import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField, getAllGenres, createGenre, saveGenre, removeGenreByUid } from './service.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField, getAllGenres, createGenre, saveGenre, removeGenreByUid, setPlayIntroImageUrl } from './service.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 import * as queueService from '../queue/service.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
@@ -683,6 +685,53 @@ router.post('/anytale/genres/:uid/generate-track', async (req, res) => {
   } catch (error) {
     console.error('Error starting music generation for genre:', error);
     res.status(500).json({ error: 'Failed to start music generation', details: error.message });
+  }
+});
+
+// ── Play mode intro image generation ─────────────────────────────────────
+
+router.post('/anytale/play/generate-intro', async (req, res) => {
+  try {
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const { prompt, workflow, seed, orientation, name, clientId } = req.body;
+
+    const generationWorkflow = workflow || anytaleConfig.generationWorkflow || 'Text to Image (Illustrious Characters)';
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === generationWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Workflow '${generationWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: generationWorkflow,
+      prompt: prompt || '',
+      seed: seed ?? Math.floor(Math.random() * 4294967295),
+      orientation: orientation || 'portrait',
+      imageFormat: 'png',
+      tags: '',
+      description: '',
+      summary: '',
+      usePostPrompts: false,
+      removeBackground: false,
+      entityType: 'anytale-play-intro',
+      requestOrigin: 'anytale-play',
+    };
+
+    const queueItem = queueService.enqueue({
+      type: 'image',
+      source: 'anytale-play',
+      clientId: clientId || null,
+      name: name || 'Play Intro',
+      subLabel: 'Play Intro',
+      endpointKey: 'anytale-play-intro',
+      taskData: requestData,
+    }, { autoStart: true });
+
+    res.status(202).json({ taskId: queueItem.id });
+  } catch (error) {
+    console.error('Error starting play intro image generation:', error);
+    res.status(500).json({ error: 'Failed to start generation', details: error.message });
   }
 });
 

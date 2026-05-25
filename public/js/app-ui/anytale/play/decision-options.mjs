@@ -42,13 +42,30 @@ const OptionImage = styled('img')`
 `;
 OptionImage.className = 'decision-option-image';
 
-const OptionText = styled('span')`
+const OptionTextBlock = styled('div')`
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+OptionTextBlock.className = 'decision-option-text-block';
+
+const OptionText = styled('span')`
   white-space: pre-wrap;
   word-wrap: break-word;
   font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  font-weight: bold;
 `;
 OptionText.className = 'decision-option-text';
+
+const OptionSubtitle = styled('span')`
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  color: ${() => currentTheme.value.colors.text.secondary};
+  font-weight: normal;
+`;
+OptionSubtitle.className = 'decision-option-subtitle';
 
 const CenteredOptionText = styled('span')`
   flex: 1;
@@ -64,7 +81,7 @@ CenteredOptionText.className = 'decision-option-text-centered';
  * `image` is provided; without `image` the text is centered.
  *
  * @param {Object} props
- * @param {Array<{text: string, image?: string, onClick: Function}>} props.options
+ * @param {Array<{text: string, subtitle?: string, image?: string, onClick: Function}>} props.options
  */
 export function DecisionOptions({ options = [] }) {
   return html`
@@ -72,8 +89,12 @@ export function DecisionOptions({ options = [] }) {
       ${options.map((opt, i) => html`
         <${OptionButton} key=${i} onClick=${opt.onClick}>
           ${opt.image ? html`<${OptionImage} src=${opt.image} alt="" />` : null}
-          ${opt.image
-            ? html`<${OptionText}>${opt.text}</${OptionText}>`
+          ${opt.image || opt.subtitle
+            ? html`
+              <${OptionTextBlock}>
+                <${OptionText}>${opt.text}</${OptionText}>
+                ${opt.subtitle ? html`<${OptionSubtitle}>${opt.subtitle}</${OptionSubtitle}>` : null}
+              </${OptionTextBlock}>`
             : html`<${CenteredOptionText}>${opt.text}</${CenteredOptionText}>`
           }
         </${OptionButton}>

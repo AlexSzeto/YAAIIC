@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { styled } from '../../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../../custom-ui/theme.mjs';
 import { PlayButton } from './glass-button.mjs';
@@ -11,6 +11,13 @@ import { PlayLoadingState } from './loading-state.mjs';
 import { HorizontalLayout, HorizontalEdgesLayout } from '../../../custom-ui/themed-base.mjs';
 
 // 896 × 1152 is the canonical play-mode render resolution.
+const PortraitFrameWrapper = styled('div')`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 const PortraitFrame = styled('div')`
   position: relative;
   display: flex;
@@ -52,6 +59,7 @@ TopControls.className = 'portrait-top-controls';
 
 const CenterSpace = styled('div')`
   flex: 1;
+  width: 100%;
   max-width: 600px;
   display: flex;
   flex-direction: column;
@@ -114,10 +122,14 @@ const ShowUICorner = styled('div')`
 `;
 ShowUICorner.className = 'show-ui-corner';
 
+const CROSSFADE_MS = 600;
+
 /**
  * PortraitPanel - Full play mode layout with background image and glass overlay controls.
  *
  * Maintains a fixed 896:1152 aspect ratio with no border.
+ * Background image transitions use a crossfade: the old image stays visible until
+ * the new one finishes loading, then both images' opacities animate simultaneously.
  *
  * @param {Object} props
  * @param {'page'|'decision'|'loading'} [props.mode='page']
@@ -136,7 +148,7 @@ ShowUICorner.className = 'show-ui-corner';
  * @param {Function} [props.onPlay]
  * @param {Function} [props.onStop]
  * @param {Function} [props.onNext]
- * @param {Array<{text: string, image?: string, onClick: Function}>} [props.decisions=[]]
+ * @param {Array<{text: string, subtitle?: string, image?: string, onClick: Function}>} [props.decisions=[]]
  * @param {Function} [props.onBack]
  */
 export function PortraitPanel({
@@ -163,11 +175,49 @@ export function PortraitPanel({
   const [uiVisible, setUiVisible] = useState(true);
   const toggleUI = () => setUiVisible(v => !v);
 
+  // Crossfade state: shownUrl is the currently visible image, pendingUrl is loading in the background.
+  const [shownUrl, setShownUrl] = useState(backgroundUrl || null);
+  const [pendingUrl, setPendingUrl] = useState(null);
+  const [crossfading, setCrossfading] = useState(false);
+
+  useEffect(() => {
+    if (!backgroundUrl || backgroundUrl === shownUrl) return;
+    if (!shownUrl) {
+      // First image — no transition needed, show immediately.
+      setShownUrl(backgroundUrl);
+      return;
+    }
+    // Queue the incoming image; crossfade starts when it finishes loading (onLoad).
+    setPendingUrl(backgroundUrl);
+    setCrossfading(false);
+  }, [backgroundUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePendingLoad = useCallback(() => {
+    if (!pendingUrl) return;
+    setCrossfading(true);
+    setTimeout(() => {
+      setShownUrl(pendingUrl);
+      setPendingUrl(null);
+      setCrossfading(false);
+    }, CROSSFADE_MS);
+  }, [pendingUrl]);
+
   const isPageOrLoading = mode === 'page' || mode === 'loading';
 
   return html`
+    <${PortraitFrameWrapper}>
     <${PortraitFrame} ...${rest}>
-      ${backgroundUrl ? html`<${BackgroundImage} src=${backgroundUrl} alt="" />` : null}
+      ${shownUrl ? html`<${BackgroundImage}
+        src=${shownUrl}
+        style=${{ opacity: crossfading ? 0 : 1, transition: crossfading ? `opacity ${CROSSFADE_MS}ms ease` : 'none' }}
+        alt=""
+      />` : null}
+      ${pendingUrl ? html`<${BackgroundImage}
+        src=${pendingUrl}
+        style=${{ opacity: crossfading ? 1 : 0, transition: crossfading ? `opacity ${CROSSFADE_MS}ms ease` : 'none', zIndex: 0 }}
+        onLoad=${handlePendingLoad}
+        alt=""
+      />` : null}
 
       ${uiVisible ? html`
         <${ContentLayer}>
@@ -178,14 +228,14 @@ export function PortraitPanel({
           </${TopControls}>
 
           <${CenterSpace}>
-            <${FlexSpacer}>
-            ${mode === 'decision'
-              ? html`<${CaptionBubble}>${bubbleText}</${CaptionBubble}>`
-              : mode === 'page'
-              ? html`<${SpeechBubble}>${bubbleText}</${SpeechBubble}>`
-              : null
-            }
-            </${FlexSpacer} />
+            ${mode !== 'loading' && html`
+              <${FlexSpacer}>
+                ${mode === 'decision'
+                  ? html`<${CaptionBubble}>${bubbleText}</${CaptionBubble}>`
+                  : html`<${SpeechBubble}>${bubbleText}</${SpeechBubble}>`
+                }
+              </${FlexSpacer}>
+            `}
 
             ${mode === 'loading'
               ? html`<${CenterContent}><${PlayLoadingState} /></${CenterContent}>`
@@ -221,5 +271,6 @@ export function PortraitPanel({
         </${ShowUICorner}>
       `}
     </${PortraitFrame}>
+    </${PortraitFrameWrapper}>
   `;
 }

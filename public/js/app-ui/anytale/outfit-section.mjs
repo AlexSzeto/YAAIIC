@@ -103,6 +103,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   libraryPartsRef.current = libraryParts;
   const outfitRef = useRef(outfit);
   outfitRef.current = outfit;
+  const onOutfitListChangeRef = useRef(onOutfitListChange);
+  onOutfitListChangeRef.current = onOutfitListChange;
   const [outfitList, setOutfitList] = useState([]);
   // Tracks the last-saved server copy; used to detect unsaved changes.
   const [libraryOutfit, setLibraryOutfit] = useState(null);
@@ -191,16 +193,21 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     if (activeTasks.length === 0) return;
     const renderTask = activeTasks.find(t => t.entityType === 'anytale-render-outfit');
     if (renderTask && !renderTaskId) {
+      const renderedOutfitUid = renderTask.outfitUid;
       setRenderTaskId(renderTask.taskId);
       progressShow(renderTask.taskId, {
         entityType: 'anytale-render-outfit',
         defaultTitle: 'Generating outfit render…',
         onComplete: (data) => {
-          if (data.result?.imageUrl) {
+          if (data.result?.imageUrl && outfitRef.current.uid === renderedOutfitUid) {
             const imageUrl = data.result.imageUrl;
             setOutfit(prev => ({ ...prev, renderUrl: imageUrl }));
             setLibraryOutfit(prev => prev ? { ...prev, renderUrl: imageUrl } : prev);
           }
+          // Refresh list so the rendered outfit's image appears when loaded later.
+          fetchOutfitList().then(list => {
+            if (Array.isArray(list)) { setOutfitList(list); onOutfitListChangeRef.current?.(list); }
+          }).catch(() => {});
           setRenderTaskId(null);
         },
         onCancelled: () => setRenderTaskId(null),
@@ -368,19 +375,24 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // Persistent subscription: pick up Outfit Render task-started events
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, subLabel, clientId }) => {
+      'queue:task-started': ({ taskId, source, subLabel, clientId, taskData }) => {
         if (source !== 'anytale' || subLabel !== 'Outfit Render') return;
         if (clientId !== getClientId()) return;
+        const renderedOutfitUid = taskData?.outfitUid;
         setRenderTaskId(taskId);
         progressShow(taskId, {
           entityType: 'anytale-render-outfit',
           defaultTitle: 'Generating outfit render…',
           onComplete: (data) => {
-            if (data.result?.imageUrl) {
+            if (data.result?.imageUrl && outfitRef.current.uid === renderedOutfitUid) {
               const imageUrl = data.result.imageUrl;
               setOutfit(prev => ({ ...prev, renderUrl: imageUrl }));
               setLibraryOutfit(prev => prev ? { ...prev, renderUrl: imageUrl } : prev);
             }
+            // Refresh list so the rendered outfit's image appears when loaded later.
+            fetchOutfitList().then(list => {
+              if (Array.isArray(list)) { setOutfitList(list); onOutfitListChangeRef.current?.(list); }
+            }).catch(() => {});
             setRenderTaskId(null);
           },
           onCancelled: () => setRenderTaskId(null),

@@ -11,69 +11,45 @@
 const STORAGE_KEY = 'anytale-play-session';
 
 /**
- * @typedef {Object} CharacterSnapshot
+ * @typedef {Object} SessionCharacter
+ * @property {string} uid
  * @property {string} name
  * @property {string} personality
  * @property {string} portraitUrl
- * @property {Array} parts
+ * @property {import('../../server/features/anytale/repository.mjs').CharacterPart[]} parts
  */
 
 /**
- * @typedef {Object} TimelineEntry
- * @property {string} plotUid
- * @property {string} startedAt - ISO timestamp
- * @property {number} pageCount - visible page count for this chapter
- * @property {Object} slotStateAtEntry - slot state snapshot when chapter was entered
- */
-
-/**
- * @typedef {Object} AssetCacheEntry
- * @property {string|null} imageUrl
- * @property {string|null} imageTaskId
- * @property {string} imageStatus - 'pending'|'generating'|'ready'|'error'
- * @property {string|null} dialogText
- * @property {string} dialogStatus
- * @property {string|null} voiceUrl
- * @property {string} voiceStatus
- * @property {string|null} error
- * @property {string} generatedAt - ISO timestamp
+ * @typedef {Object} SessionLocation
+ * @property {string} partUid
+ * @property {{ [attrName: string]: string|null }} attributeMap
  */
 
 /**
  * @typedef {Object} PlaySession
- * @property {string} characterUid
- * @property {CharacterSnapshot} characterSnapshot
+ * @property {SessionCharacter} character
  * @property {string} outfitUid
- * @property {string} locationPartUid
- * @property {Object} locationAttributes - { [attrName]: selectedValue }
- * @property {Object} slotState - { [slotType]: 'covered'|'revealing'|'removed' }
- * @property {string} musicGenre
- * @property {Array<TimelineEntry>} timeline
- * @property {Object} assetCache - { [signatureKey]: AssetCacheEntry }
- * @property {string} currentPlotUid
- * @property {number} currentPageIndex
- * @property {string} uiPhase - 'intro'|'mood'|'character-picker'|'plot'|'end-of-chapter'|'end-screen'
+ * @property {SessionLocation} location
+ * @property {{ genre: string }} music
+ * @property {{ [slotType: string]: 'covered'|'revealing'|'removed' }} slotState
+ * @property {string} preludePlotUid
+ * @property {string} phase - 'intro-main'|'intro-mood'|'character-pick'|'outfit-pick'|'location-pick'|'music-pick'|'plot'
+ * @property {string|null} introImageUrl
  * @property {boolean} muted
  * @property {boolean} musicOn
- * @property {string} navigationMode - 'manual'|'autoplay'
  */
 
 const DEFAULT_SESSION = {
-  characterUid: '',
-  characterSnapshot: { name: '', personality: '', portraitUrl: '', parts: [] },
+  character: { uid: '', name: '', personality: '', portraitUrl: '', parts: [] },
   outfitUid: '',
-  locationPartUid: '',
-  locationAttributes: {},
+  location: { partUid: '', attributeMap: {} },
+  music: { genre: '' },
   slotState: {},
-  musicGenre: '',
-  timeline: [],
-  assetCache: {},
-  currentPlotUid: '',
-  currentPageIndex: 0,
-  uiPhase: 'intro',
+  preludePlotUid: '',
+  phase: 'intro-main',
+  introImageUrl: null,
   muted: false,
   musicOn: true,
-  navigationMode: 'manual',
 };
 
 /** Load session from localStorage; merge missing keys with defaults and write the repaired session back. */
@@ -110,4 +86,9 @@ export function save(session) {
 export function patch(updates) {
   const current = load();
   save({ ...current, ...updates });
+}
+
+/** Clear the session from localStorage (triggers cold-start bootstrap on next load). */
+export function clear() {
+  localStorage.removeItem(STORAGE_KEY);
 }

@@ -2,7 +2,7 @@
  * AnyTale Service – Business logic for the parts library, plot data, and characters.
  */
 import { randomUUID } from 'crypto';
-import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit, listGenres, upsertGenre, deleteGenre, appendTrackToGenre } from './repository.mjs';
+import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit, listGenres, upsertGenre, deleteGenre, appendTrackToGenre, updatePlayState } from './repository.mjs';
 
 export function getAllParts() {
   return listParts();
@@ -151,4 +151,8 @@ export function removeGenreByUid(uid) {
 
 export function addTrackToGenre(genreUid, track) {
   return appendTrackToGenre(genreUid, track);
+}
+
+export function setPlayIntroImageUrl(imageUrl) {
+  return updatePlayState({ introImageUrl: imageUrl });
 }

@@ -30,7 +30,7 @@ import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR, SERVER_DIR } from '../../
 import { loadWorkflows } from './workflow-validator.mjs';
 import { findMediaByUid, getAllMediaData, saveMediaData } from '../../core/database.mjs';
 import { randomUUID } from 'crypto';
-import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField, addTrackToGenre } from '../anytale/service.mjs';
+import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField, addTrackToGenre, setPlayIntroImageUrl } from '../anytale/service.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -852,7 +852,8 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
                  endpointKey === 'anytale-render-portrait' ||
                  endpointKey === 'anytale-render-outfit' ||
                  endpointKey === 'anytale-voice' ||
-                 endpointKey === 'anytale-music';
+                 endpointKey === 'anytale-music' ||
+                 endpointKey === 'anytale-play-intro';
 
   const { taskId } = initializeGenerationTask(taskData, workflowData, config);
 
@@ -878,6 +879,9 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
           if (result?.summary) updates.introTranscript = result.summary;
           if (Object.keys(updates).length) saveCharacter(taskData.characterUid, { ...char, ...updates });
         }
+      }
+      if (endpointKey === 'anytale-play-intro' && result?.imageUrl) {
+        try { setPlayIntroImageUrl(result.imageUrl); } catch { /* non-fatal */ }
       }
       if (endpointKey === 'anytale-music' && taskData.genreUid && result?.audioUrl) {
         const track = {

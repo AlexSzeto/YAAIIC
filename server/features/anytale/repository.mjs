@@ -105,9 +105,10 @@ function readData() {
       characters: Array.isArray(parsed.characters) ? parsed.characters : [],
       outfits: Array.isArray(parsed.outfits) ? parsed.outfits : [],
       genres: Array.isArray(parsed.genres) ? parsed.genres : [],
+      playState: parsed.playState && typeof parsed.playState === 'object' ? parsed.playState : {},
     };
   } catch {
-    return { parts: [], plot: [], characters: [], outfits: [], genres: [] };
+    return { parts: [], plot: [], characters: [], outfits: [], genres: [], playState: {} };
   }
 }
 
@@ -262,6 +263,21 @@ export function deleteGenre(uid) {
   data.genres.splice(idx, 1);
   writeData(data);
 }
+
+// ── Play state ─────────────────────────────────────────────────────────────
+
+export function getPlayState() {
+  return readData().playState;
+}
+
+export function updatePlayState(updates) {
+  const data = readData();
+  data.playState = { ...data.playState, ...updates };
+  writeData(data);
+  return data.playState;
+}
+
+// ── Genres ─────────────────────────────────────────────────────────────────
 
 export function appendTrackToGenre(genreUid, track) {
   const data = readData();

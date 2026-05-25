@@ -32,6 +32,7 @@ vi.mock('./service.mjs', () => ({
   createGenre: vi.fn(),
   saveGenre: vi.fn(),
   removeGenreByUid: vi.fn(),
+  setPlayIntroImageUrl: vi.fn(),
 }))
 
 vi.mock('../generation/workflow-validator.mjs', () => ({

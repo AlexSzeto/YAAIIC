@@ -587,6 +587,7 @@ export function getActiveTasks() {
       taskId,
       requestOrigin: task.requestOrigin || null,
       characterUid: task.characterUid || null,
+      outfitUid: task.outfitUid || null,
       entityType: task.entityType || null,
       progress: task.progress || { percentage: 0, currentStep: 'Starting...' },
     });

@@ -162,9 +162,14 @@ router.post('/generate', upload.any(), async (req, res) => {
       }
     }
 
-    // --- Coerce checkbox extra input strings to actual booleans (FormData serializes false as "false") ---
+    // --- Coerce / backfill extra inputs ---
     if (workflowData.options?.extraInputs && Array.isArray(workflowData.options.extraInputs)) {
       workflowData.options.extraInputs.forEach(input => {
+        // Backfill missing fields with workflow defaults before anything else uses them
+        if (req.body[input.id] === undefined && input.default !== undefined) {
+          req.body[input.id] = input.default;
+        }
+        // Coerce checkbox strings to booleans (FormData serializes false as "false")
         if (input.type === 'checkbox' && req.body[input.id] !== undefined) {
           req.body[input.id] = req.body[input.id] === 'true' || req.body[input.id] === true;
         }
@@ -179,7 +184,9 @@ router.post('/generate', upload.any(), async (req, res) => {
     }
 
     // Infer source and type for queue record
-    const source = req.body.source || (req.body.requestOrigin === 'anytale' ? 'anytale' : 'yaaiic');
+    const knownOrigins = ['anytale', 'anytale-play'];
+    const source = req.body.source ||
+      (knownOrigins.includes(req.body.requestOrigin) ? req.body.requestOrigin : 'yaaiic');
     const rawType = workflowData.options?.type;
     const type = rawType === 'inpaint' ? 'image' : (rawType || 'image');
 
@@ -191,7 +198,7 @@ router.post('/generate', upload.any(), async (req, res) => {
       name: req.body.name || '',
       subLabel: null,
       endpointKey: 'generate',
-      taskData: { ...req.body, requestOrigin: source === 'anytale' ? 'anytale' : 'yaaiic' },
+      taskData: { ...req.body, requestOrigin: source },
     }, { autoStart });
 
     console.log(`[generate] Enqueued ${queueItem.id}`);
