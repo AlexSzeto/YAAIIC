@@ -227,6 +227,7 @@ const lightColors = {
     primary: '#ffffff',
     secondary: '#f8f9fa',
     tertiary: '#e9ecef',
+    elevated: '#b0b8c0',
     card: '#f8f9fa',
     hover: '#f1f1f1',
     disabled: '#e9ecef'
@@ -324,9 +325,10 @@ const darkColors = {
   // Background Colors
   background: {
     primary: '#121212',
-    page: '#121212',  
+    page: '#121212',
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
+    elevated: '#5a5a5a',
     card: '#1e1e1e',
     hover: '#333333',
     disabled: '#2a2a2a'

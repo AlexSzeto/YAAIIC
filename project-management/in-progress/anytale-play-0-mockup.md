@@ -10,25 +10,25 @@ Build all play-mode UI components and assemble two static mockup screens — a c
 
 ### Phase 1 — UI Components
 
-- [ ] **Circular glass control buttons:** Create a play-mode circular button component (48×48px, theme background with glass panel's frosted `backdrop-filter: blur(4px)`, thick outline, single centered icon). Used for: reset, mute, music, prev, play, stop, next, show/hide UI. **Manual test:** render all button variants on the mockup page, verify circular shape, frosted glass effect, and icon centering.
+- [x] **Circular glass control buttons:** Create a play-mode circular button component (48×48px, theme background with glass panel's frosted `backdrop-filter: blur(4px)`, thick outline, single centered icon). Used for: reset, mute, music, prev, play, stop, next, show/hide UI. **Manual test:** render all button variants on the mockup page, verify circular shape, frosted glass effect, and icon centering.
 
-- [ ] **Speech bubble component:** Build a speech bubble following the CSS pattern from the spec (rounded rect with triangle pointer at bottom-center, theme colors). Used for displaying character dialog text during chapter navigation. **Manual test:** render with sample text, verify triangle appears below, responsive text wrapping.
+- [x] **Speech bubble component:** Build a speech bubble following the CSS pattern from the spec (rounded rect with triangle pointer at bottom-center, theme colors). Used for displaying character dialog text during chapter navigation. **Manual test:** render with sample text, verify triangle appears below, responsive text wrapping.
 
-- [ ] **Caption bubble component:** Same styling as speech bubble but without the `:after` triangle — a plain rounded rectangle. Used for decision hints at decision points. **Manual test:** render alongside speech bubble, confirm identical sizing but no triangle.
+- [x] **Caption bubble component:** Same styling as speech bubble but without the `:after` triangle — a plain rounded rectangle. Used for decision hints at decision points. **Manual test:** render alongside speech bubble, confirm identical sizing but no triangle.
 
-- [ ] **Decision option buttons:** Glass panel style background, rounded rectangle. When image is present: image on left, word-wrapped multiline text on right. When no image: text centered. Support 3 or 4 options layout. **Manual test:** render options with and without images, verify layout adapts correctly, text wraps on long content.
+- [x] **Decision option buttons:** Glass panel style background, rounded rectangle. When image is present: image on left, word-wrapped multiline text on right. When no image: text centered. Support 3 or 4 options layout. **Manual test:** render options with and without images, verify layout adapts correctly, text wraps on long content.
 
-- [ ] **Progress bar component:** True pill shape (fully rounded ends), solid color fills. Three overlapping layers: loading (red/danger, full width), loaded (gray/elevated, partial), current (blue/primary, position indicator). Accept percentage props. **Manual test:** render with various percentages, verify layer stacking and pill shape.
+- [x] **Progress bar component:** True pill shape (fully rounded ends), solid color fills. Three overlapping layers: loading (red/danger, full width), loaded (gray/elevated, partial), current (blue/primary, position indicator). Accept percentage props. **Manual test:** render with various percentages, verify layer stacking and pill shape.
 
-- [ ] **Portrait panel UI scaffold:** Assemble the full play page layout — outlined portrait frame with: top controls region (reset, mute, music buttons), speech/caption bubble region, generated image area (placeholder for now), bottom controls (left: progress bar + `Chapter X  Page Y` labels; right: prev/play/next/show-hide buttons). **Manual test:** resize to narrow mobile viewport; all controls remain tappable; layout doesn't overflow.
+- [x] **Portrait panel UI scaffold:** Assemble the full play page layout — outlined portrait frame with: top controls region (reset, mute, music buttons), speech/caption bubble region, generated image area (placeholder for now), bottom controls (left: progress bar + `Chapter X  Page Y` labels; right: prev/play/next/show-hide buttons). **Manual test:** resize to narrow mobile viewport; all controls remain tappable; layout doesn't overflow.
 
-- [ ] **Loading spinner state:** Implement the loading state view — top/bottom controls visible, giant centered loading spinner in the portrait area. **Manual test:** toggle between loading and content states, verify spinner is prominent and centered.
+- [x] **Loading spinner state:** Implement the loading state view — top/bottom controls visible, giant centered loading spinner in the portrait area. **Manual test:** toggle between loading and content states, verify spinner is prominent and centered.
 
-- [ ] **Show/hide UI toggle:** When UI is hidden, only the show UI button remains visible. Everything else (top controls, speech/caption bubble, bottom bar) is hidden. **Manual test:** tap hide, confirm only show button visible; tap show, confirm full UI returns.
+- [x] **Show/hide UI toggle:** When UI is hidden, only the show UI button remains visible. Everything else (top controls, speech/caption bubble, bottom bar) is hidden. **Manual test:** tap hide, confirm only show button visible; tap show, confirm full UI returns.
 
 ### Phase 2 — Mockup Screens
 
-- [ ] **Character change mockup screen:** Add `public/anytale-play-mockup.html` + `public/js/anytale-play-mockup.mjs` mounting a `MockupPage` component under `Page` / `ToastProvider` / `TooltipProvider`. The page renders a screen-switcher toggle at the top, then below it the portrait panel in **decision-point layout**: background render image behind the panel, top controls (reset, mute, music), caption bubble with hint text, three character decision option buttons (each showing a portrait image on the left and name + personality snippet on the right), a fourth "Maybe someone else?" option with no image and centered text, and a single back button at the bottom. All data is hardcoded from the placeholder const. **Manual test:** open `/anytale-play-mockup.html`, verify the character change screen matches the spec layout at both desktop and narrow mobile widths.
+- [x] **Character change mockup screen:** Add `public/anytale-play-mockup.html` + `public/js/anytale-play-mockup.mjs` mounting a `MockupPage` component under `Page` / `ToastProvider` / `TooltipProvider`. The page renders a screen-switcher toggle at the top, then below it the portrait panel in **decision-point layout**: background render image behind the panel, top controls (reset, mute, music), caption bubble with hint text, three character decision option buttons (each showing a portrait image on the left and name + personality snippet on the right), a fourth "Maybe someone else?" option with no image and centered text, and a single back button at the bottom. All data is hardcoded from the placeholder const. **Manual test:** open `/anytale-play-mockup.html`, verify the character change screen matches the spec layout at both desktop and narrow mobile widths.
 
   **Placeholder images (fill in before implementing):**
   - `backgroundRender`: `http://localhost:3000/media/image_4242.png`
@@ -36,11 +36,19 @@ Build all play-mode UI components and assemble two static mockup screens — a c
   - `character2Portrait` (name: `Isabella`, personality: `A loud, unapologetically rambunctious Latina woman.`): `http://localhost:3000/media/image_3644.png`
   - `character3Portrait` (name: `Jenny`, personality: `A young Asian woman who sounds honeyed sweet at first, but often throws intense jealousy fits.`): `http://localhost:3000/media/image_3637.png`
 
-- [ ] **Plot page with dialog mockup screen:** Add a second screen to `MockupPage` (switchable via the screen-switcher toggle). Renders the portrait panel in **normal page layout**: background render image, top controls (reset, mute, music), speech bubble with dialog text below the top controls, bottom controls (progress bar at ~60% loaded / ~30% current + `Chapter 1  Page 2` labels, and prev/play/next/show-hide buttons). Show/hide toggle must work on this screen too. **Manual test:** switch to the plot page screen, verify speech bubble appears with dialog text, progress bar layers are correct, and show/hide hides all non-essential UI.
+- [x] **Plot page with dialog mockup screen:** Add a second screen to `MockupPage` (switchable via the screen-switcher toggle). Renders the portrait panel in **normal page layout**: background render image, top controls (reset, mute, music), speech bubble with dialog text below the top controls, bottom controls (progress bar at ~60% loaded / ~30% current + `Chapter 1  Page 2` labels, and prev/play/next/show-hide buttons). Show/hide toggle must work on this screen too. **Manual test:** switch to the plot page screen, verify speech bubble appears with dialog text, progress bar layers are correct, and show/hide hides all non-essential UI.
 
   **Placeholder images (fill in before implementing):**
   - `backgroundRender`: `http://localhost:3000/media/image_4242.png`
   - `dialogText`: `Do allow me to introduce myself properly. You’re here, and frankly, you deserve the view.`
+
+#### Fixes and Changes
+
+- [x] Portrait panel: 896:1152 aspect ratio, no border; usable space fills ratio exactly
+- [x] Bubbles: glass background (`overlay.glass` + `backdrop-filter: blur`), no outline border
+- [x] Page mode: remove image-area placeholder — background image fills center; just flex spacer
+- [x] Bottom controls: single row — progress bar + chapter info pill + nav buttons, all at button height
+- [x] Glass button variants (default / primary-border / none) + 2 additional mockup screens for comparison
 
 ## Implementation Details
 
