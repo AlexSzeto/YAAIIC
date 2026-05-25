@@ -478,7 +478,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       <${PlotRequirementsEditor}
         plot=${plot}
         onChange=${setPlot}
-        libraryParts=${libraryParts}
+        libraryParts=${parts}
         slotOptions=${slotOptions}
       />
 

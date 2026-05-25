@@ -15,7 +15,7 @@ Parts Library → Character Builder → Generate Portrait / Voice
 3. **Portrait generation**: assemble prompt from matched portrait parts + attribute values → queue `anytale-render-portrait` generation → result saved to character's `portraitUrl`.
 4. **Voice generation**: send character `personality` + `name` to the voice workflow → result saved to character's `audioUrl` and `introTranscript`.
 5. **Outfit section**: create named outfits as part-override sets; attach to characters via `preferredOutfits`. Optionally generate a render image for the outfit via `anytale-render-outfit`; specify preferred location parts via `preferredLocations`.
-6. **Plot section**: create plot blocks with pages, each page having prompt tags, dialog prompts, and actions; select a plot page to inject its tags into scene generation.
+6. **Plot section**: create plot blocks with pages, each page having prompt tags, dialog prompts, slot actions, and per-part hidden flags; select a plot page to inject its tags into scene generation.
 7. **Scene generation**: assembled prompt (character parts + active plot page tags) feeds the standard generation queue.
 
 ## Component Map
@@ -32,8 +32,8 @@ app-ui/anytale/
   library-part-picker.mjs      — modal to pick a part from the library
   category-input.mjs           — tag-type input for part categories
   plot-section.mjs             — plot block list + page editor
-  plot-page-pills.mjs          — unified slot/part pill UI for per-page transitions and requirements
-  plot-requirements-editor.mjs — plot-level slot/part entry requirements editor
+  plot-page-pills.mjs          — two-section pill UI: slots (transitions + requirements) and parts (hidden toggle + requirements)
+  plot-requirements-editor.mjs — plot-level entry requirements editor (slot types + auto-populated library parts; no Add Part button)
   plot-api.mjs                 — client-side API calls for plot CRUD
   character-api.mjs            — client-side API calls for character CRUD
   outfit-api.mjs               — client-side API calls for outfit CRUD
@@ -109,6 +109,8 @@ See `@typedef` declarations in `server/features/anytale/repository.mjs` for auth
   // Keys are slot type strings (e.g. 'outer upper body') or part UIDs.
   // 'present': slot must be covering or revealing; 'absent': slot must be removed or not in use.
   // Used as plot-level entry requirements for play mode bootstrap.
+  // Editor UI: all library parts auto-populate as pills cycling ignore → present → absent.
+  // Orphan UIDs (part deleted from library) persist until cycled back to ignore.
 }
 ```
 
@@ -122,8 +124,23 @@ See `@typedef` declarations in `server/features/anytale/repository.mjs` for auth
   actions: [                 // slot transitions applied when this page is reached (replayed by resolveSlotStatuses)
     { slot: string, status: 'covering' | 'revealing' | 'removed' }
   ],
+  hiddenParts: string[],     // part UIDs excluded from final prompt assembly for this page
+  // Hidden parts still count toward slot status resolution and requirements checking.
+  // Only excluded at the final assemblePrompt step (after all slot logic runs).
 }
 ```
+
+### Page rendering pipeline
+
+The pipeline runs in `anytale-form.mjs` (editor) and play mode for every generated image.
+
+1. **Build enabled parts with coverage** — filter `parts` where `data.enabled !== false`; overlay `config.isRevealing` from `getPartsCoverage()`.
+2. **Resolve slot statuses** (`resolveSlotStatuses`) — initialize all slot types to `'removed'`; each enabled part upgrades its slots based on `isRevealing` (covering > revealing > removed); replay page `actions` from page 0 through current index.
+3. **Apply slot visibility rules** (`applyRules`) — evaluate `anytale-rules.txt` ruleset (standard and forEach rules) against slot statuses; produce `Map<slot, boolean>`.
+4. **Page requirements check** (`checkPageRequirements`) — uses slot statuses *before* the current page's actions; checks each requirement string against enabled parts. In the editor this drives the "requirements met / failed" badge; in play mode it gates page visibility (hidden pages still have their actions replayed).
+5. **Assemble prompt** (`assemblePrompt`) — build `visibleParts` by filtering out: disabled parts, parts whose slot types are all invisible per step 3, and parts whose `config.uid` is in `page.hiddenParts`. Expand `page.tags` (resolving `{{type}}` tokens against visible parts), collect `baseline` + `attributeValues` per visible part, deduplicate.
+
+Steps 1–4 always run against the *full* enabled parts list — `hiddenParts` only takes effect in step 5.
 
 ### Outfit shape
 

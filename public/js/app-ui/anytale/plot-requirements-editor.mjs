@@ -1,27 +1,26 @@
 /**
  * plot-requirements-editor.mjs – Plot-level entry requirements editor.
  *
- * Two regions:
- *   Top: SearchSelectModal trigger to add a specific library part (by UID) to requirements.
- *   Bottom: Pill list — all known non-character slot types (always shown) plus any
- *           UID-keyed entries in slotRequirements. Each pill cycles through:
- *             ignore  → present → absent → ignore  (slot-type pills, always visible)
- *             present → absent  → <removed>         (part-UID pills, disappear on ignore)
+ * Two regions in the pill list:
+ *   1. Slot-type pills (always shown): all known non-character slot types.
+ *   2. Library part pills (always shown): all parts from libraryParts.
+ *   3. Orphan part pills (shown until cleared): UIDs present in slotRequirements
+ *      but absent from libraryParts — persist until toggled back to ignore.
+ *
+ * Each pill cycles: ignore (outlined) → present (green) → absent (red) → ignore.
+ * Orphan pills are removed from the data and the rendered list when they reach ignore.
  *
  * Props:
  *   @param {Object}   props.plot          – full plot object (reads slotRequirements)
  *   @param {Function} props.onChange      – called with updated plot
- *   @param {Array}    props.libraryParts  – for modal items and UID → name resolution
+ *   @param {Array}    props.libraryParts  – flat part objects from /anytale/parts ({ uid, name, ... })
  *   @param {string[]} props.slotOptions   – all known non-character slot type strings
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useMemo } from 'preact/hooks';
+import { useCallback, useMemo } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
-import { Button } from '../../custom-ui/io/button.mjs';
-import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
-import { HorizontalEdgesLayout, Label } from '../../custom-ui/themed-base.mjs';
-import { H3 } from '../../custom-ui/themed-base.mjs';
+import { Label } from '../../custom-ui/themed-base.mjs';
 
 // ── Styled components ─────────────────────────────────────────────────────────
 
@@ -51,7 +50,8 @@ ReqPill.className = 'plot-req-editor-pill';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function resolveLabel(key, libraryParts) {
-  const part = libraryParts.find(p => p.uid === key);
+  // libraryParts are editor parts: { config: { uid, name }, data: { ... } }
+  const part = libraryParts.find(p => (p.config?.uid ?? p.uid) === key);
   return part?.config?.name || part?.name || key;
 }
 
@@ -86,15 +86,14 @@ function pillLabel(key, reqValue, libraryParts) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slotOptions = [] }) {
-  const [addModalOpen, setAddModalOpen] = useState(false);
-
   const slotRequirements = plot.slotRequirements || {};
   const slotOptionSet = useMemo(() => new Set(slotOptions), [slotOptions]);
+  const libraryPartUidSet = useMemo(() => new Set(libraryParts.map(p => p.config?.uid ?? p.uid)), [libraryParts]);
 
-  // Keys present in slotRequirements that are NOT slot types → part UIDs
-  const uidKeys = useMemo(
-    () => Object.keys(slotRequirements).filter(k => !slotOptionSet.has(k)),
-    [slotRequirements, slotOptionSet]
+  // UIDs present in slotRequirements that are neither slot types nor library parts → orphans
+  const orphanUids = useMemo(
+    () => Object.keys(slotRequirements).filter(k => !slotOptionSet.has(k) && !libraryPartUidSet.has(k)),
+    [slotRequirements, slotOptionSet, libraryPartUidSet]
   );
 
   const updateRequirements = useCallback((updated) => {
@@ -111,36 +110,22 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
     updateRequirements(updated);
   }, [slotRequirements, updateRequirements]);
 
-  // Part-UID pill: present → absent → remove (pill disappears on remove)
-  const cyclePartUid = useCallback((uid) => {
+  // Part pill: ignore → present → absent → ignore.
+  // Library parts stay visible in ignore state; orphans disappear when reaching ignore.
+  const cyclePartPill = useCallback((uid) => {
     const current = slotRequirements[uid];
     const updated = { ...slotRequirements };
-    if (current === 'present') updated[uid] = 'absent';
+    if (current === undefined) updated[uid] = 'present';
+    else if (current === 'present') updated[uid] = 'absent';
     else delete updated[uid];
     updateRequirements(updated);
-  }, [slotRequirements, updateRequirements]);
-
-  const handleAddPart = useCallback((uid) => {
-    if (!uid) return;
-    updateRequirements({ ...slotRequirements, [uid]: 'present' });
-    setAddModalOpen(false);
   }, [slotRequirements, updateRequirements]);
 
   const theme = currentTheme.value;
 
   return html`
     <div>
-      <${HorizontalEdgesLayout}>
-        <${Label}>Plot Requirements</${Label}>
-        <${Button}
-          variant="small-text"
-          icon="plus"
-          color="secondary"
-          onClick=${() => setAddModalOpen(true)}
-        >
-          Add Part
-        <//>
-      </${HorizontalEdgesLayout}>
+      <${Label}>Plot Requirements</${Label}>
 
       <${PillRow} style=${{ marginTop: theme.spacing.small.gap }}>
         ${slotOptions.map(slot => {
@@ -157,33 +142,36 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
           `;
         })}
 
-        ${uidKeys.map(uid => {
+        ${libraryParts.map(part => {
+          const uid = part.config?.uid ?? part.uid;
+          if (!uid) return null;
           const reqValue = slotRequirements[uid];
           return html`
             <${ReqPill}
               key=${uid}
               style=${pillStyle(reqValue, theme)}
-              onClick=${() => cyclePartUid(uid)}
-              title="Click to cycle: present → absent → remove"
+              onClick=${() => cyclePartPill(uid)}
+              title="Click to cycle: ignore → present → absent"
+            >
+              ${pillLabel(uid, reqValue, libraryParts)}
+            </${ReqPill}>
+          `;
+        })}
+
+        ${orphanUids.map(uid => {
+          const reqValue = slotRequirements[uid];
+          return html`
+            <${ReqPill}
+              key=${uid}
+              style=${pillStyle(reqValue, theme)}
+              onClick=${() => cyclePartPill(uid)}
+              title="Click to cycle: present → absent → remove (part no longer in library)"
             >
               ${pillLabel(uid, reqValue, libraryParts)}
             </${ReqPill}>
           `;
         })}
       </${PillRow}>
-
-      <${SearchSelectModal}
-        isOpen=${addModalOpen}
-        title="Add Part Requirement"
-        items=${libraryParts.map(p => ({
-          label: p.config?.name || p.name || p.uid,
-          value: p.uid,
-          subtitle: Array.isArray(p.config?.type || p.type) ? (p.config?.type || p.type).join(', ') : '',
-        }))}
-        mode="single"
-        onSelect=${handleAddPart}
-        onClose=${() => setAddModalOpen(false)}
-      />
     </div>
   `;
 }

@@ -22,11 +22,14 @@ Rework how plot requirements and page requirements/actions are presented and sto
 
 ### Phase 3 — Plot requirements UI update
 
-- [ ] Update `plot-requirements-editor.mjs`: remove the SearchSelectModal and "Add Part" button; auto-populate the parts list from `libraryParts` as outlined pills in the ignore (no-requirement) state; pills for parts already in `plot.slotRequirements` show their current `present`/`absent` state; orphan pills — UIDs in `slotRequirements` whose uid is absent from `libraryParts` — are shown and persist until toggled back to ignore, at which point they are removed from both the rendered list and `slotRequirements`. Slot-type pills (always shown) are unchanged. **Manual test:** open a plot that has an orphan part requirement; verify the orphan pill appears; toggle it to ignore and verify it disappears.
+#### Fixes and Changes
+- [x] Switch PlotRequirementsEditor parts source from libraryParts to editor local parts prop; update uid/name access to wrapped `{ config: { uid, name } }` shape.
+
+- [x] Update `plot-requirements-editor.mjs`: remove the SearchSelectModal and "Add Part" button; auto-populate the parts list from `libraryParts` as outlined pills in the ignore (no-requirement) state; pills for parts already in `plot.slotRequirements` show their current `present`/`absent` state; orphan pills — UIDs in `slotRequirements` whose uid is absent from `libraryParts` — are shown and persist until toggled back to ignore, at which point they are removed from both the rendered list and `slotRequirements`. Slot-type pills (always shown) are unchanged. **Manual test:** open a plot that has an orphan part requirement; verify the orphan pill appears; toggle it to ignore and verify it disappears.
 
 ### Phase 4 — Docs
 
-- [ ] Review and update affected living docs: `docs/features/anytale.md`
+- [x] Review and update affected living docs: `docs/features/anytale.md`
 
 ## Implementation Details
 
