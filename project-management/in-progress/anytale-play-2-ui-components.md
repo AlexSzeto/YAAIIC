@@ -8,7 +8,10 @@ Implement the play mode session persistence module. UI components are already bu
 
 ## Tasks
 
-- [ ] **Play session module:** Define a single `localStorage` key (distinct from editor keys `anytale-state`, `anytale-plot`, `anytale-character`, `anytale-outfit`) and `{ load, save, patch }` helpers. Session object stores: character uid + snapshot, outfit uid, location part uid + attribute map, music genre, slot state, linear plot timeline, generated asset cache, current plot uid, current page index, UI phase (intro/mood/character-picker/plot/end-of-chapter/end-screen), toggles (mute, music on), navigation mode (manual/autoplay). On load, merge missing keys using random/default repair. **Manual test:** set mock values in DevTools, refresh play page, verify state persists; delete key, verify defaults are generated.
+- [x] **Play session module:** Define a single `localStorage` key (distinct from editor keys `anytale-state`, `anytale-plot`, `anytale-character`, `anytale-outfit`) and `{ load, save, patch }` helpers. Session object stores: character uid + snapshot, outfit uid, location part uid + attribute map, music genre, slot state, linear plot timeline, generated asset cache, current plot uid, current page index, UI phase (intro/mood/character-picker/plot/end-of-chapter/end-screen), toggles (mute, music on), navigation mode (manual/autoplay). On load, merge missing keys using random/default repair. **Manual test:** set mock values in DevTools, refresh play page, verify state persists; delete key, verify defaults are generated.
+
+#### Fixes and Changes
+- [x] Wire `play-session.load()` into `AnyTalePlayPage` so session state is held in component state on mount and the manual test is observable.
 
 ## Implementation Details
 
