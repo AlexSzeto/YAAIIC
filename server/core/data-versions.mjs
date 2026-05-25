@@ -13,7 +13,7 @@ import { CONFIG_PATH, DATABASE_DIR, WORKFLOWS_PATH } from './paths.mjs';
 
 export const DATA_DOMAINS = {
   'config':        { currentVersion: 0, filePath: CONFIG_PATH },
-  'anytale-data':  { currentVersion: 3, filePath: path.join(DATABASE_DIR, 'anytale-data.json') },
+  'anytale-data':  { currentVersion: 4, filePath: path.join(DATABASE_DIR, 'anytale-data.json') },
   'media-data':    { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'media-data.json') },
   'brew-data':     { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'brew-data.json') },
   'sound-sources': { currentVersion: 0, filePath: path.join(DATABASE_DIR, 'sound-sources.json') },

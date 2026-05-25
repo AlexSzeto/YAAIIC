@@ -502,11 +502,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           </span>
         </${HorizontalLayout}>
 
-        <!-- Unified slot/part pill list -->
+        <!-- Slot and part pill editors -->
         <${PlotPagePills}
           slotStatuses=${filteredSlotStatuses}
           allSlots=${slotOptions}
-          activeParts=${nonCharacterParts}
+          allLibraryParts=${parts}
           page=${currentPage}
           onChange=${(updatedPage) => updatePage(currentPageIndex, updatedPage)}
           disabled=${isCurrentPageLocked}

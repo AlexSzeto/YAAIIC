@@ -47,6 +47,7 @@ export function normalizePage(pg) {
     ...pg,
     actions:      Array.isArray(pg.actions)      ? pg.actions      : [],
     requirements: Array.isArray(pg.requirements) ? pg.requirements : [],
+    hiddenParts:  Array.isArray(pg.hiddenParts)  ? pg.hiddenParts  : [],
   };
 }
 
