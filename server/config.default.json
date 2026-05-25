@@ -24,11 +24,12 @@
       "arms": "1girl, solo, simple background, grey background, hand focus",
       "feet": "1girl, solo, simple background, grey background, feet only, facing viewer"
     },
-    "portraitParts": ["head"],
+    "portraitParts": ["head", "default expression"],
     "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"],
     "musicWorkflow": "Text to Background Track (ACE-Step 1.5 XL)",
-    "defaultMusicLength": 120
+    "defaultMusicLength": 120,
+    "introductionPlotName": "introduction"
   },
   "exports": [
     {

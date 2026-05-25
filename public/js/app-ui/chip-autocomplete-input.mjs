@@ -15,6 +15,7 @@ import { html } from 'htm/preact';
 import { useState, useCallback, useMemo } from 'preact/hooks';
 import { styled } from '../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../custom-ui/theme.mjs';
+import { VerticalLayout } from '../custom-ui/themed-base.mjs';
 import { Button } from '../custom-ui/io/button.mjs';
 import { AutocompleteInput } from './autocomplete-input.mjs';
 import { SearchSelectModal } from '../custom-ui/overlays/search-select.mjs';
@@ -22,6 +23,7 @@ import { SearchSelectModal } from '../custom-ui/overlays/search-select.mjs';
 // ============================================================================
 // Styled Components
 // ============================================================================
+
 
 const ChipRow = styled('div')`
   display: flex;
@@ -164,6 +166,7 @@ export function ChipAutocompleteInput({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return html`
+    <${VerticalLayout} gap="small">
     ${hasSearch ? html`
       <${InputSearchRow}>
         <${InputFlex}>
@@ -194,7 +197,6 @@ export function ChipAutocompleteInput({
         disabled=${disabled}
       />
     `}
-
     ${values.length > 0 && html`
       <${ChipRow}>
         ${values.map((v, i) => html`
@@ -221,5 +223,6 @@ export function ChipAutocompleteInput({
         onClose=${() => setSearchOpen(false)}
       />
     `}
+    </${VerticalLayout}>
   `;
 }

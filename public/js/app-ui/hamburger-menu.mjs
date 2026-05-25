@@ -56,8 +56,14 @@ export function HamburgerMenu() {
     {
       label: 'AnyTale',
       href:  '/anytale.html',
-      icon:  'book',
+      icon:  'play',
       active: currentPath === '/anytale.html',
+    },
+    {
+      label: 'AnyTale Editor',
+      href:  '/anytale-editor.html',
+      icon:  'edit',
+      active: currentPath === '/anytale-editor.html',
     },
     {
       label: 'Change Theme',

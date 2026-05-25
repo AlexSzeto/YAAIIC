@@ -75,7 +75,8 @@ Pages are independent HTML files (not a SPA router):
 | Main App | `/` | Generation, gallery, media management |
 | Workflow Editor | `/workflow-editor.html` | Configure ComfyUI workflows |
 | Brew Editor | `/brew-editor.html` | Create ambient sound mixes |
-| AnyTale | `/anytale.html` | Character creation and scene generation |
+| AnyTale | `/anytale.html` | Play mode for AnyTale stories |
+| AnyTale Editor | `/anytale-editor.html` | Character creation and scene generation |
 | Inpaint | `/inpaint.html` | Draw masks for image inpainting |
 | Loading | `/loading.html` | Service readiness checkpoint |
 

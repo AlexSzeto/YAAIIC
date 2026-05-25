@@ -29,6 +29,7 @@ import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs'
 import { PlotPagePills } from './plot-page-pills.mjs';
 import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
+import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 
 // ============================================================================
 // Styled Components
@@ -314,6 +315,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return out.sort((a, b) => a.localeCompare(b));
   }, [libraryParts, characterSlotTypes]);
 
+  // ── Section name suggestions from the plot library ───────────────────────
+  const progressionSectionSuggestions = useMemo(() => {
+    const seen = new Set();
+    return plotList
+      .map(p => p.section?.trim())
+      .filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
+  }, [plotList]);
+
   // ── Pre-page slot statuses (before current page's actions) ────────────────
   const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
 
@@ -336,7 +345,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     [currentPage, priorSlotStatuses, enabledParts]
   );
 
-  // ── Slot statuses visible in the pill list: exclude character slot types ───
+  // ── Slot statuses for the pill list: character slot types are excluded ────────
+  // To re-include character slots (with their requirements lock disabled), remove
+  // this filter and pass `priorSlotStatuses` directly. Also pass
+  // `allSlots={[...slotOptions, ...characterSlotTypes]}` and add a
+  // `requirementsDisabledSlots={new Set(characterSlotTypes)}` prop to PlotPagePills
+  // (see the comment in plot-page-pills.mjs for how to wire up the per-slot lock).
   const filteredSlotStatuses = useMemo(() => {
     const filtered = new Map();
     for (const [slot, status] of priorSlotStatuses.entries()) {
@@ -561,6 +575,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           </${HorizontalLayout}>
         </${HorizontalEdgesLayout}>
       </${VerticalLayout}>
+
+      <!-- Progression Sections -->
+      <${ChipAutocompleteInput}
+        label="Progression Sections"
+        placeholder="Add a section name..."
+        suggestions=${progressionSectionSuggestions}
+        values=${plot.progressionSections || []}
+        onValuesChange=${(v) => setPlot(prev => ({ ...prev, progressionSections: v }))}
+      />
 
       <!-- Row 3: Create/Save, Revert, Delete, Clear (right aligned) -->
       <${HorizontalLayout} gap="small" justifyContent="flex-end">

@@ -154,6 +154,10 @@ export function PlotPagePills({ slotStatuses, allSlots = [], activeParts = [], p
           const isLocked = requirements.includes(slot);
           const action = actions.find(a => a.slot === slot);
           const transition = action ? action.status : null;
+          // To support per-slot lock disabling (e.g. character slot types that can
+          // have transitions but never become requirements), add a
+          // `requirementsDisabledSlots` Set<string> prop and replace `disabled` below
+          // with `disabled || requirementsDisabledSlots?.has(slot.toLowerCase())`.
           const iconColor = disabled ? currentTheme.value.colors.text.secondary
             : isLocked ? currentTheme.value.colors.danger.background
             : currentTheme.value.colors.text.secondary;
