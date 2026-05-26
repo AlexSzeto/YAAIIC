@@ -55,6 +55,8 @@ export function AnyTalePlayPage() {
   const [pageVoiceUrls, setPageVoiceUrls] = useState({});
   const [pageVoiceStatuses, setPageVoiceStatuses] = useState({});
   const [isAutoplay, setIsAutoplay] = useState(false);
+  // URL currently shown in PortraitPanel — only advances to a new page's image once ALL page assets are ready
+  const [displayedImageUrl, setDisplayedImageUrl] = useState('');
 
 
   // Phase-specific draft state (intro)
@@ -198,13 +200,7 @@ export function AnyTalePlayPage() {
           setPageVoiceUrls(prev => ({ ...prev, [plotPageIdx]: url }));
           setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
           updateCacheEntry(cacheKey, { voiceUrl: url, voiceStatus: 'complete' });
-          // Auto-play if this is the current page and not muted
-          const sess = sessionRef.current;
-          const vis = visiblePageIndicesRef.current;
-          const currentPlotIdx = vis[sess.pageIndex];
-          if (currentPlotIdx === plotPageIdx && !sess.muted) {
-            globalAudioPlayer.play(url);
-          }
+          // Playback is triggered by the page-ready effect when all assets are settled
         } else {
           setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
           updateCacheEntry(cacheKey, { voiceStatus: 'error' });
@@ -732,19 +728,45 @@ export function AnyTalePlayPage() {
 
   // --- Voice playback ---
 
-  // Play voice on page navigation if available and not muted
+  // Stop voice immediately on page navigation; playback is restarted by the page-ready effect below
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
-    const plotPageIdx = visiblePageIndices[session.pageIndex];
-    if (plotPageIdx === undefined) return;
-
     globalAudioPlayer.stop();
-
-    const voiceUrl = pageVoiceUrls[plotPageIdx];
-    if (voiceUrl && !session.muted) {
-      globalAudioPlayer.play(voiceUrl);
-    }
   }, [session.pageIndex, session.phase, currentPlot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When all page assets are ready (image + dialog + voice if applicable), simultaneously:
+  // crossfade to the new background image, reveal dialog, and begin voice playback.
+  // Preload the image in the background so the crossfade is instant at this moment.
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+    const plotIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
+    if (plotIdx == null) return;
+
+    const imgUrl = pageImageUrls[plotIdx];
+    if (!imgUrl || pageStatuses[plotIdx] !== 'complete') return;
+
+    const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
+    const vs = pageVoiceStatuses[plotIdx];
+    const voiceSettled = !voiceApplicable ||
+      vs === 'complete' || vs === 'skipped' || vs === 'error' ||
+      pageDialogTexts[plotIdx] === null;
+    if (!voiceSettled) return;
+
+    // Preload image so PortraitPanel crossfade is instant
+    if (imgUrl !== displayedImageUrl) {
+      const img = new Image();
+      img.src = imgUrl;
+    }
+
+    setDisplayedImageUrl(imgUrl);
+    if (!session.muted && pageVoiceUrls[plotIdx]) {
+      globalAudioPlayer.play(pageVoiceUrls[plotIdx]);
+    }
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    session.phase, session.pageIndex, session.muted, session.character.voiceSampleUrl,
+    currentPlot, visiblePageIndices, pageImageUrls, pageStatuses,
+    pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, displayedImageUrl,
+  ]);
 
   // Handle mute toggle: cancel TTS on mute; re-queue TTS and navigate on unmute
   useEffect(() => {
@@ -774,11 +796,7 @@ export function AnyTalePlayPage() {
         updateCacheEntry(cacheKey, { voiceStatus: 'skipped', voiceTaskId: null });
       }
     } else if (session.character.voiceSampleUrl) {
-      // Play current page voice immediately if already available
-      const currentPlotIdx = visiblePageIndices[session.pageIndex];
-      const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
-      if (currentVoiceUrl) globalAudioPlayer.play(currentVoiceUrl);
-
+      // Voice playback on unmute is handled by the page-ready effect (session.muted dep).
       // Reset 'skipped' voice cache entries that were cancelled due to muting (have dialog text)
       // so that initChapter will re-queue TTS for them
       let anyVoiceReset = false;
@@ -928,6 +946,7 @@ export function AnyTalePlayPage() {
     setPageVoiceUrls({});
     setPageVoiceStatuses({});
     setIsAutoplay(false);
+    setDisplayedImageUrl('');
     setPlayData(null);
     loadPlayData()
       .then(data => setPlayData(data))
@@ -1179,7 +1198,7 @@ export function AnyTalePlayPage() {
     return html`
       <${PortraitPanel}
         mode=${currentPageReady ? 'page' : 'loading'}
-        backgroundUrl=${currentImageUrl || ''}
+        backgroundUrl=${displayedImageUrl}
         bubbleText=${currentPageReady ? currentDialogText : ''}
         muted=${session.muted}
         musicEnabled=${session.musicOn}
