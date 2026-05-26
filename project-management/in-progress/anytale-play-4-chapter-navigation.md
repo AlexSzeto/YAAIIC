@@ -33,6 +33,7 @@ Implement the core chapter playthrough experience — entering the prelude chapt
 - [x] Fix race condition where chapter page SSE completions are lost — call `progressShow` directly from `fetchJson.then()` instead of routing via `queue:task-started`
 - [x] Disable prev/next buttons when the target page has not finished generating
 - [x] Add `anytale-play-chapter` to orchestrator silent list so chapter page images never enter the media database
+- [x] Fix progressShow being called with queue item UUID instead of SSE task ID; restore queue:task-started routing with correct ID mapping and early-event buffer
 
 ## Implementation Details
 

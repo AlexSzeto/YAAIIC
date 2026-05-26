@@ -144,6 +144,34 @@ export function AnyTalePlayPage() {
   useEffect(() => { playDataRef.current = playData; }, [playData]);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
+  // Maps queue item UUID (from HTTP 202) → { plotPageIdx, cacheKey }
+  // Used to route queue:task-started events to the correct page subscriber
+  const taskToPageRef = useRef(new Map());
+  // Buffer for queue:task-started events that arrive before queuePageImage.then() fires
+  const pendingChapterEventsRef = useRef([]);
+
+  // Open a progress SSE subscription for a chapter page using the SSE task ID
+  const subscribePageProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
+    progressShow(sseTaskId, {
+      onComplete: (result) => {
+        if (result?.result?.imageUrl) {
+          const url = result.result.imageUrl;
+          setPageImageUrls(prev => ({ ...prev, [plotPageIdx]: url }));
+          setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
+          updateCacheEntry(cacheKey, { imageUrl: url, imageStatus: 'complete' });
+        } else {
+          setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+          updateCacheEntry(cacheKey, { imageStatus: 'error' });
+        }
+      },
+      onError: () => {
+        setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+        updateCacheEntry(cacheKey, { imageStatus: 'error' });
+      },
+      onCancelled: () => setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
+    });
+  }, [progressShow]);
+
   const queuePageImage = useCallback((plotPageIdx, plot, slotStatuses) => {
     const data = playDataRef.current;
     const sess = sessionRef.current;
@@ -187,34 +215,24 @@ export function AnyTalePlayPage() {
         orientation: 'portrait',
         clientId: getClientId(),
       }),
-    }).then(({ taskId }) => {
-      updateCacheEntry(cacheKey, { imageTaskId: taskId, imageStatus: 'generating' });
+    }).then(({ taskId: queueItemId }) => {
+      updateCacheEntry(cacheKey, { imageTaskId: queueItemId, imageStatus: 'generating' });
       setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
-      // Subscribe directly here — avoids race condition where queue:task-started
-      // arrives before this .then() runs (task already started by the time HTTP 202 is received).
-      progressShow(taskId, {
-        onComplete: (result) => {
-          if (result?.result?.imageUrl) {
-            const url = result.result.imageUrl;
-            setPageImageUrls(prev => ({ ...prev, [plotPageIdx]: url }));
-            setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
-            updateCacheEntry(cacheKey, { imageUrl: url, imageStatus: 'complete' });
-          } else {
-            setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
-            updateCacheEntry(cacheKey, { imageStatus: 'error' });
-          }
-        },
-        onError: () => {
-          setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
-          updateCacheEntry(cacheKey, { imageStatus: 'error' });
-        },
-        onCancelled: () => setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
-      });
+
+      // Check if queue:task-started arrived before this .then() ran
+      const earlyIdx = pendingChapterEventsRef.current.findIndex(e => e.id === queueItemId);
+      if (earlyIdx !== -1) {
+        const [earlyEvent] = pendingChapterEventsRef.current.splice(earlyIdx, 1);
+        subscribePageProgress(earlyEvent.taskId, plotPageIdx, cacheKey);
+      } else {
+        // Store mapping so queue:task-started can find the page info when it arrives
+        taskToPageRef.current.set(queueItemId, { plotPageIdx, cacheKey });
+      }
     }).catch(err => {
       console.error('[AnyTalePlayPage] Failed to queue page image:', err);
       setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
     });
-  }, [progressShow]);
+  }, [subscribePageProgress]);
 
   // --- Chapter initialization ---
 
@@ -287,18 +305,28 @@ export function AnyTalePlayPage() {
   const sessionPhaseRef = useRef(session.phase);
   useEffect(() => { sessionPhaseRef.current = session.phase; }, [session.phase]);
 
-  // Handle intro image task-started events only. Chapter page tasks subscribe directly
-  // in queuePageImage.then() to avoid the race where the SSE event arrives before
-  // the fetch response (taskId not yet known on the client side).
   useEffect(() => {
     return queueSSEManager.subscribe({
-      'queue:task-started': ({ taskId, source, clientId }) => {
+      'queue:task-started': ({ id: queueItemId, taskId: sseTaskId, source, clientId }) => {
         if (source !== 'anytale-play') return;
         if (clientId !== getClientId()) return;
-        // Only handle intro-phase tasks; chapter page tasks already have their own progressShow subscription
-        if (sessionPhaseRef.current === 'plot') return;
+
+        if (sessionPhaseRef.current === 'plot') {
+          // Chapter page task — route via taskToPageRef
+          const pageInfo = taskToPageRef.current.get(queueItemId);
+          if (pageInfo) {
+            taskToPageRef.current.delete(queueItemId);
+            subscribePageProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
+          } else {
+            // queuePageImage.then() hasn't run yet — buffer for deferred processing
+            pendingChapterEventsRef.current.push({ id: queueItemId, taskId: sseTaskId });
+          }
+          return;
+        }
+
+        // Intro-phase task
         setIsGenerating(true);
-        progressShow(taskId, {
+        progressShow(sseTaskId, {
           onComplete: (data) => {
             setIsGenerating(false);
             if (data.result?.imageUrl) {
@@ -310,7 +338,7 @@ export function AnyTalePlayPage() {
         });
       },
     });
-  }, [progressShow, updateSession]);
+  }, [progressShow, subscribePageProgress, updateSession]);
 
   // Reconnect recovery: re-fetch queue status so any in-progress tasks are reflected
   useEffect(() => {
@@ -467,6 +495,10 @@ export function AnyTalePlayPage() {
     // Cancel all in-progress/queued play mode generations on the server
     fetch('/queue/items/source/anytale-play', { method: 'DELETE' })
       .catch(err => console.error('[AnyTalePlayPage] Failed to cancel play queue items:', err));
+
+    // Clear pending routing state so stale mappings don't survive the reset
+    taskToPageRef.current.clear();
+    pendingChapterEventsRef.current = [];
 
     // Wipe the entire client-side asset cache so stale images never resurface
     clearAllCache();
