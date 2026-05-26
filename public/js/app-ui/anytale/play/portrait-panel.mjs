@@ -144,6 +144,7 @@ const CROSSFADE_MS = 600;
  * @param {number} [props.page=1]
  * @param {number} [props.loadedPercent=0]
  * @param {number} [props.currentPercent=0]
+ * @param {boolean} [props.isAutoplay=false] - When true, bottom bar shows only a Stop button
  * @param {Function} [props.onPrev]
  * @param {Function} [props.onPlay]
  * @param {Function} [props.onStop]
@@ -164,6 +165,7 @@ export function PortraitPanel({
   page = 1,
   loadedPercent = 0,
   currentPercent = 0,
+  isAutoplay = false,
   onPrev,
   onPlay,
   onStop,
@@ -249,11 +251,15 @@ export function PortraitPanel({
             <${BottomRow}>
               <${HorizontalEdgesLayout}>
                 <${HorizontalLayout}>
-                  <${PlayButton} icon="skip-previous" onClick=${onPrev} />
-                  <${PlayButton} icon="play" onClick=${onPlay} />
-                  <${PlayButton} icon="stop" onClick=${onStop} />
-                  <${PlayButton} icon="skip-next" onClick=${onNext} />
-                  <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                  ${isAutoplay
+                    ? html`<${PlayButton} icon="stop" onClick=${onStop} />`
+                    : html`
+                      <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
+                      <${PlayButton} icon="play" onClick=${onPlay} disabled=${!onPlay} />
+                      <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
+                      <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                    `
+                  }
                 </${HorizontalLayout}>
                 <${ChapterPill}>
                   <${ChapterLabel}>Chapter ${chapter}, Page ${page}</${ChapterLabel}>

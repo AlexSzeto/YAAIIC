@@ -690,6 +690,51 @@ router.post('/anytale/genres/:uid/generate-track', async (req, res) => {
 
 // ── Play mode intro image generation ─────────────────────────────────────
 
+router.post('/anytale/play/generate-page', async (req, res) => {
+  try {
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const { prompt, workflow, seed, orientation, name, clientId } = req.body;
+
+    const generationWorkflow = workflow || anytaleConfig.generationWorkflow || 'Text to Image (Illustrious Characters)';
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === generationWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Workflow '${generationWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: generationWorkflow,
+      prompt: prompt || '',
+      seed: seed ?? Math.floor(Math.random() * 4294967295),
+      orientation: orientation || 'portrait',
+      imageFormat: 'png',
+      tags: '',
+      description: '',
+      summary: '',
+      usePostPrompts: false,
+      removeBackground: false,
+      entityType: 'anytale-play-chapter',
+      requestOrigin: 'anytale-play',
+    };
+
+    const queueItem = queueService.enqueue({
+      type: 'image',
+      source: 'anytale-play',
+      clientId: clientId || null,
+      name: name || 'Play Chapter Page',
+      subLabel: 'Play Page',
+      endpointKey: 'anytale-play-chapter',
+      taskData: requestData,
+    }, { autoStart: true });
+
+    res.status(202).json({ taskId: queueItem.id });
+  } catch (error) {
+    console.error('Error starting play chapter image generation:', error);
+    res.status(500).json({ error: 'Failed to start generation', details: error.message });
+  }
+});
+
 router.post('/anytale/play/generate-intro', async (req, res) => {
   try {
     const anytaleConfig = req.app.locals.config?.anytale || {};

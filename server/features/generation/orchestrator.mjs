@@ -853,7 +853,8 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
                  endpointKey === 'anytale-render-outfit' ||
                  endpointKey === 'anytale-voice' ||
                  endpointKey === 'anytale-music' ||
-                 endpointKey === 'anytale-play-intro';
+                 endpointKey === 'anytale-play-intro' ||
+                 endpointKey === 'anytale-play-chapter';
 
   const { taskId } = initializeGenerationTask(taskData, workflowData, config);
 

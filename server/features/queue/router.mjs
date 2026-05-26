@@ -85,6 +85,13 @@ router.post('/queue/clear', (req, res) => {
   res.json({ success: true });
 });
 
+router.delete('/queue/items/source/:source', (req, res) => {
+  const { source } = req.params;
+  if (!source) return res.status(400).json({ error: 'source is required' });
+  service.clearBySource(source);
+  res.json({ success: true });
+});
+
 router.patch('/queue/reorder', (req, res) => {
   const { id, toIndex } = req.body;
   if (id === undefined || toIndex === undefined) {

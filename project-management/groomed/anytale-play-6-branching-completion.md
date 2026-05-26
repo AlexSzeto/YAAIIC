@@ -30,6 +30,10 @@ Complete the full play loop by implementing end-of-chapter branching, chapter tr
 
 ## Implementation Details
 
+### Media library exclusion (mandatory)
+
+All ComfyUI generation tasks initiated by play mode **must not** appear in the media library. Any image or audio generation added in this rollout must use an endpointKey prefixed `anytale-play-` and that key must be added to the `silent` list in `server/features/generation/orchestrator.mjs` in the same task. Do not ship a generation endpoint without verifying it is in the silent list.
+
 ### Decision page layout
 
 The decision page uses the decision point layout defined in the parent spec:

@@ -1,6 +1,7 @@
 /**
  * Play mode utility helpers — pure functions with no side effects.
  */
+import { resolveSlotStatuses, checkPageRequirements, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 
 /**
  * Pick up to n random unique items from arr (Fisher-Yates partial shuffle).
@@ -91,4 +92,120 @@ export function buildPartForPrompt(partUid, attributeValues, partsMap) {
   const config = partsMap.get(partUid);
   if (!config) return null;
   return { config, data: { enabled: true, attributeValues: attributeValues || {} } };
+}
+
+/**
+ * Build active parts array in slot-resolver format from a session's character and outfit.
+ * Returns objects of shape { config: { type, isRevealing } } suitable for resolveSlotStatuses.
+ *
+ * @param {Object} session - play session object
+ * @param {Object[]} outfitParts - outfit.parts array (may be [])
+ * @param {Map<string, object>} partsMap - uid → PartConfig
+ * @returns {Array}
+ */
+export function buildActiveParts(session, outfitParts, partsMap) {
+  const charParts = (session.character?.parts || []).map(p => {
+    const config = partsMap.get(p.partUid);
+    return config ? { config: { ...config, isRevealing: false } } : null;
+  }).filter(Boolean);
+
+  const outParts = (outfitParts || []).map(p => {
+    const config = partsMap.get(p.partUid);
+    return config ? { config: { ...config, isRevealing: p.isRevealing ?? false } } : null;
+  }).filter(Boolean);
+
+  return [...charParts, ...outParts];
+}
+
+/**
+ * Simulate page-by-page slot evolution to determine which pages are visible.
+ *
+ * For each page in the plot:
+ *   1. Check requirements against current statuses (before this page's actions).
+ *   2. If requirements pass, mark page as visible.
+ *   3. Apply this page's actions to advance statuses.
+ *   4. Record the post-action slot statuses as the snapshot for prompt assembly.
+ *
+ * @param {Array} activeParts - slot-resolver format parts (from buildActiveParts)
+ * @param {Object} plot - full plot object with pages array
+ * @param {string} slotRulesText - raw rules text from config.slotRules
+ * @returns {{ visibleIndices: number[], pageSlotStatuses: Map[] }}
+ *   visibleIndices: actual plot page indices that are visible to the player
+ *   pageSlotStatuses: Map[] indexed by actual plot page index; post-action slot statuses for prompt assembly
+ */
+export function computeVisiblePages(activeParts, plot, slotRulesText) {
+  const pages = (plot && Array.isArray(plot.pages)) ? plot.pages : [];
+  const parsedRules = parseRules(slotRulesText || '');
+
+  // Build initial statuses from active parts only (no page actions yet)
+  let currentStatuses = resolveSlotStatuses(activeParts, [], 0);
+
+  const visibleIndices = [];
+  const pageSlotStatuses = [];
+
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+
+    // Check requirements against statuses BEFORE this page's actions
+    const isVisible = checkPageRequirements(page, currentStatuses, activeParts);
+    if (isVisible) visibleIndices.push(i);
+
+    // Apply this page's actions to advance statuses for subsequent pages
+    for (const action of (page.actions || [])) {
+      const key = (action.slot || '').trim().toLowerCase();
+      if (key && currentStatuses.has(key)) {
+        currentStatuses.set(key, action.status);
+      }
+    }
+
+    // Post-action snapshot used for prompt assembly on this page
+    pageSlotStatuses.push(new Map(currentStatuses));
+  }
+
+  return { visibleIndices, pageSlotStatuses };
+}
+
+/**
+ * Build the enabledParts array for assemblePrompt using per-page slot statuses.
+ * Includes character parts, outfit parts (filtered by slot visibility), and the location part.
+ *
+ * @param {Object} session - play session
+ * @param {Object[]} outfitParts - outfit.parts array
+ * @param {Map<string, object>} partsMap - uid → PartConfig
+ * @param {Map<string, string>} slotStatuses - post-action slot statuses for this page
+ * @param {string} slotRulesText - raw rules text
+ * @returns {{ enabledParts: Array, visibility: Map<string, boolean> }}
+ */
+export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotStatuses, slotRulesText) {
+  const parsedRules = parseRules(slotRulesText || '');
+  const visibility = applyRules(slotStatuses, parsedRules);
+
+  const rawParts = [
+    ...(session.character?.parts || []).map(p =>
+      buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
+    ),
+    ...(outfitParts || []).map(p =>
+      buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
+    ),
+  ].filter(Boolean);
+
+  const enabledParts = rawParts.filter(p => {
+    const types = Array.isArray(p.config?.type) ? p.config.type : [];
+    if (types.length === 0) return true;
+    return types.some(t => visibility.get(t.trim().toLowerCase()) !== false);
+  });
+
+  // Location part: mark its slot types visible so assemblePrompt includes it
+  if (session.location?.partUid) {
+    const locConfig = partsMap.get(session.location.partUid);
+    if (locConfig) {
+      for (const t of (Array.isArray(locConfig.type) ? locConfig.type : [])) {
+        visibility.set(t.trim().toLowerCase(), true);
+      }
+    }
+    const locPart = buildPartForPrompt(session.location.partUid, session.location.attributeMap, partsMap);
+    if (locPart) enabledParts.push(locPart);
+  }
+
+  return { enabledParts, visibility };
 }

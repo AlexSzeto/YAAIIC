@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { loadPlayData, clearPlayDataCache } from './play-data.mjs';
 import {
@@ -20,8 +20,14 @@ import {
   computeSlotState,
   checkSlotRequirements,
   buildPartForPrompt,
+  buildActiveParts,
+  computeVisiblePages,
+  buildEnabledPartsForPage,
 } from './play-utils.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
+import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
+
+const CROSSFADE_MS = 600;
 
 export function AnyTalePlayPage() {
   const [, setTheme] = useState(currentTheme.value);
@@ -35,7 +41,18 @@ export function AnyTalePlayPage() {
   const [error, setError] = useState(null);
   const [introPlot, setIntroPlot] = useState(null);
 
-  // Phase-specific draft state
+  // Chapter state (recomputed after chapter entry or page reload)
+  const [currentPlot, setCurrentPlot] = useState(null);
+  const [visiblePageIndices, setVisiblePageIndices] = useState([]);
+  // pageSlotStatuses: Map[] indexed by actual plot-page index; post-action slot statuses
+  const [pageSlotStatuses, setPageSlotStatuses] = useState([]);
+  // pageImageUrls / pageStatuses keyed by actual plot-page index
+  const [pageImageUrls, setPageImageUrls] = useState({});
+  const [pageStatuses, setPageStatuses] = useState({});
+  const [isAutoplay, setIsAutoplay] = useState(false);
+
+
+  // Phase-specific draft state (intro)
   const [charDraft, setCharDraft] = useState([]);
   const [outfitDraft, setOutfitDraft] = useState([]);
   const [genreDraft, setGenreDraft] = useState([]);
@@ -56,13 +73,12 @@ export function AnyTalePlayPage() {
     });
   }, []);
 
-  // --- Image generation (Tasks 3, 6, 7, 8) ---
+  // --- Intro image generation ---
 
   const generateIntroImage = useCallback((sess, introPl, data) => {
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
 
-    // Build activeParts for slot visibility resolution (char parts always covering)
     const charActiveParts = (sess.character.parts || []).map(p => {
       const config = partsMap.get(p.partUid);
       return config ? { config: { type: config.type || [], isRevealing: false } } : null;
@@ -73,12 +89,10 @@ export function AnyTalePlayPage() {
       return config ? { config: { type: config.type || [], isRevealing: p.isRevealing ?? false } } : null;
     }).filter(Boolean);
 
-    // Pass the intro plot's pages so page 1 (index 0) actions affect slot visibility.
     const slotStatuses = resolveSlotStatuses([...charActiveParts, ...outfitActiveParts], introPl.pages || [], 0);
     const parsedRules = parseRules(data.config.slotRules || '');
     const visibility = applyRules(slotStatuses, parsedRules);
 
-    // Build prompt parts, filtering by slot visibility
     const rawParts = [
       ...(sess.character.parts || []).map(p =>
         buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
@@ -95,7 +109,6 @@ export function AnyTalePlayPage() {
     });
 
     if (sess.location.partUid) {
-      // Location is not a body slot — mark its types visible so assemblePrompt's strict === true check passes
       const locPartConfig = partsMap.get(sess.location.partUid);
       if (locPartConfig) {
         const locTypes = Array.isArray(locPartConfig.type) ? locPartConfig.type : [];
@@ -120,15 +133,170 @@ export function AnyTalePlayPage() {
         orientation: 'portrait',
         clientId: getClientId(),
       }),
-    }).catch(err => console.error('[AnyTalePlayPage] Failed to submit generation:', err));
+    }).catch(err => console.error('[AnyTalePlayPage] Failed to submit intro generation:', err));
   }, []);
 
-  // SSE subscription: pick up task-started for anytale-play tasks (Task 3)
+  // --- Chapter page image queuing ---
+
+  // Stable ref to latest values needed inside callbacks / effects
+  const playDataRef = useRef(playData);
+  const sessionRef = useRef(session);
+  useEffect(() => { playDataRef.current = playData; }, [playData]);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+
+  const queuePageImage = useCallback((plotPageIdx, plot, slotStatuses) => {
+    const data = playDataRef.current;
+    const sess = sessionRef.current;
+    if (!data || !sess) return;
+
+    const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
+    const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
+
+    const { enabledParts, visibility } = buildEnabledPartsForPage(
+      sess,
+      outfit ? outfit.parts : [],
+      partsMap,
+      slotStatuses,
+      data.config.slotRules || ''
+    );
+
+    const page = plot.pages[plotPageIdx];
+    const prompt = assemblePrompt(enabledParts, page, visibility);
+    const workflow = data.config.generationWorkflow || 'Text to Image (Illustrious Characters)';
+
+    const cacheKey = buildCacheKey({
+      plotUid: plot.uid,
+      pageIndex: plotPageIdx,
+      characterUid: sess.character.uid,
+      outfitUid: sess.outfitUid,
+      locationPartUid: sess.location.partUid,
+      locationAttributeMap: sess.location.attributeMap,
+      slotStatuses,
+    });
+
+    setCacheEntry(cacheKey, { imageUrl: null, imageTaskId: null, imageStatus: 'pending' });
+
+    fetchJson('/anytale/play/generate-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow,
+        name: `${plot.name} - Page ${plotPageIdx + 1}`,
+        prompt,
+        seed: Math.floor(Math.random() * 2 ** 32),
+        orientation: 'portrait',
+        clientId: getClientId(),
+      }),
+    }).then(({ taskId }) => {
+      updateCacheEntry(cacheKey, { imageTaskId: taskId, imageStatus: 'generating' });
+      setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
+      // Subscribe directly here — avoids race condition where queue:task-started
+      // arrives before this .then() runs (task already started by the time HTTP 202 is received).
+      progressShow(taskId, {
+        onComplete: (result) => {
+          if (result?.result?.imageUrl) {
+            const url = result.result.imageUrl;
+            setPageImageUrls(prev => ({ ...prev, [plotPageIdx]: url }));
+            setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
+            updateCacheEntry(cacheKey, { imageUrl: url, imageStatus: 'complete' });
+          } else {
+            setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+            updateCacheEntry(cacheKey, { imageStatus: 'error' });
+          }
+        },
+        onError: () => {
+          setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+          updateCacheEntry(cacheKey, { imageStatus: 'error' });
+        },
+        onCancelled: () => setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
+      });
+    }).catch(err => {
+      console.error('[AnyTalePlayPage] Failed to queue page image:', err);
+      setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+    });
+  }, [progressShow]);
+
+  // --- Chapter initialization ---
+
+  const initChapter = useCallback((plot, sess, data) => {
+    const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
+    const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
+    const activeParts = buildActiveParts(sess, outfit ? outfit.parts : [], partsMap);
+
+    const { visibleIndices, pageSlotStatuses: slotStatuses } = computeVisiblePages(
+      activeParts,
+      plot,
+      data.config.slotRules || ''
+    );
+
+    setCurrentPlot(plot);
+    setVisiblePageIndices(visibleIndices);
+    setPageSlotStatuses(slotStatuses);
+
+    const newImageUrls = {};
+    const newStatuses = {};
+    const toQueue = [];
+
+    for (const plotPageIdx of visibleIndices) {
+      const cacheKey = buildCacheKey({
+        plotUid: plot.uid,
+        pageIndex: plotPageIdx,
+        characterUid: sess.character.uid,
+        outfitUid: sess.outfitUid,
+        locationPartUid: sess.location.partUid,
+        locationAttributeMap: sess.location.attributeMap,
+        slotStatuses: slotStatuses[plotPageIdx],
+      });
+      const entry = getCacheEntry(cacheKey);
+      if (entry?.imageStatus === 'complete' && entry.imageUrl) {
+        newImageUrls[plotPageIdx] = entry.imageUrl;
+        newStatuses[plotPageIdx] = 'complete';
+      } else {
+        newStatuses[plotPageIdx] = 'pending';
+        toQueue.push({ plotPageIdx, slotStatuses: slotStatuses[plotPageIdx] });
+      }
+    }
+
+    setPageImageUrls(newImageUrls);
+    setPageStatuses(newStatuses);
+
+    // Queue page 1 first, then the rest in order
+    for (const { plotPageIdx, slotStatuses: ss } of toQueue) {
+      queuePageImage(plotPageIdx, plot, ss);
+    }
+  }, [queuePageImage]);
+
+  // Load chapter when phase is 'plot' and plot not yet loaded (or changed)
+  useEffect(() => {
+    if (session.phase !== 'plot') return;
+    if (!session.currentPlotUid) return;
+    if (!playData) return;
+    if (currentPlot?.uid === session.currentPlotUid) return;
+
+    fetchJson(`/anytale/plot/${session.currentPlotUid}`)
+      .then(plot => initChapter(plot, session, playData))
+      .catch(err => {
+        console.error('[AnyTalePlayPage] Failed to load chapter:', err);
+        updateSession({ phase: 'intro-main' });
+      });
+  }, [session.phase, session.currentPlotUid, playData, currentPlot?.uid, initChapter, updateSession]);
+
+  // --- SSE subscriptions ---
+
+  // Stable ref so the SSE handler can read current phase without re-subscribing
+  const sessionPhaseRef = useRef(session.phase);
+  useEffect(() => { sessionPhaseRef.current = session.phase; }, [session.phase]);
+
+  // Handle intro image task-started events only. Chapter page tasks subscribe directly
+  // in queuePageImage.then() to avoid the race where the SSE event arrives before
+  // the fetch response (taskId not yet known on the client side).
   useEffect(() => {
     return queueSSEManager.subscribe({
       'queue:task-started': ({ taskId, source, clientId }) => {
         if (source !== 'anytale-play') return;
         if (clientId !== getClientId()) return;
+        // Only handle intro-phase tasks; chapter page tasks already have their own progressShow subscription
+        if (sessionPhaseRef.current === 'plot') return;
         setIsGenerating(true);
         progressShow(taskId, {
           onComplete: (data) => {
@@ -144,7 +312,16 @@ export function AnyTalePlayPage() {
     });
   }, [progressShow, updateSession]);
 
-  // --- Bootstrap / restore on data load (Tasks 1, 2, 10) ---
+  // Reconnect recovery: re-fetch queue status so any in-progress tasks are reflected
+  useEffect(() => {
+    return queueSSEManager.onConnect(() => {
+      fetch('/queue/status')
+        .then(r => r.json())
+        .catch(err => console.error('[AnyTalePlayPage] Reconnect status fetch failed:', err));
+    });
+  }, []);
+
+  // --- Bootstrap / restore on data load ---
 
   useEffect(() => {
     loadPlayData()
@@ -158,7 +335,6 @@ export function AnyTalePlayPage() {
   useEffect(() => {
     if (!playData) return;
 
-    // Task 2: locate introduction plot by name from config
     const introPlotName = (playData.config.introductionPlotName || 'introduction').toLowerCase();
     const foundIntroPl = (playData.plots || []).find(
       p => p.name.toLowerCase() === introPlotName
@@ -171,20 +347,20 @@ export function AnyTalePlayPage() {
       return;
     }
 
-    // Fetch the full plot object — the list endpoint returns summaries only (no pages/actions).
     fetchJson(`/anytale/plot/${foundIntroPl.uid}`)
       .then(fullIntroPl => {
         setIntroPlot(fullIntroPl);
 
-        // Task 10: restore existing session
         const current = loadSession();
         if (current.character.uid) {
           setSession(current);
-          if (!current.introImageUrl) generateIntroImage(current, fullIntroPl, playData);
+          if (current.phase !== 'plot' && !current.introImageUrl) {
+            generateIntroImage(current, fullIntroPl, playData);
+          }
           return;
         }
 
-        // Task 1: cold start bootstrap
+        // Cold start bootstrap
         const partsMap = new Map((playData.parts || []).map(p => [p.uid, p]));
 
         const eligibleChars = (playData.characters || []).filter(c => c.parts && c.parts.length > 0);
@@ -264,15 +440,49 @@ export function AnyTalePlayPage() {
       });
   }, [playData, generateIntroImage, applySession]);
 
+  // --- Autoplay ---
+
+  useEffect(() => {
+    if (!isAutoplay || !currentPlot) return;
+
+    const nextVisIdx = session.pageIndex + 1;
+    if (nextVisIdx >= visiblePageIndices.length) {
+      setIsAutoplay(false);
+      return;
+    }
+
+    const nextPlotPageIdx = visiblePageIndices[nextVisIdx];
+    if (pageStatuses[nextPlotPageIdx] !== 'complete') return;
+
+    const timer = setTimeout(() => {
+      updateSession({ pageIndex: nextVisIdx });
+    }, CROSSFADE_MS + 100);
+
+    return () => clearTimeout(timer);
+  }, [isAutoplay, session.pageIndex, pageStatuses, visiblePageIndices, currentPlot, updateSession]);
+
   // --- Reset ---
 
   const handleReset = useCallback(() => {
+    // Cancel all in-progress/queued play mode generations on the server
+    fetch('/queue/items/source/anytale-play', { method: 'DELETE' })
+      .catch(err => console.error('[AnyTalePlayPage] Failed to cancel play queue items:', err));
+
+    // Wipe the entire client-side asset cache so stale images never resurface
+    clearAllCache();
+
     clearSession();
     clearPlayDataCache();
     setIntroPlot(null);
     setError(null);
     setIsGenerating(false);
-    setPlayData(null); // re-triggers load → bootstrap
+    setCurrentPlot(null);
+    setVisiblePageIndices([]);
+    setPageSlotStatuses([]);
+    setPageImageUrls({});
+    setPageStatuses({});
+    setIsAutoplay(false);
+    setPlayData(null);
     loadPlayData()
       .then(data => setPlayData(data))
       .catch(err => {
@@ -281,9 +491,8 @@ export function AnyTalePlayPage() {
       });
   }, []);
 
-  // --- Phase transitions (Tasks 4–9) ---
+  // --- Intro phase transitions ---
 
-  // Task 6: character change
   const enterCharacterPick = useCallback(() => {
     if (!playData) return;
     const others = (playData.characters || []).filter(
@@ -332,13 +541,14 @@ export function AnyTalePlayPage() {
     });
   }, [playData, introPlot, generateIntroImage]);
 
-  // Task 4: intro main → mood
   const enterMood = useCallback(() => updateSession({ phase: 'intro-mood' }), [updateSession]);
 
-  // Task 5 (begin tale): store intent, Rollout 4 will handle chapter entry
-  const beginTale = useCallback(() => updateSession({ phase: 'plot' }), [updateSession]);
+  // "Begin the tale" — enter the chapter
+  const beginTale = useCallback(() => {
+    if (!playData || !session.preludePlotUid) return;
+    updateSession({ phase: 'plot', currentPlotUid: session.preludePlotUid, pageIndex: 0 });
+  }, [playData, session.preludePlotUid, updateSession]);
 
-  // Task 7: outfit change — draw from full library
   const enterOutfitPick = useCallback(() => {
     if (!playData) return;
     const eligible = (playData.outfits || []).filter(o => o.uid !== session.outfitUid);
@@ -361,7 +571,6 @@ export function AnyTalePlayPage() {
     });
   }, [playData, introPlot, session.character.parts, generateIntroImage]);
 
-  // Task 8: location change — attributes auto-randomize on part selection
   const enterLocationPick = useCallback(() => {
     if (!playData) return;
     const locationParts = (playData.parts || []).filter(
@@ -389,7 +598,6 @@ export function AnyTalePlayPage() {
     });
   }, [introPlot, playData, generateIntroImage]);
 
-  // Task 9: music genre selection
   const enterMusicPick = useCallback(() => {
     const genres = playData?.genres || [];
     setGenreDraft(randomPickN(genres, 3));
@@ -406,6 +614,30 @@ export function AnyTalePlayPage() {
     }
     updateSession({ music: { genre: genre.name }, phase: 'intro-mood' });
   }, [updateSession]);
+
+  // --- Chapter navigation ---
+
+  const goToPrev = useCallback(() => {
+    setIsAutoplay(false);
+    setSession(prev => {
+      if (prev.pageIndex <= 0) return prev;
+      const next = { ...prev, pageIndex: prev.pageIndex - 1 };
+      saveSession(next);
+      return next;
+    });
+  }, []);
+
+  const goToNext = useCallback(() => {
+    setSession(prev => {
+      if (prev.pageIndex >= visiblePageIndices.length - 1) return prev;
+      const next = { ...prev, pageIndex: prev.pageIndex + 1 };
+      saveSession(next);
+      return next;
+    });
+  }, [visiblePageIndices]);
+
+  const startAutoplay = useCallback(() => setIsAutoplay(true), []);
+  const stopAutoplay = useCallback(() => setIsAutoplay(false), []);
 
   // --- Render ---
 
@@ -424,13 +656,62 @@ export function AnyTalePlayPage() {
   }
 
   const { phase } = session;
+
+  // ── Chapter (plot) phase ─────────────────────────────────────────────────
+  if (phase === 'plot') {
+    if (!currentPlot || visiblePageIndices.length === 0) {
+      return html`<${PortraitPanel} mode="loading" />`;
+    }
+
+    const currentPlotPageIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
+    const currentImageUrl = pageImageUrls[currentPlotPageIdx];
+    const currentPageReady = pageStatuses[currentPlotPageIdx] === 'complete';
+
+    const loadedCount = visiblePageIndices.filter(i => pageStatuses[i] === 'complete').length;
+    const loadedPercent = visiblePageIndices.length > 0
+      ? (loadedCount / visiblePageIndices.length) * 100 : 0;
+    const currentPercent = visiblePageIndices.length > 0
+      ? ((session.pageIndex + 1) / visiblePageIndices.length) * 100 : 0;
+
+    // Chapter number = position of this plot in the full plots list (1-indexed)
+    const chapterNum = (playData.plots || []).findIndex(p => p.uid === currentPlot.uid) + 1 || 1;
+
+    const prevPlotPageIdx = session.pageIndex > 0 ? visiblePageIndices[session.pageIndex - 1] : null;
+    const nextPlotPageIdx = session.pageIndex < visiblePageIndices.length - 1
+      ? visiblePageIndices[session.pageIndex + 1] : null;
+    const canGoPrev = prevPlotPageIdx !== null && pageStatuses[prevPlotPageIdx] === 'complete';
+    const canGoNext = nextPlotPageIdx !== null && pageStatuses[nextPlotPageIdx] === 'complete';
+
+    return html`
+      <${PortraitPanel}
+        mode=${currentPageReady ? 'page' : 'loading'}
+        backgroundUrl=${currentImageUrl || ''}
+        bubbleText=""
+        muted=${session.muted}
+        musicEnabled=${session.musicOn}
+        chapter=${chapterNum}
+        page=${session.pageIndex + 1}
+        loadedPercent=${loadedPercent}
+        currentPercent=${currentPercent}
+        isAutoplay=${isAutoplay}
+        onPrev=${canGoPrev ? goToPrev : undefined}
+        onPlay=${currentPageReady ? startAutoplay : undefined}
+        onStop=${stopAutoplay}
+        onNext=${canGoNext ? goToNext : undefined}
+        onReset=${handleReset}
+        onToggleMute=${() => updateSession({ muted: !session.muted })}
+        onToggleMusic=${() => updateSession({ musicOn: !session.musicOn })}
+      />
+    `;
+  }
+
+  // ── Intro phases ─────────────────────────────────────────────────────────
   const panelMode = isGenerating || !session.introImageUrl ? 'loading' : 'decision';
 
   let decisions = [];
   let bubbleText = '';
   let onBack = null;
 
-  // Task 4: introduction main page
   if (phase === 'intro-main' && panelMode === 'decision') {
     bubbleText = session.character.name ? `Hello, I'm ${session.character.name}.` : '';
     decisions = [
@@ -439,7 +720,6 @@ export function AnyTalePlayPage() {
       { text: 'Begin the tale', onClick: beginTale },
     ];
 
-  // Task 5: introduction mood page
   } else if (phase === 'intro-mood') {
     bubbleText = 'What would you like to change?';
     onBack = () => updateSession({ phase: 'intro-main' });
@@ -449,7 +729,6 @@ export function AnyTalePlayPage() {
       { text: "Let's listen to something different.", onClick: enterMusicPick },
     ];
 
-  // Task 6: character change flow
   } else if (phase === 'character-pick') {
     bubbleText = 'Who would you like to meet?';
     onBack = () => updateSession({ phase: 'intro-main' });
@@ -463,7 +742,6 @@ export function AnyTalePlayPage() {
       { text: 'Maybe someone else?', onClick: rerollChars },
     ];
 
-  // Task 7: outfit change flow
   } else if (phase === 'outfit-pick') {
     bubbleText = 'Pick a different outfit.';
     onBack = () => updateSession({ phase: 'intro-mood' });
@@ -476,7 +754,6 @@ export function AnyTalePlayPage() {
       { text: 'Nevermind', onClick: () => updateSession({ phase: 'intro-mood' }) },
     ];
 
-  // Task 8: location change flow (auto-randomizes attributes on pick)
   } else if (phase === 'location-pick') {
     bubbleText = 'Where would you like to go?';
     onBack = () => updateSession({ phase: 'intro-mood' });
@@ -485,7 +762,6 @@ export function AnyTalePlayPage() {
       onClick: () => pickLocation(loc),
     }));
 
-  // Task 9: music genre selection
   } else if (phase === 'music-pick') {
     bubbleText = 'What kind of music sets the mood?';
     onBack = () => updateSession({ phase: 'intro-mood' });
@@ -493,11 +769,6 @@ export function AnyTalePlayPage() {
       text: genre.name,
       onClick: () => pickGenre(genre),
     }));
-
-  // Rollout 4 placeholder
-  } else if (phase === 'plot') {
-    bubbleText = 'The tale begins… (coming in the next update)';
-    onBack = () => updateSession({ phase: 'intro-main' });
   }
 
   return html`

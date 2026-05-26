@@ -33,6 +33,8 @@ const STORAGE_KEY = 'anytale-play-session';
  * @property {{ genre: string }} music
  * @property {{ [slotType: string]: 'covered'|'revealing'|'removed' }} slotState
  * @property {string} preludePlotUid
+ * @property {string} currentPlotUid - UID of the chapter plot currently being played
+ * @property {number} pageIndex - 0-based index into the visible pages array for the current chapter
  * @property {string} phase - 'intro-main'|'intro-mood'|'character-pick'|'outfit-pick'|'location-pick'|'music-pick'|'plot'
  * @property {string|null} introImageUrl
  * @property {boolean} muted
@@ -46,6 +48,8 @@ const DEFAULT_SESSION = {
   music: { genre: '' },
   slotState: {},
   preludePlotUid: '',
+  currentPlotUid: '',
+  pageIndex: 0,
   phase: 'intro-main',
   introImageUrl: null,
   muted: false,

@@ -12,7 +12,7 @@ Add the dialog (LLM), voice (TTS), and background music systems to play mode. Af
 
 - [ ] **Dialog generation flow:** When entering a chapter, queue all page dialogs concurrently (separate from ComfyUI queue since Ollama is independent). Skip dialog for pages where `dialogPrompt` is empty/blank, character personality is missing, or background location attribute is missing. Cache successful dialog text in the asset cache by stable signature. On page display, show cached dialog in the speech bubble. **Manual test:** step through pages, verify speech bubble shows dialog for qualifying pages and is empty for others; back navigation reuses cached dialog.
 
-- [ ] **Dialog TTS endpoint (server):** Add a play-mode server endpoint that accepts character uid (or voice sample reference) plus dialog text. Preprocesses inputs for a configured TTS workflow (Chatterbox/Qwen-style), runs ComfyUI generation, returns speech audio URL + metadata. This is NOT the existing personality-to-voice-sample endpoint (`/anytale/characters/:uid/generate-voice`). **Manual test:** POST with character voice sample + dialog text, verify returned audio speaks the provided text.
+- [ ] **Dialog TTS endpoint (server):** Add a play-mode server endpoint that accepts character uid (or voice sample reference) plus dialog text. Preprocesses inputs for a configured TTS workflow (Chatterbox/Qwen-style), runs ComfyUI generation, returns speech audio URL + metadata. This is NOT the existing personality-to-voice-sample endpoint (`/anytale/characters/:uid/generate-voice`). Use endpointKey `anytale-play-speech` and add it to the `silent` list in `server/features/generation/orchestrator.mjs` — **generated audio must NOT enter the media library**. **Manual test:** POST with character voice sample + dialog text, verify returned audio speaks the provided text.
 
 - [ ] **Audio channel wiring:** Wire `globalBgmPlayer` as the music channel and `globalAudioPlayer` as the voice/dialog channel. On session start, load random tracks from the stored genre into `globalBgmPlayer` and begin playback. On page entry with a generated voice URL, play it via `globalAudioPlayer`. Both players support independent mute/stop. On reset/leave, stop both players and clear the BGM playlist. **Manual test:** play music and voice simultaneously; mute voice — music continues; stop music — voice continues; reset stops both.
 
@@ -31,6 +31,19 @@ Add the dialog (LLM), voice (TTS), and background music systems to play mode. Af
 - [ ] **Optional streamed dialog UI:** If `anytale.dialog.stream` is enabled in config, parse the `/api/chat` SSE response incrementally, append partial assistant content to the speech bubble, finalize cached dialog only on completion. Keep non-streaming as the default path. **Manual test:** enable streaming in config, verify partial text appears progressively in the speech bubble.
 
 ## Implementation Details
+
+### Media library exclusion (mandatory)
+
+All ComfyUI generation tasks initiated by play mode **must not** appear in the media library. This applies to every generation endpoint added in this and all future play mode rollouts. Enforce via the `silent` flag in `server/features/generation/orchestrator.mjs`:
+
+```js
+const silent = ...
+  || endpointKey === 'anytale-play-intro'
+  || endpointKey === 'anytale-play-chapter'
+  || endpointKey === 'anytale-play-speech';  // Rollout 5 — add any new play endpointKey here
+```
+
+When adding any new play mode generation endpoint, the endpointKey **must** be added to this list in the same task. Do not ship a generation endpoint without verifying it is in the silent list.
 
 ### Dialog system architecture
 

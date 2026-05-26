@@ -158,6 +158,29 @@ export function clear() {
   }
 }
 
+/**
+ * Remove all queued items from a specific source and cancel the running item
+ * if it also belongs to that source. Items from other sources are unaffected.
+ *
+ * @param {string} source - e.g. 'anytale-play'
+ */
+export function clearBySource(source) {
+  // Drop all not-yet-running items from this source immediately
+  items = items.filter(i => i.source !== source || i.status === 'running');
+
+  // If the running item belongs to this source, cancel it.
+  // All queued items are already gone so 'pausing' is the correct landing state.
+  const runningItem = items.find(i => i.status === 'running');
+  if (runningItem?.source === source) {
+    deletingRunningItemId = runningItem.id;
+    state = 'pausing';
+    _cancelRunningTask();
+  }
+
+  saveQueue(items);
+  emitUpdated();
+}
+
 export function start() {
   if (state === 'running' || state === 'cancelling' || state === 'skipping' || state === 'pausing') {
     return false; // 409

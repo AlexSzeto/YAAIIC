@@ -16,7 +16,7 @@ vi.mock('../generation/comfy-client.mjs', () => ({
   interruptGeneration: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { initialize, setEmitQueueEvent, enqueue } from './service.mjs';
+import { initialize, setEmitQueueEvent, enqueue, clearBySource, getStatus } from './service.mjs';
 import { setTaskCompletedCallback } from '../../core/sse.mjs';
 
 function flushAsync() {
@@ -72,6 +72,24 @@ describe('queue service — _handleTaskCompleted', () => {
 
     // The first queue:updated must still contain item2
     expect(first.payload.items.find(i => i.id === item2.id)).toBeDefined();
+  });
+
+  test('clearBySource removes queued items from the given source only', async () => {
+    enqueue({ source: 'anytale-play', endpointKey: 'play', type: 'image', name: 'p1' });
+    enqueue({ source: 'anytale-play', endpointKey: 'play', type: 'image', name: 'p2' });
+    const other = enqueue({ source: 'other', endpointKey: 'other', type: 'image', name: 'o1' });
+
+    clearBySource('anytale-play');
+
+    const { items } = getStatus();
+    expect(items.every(i => i.source !== 'anytale-play')).toBe(true);
+    expect(items.find(i => i.id === other.id)).toBeDefined();
+  });
+
+  test('clearBySource is a no-op when no items match the source', () => {
+    enqueue({ source: 'other', endpointKey: 'other', type: 'image', name: 'o1' });
+    expect(() => clearBySource('anytale-play')).not.toThrow();
+    expect(getStatus().items).toHaveLength(1);
   });
 
   test('queue:updated intermediate state comes before queue:task-started for the next task', async () => {
