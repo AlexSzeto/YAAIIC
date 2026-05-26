@@ -44,6 +44,11 @@ export function initialize({ config, uploadFileToComfyUI, executeQueuedTask }) {
   _uploadFileToComfyUI = uploadFileToComfyUI;
   _executeQueuedTask = executeQueuedTask;
 
+  // Reset runtime state (important for test isolation and clean server restart)
+  state = 'stopped';
+  runningTaskId = null;
+  deletingRunningItemId = null;
+
   // Load persisted queue
   items = loadQueue();
 
@@ -113,6 +118,14 @@ export function deleteItem(id) {
   const item = items[idx];
 
   if (item.status === 'running') {
+    if (state === 'cancelling' || state === 'skipping' || state === 'pausing') {
+      // Already waiting for cancellation — force-abandon so the item is gone immediately
+      _forceAbandonRunningTask();
+      saveQueue(items);
+      emitUpdated();
+      _runNext();
+      return true;
+    }
     // Determine if there are more items after this one
     const hasNext = items.some((i, j) => j > idx && i.status === 'queued');
     deletingRunningItemId = id;
@@ -141,7 +154,7 @@ export function reorder({ id, toIndex }) {
 }
 
 export function clear() {
-  if (state === 'running' || state === 'cancelling' || state === 'skipping' || state === 'pausing') {
+  if (state === 'running') {
     state = 'cancelling';
     // Immediately drop queued items so the UI reflects the clear right away.
     // The running item will be removed in _handleTaskCancelled once the cancel completes.
@@ -149,6 +162,14 @@ export function clear() {
     saveQueue(items);
     emitUpdated();
     _cancelRunningTask();
+  } else if (state === 'cancelling' || state === 'skipping' || state === 'pausing') {
+    // Already waiting for cancellation — force-abandon so the queue is empty immediately
+    items = items.filter(i => i.status !== 'queued');
+    _forceAbandonRunningTask();
+    state = 'stopped';
+    saveQueue(items);
+    emit('queue:stopped', { state: 'stopped', reason: 'user-paused' });
+    emitUpdated();
   } else {
     items = [];
     saveQueue(items);
@@ -172,6 +193,14 @@ export function clearBySource(source) {
   // All queued items are already gone so 'pausing' is the correct landing state.
   const runningItem = items.find(i => i.status === 'running');
   if (runningItem?.source === source) {
+    if (state === 'cancelling' || state === 'skipping' || state === 'pausing') {
+      // Already waiting for cancellation — force-abandon immediately
+      _forceAbandonRunningTask();
+      saveQueue(items);
+      emitUpdated();
+      _runNext();
+      return;
+    }
     deletingRunningItemId = runningItem.id;
     state = 'pausing';
     _cancelRunningTask();
@@ -224,6 +253,26 @@ function _cancelRunningTask() {
   if (!runningTaskId) return;
   cancelTask(runningTaskId);
   interruptGeneration().catch(err => console.error('[queue] Failed to interrupt ComfyUI:', err));
+}
+
+/**
+ * Immediately removes the running item and resets all task tracking without
+ * waiting for ComfyUI or Ollama to acknowledge the cancellation. Used when a
+ * second cancel arrives while already in a transition state — sending another
+ * interrupt would cause ComfyUI to emit "Global interrupt (no prompt_id
+ * specified)" because the prompt is no longer tracked.
+ *
+ * Callers must update `state`, persist the queue, and emit events afterward.
+ */
+function _forceAbandonRunningTask() {
+  const runningItem = items.find(i => i.status === 'running');
+  if (runningItem) {
+    items = items.filter(i => i.id !== runningItem.id);
+    emit('queue:task-cancelled', { id: runningItem.id });
+    console.log(`[queue] Force-abandoned item ${runningItem.id} (taskId ${runningTaskId})`);
+  }
+  runningTaskId = null;
+  deletingRunningItemId = null;
 }
 
 // ---------------------------------------------------------------------------

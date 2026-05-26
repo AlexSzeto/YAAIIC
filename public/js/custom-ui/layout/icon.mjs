@@ -58,6 +58,8 @@ const ICON_MAP = {
   'image-alt': 'image',
   'video': 'videocam',
   'music': 'music_note',
+  'ear': 'music_note',
+  'ear-slash': 'music_off',
   'volume': 'volume_up',
   'volume-mute': 'volume_off',
   'microphone': 'mic',

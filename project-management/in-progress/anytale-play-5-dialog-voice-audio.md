@@ -115,3 +115,7 @@ Voice generation goes through the ComfyUI queue (same as images), so it competes
 - [x] **Immediate voice playback on unmute:** When `session.muted` becomes false and the current page already has a voice URL, play it immediately via `globalAudioPlayer`.
 
 - [x] **Stop intro audio on character change:** When the user initiates a character pick from the introduction screen, call `globalAudioPlayer.stop()` before transitioning, so the outgoing character's intro transcript stops immediately.
+
+- [x] **Hide dialog text during loading:** Do not pass `currentDialogText` as `bubbleText` when the page is still loading (`currentPageReady` is false). Loading mode should always receive an empty `bubbleText` so it shows "Loading", not the pre-fetched dialog.
+
+- [] BGM not playing during introduction, and if forced to start by using the BGM button, continues playing the same track when the genre is being changed.

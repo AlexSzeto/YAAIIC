@@ -247,7 +247,7 @@ export function AnyTalePlayPage() {
       slotStatuses,
     });
 
-    setCacheEntry(cacheKey, { imageUrl: null, imageTaskId: null, imageStatus: 'pending' });
+    updateCacheEntry(cacheKey, { imageUrl: null, imageTaskId: null, imageStatus: 'pending' });
 
     fetchJson('/anytale/play/generate-page', {
       method: 'POST',
@@ -320,6 +320,8 @@ export function AnyTalePlayPage() {
     } catch (err) {
       console.error('[Dialog] catch for page', plotPageIdx, err.name, err.message, err);
       updateCacheEntry(cacheKey, { dialogStatus: 'error' });
+      // Treat error as no-dialog so isVoiceSettled returns true and the page can still show
+      setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
       return null;
     }
   }, []);
@@ -437,10 +439,14 @@ export function AnyTalePlayPage() {
     const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
 
     ;(async () => {
+      console.log('[Queue] initChapter start — visibleIndices:', visibleIndices, 'toQueueDialog:', toQueueDialog.map(x => x.plotPageIdx), 'toQueueImage:', toQueueImage.map(x => x.plotPageIdx));
+
       // Step 1: all dialogs sequentially so each call includes prior-turn context
       for (const { plotPageIdx, cacheKey } of toQueueDialog) {
+        console.log('[Queue] Step 1 — queuing dialog for page', plotPageIdx);
         const history = [...dialogHistoryRef.current];
         const text = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
+        console.log('[Queue] Step 1 — dialog complete for page', plotPageIdx, '→', text ? `"${text.slice(0, 40)}…"` : 'null');
         const prompt = (plot.pages[plotPageIdx].dialogPrompt || '').trim();
         if (text && prompt) {
           dialogHistoryRef.current = [
@@ -453,6 +459,7 @@ export function AnyTalePlayPage() {
 
       // Step 2+: for each page in visible order — image then TTS (if applicable)
       const voiceOn = !sess.muted && !!sess.character.voiceSampleUrl;
+      console.log('[Queue] Step 2 start — voiceOn:', voiceOn);
       for (const plotPageIdx of visibleIndices) {
         const cacheKey = buildCacheKey({
           plotUid: plot.uid,
@@ -465,7 +472,10 @@ export function AnyTalePlayPage() {
         });
 
         if (needsImage.has(plotPageIdx)) {
+          console.log('[Queue] Step 2 — queuing IMAGE for page', plotPageIdx);
           queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
+        } else {
+          console.log('[Queue] Step 2 — image already cached for page', plotPageIdx, '(skipping)');
         }
 
         if (voiceOn) {
@@ -473,11 +483,14 @@ export function AnyTalePlayPage() {
           const dialogText = entry?.dialogText;
           const vs = entry?.voiceStatus;
           const voiceNeeded = dialogText && !['complete', 'generating', 'skipped', 'error'].includes(vs);
+          console.log('[Queue] Step 2 — page', plotPageIdx, 'voiceNeeded:', voiceNeeded, '| dialogText:', dialogText ? `"${dialogText.slice(0, 30)}…"` : 'null', '| voiceStatus:', vs ?? 'undefined');
           if (voiceNeeded) {
+            console.log('[Queue] Step 2 — queuing TTS for page', plotPageIdx);
             queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
           }
         }
       }
+      console.log('[Queue] initChapter loop complete');
     })();
   }, [queuePageImage, queuePageDialog]);
 
@@ -1098,8 +1111,7 @@ export function AnyTalePlayPage() {
     const loadedCount = visiblePageIndices.filter(i => {
       const imageReady = pageStatuses[i] === 'complete';
       if (!voiceApplicable) return imageReady;
-      const voiceReady = pageVoiceStatuses[i] === 'complete' || pageVoiceStatuses[i] === 'skipped';
-      return imageReady && voiceReady;
+      return imageReady && isVoiceSettled(i);
     }).length;
     const loadedPercent = visiblePageIndices.length > 0
       ? (loadedCount / visiblePageIndices.length) * 100 : 0;
@@ -1123,7 +1135,7 @@ export function AnyTalePlayPage() {
       <${PortraitPanel}
         mode=${currentPageReady ? 'page' : 'loading'}
         backgroundUrl=${currentImageUrl || ''}
-        bubbleText=${currentDialogText}
+        bubbleText=${currentPageReady ? currentDialogText : ''}
         muted=${session.muted}
         musicEnabled=${session.musicOn}
         chapter=${chapterNum}

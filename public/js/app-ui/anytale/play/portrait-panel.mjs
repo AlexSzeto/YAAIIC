@@ -245,7 +245,7 @@ export function PortraitPanel({
           <${TopControls}>
             <${PlayButton} icon="refresh" onClick=${onReset} />
             <${PlayButton} icon=${muted ? 'volume-mute' : 'volume-full'} onClick=${onToggleMute} />
-            <${PlayButton} icon="music" onClick=${onToggleMusic} />
+            <${PlayButton} icon=${musicEnabled ? 'ear' : 'ear-slash'} onClick=${onToggleMusic} />
           </${TopControls}>
 
           <${CenterSpace}>

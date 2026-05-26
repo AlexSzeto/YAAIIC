@@ -16,8 +16,8 @@ vi.mock('../generation/comfy-client.mjs', () => ({
   interruptGeneration: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { initialize, setEmitQueueEvent, enqueue, clearBySource, getStatus } from './service.mjs';
-import { setTaskCompletedCallback } from '../../core/sse.mjs';
+import { initialize, setEmitQueueEvent, enqueue, clearBySource, deleteItem, clear, getStatus } from './service.mjs';
+import { setTaskCancelledCallback, setTaskCompletedCallback } from '../../core/sse.mjs';
 
 function flushAsync() {
   return new Promise(resolve => setTimeout(resolve, 0));
@@ -25,12 +25,17 @@ function flushAsync() {
 
 describe('queue service — _handleTaskCompleted', () => {
   let completedCallback;
+  let cancelledCallback;
   let emittedEvents;
   let mockExecuteQueuedTask;
 
   beforeEach(() => {
     emittedEvents = [];
     mockExecuteQueuedTask = vi.fn().mockResolvedValue({ taskId: 'task-abc' });
+
+    vi.mocked(setTaskCancelledCallback).mockImplementation(fn => {
+      cancelledCallback = fn;
+    });
 
     vi.mocked(setTaskCompletedCallback).mockImplementation(fn => {
       completedCallback = fn;
@@ -90,6 +95,63 @@ describe('queue service — _handleTaskCompleted', () => {
     enqueue({ source: 'other', endpointKey: 'other', type: 'image', name: 'o1' });
     expect(() => clearBySource('anytale-play')).not.toThrow();
     expect(getStatus().items).toHaveLength(1);
+  });
+
+  test('second clear() while already cancelling force-abandons the running item immediately', async () => {
+    enqueue({ endpointKey: 'test', type: 'image', name: 'img1' }, { autoStart: true });
+    await flushAsync();
+
+    clear(); // first cancel → state becomes 'cancelling'
+    expect(getStatus().state).toBe('cancelling');
+    expect(getStatus().items).toHaveLength(1); // running item still present
+
+    clear(); // second cancel → force-abandon
+    const { state, items } = getStatus();
+    expect(state).toBe('stopped');
+    expect(items).toHaveLength(0);
+  });
+
+  test('second clear() force-abandon: late callback from ComfyUI is ignored', async () => {
+    enqueue({ endpointKey: 'test', type: 'image', name: 'img1' }, { autoStart: true });
+    await flushAsync();
+
+    clear();
+    clear(); // force-abandon
+    expect(getStatus().state).toBe('stopped');
+
+    // ComfyUI eventually sends its cancellation — must not corrupt state
+    cancelledCallback?.('task-abc');
+    expect(getStatus().state).toBe('stopped');
+    expect(getStatus().items).toHaveLength(0);
+  });
+
+  test('deleteItem() on running item while already in transition state force-abandons immediately', async () => {
+    enqueue({ endpointKey: 'test', type: 'image', name: 'img1' }, { autoStart: true });
+    await flushAsync();
+
+    const runningId = getStatus().items[0].id;
+
+    deleteItem(runningId); // first delete → state becomes 'pausing', item still in queue
+    expect(getStatus().state).toBe('pausing');
+    expect(getStatus().items.find(i => i.id === runningId)).toBeDefined();
+
+    deleteItem(runningId); // second delete → force-abandon
+    const { state, items } = getStatus();
+    expect(state).toBe('stopped');
+    expect(items.find(i => i.id === runningId)).toBeUndefined();
+  });
+
+  test('deleteItem() force-abandon: late callback is ignored', async () => {
+    enqueue({ endpointKey: 'test', type: 'image', name: 'img1' }, { autoStart: true });
+    await flushAsync();
+
+    const runningId = getStatus().items[0].id;
+    deleteItem(runningId);
+    deleteItem(runningId); // force-abandon
+
+    cancelledCallback?.('task-abc'); // late signal from ComfyUI
+    expect(getStatus().state).toBe('stopped');
+    expect(getStatus().items).toHaveLength(0);
   });
 
   test('queue:updated intermediate state comes before queue:task-started for the next task', async () => {
