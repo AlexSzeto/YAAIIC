@@ -28,8 +28,6 @@ import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-res
 import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
 import { generateDialog } from './play-dialog.mjs';
 
-const CROSSFADE_MS = 600;
-
 export function AnyTalePlayPage() {
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
@@ -163,8 +161,11 @@ export function AnyTalePlayPage() {
   const taskToPageRef = useRef(new Map());
   // Buffer for queue:task-started events that arrive before queuePageImage.then() fires
   const pendingChapterEventsRef = useRef([]);
-  // Stable ref so initChapter's async loop can call queuePageSpeech after it's defined
+  // Stable refs so callbacks can call functions defined later in the component
   const queuePageSpeechRef = useRef(null);
+  const initChapterRef = useRef(null);
+  const currentPlotRef = useRef(currentPlot);
+  useEffect(() => { currentPlotRef.current = currentPlot; }, [currentPlot]);
 
   // Open a progress SSE subscription for a chapter page using the SSE task ID
   const subscribePageProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
@@ -364,13 +365,15 @@ export function AnyTalePlayPage() {
     });
   }, [subscribeVoiceProgress]);
 
-  // Keep the ref in sync so queuePageDialog can call queuePageSpeech after definition
   useEffect(() => { queuePageSpeechRef.current = queuePageSpeech; }, [queuePageSpeech]);
 
   // --- Chapter initialization ---
 
-  const initChapter = useCallback((plot, sess, data) => {
-    dialogHistoryRef.current = [];
+  const initChapter = useCallback(async (plot, sess, data) => {
+    // Phase 1: flush all anytale-play items from the queue for a clean slate
+    taskToPageRef.current.clear();
+    pendingChapterEventsRef.current = [];
+    await fetch('/queue/items/source/anytale-play', { method: 'DELETE' }).catch(() => {});
 
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
@@ -385,6 +388,8 @@ export function AnyTalePlayPage() {
     setCurrentPlot(plot);
     setVisiblePageIndices(visibleIndices);
     setPageSlotStatuses(slotStatuses);
+
+    const dialogEnabled = !!data.config.dialog;
 
     const newImageUrls = {};
     const newStatuses = {};
@@ -416,8 +421,11 @@ export function AnyTalePlayPage() {
 
       if (entry?.dialogStatus === 'complete' || entry?.dialogStatus === 'skipped') {
         newDialogTexts[plotPageIdx] = entry.dialogText ?? null;
-      } else {
+      } else if (dialogEnabled) {
         toQueueDialog.push({ plotPageIdx, cacheKey });
+      } else {
+        updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'skipped' });
+        newDialogTexts[plotPageIdx] = null;
       }
 
       if (entry?.voiceStatus === 'complete' && entry.voiceUrl) {
@@ -425,8 +433,12 @@ export function AnyTalePlayPage() {
         newVoiceStatuses[plotPageIdx] = 'complete';
       } else if (entry?.voiceStatus === 'skipped') {
         newVoiceStatuses[plotPageIdx] = 'skipped';
+      } else if (entry?.voiceStatus === 'generating' || entry?.voiceStatus === 'error') {
+        // Phase 1 flushed the queue so 'generating' tasks are gone; reset for Phase 3 to re-queue.
+        // Also retry 'error' entries on fresh init.
+        updateCacheEntry(cacheKey, { voiceStatus: 'pending', voiceTaskId: null });
       }
-      // voice for non-cached pages will be queued after dialog completes
+      // undefined/pending: Phase 3 will queue
     }
 
     setPageImageUrls(newImageUrls);
@@ -435,18 +447,15 @@ export function AnyTalePlayPage() {
     setPageVoiceUrls(newVoiceUrls);
     setPageVoiceStatuses(newVoiceStatuses);
 
-    // Build a set of pages that need image generation (for quick lookup below)
-    const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
+    dialogHistoryRef.current = [];
 
-    ;(async () => {
-      console.log('[Queue] initChapter start — visibleIndices:', visibleIndices, 'toQueueDialog:', toQueueDialog.map(x => x.plotPageIdx), 'toQueueImage:', toQueueImage.map(x => x.plotPageIdx));
+    console.log('[Queue] Phase 2 start — toQueueDialog:', toQueueDialog.map(x => x.plotPageIdx), 'toQueueImage:', toQueueImage.map(x => x.plotPageIdx), 'dialogEnabled:', dialogEnabled);
 
-      // Step 1: all dialogs sequentially so each call includes prior-turn context
+    // Phase 2: generate all missing dialog sequentially; no images or TTS until complete
+    if (dialogEnabled) {
       for (const { plotPageIdx, cacheKey } of toQueueDialog) {
-        console.log('[Queue] Step 1 — queuing dialog for page', plotPageIdx);
         const history = [...dialogHistoryRef.current];
         const text = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
-        console.log('[Queue] Step 1 — dialog complete for page', plotPageIdx, '→', text ? `"${text.slice(0, 40)}…"` : 'null');
         const prompt = (plot.pages[plotPageIdx].dialogPrompt || '').trim();
         if (text && prompt) {
           dialogHistoryRef.current = [
@@ -456,43 +465,44 @@ export function AnyTalePlayPage() {
           ];
         }
       }
+    }
 
-      // Step 2+: for each page in visible order — image then TTS (if applicable)
-      const voiceOn = !sess.muted && !!sess.character.voiceSampleUrl;
-      console.log('[Queue] Step 2 start — voiceOn:', voiceOn);
-      for (const plotPageIdx of visibleIndices) {
-        const cacheKey = buildCacheKey({
-          plotUid: plot.uid,
-          pageIndex: plotPageIdx,
-          characterUid: sess.character.uid,
-          outfitUid: sess.outfitUid,
-          locationPartUid: sess.location.partUid,
-          locationAttributeMap: sess.location.attributeMap,
-          slotStatuses: slotStatuses[plotPageIdx],
-        });
+    // Phase 3: for each page, queue image (if missing) and TTS (if missing and applicable)
+    const voiceOn = dialogEnabled && !sess.muted && !!sess.character.voiceSampleUrl;
+    const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
 
-        if (needsImage.has(plotPageIdx)) {
-          console.log('[Queue] Step 2 — queuing IMAGE for page', plotPageIdx);
-          queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
-        } else {
-          console.log('[Queue] Step 2 — image already cached for page', plotPageIdx, '(skipping)');
-        }
+    console.log('[Queue] Phase 3 start — voiceOn:', voiceOn);
 
-        if (voiceOn) {
-          const entry = getCacheEntry(cacheKey);
-          const dialogText = entry?.dialogText;
-          const vs = entry?.voiceStatus;
-          const voiceNeeded = dialogText && !['complete', 'generating', 'skipped', 'error'].includes(vs);
-          console.log('[Queue] Step 2 — page', plotPageIdx, 'voiceNeeded:', voiceNeeded, '| dialogText:', dialogText ? `"${dialogText.slice(0, 30)}…"` : 'null', '| voiceStatus:', vs ?? 'undefined');
-          if (voiceNeeded) {
-            console.log('[Queue] Step 2 — queuing TTS for page', plotPageIdx);
-            queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
-          }
+    for (const plotPageIdx of visibleIndices) {
+      const cacheKey = buildCacheKey({
+        plotUid: plot.uid,
+        pageIndex: plotPageIdx,
+        characterUid: sess.character.uid,
+        outfitUid: sess.outfitUid,
+        locationPartUid: sess.location.partUid,
+        locationAttributeMap: sess.location.attributeMap,
+        slotStatuses: slotStatuses[plotPageIdx],
+      });
+
+      if (needsImage.has(plotPageIdx)) {
+        queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
+      }
+
+      if (voiceOn) {
+        const entry = getCacheEntry(cacheKey);
+        const dialogText = entry?.dialogText;
+        const vs = entry?.voiceStatus;
+        const voiceNeeded = dialogText && !['complete', 'generating', 'skipped', 'error'].includes(vs);
+        if (voiceNeeded) {
+          queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
         }
       }
-      console.log('[Queue] initChapter loop complete');
-    })();
+    }
+
+    console.log('[Queue] Phase 3 complete');
   }, [queuePageImage, queuePageDialog]);
+
+  useEffect(() => { initChapterRef.current = initChapter; }, [initChapter]);
 
   // Load chapter when phase is 'plot' and plot not yet loaded (or changed)
   useEffect(() => {
@@ -554,12 +564,19 @@ export function AnyTalePlayPage() {
     });
   }, [progressShow, subscribePageProgress, subscribeVoiceProgress, updateSession]);
 
-  // Reconnect recovery: re-fetch queue status so any in-progress tasks are reflected
+  // Reconnect recovery: re-run chapter init (if in plot phase) or refresh queue status
   useEffect(() => {
     return queueSSEManager.onConnect(() => {
-      fetch('/queue/status')
-        .then(r => r.json())
-        .catch(err => console.error('[AnyTalePlayPage] Reconnect status fetch failed:', err));
+      const sess = sessionRef.current;
+      const data = playDataRef.current;
+      const plot = currentPlotRef.current;
+      if (sess.phase === 'plot' && plot && data) {
+        initChapterRef.current?.(plot, sess, data);
+      } else {
+        fetch('/queue/status')
+          .then(r => r.json())
+          .catch(err => console.error('[AnyTalePlayPage] Reconnect status fetch failed:', err));
+      }
     });
   }, []);
 
@@ -700,7 +717,7 @@ export function AnyTalePlayPage() {
     if (session.musicOn) {
       globalBgmPlayer.play().catch(() => {});
     }
-  }, [audioUnlocked, playData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audioUnlocked, playData, session.music?.genre]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync BGM play/stop with session.musicOn
   useEffect(() => {
@@ -757,10 +774,15 @@ export function AnyTalePlayPage() {
         updateCacheEntry(cacheKey, { voiceStatus: 'skipped', voiceTaskId: null });
       }
     } else if (session.character.voiceSampleUrl) {
-      // Re-queue TTS for pages that have dialog but no settled voice
-      let earliestMissingIdx = null;
-      for (let i = 0; i < visiblePageIndices.length; i++) {
-        const plotPageIdx = visiblePageIndices[i];
+      // Play current page voice immediately if already available
+      const currentPlotIdx = visiblePageIndices[session.pageIndex];
+      const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
+      if (currentVoiceUrl) globalAudioPlayer.play(currentVoiceUrl);
+
+      // Reset 'skipped' voice cache entries that were cancelled due to muting (have dialog text)
+      // so that initChapter will re-queue TTS for them
+      let anyVoiceReset = false;
+      for (const plotPageIdx of visiblePageIndices) {
         const cacheKey = buildCacheKey({
           plotUid: currentPlot.uid,
           pageIndex: plotPageIdx,
@@ -771,22 +793,14 @@ export function AnyTalePlayPage() {
           slotStatuses: pageSlotStatuses[plotPageIdx],
         });
         const entry = getCacheEntry(cacheKey);
-        const dialogText = entry?.dialogText;
-        const vs = entry?.voiceStatus;
-        if (dialogText && !['complete', 'generating', 'error'].includes(vs)) {
-          if (earliestMissingIdx === null) earliestMissingIdx = i;
-          queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
+        if (entry?.dialogText && entry?.voiceStatus === 'skipped') {
+          updateCacheEntry(cacheKey, { voiceStatus: 'pending' });
+          anyVoiceReset = true;
         }
       }
 
-      // Play current page voice immediately if already available
-      const currentPlotIdx = visiblePageIndices[session.pageIndex];
-      const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
-      if (currentVoiceUrl) {
-        globalAudioPlayer.play(currentVoiceUrl);
-      } else if (earliestMissingIdx !== null && earliestMissingIdx < session.pageIndex) {
-        // Navigate back to the earliest page waiting for voice
-        updateSession({ pageIndex: earliestMissingIdx });
+      if (anyVoiceReset) {
+        initChapterRef.current?.(currentPlot, session, playDataRef.current);
       }
     }
   }, [session.muted]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -843,12 +857,42 @@ export function AnyTalePlayPage() {
     const nextPlotPageIdx = visiblePageIndices[nextVisIdx];
     if (pageStatuses[nextPlotPageIdx] !== 'complete') return;
 
-    const timer = setTimeout(() => {
-      updateSession({ pageIndex: nextVisIdx });
-    }, CROSSFADE_MS + 100);
+    const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
+    const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
+    const currentDialogText = pageDialogTexts[currentPlotPageIdx];
 
+    // Voice-gated: wait for the current page's voice to finish, then 3 s.
+    // Falls back to timer behavior when muted or no voice on this page.
+    if (!session.muted && currentVoiceUrl) {
+      let timer = null;
+      const scheduleAdvance = () => {
+        if (timer !== null) return;
+        timer = setTimeout(() => updateSession({ pageIndex: nextVisIdx }), 3000);
+      };
+
+      if (!globalAudioPlayer.isPlaying(currentVoiceUrl)) {
+        scheduleAdvance();
+        return () => { if (timer !== null) clearTimeout(timer); };
+      }
+
+      const unsubscribe = globalAudioPlayer.subscribe(() => {
+        if (!globalAudioPlayer.isPlaying(currentVoiceUrl)) {
+          scheduleAdvance();
+          unsubscribe();
+        }
+      });
+
+      return () => {
+        unsubscribe();
+        if (timer !== null) clearTimeout(timer);
+      };
+    }
+
+    // Timer-based: 5 s base + 3 s extra if dialog text is showing.
+    const delay = 5000 + (currentDialogText ? 3000 : 0);
+    const timer = setTimeout(() => updateSession({ pageIndex: nextVisIdx }), delay);
     return () => clearTimeout(timer);
-  }, [isAutoplay, session.pageIndex, pageStatuses, visiblePageIndices, currentPlot, updateSession]);
+  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]);
 
   // --- Reset ---
 
@@ -1014,6 +1058,7 @@ export function AnyTalePlayPage() {
     const tracks = genre.tracks || [];
     if (tracks.length > 0) {
       const shuffled = randomPickN(tracks, tracks.length);
+      globalBgmPlayer.stop();
       globalBgmPlayer.setPlaylist(shuffled.map(t => ({ url: t.audioUrl, label: t.name })));
       globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: 2 });
       globalBgmPlayer.play().catch(err => console.error('[AnyTalePlayPage] BGM play failed:', err));

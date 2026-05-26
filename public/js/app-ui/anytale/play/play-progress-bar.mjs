@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { styled } from '../../../custom-ui/goober-setup.mjs';
+import { styled, keyframes } from '../../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../../custom-ui/theme.mjs';
 
 const ProgressContainer = styled('div')`
@@ -24,7 +24,7 @@ ProgressLayer.className = 'progress-layer';
  * PlayProgressBar - Three-layer pill progress bar.
  *
  * Layer stacking (bottom to top):
- *   1. Loading (full width, danger red) — unloaded area
+ *   1. Loading (full width, danger red) — unloaded area; pulses when isLoading
  *   2. Loaded (loadedPercent, grey) — buffered area
  *   3. Current (currentPercent, primary blue) — playback position
  *
@@ -34,12 +34,20 @@ ProgressLayer.className = 'progress-layer';
  */
 export function PlayProgressBar({ loadedPercent = 0, currentPercent = 0, ...rest }) {
   const theme = currentTheme.value;
+  const isLoading = loadedPercent < 100;
+
+  const pulseAnim = isLoading ? keyframes`
+    0%, 100% { background-color: ${theme.colors.danger.background}; }
+    50% { background-color: ${theme.colors.background.elevated}; }
+  ` : null;
+
   return html`
     <${ProgressContainer} ...${rest}>
       <${ProgressLayer} style=${{
         width: '100%',
         backgroundColor: theme.colors.danger.background,
         zIndex: 1,
+        animation: pulseAnim ? `${pulseAnim} 1.5s ease-in-out infinite` : 'none',
       }} />
       <${ProgressLayer} style=${{
         width: `${loadedPercent}%`,
