@@ -41,7 +41,12 @@
       "mode": "chat",
       "stream": false
     },
-    "speechWorkflow": "Dialog to Speech (Chatterbox)"
+    "speechWorkflow": "Dialog to Speech (Chatterbox)",
+    "dialogPreview": {
+      "name": "",
+      "personality": "",
+      "outfit": ""
+    }
   },
   "exports": [
     {

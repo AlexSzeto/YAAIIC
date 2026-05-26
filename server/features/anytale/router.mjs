@@ -318,7 +318,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
     const anytaleConfig = req.app.locals.config?.anytale || {};
     const voiceWorkflow = anytaleConfig.voiceWorkflow || 'Personality to Voice Design (Qwen3-TTS)';
 
-    const { personality = '', name = '' } = req.body;
+    const { personality = '', voiceProfile = '', name = '' } = req.body;
 
     const comfyuiWorkflows = loadWorkflows();
     const workflowData = comfyuiWorkflows.workflows.find(w => w.name === voiceWorkflow);
@@ -330,6 +330,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
       workflow: voiceWorkflow,
       name,
       prompt: personality,
+      voiceProfile,
       seed: Math.floor(Math.random() * 4294967295),
       tags: '',
       description: '',
