@@ -8,7 +8,8 @@
       "Bash(npm run *)",
       "Bash(node f:\\\\YAAIIC\\\\scripts\\\\archive-feature.mjs anytale-outfit-render-location-type.md)",
       "Bash(node scripts/archive-feature.mjs anytale-outfit-render-location-type.md)",
-      "Bash(node f:\\\\YAAIIC\\\\scripts\\\\archive-feature.mjs)"
+      "Bash(node f:\\\\YAAIIC\\\\scripts\\\\archive-feature.mjs)",
+      "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\\\\public\\\\js\\\\app-ui\" -MaxDepth 1 -Filter \"*.html\")"
     ]
   }
 }

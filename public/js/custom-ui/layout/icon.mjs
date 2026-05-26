@@ -68,6 +68,7 @@ const ICON_MAP = {
   'headphone': 'headphones',
   'book': 'book_2',
   'file-detail': 'docs',
+  'message-detail': 'chat',
   
   // Communicationrc
   'search': 'search',
