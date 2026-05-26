@@ -4742,7 +4742,7 @@
     },
     {
       "uid": "700189be-395e-4f3f-ba65-908c6a652f4e",
-      "name": "Text to Speech (Chatterbox)",
+      "name": "Dialog to Speech (Chatterbox)",
       "options": {
         "type": "audio",
         "inputImages": 0,
@@ -4821,35 +4821,7 @@
           ]
         }
       ],
-      "postGenerationTasks": [
-        {
-          "process": "executeWorkflow",
-          "name": "Generating Album Cover",
-          "parameters": {
-            "workflow": "Text to Image (Album)",
-            "inputMapping": [
-              {
-                "from": "name",
-                "to": "name"
-              },
-              {
-                "from": "seed",
-                "to": "seed"
-              }
-            ],
-            "outputMapping": [
-              {
-                "from": "imageUrl",
-                "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
-              }
-            ]
-          }
-        }
-      ]
+      "postGenerationTasks": []
     },
     {
       "uid": "ff03fec8-e345-4aac-95c9-bc593ad226aa",

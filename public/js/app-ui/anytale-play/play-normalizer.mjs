@@ -16,7 +16,8 @@ export function normalizeCharacter(c) {
     parts:            Array.isArray(c.parts)            ? c.parts            : [],
     preferredOutfits: Array.isArray(c.preferredOutfits) ? c.preferredOutfits : [],
     portraitUrl:      c.portraitUrl      ?? '',
-    voiceSampleUrl:   c.voiceSampleUrl   ?? '',
+    voiceSampleUrl:   c.voiceSampleUrl   ?? c.audioUrl ?? '',
+    introTranscript:  c.introTranscript  ?? '',
   };
 }
 

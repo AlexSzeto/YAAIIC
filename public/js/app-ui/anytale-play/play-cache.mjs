@@ -6,8 +6,13 @@
  * entries without any explicit clearing logic.
  *
  * Cache entry shape:
- *   { imageUrl, imageTaskId, imageStatus, generatedAt }
- *   where imageStatus = 'pending'|'generating'|'complete'|'error'
+ *   {
+ *     imageUrl, imageTaskId, imageStatus,
+ *     dialogText, dialogStatus,
+ *     voiceUrl, voiceTaskId, voiceStatus,
+ *     generatedAt
+ *   }
+ *   where *Status = 'pending'|'generating'|'complete'|'error'|'skipped'
  */
 
 const KEY_PREFIX = 'anytale-play-cache:';

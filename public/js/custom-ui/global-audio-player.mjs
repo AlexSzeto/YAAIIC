@@ -206,6 +206,8 @@ class GlobalBgmPlayer {
     this._isPlaying = false;
     this._advanceTimer = null;
     this._playId = 0;
+    this._targetGain = 1.0;
+    this._stopFadeId = 0;
   }
 
   _getContext() {
@@ -253,8 +255,27 @@ class GlobalBgmPlayer {
     this._transition = { ...this._transition, ...config };
   }
 
+  /**
+   * Set the master gain for BGM playback. Applied immediately if playing.
+   * @param {number} value - 0 (silent) to 1 (full volume)
+   */
+  setGain(value) {
+    this._targetGain = Math.max(0, Math.min(1, value));
+    if (!this._isPlaying || !this._context) return;
+    const ctx = this._context;
+    const now = ctx.currentTime;
+    const { gain } = this._slots[this._activeSlot];
+    if (!gain) return;
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(this._targetGain, now + 0.2);
+    } catch (e) {}
+  }
+
   /** Start playback from the first track. No-op if already playing or playlist is empty. */
   async play() {
+    this._stopFadeId++; // cancel any in-flight fade-out from stop()
     if (this._playlist.length === 0 || this._isPlaying) return;
     this._isPlaying = true;
     this._initSlots();
@@ -290,19 +311,42 @@ class GlobalBgmPlayer {
     this._consumeAndAdvance();
   }
 
-  /** Stop playback and reset the playlist. */
+  /** Stop playback and reset the playlist, fading out smoothly if audio is active. */
   stop() {
     this._playId++;
+    this._stopFadeId++;
+    const capturedStopFadeId = this._stopFadeId;
+
     if (this._advanceTimer !== null) {
       clearTimeout(this._advanceTimer);
       this._advanceTimer = null;
     }
+
     const ctx = this._context;
-    const now = ctx ? ctx.currentTime : 0;
-    for (const { audio, gain } of this._slots) {
-      if (audio) { try { audio.pause(); } catch (e) {} }
-      if (gain && ctx) { try { gain.gain.setValueAtTime(0, now); } catch (e) {} }
+    if (ctx && this._isPlaying) {
+      const now = ctx.currentTime;
+      const fadeDuration = Math.min(this._transition.durationSeconds, 1.5);
+      for (const { gain } of this._slots) {
+        if (gain) {
+          try {
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.linearRampToValueAtTime(0, now + fadeDuration);
+          } catch (e) {}
+        }
+      }
+      setTimeout(() => {
+        if (this._stopFadeId !== capturedStopFadeId) return;
+        for (const { audio } of this._slots) {
+          if (audio) { try { audio.pause(); } catch (e) {} }
+        }
+      }, fadeDuration * 1000 + 50);
+    } else {
+      for (const { audio } of this._slots) {
+        if (audio) { try { audio.pause(); } catch (e) {} }
+      }
     }
+
     this._isPlaying = false;
     this._playlist = [];
     this._currentIndex = -1;
@@ -412,7 +456,7 @@ class GlobalBgmPlayer {
 
     // Fade in new slot
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + fadeDuration);
+    gain.gain.linearRampToValueAtTime(this._targetGain, now + fadeDuration);
 
     // Fade out previous slot (if a track was playing)
     if (this._currentIndex >= 0) {

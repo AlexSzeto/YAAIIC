@@ -30,7 +30,8 @@
  *   DELETE /anytale/genres/:uid                     – delete a genre and all nested tracks
  *   POST   /anytale/genres/:uid/generate-track      – queue AceStep generation for a genre
  *
- *   POST   /anytale/play/generate-intro  – queue intro image generation for play mode (stored in anytale data, not media-data)
+ *   POST   /anytale/play/generate-intro   – queue intro image generation for play mode (stored in anytale data, not media-data)
+ *   POST   /anytale/play/generate-speech  – queue TTS generation for play mode dialog (NOT stored in media library)
  */
 import { Router } from 'express';
 import fs from 'node:fs';
@@ -777,6 +778,75 @@ router.post('/anytale/play/generate-intro', async (req, res) => {
   } catch (error) {
     console.error('Error starting play intro image generation:', error);
     res.status(500).json({ error: 'Failed to start generation', details: error.message });
+  }
+});
+
+// ── Play mode speech (TTS) generation ────────────────────────────────────────
+
+router.post('/anytale/play/generate-speech', async (req, res) => {
+  try {
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const uploadFileToComfyUI = req.app.locals.uploadFileToComfyUI;
+    const { characterUid, voiceSampleUrl, dialogText, clientId } = req.body;
+
+    if (!dialogText || !dialogText.trim()) {
+      return res.status(400).json({ error: 'dialogText is required' });
+    }
+    if (!voiceSampleUrl) {
+      return res.status(400).json({ error: 'voiceSampleUrl is required' });
+    }
+
+    const speechWorkflow = anytaleConfig.speechWorkflow || 'Dialog to Speech (Chatterbox)';
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === speechWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `Speech workflow '${speechWorkflow}' not found` });
+    }
+
+    // Upload the voice sample to ComfyUI so the workflow can reference it by filename
+    const voiceRelPath = voiceSampleUrl.replace(/^\/media\//, '');
+    const voiceFilePath = join(STORAGE_DIR, voiceRelPath);
+    const voiceBuffer = await fs.promises.readFile(voiceFilePath);
+    const voiceUpload = await uploadFileToComfyUI(voiceBuffer, voiceRelPath, 'audio', 'input', true);
+
+    const requestData = {
+      workflow: speechWorkflow,
+      prompt: dialogText.trim(),
+      audio_0_filename: voiceUpload.filename,
+      seed: Math.floor(Math.random() * 4294967295),
+      tags: '',
+      description: '',
+      summary: '',
+      entityType: 'anytale-play-speech',
+      requestOrigin: 'anytale-play',
+    };
+
+    // Apply workflow extraInputs defaults
+    if (workflowData.options?.extraInputs) {
+      for (const input of workflowData.options.extraInputs) {
+        if (input.default !== undefined && requestData[input.id] === undefined) {
+          requestData[input.id] = input.default;
+        }
+      }
+    }
+
+    if (characterUid) requestData.characterUid = characterUid;
+
+    const queueItem = queueService.enqueue({
+      type: 'audio',
+      source: 'anytale-play',
+      clientId: clientId || null,
+      name: 'Play Speech',
+      subLabel: 'Speech',
+      endpointKey: 'anytale-play-speech',
+      taskData: requestData,
+    }, { autoStart: true });
+
+    res.status(202).json({ taskId: queueItem.id });
+  } catch (error) {
+    console.error('Error starting play speech generation:', error);
+    res.status(500).json({ error: 'Failed to start speech generation', details: error.message });
   }
 });
 

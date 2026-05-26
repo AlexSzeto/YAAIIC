@@ -80,6 +80,17 @@ const CenterContent = styled('div')`
 `;
 CenterContent.className = 'portrait-center-content';
 
+const StartOverlay = styled('div')`
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+`;
+StartOverlay.className = 'portrait-start-overlay';
+
 // Single-row bottom bar: chapter pill (flex: 1) + nav buttons.
 const BottomRow = styled('div')`
   width: 100%;
@@ -132,9 +143,10 @@ const CROSSFADE_MS = 600;
  * the new one finishes loading, then both images' opacities animate simultaneously.
  *
  * @param {Object} props
- * @param {'page'|'decision'|'loading'} [props.mode='page']
+ * @param {'page'|'decision'|'loading'|'start'} [props.mode='page']
  * @param {string} [props.backgroundUrl] - Background scene image URL
  * @param {string} [props.bubbleText=''] - Dialog (page mode) or hint text (decision mode)
+ * @param {'caption'|'speech'} [props.bubbleType='caption'] - Bubble style used in decision mode
  * @param {boolean} [props.muted=false]
  * @param {boolean} [props.musicEnabled=false]
  * @param {Function} [props.onReset]
@@ -151,11 +163,13 @@ const CROSSFADE_MS = 600;
  * @param {Function} [props.onNext]
  * @param {Array<{text: string, subtitle?: string, image?: string, onClick: Function}>} [props.decisions=[]]
  * @param {Function} [props.onBack]
+ * @param {Function} [props.onStart] - Called when the user clicks the start button (mode="start")
  */
 export function PortraitPanel({
   mode = 'page',
   backgroundUrl,
   bubbleText = '',
+  bubbleType = 'caption',
   muted = false,
   musicEnabled = false,
   onReset,
@@ -172,6 +186,7 @@ export function PortraitPanel({
   onNext,
   decisions = [],
   onBack,
+  onStart,
   ...rest
 }) {
   const [uiVisible, setUiVisible] = useState(true);
@@ -204,8 +219,6 @@ export function PortraitPanel({
     }, CROSSFADE_MS);
   }, [pendingUrl]);
 
-  const isPageOrLoading = mode === 'page' || mode === 'loading';
-
   return html`
     <${PortraitFrameWrapper}>
     <${PortraitFrame} ...${rest}>
@@ -221,7 +234,13 @@ export function PortraitPanel({
         alt=""
       />` : null}
 
-      ${uiVisible ? html`
+      ${mode === 'start' ? html`
+        <${StartOverlay}>
+          <${PlayButton} icon="play" onClick=${onStart} />
+        </${StartOverlay}>
+      ` : null}
+
+      ${mode !== 'start' && (uiVisible ? html`
         <${ContentLayer}>
           <${TopControls}>
             <${PlayButton} icon="refresh" onClick=${onReset} />
@@ -230,24 +249,26 @@ export function PortraitPanel({
           </${TopControls}>
 
           <${CenterSpace}>
-            ${mode !== 'loading' && html`
-              <${FlexSpacer}>
-                ${mode === 'decision'
-                  ? html`<${CaptionBubble}>${bubbleText}</${CaptionBubble}>`
-                  : html`<${SpeechBubble}>${bubbleText}</${SpeechBubble}>`
-                }
-              </${FlexSpacer}>
-            `}
+            <${FlexSpacer}>
+              ${mode === 'loading'
+                ? html`<${CaptionBubble}>${bubbleText || 'Loading'}</${CaptionBubble}>`
+                : bubbleText
+                  ? (mode === 'decision' && bubbleType !== 'speech'
+                    ? html`<${CaptionBubble}>${bubbleText}</${CaptionBubble}>`
+                    : html`<${SpeechBubble}>${bubbleText}</${SpeechBubble}>`)
+                  : null
+              }
+            </${FlexSpacer}>
 
             ${mode === 'loading'
               ? html`<${CenterContent}><${PlayLoadingState} /></${CenterContent}>`
               : mode === 'decision'
               ? html`<${DecisionOptions} options=${decisions} />`
-              : html``
+              : null
             }
           </${CenterSpace}>
 
-          ${isPageOrLoading ? html`
+          ${mode === 'page' ? html`
             <${BottomRow}>
               <${HorizontalEdgesLayout}>
                 <${HorizontalLayout}>
@@ -267,15 +288,15 @@ export function PortraitPanel({
                 </${ChapterPill}>
               </${HorizontalEdgesLayout}>
             </${BottomRow}>
-          ` : html`
+          ` : mode === 'decision' ? html`
             <${PlayButton} icon="arrow-left-stroke" onClick=${onBack} />
-          `}
+          ` : null}
         </${ContentLayer}>
       ` : html`
         <${ShowUICorner}>
           <${PlayButton} icon="eye" onClick=${toggleUI} />
         </${ShowUICorner}>
-      `}
+      `)}
     </${PortraitFrame}>
     </${PortraitFrameWrapper}>
   `;

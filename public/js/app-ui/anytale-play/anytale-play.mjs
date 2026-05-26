@@ -13,7 +13,7 @@ import { fetchJson } from '../../custom-ui/util.mjs';
 import { getClientId } from '../client-id.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
-import { globalBgmPlayer } from '../../custom-ui/global-audio-player.mjs';
+import { globalBgmPlayer, globalAudioPlayer } from '../../custom-ui/global-audio-player.mjs';
 import {
   randomPickN,
   splitOptions,
@@ -26,6 +26,7 @@ import {
 } from './play-utils.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
+import { generateDialog } from './play-dialog.mjs';
 
 const CROSSFADE_MS = 600;
 
@@ -35,6 +36,7 @@ export function AnyTalePlayPage() {
 
   const { show: progressShow } = useProgress();
 
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [playData, setPlayData] = useState(null);
   const [session, setSession] = useState(() => loadSession());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -49,6 +51,11 @@ export function AnyTalePlayPage() {
   // pageImageUrls / pageStatuses keyed by actual plot-page index
   const [pageImageUrls, setPageImageUrls] = useState({});
   const [pageStatuses, setPageStatuses] = useState({});
+  // pageDialogTexts keyed by actual plot-page index (null = no dialog / skipped)
+  const [pageDialogTexts, setPageDialogTexts] = useState({});
+  // pageVoiceUrls / pageVoiceStatuses keyed by actual plot-page index
+  const [pageVoiceUrls, setPageVoiceUrls] = useState({});
+  const [pageVoiceStatuses, setPageVoiceStatuses] = useState({});
   const [isAutoplay, setIsAutoplay] = useState(false);
 
 
@@ -138,17 +145,26 @@ export function AnyTalePlayPage() {
 
   // --- Chapter page image queuing ---
 
+  // Accumulated dialog history for the current chapter (cleared on chapter entry / reset)
+  const dialogHistoryRef = useRef([]);
+  // Tracks which character UID intro voice was last played for — prevents replaying on outfit/location changes
+  const introVoicePlayedForRef = useRef('');
+
   // Stable ref to latest values needed inside callbacks / effects
   const playDataRef = useRef(playData);
   const sessionRef = useRef(session);
+  const visiblePageIndicesRef = useRef(visiblePageIndices);
   useEffect(() => { playDataRef.current = playData; }, [playData]);
   useEffect(() => { sessionRef.current = session; }, [session]);
+  useEffect(() => { visiblePageIndicesRef.current = visiblePageIndices; }, [visiblePageIndices]);
 
-  // Maps queue item UUID (from HTTP 202) → { plotPageIdx, cacheKey }
+  // Maps queue item UUID (from HTTP 202) → { plotPageIdx, cacheKey, type: 'image'|'voice' }
   // Used to route queue:task-started events to the correct page subscriber
   const taskToPageRef = useRef(new Map());
   // Buffer for queue:task-started events that arrive before queuePageImage.then() fires
   const pendingChapterEventsRef = useRef([]);
+  // Stable ref so initChapter's async loop can call queuePageSpeech after it's defined
+  const queuePageSpeechRef = useRef(null);
 
   // Open a progress SSE subscription for a chapter page using the SSE task ID
   const subscribePageProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
@@ -169,6 +185,35 @@ export function AnyTalePlayPage() {
         updateCacheEntry(cacheKey, { imageStatus: 'error' });
       },
       onCancelled: () => setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
+    });
+  }, [progressShow]);
+
+  // Open a voice/speech SSE subscription for a chapter page
+  const subscribeVoiceProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
+    progressShow(sseTaskId, {
+      onComplete: (result) => {
+        if (result?.result?.audioUrl) {
+          const url = result.result.audioUrl;
+          setPageVoiceUrls(prev => ({ ...prev, [plotPageIdx]: url }));
+          setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
+          updateCacheEntry(cacheKey, { voiceUrl: url, voiceStatus: 'complete' });
+          // Auto-play if this is the current page and not muted
+          const sess = sessionRef.current;
+          const vis = visiblePageIndicesRef.current;
+          const currentPlotIdx = vis[sess.pageIndex];
+          if (currentPlotIdx === plotPageIdx && !sess.muted) {
+            globalAudioPlayer.play(url);
+          }
+        } else {
+          setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+          updateCacheEntry(cacheKey, { voiceStatus: 'error' });
+        }
+      },
+      onError: () => {
+        setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+        updateCacheEntry(cacheKey, { voiceStatus: 'error' });
+      },
+      onCancelled: () => setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
     });
   }, [progressShow]);
 
@@ -234,9 +279,97 @@ export function AnyTalePlayPage() {
     });
   }, [subscribePageProgress]);
 
+  // --- Dialog generation ---
+
+  const queuePageDialog = useCallback(async (plotPageIdx, plot, sess, data, cacheKey, history = []) => {
+    const page = plot.pages[plotPageIdx];
+    const dialogPrompt = (page.dialogPrompt || '').trim();
+    const personality = (sess.character.personality || '').trim();
+    const locationAttrValue = Object.values(sess.location.attributeMap || {}).find(v => v) || '';
+    const dialogConfig = data.config.dialog;
+
+    console.log('[Dialog] page', plotPageIdx, { dialogPrompt, personality, locationAttrValue, dialogConfig: !!dialogConfig });
+
+    if (!dialogPrompt || !personality || !locationAttrValue || !dialogConfig) {
+      console.log('[Dialog] skipping page', plotPageIdx, { missingPrompt: !dialogPrompt, missingPersonality: !personality, missingLocation: !locationAttrValue, missingConfig: !dialogConfig });
+      updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'skipped' });
+      setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
+      return null;
+    }
+
+    updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'generating' });
+
+    const isStreaming = dialogConfig.stream === true;
+    console.log('[Dialog] calling generateDialog for page', plotPageIdx, 'isStreaming:', isStreaming, 'generateDialog type:', typeof generateDialog);
+
+    try {
+      const text = await generateDialog({
+        character: sess.character,
+        locationAttributeValue: locationAttrValue,
+        page,
+        dialogConfig,
+        history,
+        onChunk: isStreaming ? (partial) => {
+          setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: partial }));
+        } : undefined,
+      });
+      console.log('[Dialog] page', plotPageIdx, 'result:', text);
+      updateCacheEntry(cacheKey, { dialogText: text, dialogStatus: 'complete' });
+      setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: text }));
+      return text;
+    } catch (err) {
+      console.error('[Dialog] catch for page', plotPageIdx, err.name, err.message, err);
+      updateCacheEntry(cacheKey, { dialogStatus: 'error' });
+      return null;
+    }
+  }, []);
+
+  // Queue TTS speech generation for a page (after dialog text is known)
+  const queuePageSpeech = useCallback((plotPageIdx, dialogText, cacheKey) => {
+    const sess = sessionRef.current;
+    const voiceSampleUrl = sess?.character?.voiceSampleUrl;
+    if (!voiceSampleUrl || sess?.muted) {
+      updateCacheEntry(cacheKey, { voiceUrl: null, voiceStatus: 'skipped' });
+      setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'skipped' }));
+      return;
+    }
+
+    updateCacheEntry(cacheKey, { voiceUrl: null, voiceStatus: 'generating' });
+    setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
+
+    fetchJson('/anytale/play/generate-speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        characterUid: sess.character.uid,
+        voiceSampleUrl,
+        dialogText,
+        clientId: getClientId(),
+      }),
+    }).then(({ taskId: queueItemId }) => {
+      updateCacheEntry(cacheKey, { voiceTaskId: queueItemId });
+      const earlyIdx = pendingChapterEventsRef.current.findIndex(e => e.id === queueItemId);
+      if (earlyIdx !== -1) {
+        const [earlyEvent] = pendingChapterEventsRef.current.splice(earlyIdx, 1);
+        subscribeVoiceProgress(earlyEvent.taskId, plotPageIdx, cacheKey);
+      } else {
+        taskToPageRef.current.set(queueItemId, { plotPageIdx, cacheKey, type: 'voice' });
+      }
+    }).catch(err => {
+      console.error('[AnyTalePlayPage] Failed to queue speech:', err);
+      setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+      updateCacheEntry(cacheKey, { voiceStatus: 'error' });
+    });
+  }, [subscribeVoiceProgress]);
+
+  // Keep the ref in sync so queuePageDialog can call queuePageSpeech after definition
+  useEffect(() => { queuePageSpeechRef.current = queuePageSpeech; }, [queuePageSpeech]);
+
   // --- Chapter initialization ---
 
   const initChapter = useCallback((plot, sess, data) => {
+    dialogHistoryRef.current = [];
+
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
     const activeParts = buildActiveParts(sess, outfit ? outfit.parts : [], partsMap);
@@ -253,7 +386,11 @@ export function AnyTalePlayPage() {
 
     const newImageUrls = {};
     const newStatuses = {};
-    const toQueue = [];
+    const newDialogTexts = {};
+    const newVoiceUrls = {};
+    const newVoiceStatuses = {};
+    const toQueueImage = [];
+    const toQueueDialog = [];
 
     for (const plotPageIdx of visibleIndices) {
       const cacheKey = buildCacheKey({
@@ -266,23 +403,83 @@ export function AnyTalePlayPage() {
         slotStatuses: slotStatuses[plotPageIdx],
       });
       const entry = getCacheEntry(cacheKey);
+
       if (entry?.imageStatus === 'complete' && entry.imageUrl) {
         newImageUrls[plotPageIdx] = entry.imageUrl;
         newStatuses[plotPageIdx] = 'complete';
       } else {
         newStatuses[plotPageIdx] = 'pending';
-        toQueue.push({ plotPageIdx, slotStatuses: slotStatuses[plotPageIdx] });
+        toQueueImage.push({ plotPageIdx, slotStatuses: slotStatuses[plotPageIdx] });
       }
+
+      if (entry?.dialogStatus === 'complete' || entry?.dialogStatus === 'skipped') {
+        newDialogTexts[plotPageIdx] = entry.dialogText ?? null;
+      } else {
+        toQueueDialog.push({ plotPageIdx, cacheKey });
+      }
+
+      if (entry?.voiceStatus === 'complete' && entry.voiceUrl) {
+        newVoiceUrls[plotPageIdx] = entry.voiceUrl;
+        newVoiceStatuses[plotPageIdx] = 'complete';
+      } else if (entry?.voiceStatus === 'skipped') {
+        newVoiceStatuses[plotPageIdx] = 'skipped';
+      }
+      // voice for non-cached pages will be queued after dialog completes
     }
 
     setPageImageUrls(newImageUrls);
     setPageStatuses(newStatuses);
+    setPageDialogTexts(newDialogTexts);
+    setPageVoiceUrls(newVoiceUrls);
+    setPageVoiceStatuses(newVoiceStatuses);
 
-    // Queue page 1 first, then the rest in order
-    for (const { plotPageIdx, slotStatuses: ss } of toQueue) {
-      queuePageImage(plotPageIdx, plot, ss);
-    }
-  }, [queuePageImage]);
+    // Build a set of pages that need image generation (for quick lookup below)
+    const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
+
+    ;(async () => {
+      // Step 1: all dialogs sequentially so each call includes prior-turn context
+      for (const { plotPageIdx, cacheKey } of toQueueDialog) {
+        const history = [...dialogHistoryRef.current];
+        const text = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
+        const prompt = (plot.pages[plotPageIdx].dialogPrompt || '').trim();
+        if (text && prompt) {
+          dialogHistoryRef.current = [
+            ...dialogHistoryRef.current,
+            { role: 'user', content: prompt },
+            { role: 'assistant', content: text },
+          ];
+        }
+      }
+
+      // Step 2+: for each page in visible order — image then TTS (if applicable)
+      const voiceOn = !sess.muted && !!sess.character.voiceSampleUrl;
+      for (const plotPageIdx of visibleIndices) {
+        const cacheKey = buildCacheKey({
+          plotUid: plot.uid,
+          pageIndex: plotPageIdx,
+          characterUid: sess.character.uid,
+          outfitUid: sess.outfitUid,
+          locationPartUid: sess.location.partUid,
+          locationAttributeMap: sess.location.attributeMap,
+          slotStatuses: slotStatuses[plotPageIdx],
+        });
+
+        if (needsImage.has(plotPageIdx)) {
+          queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
+        }
+
+        if (voiceOn) {
+          const entry = getCacheEntry(cacheKey);
+          const dialogText = entry?.dialogText;
+          const vs = entry?.voiceStatus;
+          const voiceNeeded = dialogText && !['complete', 'generating', 'skipped', 'error'].includes(vs);
+          if (voiceNeeded) {
+            queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
+          }
+        }
+      }
+    })();
+  }, [queuePageImage, queuePageDialog]);
 
   // Load chapter when phase is 'plot' and plot not yet loaded (or changed)
   useEffect(() => {
@@ -312,13 +509,17 @@ export function AnyTalePlayPage() {
         if (clientId !== getClientId()) return;
 
         if (sessionPhaseRef.current === 'plot') {
-          // Chapter page task — route via taskToPageRef
+          // Chapter page task (image or voice) — route via taskToPageRef
           const pageInfo = taskToPageRef.current.get(queueItemId);
           if (pageInfo) {
             taskToPageRef.current.delete(queueItemId);
-            subscribePageProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
+            if (pageInfo.type === 'voice') {
+              subscribeVoiceProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
+            } else {
+              subscribePageProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
+            }
           } else {
-            // queuePageImage.then() hasn't run yet — buffer for deferred processing
+            // .then() hasn't run yet — buffer for deferred processing
             pendingChapterEventsRef.current.push({ id: queueItemId, taskId: sseTaskId });
           }
           return;
@@ -338,7 +539,7 @@ export function AnyTalePlayPage() {
         });
       },
     });
-  }, [progressShow, subscribePageProgress, updateSession]);
+  }, [progressShow, subscribePageProgress, subscribeVoiceProgress, updateSession]);
 
   // Reconnect recovery: re-fetch queue status so any in-progress tasks are reflected
   useEffect(() => {
@@ -352,6 +553,7 @@ export function AnyTalePlayPage() {
   // --- Bootstrap / restore on data load ---
 
   useEffect(() => {
+    globalBgmPlayer.setGain(0.1);
     loadPlayData()
       .then(data => setPlayData(data))
       .catch(err => {
@@ -449,6 +651,8 @@ export function AnyTalePlayPage() {
             name: character.name,
             personality: character.personality || '',
             portraitUrl: character.portraitUrl || '',
+            voiceSampleUrl: character.voiceSampleUrl || character.audioUrl || '',
+            introTranscript: character.introTranscript || '',
             parts: character.parts || [],
           },
           outfitUid: outfit ? outfit.uid : '',
@@ -467,6 +671,150 @@ export function AnyTalePlayPage() {
         setError('Failed to load introduction plot. Please refresh.');
       });
   }, [playData, generateIntroImage, applySession]);
+
+  // --- BGM control ---
+
+  // Restore BGM playlist on session load when genre is already selected
+  useEffect(() => {
+    if (!audioUnlocked || !playData || !session.music?.genre) return;
+    if (globalBgmPlayer.isPlaying()) return; // already playing from pick
+    const genres = playData.genres || [];
+    const genre = genres.find(g => g.name === session.music.genre);
+    if (!genre || !genre.tracks?.length) return;
+    const shuffled = randomPickN(genre.tracks, genre.tracks.length);
+    globalBgmPlayer.setPlaylist(shuffled.map(t => ({ url: t.audioUrl, label: t.name })));
+    globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: 2 });
+    if (session.musicOn) {
+      globalBgmPlayer.play().catch(() => {});
+    }
+  }, [audioUnlocked, playData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync BGM play/stop with session.musicOn
+  useEffect(() => {
+    if (session.musicOn) {
+      if (!globalBgmPlayer.isPlaying()) {
+        globalBgmPlayer.play().catch(() => {});
+      }
+    } else {
+      if (globalBgmPlayer.isPlaying()) globalBgmPlayer.stop();
+    }
+  }, [session.musicOn]);
+
+  // --- Voice playback ---
+
+  // Play voice on page navigation if available and not muted
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+    const plotPageIdx = visiblePageIndices[session.pageIndex];
+    if (plotPageIdx === undefined) return;
+
+    globalAudioPlayer.stop();
+
+    const voiceUrl = pageVoiceUrls[plotPageIdx];
+    if (voiceUrl && !session.muted) {
+      globalAudioPlayer.play(voiceUrl);
+    }
+  }, [session.pageIndex, session.phase, currentPlot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle mute toggle: cancel TTS on mute; re-queue TTS and navigate on unmute
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+
+    if (session.muted) {
+      // Stop playback immediately
+      globalAudioPlayer.stop();
+
+      // Cancel all generating TTS tasks and mark them skipped
+      for (const plotPageIdx of visiblePageIndices) {
+        if (pageVoiceStatuses[plotPageIdx] !== 'generating') continue;
+        const cacheKey = buildCacheKey({
+          plotUid: currentPlot.uid,
+          pageIndex: plotPageIdx,
+          characterUid: session.character.uid,
+          outfitUid: session.outfitUid,
+          locationPartUid: session.location.partUid,
+          locationAttributeMap: session.location.attributeMap,
+          slotStatuses: pageSlotStatuses[plotPageIdx],
+        });
+        const entry = getCacheEntry(cacheKey);
+        if (entry?.voiceTaskId) {
+          fetch(`/queue/item/${entry.voiceTaskId}`, { method: 'DELETE' }).catch(() => {});
+        }
+        setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'skipped' }));
+        updateCacheEntry(cacheKey, { voiceStatus: 'skipped', voiceTaskId: null });
+      }
+    } else if (session.character.voiceSampleUrl) {
+      // Re-queue TTS for pages that have dialog but no settled voice
+      let earliestMissingIdx = null;
+      for (let i = 0; i < visiblePageIndices.length; i++) {
+        const plotPageIdx = visiblePageIndices[i];
+        const cacheKey = buildCacheKey({
+          plotUid: currentPlot.uid,
+          pageIndex: plotPageIdx,
+          characterUid: session.character.uid,
+          outfitUid: session.outfitUid,
+          locationPartUid: session.location.partUid,
+          locationAttributeMap: session.location.attributeMap,
+          slotStatuses: pageSlotStatuses[plotPageIdx],
+        });
+        const entry = getCacheEntry(cacheKey);
+        const dialogText = entry?.dialogText;
+        const vs = entry?.voiceStatus;
+        if (dialogText && !['complete', 'generating', 'error'].includes(vs)) {
+          if (earliestMissingIdx === null) earliestMissingIdx = i;
+          queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
+        }
+      }
+
+      // Play current page voice immediately if already available
+      const currentPlotIdx = visiblePageIndices[session.pageIndex];
+      const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
+      if (currentVoiceUrl) {
+        globalAudioPlayer.play(currentVoiceUrl);
+      } else if (earliestMissingIdx !== null && earliestMissingIdx < session.pageIndex) {
+        // Navigate back to the earliest page waiting for voice
+        updateSession({ pageIndex: earliestMissingIdx });
+      }
+    }
+  }, [session.muted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Play intro voice only after the intro image finishes loading and the screen becomes visible.
+  // Only triggers on character change — outfit/location/music regenerations are ignored.
+  useEffect(() => {
+    if (session.phase !== 'intro-main' || !audioUnlocked || session.muted) return;
+    if (!session.character.voiceSampleUrl || !session.character.introTranscript) return;
+    if (isGenerating || !session.introImageUrl) return;
+    if (introVoicePlayedForRef.current === session.character.uid) return;
+    introVoicePlayedForRef.current = session.character.uid;
+    globalAudioPlayer.play(session.character.voiceSampleUrl);
+  }, [session.phase, session.character.uid, audioUnlocked, session.muted, isGenerating, session.introImageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dynamic voice reprioritization: when navigating to a page whose voice is generating,
+  // move its queue item to position 1 (right after any currently-running task)
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+    const plotPageIdx = visiblePageIndices[session.pageIndex];
+    if (plotPageIdx === undefined) return;
+    if (pageVoiceStatuses[plotPageIdx] !== 'generating') return;
+
+    const entry = getCacheEntry(buildCacheKey({
+      plotUid: currentPlot.uid,
+      pageIndex: plotPageIdx,
+      characterUid: session.character.uid,
+      outfitUid: session.outfitUid,
+      locationPartUid: session.location.partUid,
+      locationAttributeMap: session.location.attributeMap,
+      slotStatuses: pageSlotStatuses[plotPageIdx],
+    }));
+    const voiceTaskId = entry?.voiceTaskId;
+    if (!voiceTaskId) return;
+
+    fetch('/queue/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: voiceTaskId, toIndex: 1 }),
+    }).catch(() => {});
+  }, [session.pageIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Autoplay ---
 
@@ -496,9 +844,14 @@ export function AnyTalePlayPage() {
     fetch('/queue/items/source/anytale-play', { method: 'DELETE' })
       .catch(err => console.error('[AnyTalePlayPage] Failed to cancel play queue items:', err));
 
+    // Stop audio players
+    globalAudioPlayer.stop();
+    globalBgmPlayer.stop();
+
     // Clear pending routing state so stale mappings don't survive the reset
     taskToPageRef.current.clear();
     pendingChapterEventsRef.current = [];
+    dialogHistoryRef.current = [];
 
     // Wipe the entire client-side asset cache so stale images never resurface
     clearAllCache();
@@ -514,6 +867,9 @@ export function AnyTalePlayPage() {
     setPageSlotStatuses([]);
     setPageImageUrls({});
     setPageStatuses({});
+    setPageDialogTexts({});
+    setPageVoiceUrls({});
+    setPageVoiceStatuses({});
     setIsAutoplay(false);
     setPlayData(null);
     loadPlayData()
@@ -528,6 +884,7 @@ export function AnyTalePlayPage() {
 
   const enterCharacterPick = useCallback(() => {
     if (!playData) return;
+    globalAudioPlayer.stop();
     const others = (playData.characters || []).filter(
       c => c.parts?.length > 0 && c.uid !== session.character.uid
     );
@@ -562,11 +919,14 @@ export function AnyTalePlayPage() {
           uid: char.uid, name: char.name,
           personality: char.personality || '',
           portraitUrl: char.portraitUrl || '',
+          voiceSampleUrl: char.voiceSampleUrl || char.audioUrl || '',
+          introTranscript: char.introTranscript || '',
           parts: char.parts || [],
         },
         outfitUid: outfit ? outfit.uid : '',
         slotState,
         phase: 'intro-main',
+        introImageUrl: null,
       };
       saveSession(next);
       generateIntroImage(next, introPlot, playData);
@@ -674,6 +1034,30 @@ export function AnyTalePlayPage() {
 
   // --- Render ---
 
+  if (!audioUnlocked) {
+    const handleStart = () => {
+      setAudioUnlocked(true);
+      // Start BGM immediately on user gesture if genre is ready
+      if (session.musicOn && session.music?.genre && playData) {
+        const genres = playData.genres || [];
+        const genre = genres.find(g => g.name === session.music.genre);
+        if (genre?.tracks?.length && !globalBgmPlayer.isPlaying()) {
+          const shuffled = randomPickN(genre.tracks, genre.tracks.length);
+          globalBgmPlayer.setPlaylist(shuffled.map(t => ({ url: t.audioUrl, label: t.name })));
+          globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: 2 });
+          globalBgmPlayer.play().catch(() => {});
+        }
+      }
+    };
+    return html`
+      <${PortraitPanel}
+        mode="start"
+        backgroundUrl=${session.introImageUrl || ''}
+        onStart=${handleStart}
+      />
+    `;
+  }
+
   if (error) {
     return html`
       <${PortraitPanel}
@@ -698,9 +1082,25 @@ export function AnyTalePlayPage() {
 
     const currentPlotPageIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
     const currentImageUrl = pageImageUrls[currentPlotPageIdx];
-    const currentPageReady = pageStatuses[currentPlotPageIdx] === 'complete';
+    const currentDialogText = pageDialogTexts[currentPlotPageIdx] || '';
 
-    const loadedCount = visiblePageIndices.filter(i => pageStatuses[i] === 'complete').length;
+    const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
+
+    const isVoiceSettled = (plotIdx) => {
+      const vs = pageVoiceStatuses[plotIdx];
+      if (vs === 'complete' || vs === 'skipped' || vs === 'error') return true;
+      if (pageDialogTexts[plotIdx] === null) return true;
+      return false;
+    };
+
+    const currentPageReady = pageStatuses[currentPlotPageIdx] === 'complete' &&
+      (!voiceApplicable || isVoiceSettled(currentPlotPageIdx));
+    const loadedCount = visiblePageIndices.filter(i => {
+      const imageReady = pageStatuses[i] === 'complete';
+      if (!voiceApplicable) return imageReady;
+      const voiceReady = pageVoiceStatuses[i] === 'complete' || pageVoiceStatuses[i] === 'skipped';
+      return imageReady && voiceReady;
+    }).length;
     const loadedPercent = visiblePageIndices.length > 0
       ? (loadedCount / visiblePageIndices.length) * 100 : 0;
     const currentPercent = visiblePageIndices.length > 0
@@ -712,14 +1112,18 @@ export function AnyTalePlayPage() {
     const prevPlotPageIdx = session.pageIndex > 0 ? visiblePageIndices[session.pageIndex - 1] : null;
     const nextPlotPageIdx = session.pageIndex < visiblePageIndices.length - 1
       ? visiblePageIndices[session.pageIndex + 1] : null;
-    const canGoPrev = prevPlotPageIdx !== null && pageStatuses[prevPlotPageIdx] === 'complete';
-    const canGoNext = nextPlotPageIdx !== null && pageStatuses[nextPlotPageIdx] === 'complete';
+
+    const isPageReady = (plotIdx) =>
+      pageStatuses[plotIdx] === 'complete' && (!voiceApplicable || isVoiceSettled(plotIdx));
+
+    const canGoPrev = prevPlotPageIdx !== null && isPageReady(prevPlotPageIdx);
+    const canGoNext = nextPlotPageIdx !== null && isPageReady(nextPlotPageIdx);
 
     return html`
       <${PortraitPanel}
         mode=${currentPageReady ? 'page' : 'loading'}
         backgroundUrl=${currentImageUrl || ''}
-        bubbleText=""
+        bubbleText=${currentDialogText}
         muted=${session.muted}
         musicEnabled=${session.musicOn}
         chapter=${chapterNum}
@@ -743,10 +1147,13 @@ export function AnyTalePlayPage() {
 
   let decisions = [];
   let bubbleText = '';
+  let bubbleType = 'caption';
   let onBack = null;
 
   if (phase === 'intro-main' && panelMode === 'decision') {
-    bubbleText = session.character.name ? `Hello, I'm ${session.character.name}.` : '';
+    bubbleText = session.character.introTranscript ||
+      (session.character.name ? `Hello, I'm ${session.character.name}.` : '');
+    bubbleType = 'speech';
     decisions = [
       { text: 'Let me meet someone else', onClick: enterCharacterPick },
       { text: "The mood isn't right", onClick: enterMood },
@@ -809,6 +1216,7 @@ export function AnyTalePlayPage() {
       mode=${panelMode}
       backgroundUrl=${session.introImageUrl || ''}
       bubbleText=${bubbleText}
+      bubbleType=${bubbleType}
       muted=${session.muted}
       musicEnabled=${session.musicOn}
       decisions=${decisions}

@@ -29,7 +29,19 @@
     "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"],
     "musicWorkflow": "Text to Background Track (ACE-Step 1.5 XL)",
     "defaultMusicLength": 120,
-    "introductionPlotName": "introduction"
+    "introductionPlotName": "introduction",
+    "dialog": {
+      "model": "hf.co/mradermacher/IceAbsintheRP-7b-i1-GGUF:Q4_K_S",
+      "systemMessage": "You are a chat companion that is writing spoken lines of dialog to roleplay with a third party user outside of the current conversation. The incoming user texts are instructions to inform you what your character is physically doing. Instead of responding to the user, write a dialog that naturally follows the context of your previous and current actions, as well as your character's personality.\n\nKeep your dialog extremely brief, no longer that two or three lines. Inject your dialog with exaggerated emotion. Write the dialog only, with no quotes or emotes. Do not inject additional instructions.\n\nA good example:\n\nI need you tonight.\n\nAvoid any of these:\n\n\"I need you tonight\", she said\nI need you tonight *winks*\nI wink, gesturing my needs for you\n\nYour character profile:\nYou are {{name}}, {{profile}}.\n\nCurrent location:\n{{location}}",
+      "parameters": {
+        "temperature": 0.9,
+        "topP": 0.9,
+        "maxTokens": 2048
+      },
+      "mode": "chat",
+      "stream": false
+    },
+    "speechWorkflow": "Dialog to Speech (Chatterbox)"
   },
   "exports": [
     {

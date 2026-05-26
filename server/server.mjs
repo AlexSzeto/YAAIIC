@@ -160,6 +160,8 @@ app.get('/workflows', (req, res) => {
 
 async function startServer() {
   await migrateAll();
+  // Reload config after migrations so any newly-written fields are live in app.locals
+  app.locals.config = loadConfig();
 
   // Load image data on server initialization
   loadMediaData();
