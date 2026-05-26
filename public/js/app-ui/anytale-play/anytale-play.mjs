@@ -27,6 +27,7 @@ import {
 import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
 import { generateDialog } from './play-dialog.mjs';
+import { patchPrefs } from '../anytale/play/play-prefs.mjs';
 
 export function AnyTalePlayPage() {
   const [, setTheme] = useState(currentTheme.value);
@@ -719,12 +720,20 @@ export function AnyTalePlayPage() {
   useEffect(() => {
     if (session.musicOn) {
       if (!globalBgmPlayer.isPlaying()) {
+        // stop() clears the playlist — reload it before playing when toggling back on
+        const genres = playData?.genres || [];
+        const genre = genres.find(g => g.name === session.music?.genre);
+        if (genre?.tracks?.length) {
+          const shuffled = randomPickN(genre.tracks, genre.tracks.length);
+          globalBgmPlayer.setPlaylist(shuffled.map(t => ({ url: t.audioUrl, label: t.name })));
+          globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: 2 });
+        }
         globalBgmPlayer.play().catch(() => {});
       }
     } else {
       if (globalBgmPlayer.isPlaying()) globalBgmPlayer.stop();
     }
-  }, [session.musicOn]);
+  }, [session.musicOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Voice playback ---
 
@@ -1119,6 +1128,18 @@ export function AnyTalePlayPage() {
   const startAutoplay = useCallback(() => setIsAutoplay(true), []);
   const stopAutoplay = useCallback(() => setIsAutoplay(false), []);
 
+  const handleToggleMute = useCallback(() => {
+    const next = !session.muted;
+    patchPrefs({ muted: next });
+    updateSession({ muted: next });
+  }, [session.muted, updateSession]);
+
+  const handleToggleMusic = useCallback(() => {
+    const next = !session.musicOn;
+    patchPrefs({ musicOn: next });
+    updateSession({ musicOn: next });
+  }, [session.musicOn, updateSession]);
+
   // --- Render ---
 
   if (!audioUnlocked) {
@@ -1222,8 +1243,8 @@ export function AnyTalePlayPage() {
         onStop=${stopAutoplay}
         onNext=${canGoNext ? goToNext : undefined}
         onReset=${handleReset}
-        onToggleMute=${() => updateSession({ muted: !session.muted })}
-        onToggleMusic=${() => updateSession({ musicOn: !session.musicOn })}
+        onToggleMute=${handleToggleMute}
+        onToggleMusic=${handleToggleMusic}
       />
     `;
   }

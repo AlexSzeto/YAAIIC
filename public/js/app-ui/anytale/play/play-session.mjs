@@ -6,7 +6,12 @@
  *
  * Key is distinct from editor keys: anytale-state, anytale-plot,
  * anytale-character, anytale-outfit.
+ *
+ * User preferences (muted, musicOn) are intentionally NOT stored here —
+ * they live in anytale-play-prefs (play-prefs.mjs) so they survive resets.
  */
+
+import { loadPrefs } from './play-prefs.mjs';
 
 const STORAGE_KEY = 'anytale-play-session';
 
@@ -39,8 +44,8 @@ const STORAGE_KEY = 'anytale-play-session';
  * @property {number} pageIndex - 0-based index into the visible pages array for the current chapter
  * @property {string} phase - 'intro-main'|'intro-mood'|'character-pick'|'outfit-pick'|'location-pick'|'music-pick'|'plot'
  * @property {string|null} introImageUrl
- * @property {boolean} muted
- * @property {boolean} musicOn
+ * @property {boolean} muted - sourced from play-prefs, not written here
+ * @property {boolean} musicOn - sourced from play-prefs, not written here
  */
 
 const DEFAULT_SESSION = {
@@ -54,11 +59,9 @@ const DEFAULT_SESSION = {
   pageIndex: 0,
   phase: 'intro-main',
   introImageUrl: null,
-  muted: false,
-  musicOn: true,
 };
 
-/** Load session from localStorage; merge missing keys with defaults and write the repaired session back. */
+/** Load session from localStorage, merge missing keys with defaults, then overlay prefs. */
 export function load() {
   let stored = {};
   try {
@@ -80,12 +83,20 @@ export function load() {
   }
 
   if (repaired) localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+  // Preferences override session defaults — they survive resets independently.
+  const prefs = loadPrefs();
+  merged.muted = prefs.muted;
+  merged.musicOn = prefs.musicOn;
+
   return merged;
 }
 
-/** Full save — replaces entire session object in localStorage. */
+/** Full save — replaces entire session object in localStorage (prefs keys are excluded). */
 export function save(session) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  // Strip pref-owned keys so they are never mixed into the session storage.
+  const { muted, musicOn, ...rest } = session; // eslint-disable-line no-unused-vars
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }
 
 /** Shallow-merge partial updates into the stored session. */
