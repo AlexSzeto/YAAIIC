@@ -736,7 +736,8 @@ export function AnyTalePlayPage() {
 
   // When all page assets are ready (image + dialog + voice if applicable), simultaneously:
   // crossfade to the new background image, reveal dialog, and begin voice playback.
-  // Preload the image in the background so the crossfade is instant at this moment.
+  // Only fires when the displayed URL is actually changing — prevents voice from replaying
+  // when an unrelated dep (e.g. the next page's voice URL) causes the effect to re-run.
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
     const plotIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
@@ -745,18 +746,21 @@ export function AnyTalePlayPage() {
     const imgUrl = pageImageUrls[plotIdx];
     if (!imgUrl || pageStatuses[plotIdx] !== 'complete') return;
 
+    const isNewTransition = imgUrl !== displayedImageUrl;
+
+    // Preload early — warm the browser cache while voice is still generating
+    // so the crossfade is instant the moment all assets settle.
+    if (isNewTransition) {
+      const img = new Image();
+      img.src = imgUrl;
+    }
+
     const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
     const vs = pageVoiceStatuses[plotIdx];
     const voiceSettled = !voiceApplicable ||
       vs === 'complete' || vs === 'skipped' || vs === 'error' ||
       pageDialogTexts[plotIdx] === null;
-    if (!voiceSettled) return;
-
-    // Preload image so PortraitPanel crossfade is instant
-    if (imgUrl !== displayedImageUrl) {
-      const img = new Image();
-      img.src = imgUrl;
-    }
+    if (!voiceSettled || !isNewTransition) return;
 
     setDisplayedImageUrl(imgUrl);
     if (!session.muted && pageVoiceUrls[plotIdx]) {
@@ -796,7 +800,13 @@ export function AnyTalePlayPage() {
         updateCacheEntry(cacheKey, { voiceStatus: 'skipped', voiceTaskId: null });
       }
     } else if (session.character.voiceSampleUrl) {
-      // Voice playback on unmute is handled by the page-ready effect (session.muted dep).
+      // Play current page voice immediately if already available.
+      // The page-ready effect only fires when displayedImageUrl changes, so unmute
+      // must trigger playback here for pages that are already fully displayed.
+      const currentPlotIdx = visiblePageIndices[session.pageIndex];
+      const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
+      if (currentVoiceUrl) globalAudioPlayer.play(currentVoiceUrl);
+
       // Reset 'skipped' voice cache entries that were cancelled due to muting (have dialog text)
       // so that initChapter will re-queue TTS for them
       let anyVoiceReset = false;
