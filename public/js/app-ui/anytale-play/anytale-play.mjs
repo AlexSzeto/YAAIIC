@@ -504,6 +504,7 @@ export function AnyTalePlayPage() {
     clearAllCache();
 
     clearSession();
+    setSession(loadSession());
     clearPlayDataCache();
     setIntroPlot(null);
     setError(null);
