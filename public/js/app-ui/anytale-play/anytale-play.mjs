@@ -1352,8 +1352,8 @@ export function AnyTalePlayPage() {
       decisions=${decisions}
       onBack=${onBack}
       onReset=${handleReset}
-      onToggleMute=${() => updateSession({ muted: !session.muted })}
-      onToggleMusic=${() => updateSession({ musicOn: !session.musicOn })}
+      onToggleMute=${handleToggleMute}
+      onToggleMusic=${handleToggleMusic}
     />
   `;
 }
