@@ -44,6 +44,50 @@ import { portraitPromptHash } from './portrait-hash.mjs';
 
 const router = Router();
 
+// ---------------------------------------------------------------------------
+// Voice-upload cache for play-mode TTS
+//
+// The generate-speech endpoint must upload the character's voice sample to
+// ComfyUI before enqueuing the task. Without caching this operation takes
+// ~100–300 ms per request. Because all TTS requests for a chapter arrive at
+// the server almost simultaneously, every TTS task was being enqueued AFTER
+// all image tasks (which enqueue synchronously), producing the wrong order:
+//   [img0, img1, img2, …, tts0, tts1, tts2, …]
+//
+// This cache ensures only the FIRST request for a given voice URL does the
+// actual I/O; concurrent requests for the same URL await the same Promise so
+// they all resolve together and are enqueued with minimal extra delay.
+// ---------------------------------------------------------------------------
+const _voiceFilenameCache = new Map();   // voiceSampleUrl → comfyUI filename
+const _voiceFilenamePending = new Map(); // voiceSampleUrl → Promise<string>
+
+/**
+ * Return the ComfyUI filename for a voice sample, uploading it if necessary.
+ * Concurrent calls for the same URL share a single upload Promise.
+ * @param {string} voiceSampleUrl
+ * @param {Function} uploadFileToComfyUI
+ * @returns {Promise<string>}
+ */
+async function resolveVoiceFilename(voiceSampleUrl, uploadFileToComfyUI) {
+  if (_voiceFilenameCache.has(voiceSampleUrl)) {
+    return _voiceFilenameCache.get(voiceSampleUrl);
+  }
+  if (_voiceFilenamePending.has(voiceSampleUrl)) {
+    return _voiceFilenamePending.get(voiceSampleUrl);
+  }
+  const uploadPromise = (async () => {
+    const voiceRelPath = voiceSampleUrl.replace(/^\/media\//, '');
+    const voiceFilePath = join(STORAGE_DIR, voiceRelPath);
+    const voiceBuffer = await fs.promises.readFile(voiceFilePath);
+    const { filename } = await uploadFileToComfyUI(voiceBuffer, voiceRelPath, 'audio', 'input', true);
+    _voiceFilenameCache.set(voiceSampleUrl, filename);
+    _voiceFilenamePending.delete(voiceSampleUrl);
+    return filename;
+  })();
+  _voiceFilenamePending.set(voiceSampleUrl, uploadPromise);
+  return uploadPromise;
+}
+
 const RULES_PATH = join(process.cwd(), 'server', 'resource', 'anytale-rules.txt');
 
 function loadSlotRules() {
@@ -806,16 +850,13 @@ router.post('/anytale/play/generate-speech', async (req, res) => {
       return res.status(400).json({ error: `Speech workflow '${speechWorkflow}' not found` });
     }
 
-    // Upload the voice sample to ComfyUI so the workflow can reference it by filename
-    const voiceRelPath = voiceSampleUrl.replace(/^\/media\//, '');
-    const voiceFilePath = join(STORAGE_DIR, voiceRelPath);
-    const voiceBuffer = await fs.promises.readFile(voiceFilePath);
-    const voiceUpload = await uploadFileToComfyUI(voiceBuffer, voiceRelPath, 'audio', 'input', true);
+    // Resolve the ComfyUI voice filename (cached after first upload per URL).
+    const voiceFilename = await resolveVoiceFilename(voiceSampleUrl, uploadFileToComfyUI);
 
     const requestData = {
       workflow: speechWorkflow,
       prompt: dialogText.trim(),
-      audio_0_filename: voiceUpload.filename,
+      audio_0_filename: voiceFilename,
       seed: Math.floor(Math.random() * 4294967295),
       tags: '',
       description: '',

@@ -319,7 +319,8 @@ export function AnyTalePlayPage() {
 
     updateCacheEntry(cacheKey, { imageUrl: null, imageTaskId: null, imageStatus: 'pending' });
 
-    fetchJson('/anytale/play/generate-page', {
+    // Return the Promise so callers can await the server enqueue before moving on.
+    return fetchJson('/anytale/play/generate-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -407,20 +408,23 @@ export function AnyTalePlayPage() {
     }
   }, []);
 
-  // Queue TTS speech generation for a page (after dialog text is known)
+  // Queue TTS speech generation for a page (after dialog text is known).
+  // Returns a Promise that resolves once the server has accepted the task so
+  // callers can await it before enqueuing the next page's image.
   const queuePageSpeech = useCallback((plotPageIdx, dialogText, cacheKey) => {
     const sess = sessionRef.current;
     const voiceSampleUrl = sess?.character?.voiceSampleUrl;
     if (!voiceSampleUrl || sess?.muted) {
       updateCacheEntry(cacheKey, { voiceUrl: null, voiceStatus: 'skipped' });
       setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'skipped' }));
-      return;
+      return Promise.resolve();
     }
 
     updateCacheEntry(cacheKey, { voiceUrl: null, voiceStatus: 'generating' });
     setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
 
-    fetchJson('/anytale/play/generate-speech', {
+    // Return the Promise so callers can await the server enqueue before moving on.
+    return fetchJson('/anytale/play/generate-speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -590,11 +594,24 @@ export function AnyTalePlayPage() {
 
     if (chapterStaleRef.current !== staleId) return;
 
-    // Phase 3: queue images and TTS for missing pages
+    // Phase 3: queue images and TTS per page in order — img0 then tts0, img1 then tts1, …
+    //
+    // WHY sequential per-page submission matters:
+    //   The server's generate-page endpoint enqueues synchronously; generate-speech must
+    //   await a voice-file upload (≈100–300 ms) before it can enqueue. Submitting all
+    //   requests fire-and-forget causes the server queue to see [img0,img1,img2,…,tts0,tts1,…]
+    //   instead of [img0,tts0,img1,tts1,…].
+    //
+    //   Awaiting Promise.all([imagePromise, ttsPromise]) per page before advancing to the
+    //   next page guarantees that page N's image AND TTS are both enqueued on the server
+    //   before page N+1's requests are sent, preserving the correct interleaved order.
     const voiceOn = dialogEnabled && !sess.muted && !!sess.character.voiceSampleUrl;
     const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
 
     for (const plotPageIdx of visibleIndices) {
+      // Abort if another initChapter was called while we were awaiting the previous page.
+      if (chapterStaleRef.current !== staleId) return;
+
       const cacheKey = buildCacheKey({
         plotUid: plot.uid,
         pageIndex: plotPageIdx,
@@ -605,8 +622,11 @@ export function AnyTalePlayPage() {
         slotStatuses: slotStatuses[plotPageIdx],
       });
 
+      const pagePromises = [];
+
       if (needsImage.has(plotPageIdx)) {
-        queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
+        const p = queuePageImage(plotPageIdx, plot, slotStatuses[plotPageIdx]);
+        if (p) pagePromises.push(p);
       }
 
       if (voiceOn) {
@@ -615,9 +635,14 @@ export function AnyTalePlayPage() {
         const vs = entry?.voiceStatus;
         const voiceNeeded = dialogText && !['complete', 'generating', 'skipped', 'error'].includes(vs);
         if (voiceNeeded) {
-          queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
+          const p = queuePageSpeechRef.current?.(plotPageIdx, dialogText, cacheKey);
+          if (p) pagePromises.push(p);
         }
       }
+
+      // Await both submissions before moving to the next page so the server queue
+      // receives them in the correct order.
+      if (pagePromises.length > 0) await Promise.all(pagePromises);
     }
   }, [queuePageImage, queuePageDialog]);
 
