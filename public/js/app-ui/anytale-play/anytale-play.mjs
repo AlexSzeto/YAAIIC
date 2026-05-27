@@ -1323,7 +1323,7 @@ export function AnyTalePlayPage() {
       globalBgmPlayer.setTransition({ mode: 'crossfade', durationSeconds: 2 });
       globalBgmPlayer.play().catch(err => console.error('[AnyTalePlayPage] BGM play failed:', err));
     }
-    updateSession({ music: { genre: genre.name }, phase: 'intro-mood' });
+    updateSession({ music: { genre: genre.name }, phase: 'intro-main' });
   }, [updateSession]);
 
   // --- Chapter navigation ---
@@ -1730,7 +1730,9 @@ export function AnyTalePlayPage() {
     bubbleType = 'speech';
     decisions = [
       { text: 'Let me meet someone else', onClick: enterCharacterPick },
-      { text: "The mood isn't right", onClick: enterMood },
+      { text: 'Maybe try on a different outfit?', onClick: enterOutfitPick },
+      { text: "Let's go somewhere else.", onClick: enterLocationPick },
+      { text: "Let's listen to something different.", onClick: enterMusicPick },
       { text: 'Begin the tale', onClick: beginTale },
     ];
 
@@ -1765,7 +1767,7 @@ export function AnyTalePlayPage() {
 
   } else if (phase === 'outfit-pick') {
     bubbleText = 'Pick a different outfit.';
-    onBack = () => updateSession({ phase: 'intro-mood' });
+    onBack = () => updateSession({ phase: 'intro-main' });
     decisions = [
       ...outfitDraft.map(outfit => ({
         text: outfit.name,

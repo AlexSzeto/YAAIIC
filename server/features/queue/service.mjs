@@ -126,10 +126,11 @@ export function deleteItem(id) {
       _runNext();
       return true;
     }
-    // Determine if there are more items after this one
-    const hasNext = items.some((i, j) => j > idx && i.status === 'queued');
+    // Use 'skipping' so _handleTaskCancelled calls _runNext() after the interrupt
+    // lands, transitioning to 'stopped' (not 'paused') when no items follow.
+    // This keeps autoStart working for items enqueued after the delete.
     deletingRunningItemId = id;
-    state = hasNext ? 'skipping' : 'pausing';
+    state = 'skipping';
     _cancelRunningTask();
     emitUpdated();
     return true;
@@ -190,7 +191,8 @@ export function clearBySource(source) {
   items = items.filter(i => i.source !== source || i.status === 'running');
 
   // If the running item belongs to this source, cancel it.
-  // All queued items are already gone so 'pausing' is the correct landing state.
+  // Use 'skipping' (not 'pausing') so _handleTaskCancelled calls _runNext() after
+  // the interrupt, keeping the queue in 'stopped' state for items enqueued later.
   const runningItem = items.find(i => i.status === 'running');
   if (runningItem?.source === source) {
     if (state === 'cancelling' || state === 'skipping' || state === 'pausing') {
@@ -202,7 +204,7 @@ export function clearBySource(source) {
       return;
     }
     deletingRunningItemId = runningItem.id;
-    state = 'pausing';
+    state = 'skipping';
     _cancelRunningTask();
   }
 

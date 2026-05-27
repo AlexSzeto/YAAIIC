@@ -14,7 +14,7 @@
   },
   "12": {
     "inputs": {
-      "text": "blurry, watermark, trademarked, subtitle, jpeg artifacts, safe, censored",
+      "text": "blurry, extra hands, extra fingers, extra arms, extra legs, watermark, trademarked, subtitle, background text, foreground text, speech bubble, sound effects, jpeg artifacts, safe, censored",
       "clip": [
         "45",
         0

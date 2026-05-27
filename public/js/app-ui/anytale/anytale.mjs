@@ -71,18 +71,22 @@ export function AnyTalePage() {
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
 
-  // Workflow config loaded from /anytale/config + /workflows on mount
+  // Workflow config loaded from /anytale/config + /api/workflows/:name on mount.
+  // Using /api/workflows/:name (not the public /workflows list) so hidden workflows work.
   const [workflowConfig, setWorkflowConfig] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/anytale/config').then(r => r.json()),
-      fetch('/workflows').then(r => r.json()),
-    ])
-      .then(([config, workflows]) => {
+    fetch('/anytale/config')
+      .then(r => r.json())
+      .then(config => {
         const name = config.generationWorkflow;
-        const found = Array.isArray(workflows) ? workflows.find(w => w.name === name) : null;
-        setWorkflowConfig(found || null);
+        if (!name) { setWorkflowConfig(null); return; }
+        return fetch(`/api/workflows/${encodeURIComponent(name)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            const wf = data?.workflow;
+            setWorkflowConfig(wf ? { name: wf.name, ...wf.options } : null);
+          });
       })
       .catch(err => console.error('[AnyTalePage] Failed to load workflow config:', err));
   }, []);

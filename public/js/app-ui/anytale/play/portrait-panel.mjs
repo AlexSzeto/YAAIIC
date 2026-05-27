@@ -119,6 +119,7 @@ const ChapterPill = styled('div')`
   gap: 8px;
   padding: 0 24px;
   max-width: 240px;
+  margin-left: auto;
   border-radius: 9999px;
   background-color: ${() => currentTheme.value.colors.overlay.glass};
   backdrop-filter: blur(4px);
@@ -126,6 +127,7 @@ const ChapterPill = styled('div')`
   overflow: hidden;
   @media (max-width: 768px) {
     max-width: none;
+    margin-left: 0;
   }
 `;
 ChapterPill.className = 'chapter-pill';

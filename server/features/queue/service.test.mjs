@@ -131,8 +131,8 @@ describe('queue service — _handleTaskCompleted', () => {
 
     const runningId = getStatus().items[0].id;
 
-    deleteItem(runningId); // first delete → state becomes 'pausing', item still in queue
-    expect(getStatus().state).toBe('pausing');
+    deleteItem(runningId); // first delete → state becomes 'skipping', item still in queue
+    expect(getStatus().state).toBe('skipping');
     expect(getStatus().items.find(i => i.id === runningId)).toBeDefined();
 
     deleteItem(runningId); // second delete → force-abandon
