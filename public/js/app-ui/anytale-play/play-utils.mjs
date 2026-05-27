@@ -230,3 +230,59 @@ export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotSta
 
   return { enabledParts, visibility };
 }
+
+/**
+ * Filter raw LLM dialog output before display and history storage.
+ *
+ * Step 1 — Quoted-speech extraction:
+ *   If any double-quote character is present (" U+0022, " U+201C, " U+201D),
+ *   extract only the content between quoted pairs and join with a space,
+ *   discarding surrounding narrator text.
+ *   e.g. `"Hello," she said, "goodbye."` → `Hello, goodbye.`
+ *
+ * Step 2 — Emote / inner-thought removal:
+ *   Strip text wrapped in *asterisks* or (parentheses).
+ *   e.g. `So, *smiles* and (thinks quietly) that's it.` → `So, and that's it.`
+ *
+ * Step 3 — Emoji removal:
+ *   Remove all pictographic emoji (😉, 🎉, etc.) plus ZWJ/variation-selector
+ *   characters used to build emoji sequences.
+ *
+ * Step 4 — Whitespace normalisation.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function filterDialogText(text) {
+  if (!text) return text;
+
+  // Step 1: Quote extraction — only when at least one quote character is present.
+  if (/["“”]/.test(text)) {
+    const segments = [];
+    // Open: " (U+0022) or " (U+201C).  Close: " (U+0022) or " (U+201D).
+    // Content may not contain another open/close quote.
+    const re = /[“"]([^"”]*)[”"]/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const seg = m[1].trim();
+      if (seg) segments.push(seg);
+    }
+    if (segments.length > 0) text = segments.join(' ');
+  }
+
+  // Step 2: Remove *emote markers* and (inner-thought markers).
+  text = text.replace(/\*[^*]+\*/g, '');
+  text = text.replace(/\([^)]+\)/g, '');
+
+  // Step 3: Remove emoji — covers pictographics, skin-tone modifiers, and flag
+  // regional-indicator pairs.  The second pass removes sequence-building code
+  // points that may be left behind: U+200D (ZWJ), U+FE0F (variation selector-16),
+  // U+20E3 (combining keycap).
+  text = text.replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}/gu, '');
+  text = text.replace(/‍|️|⃣/g, '');
+
+  // Step 4: Normalise whitespace.
+  text = text.replace(/\s+/g, ' ').trim();
+
+  return text;
+}

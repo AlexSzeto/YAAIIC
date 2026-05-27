@@ -24,6 +24,7 @@ import {
   buildActiveParts,
   computeVisiblePages,
   buildEnabledPartsForPage,
+  filterDialogText,
 } from './play-utils.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
@@ -364,7 +365,7 @@ export function AnyTalePlayPage() {
     const isStreaming = dialogConfig.stream === true;
 
     try {
-      const text = await generateDialog({
+      const rawText = await generateDialog({
         character: sess.character,
         locationAttributeValue: locationAttrValue,
         outfitText,
@@ -376,6 +377,8 @@ export function AnyTalePlayPage() {
           setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: partial }));
         } : undefined,
       });
+      // Filter the completed text and update UI (overwrites any streaming preview).
+      const text = filterDialogText(rawText);
       updateCacheEntry(cacheKey, { dialogText: text, dialogStatus: 'complete' });
       setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: text }));
       return { text, expandedPrompt };

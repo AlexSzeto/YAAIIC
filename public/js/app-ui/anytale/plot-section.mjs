@@ -32,6 +32,7 @@ import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { generateDialog } from '../anytale-play/play-dialog.mjs';
+import { filterDialogText } from '../anytale-play/play-utils.mjs';
 
 // ============================================================================
 // Styled Components
@@ -460,14 +461,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         // Expand {{slot type}} tokens in the dialog prompt using enabled parts' display names
         const expandedPrompt = expandDialogPrompt(pages[i].dialogPrompt, enabledParts);
         const expandedPage = { ...pages[i], dialogPrompt: expandedPrompt };
-        const result = await generateDialog({
+        const result = filterDialogText(await generateDialog({
           character,
           locationAttributeValue,
           outfitText,
           page: expandedPage,
           dialogConfig,
           history,
-        });
+        }));
         history.push({ role: 'user', content: expandedPrompt });
         history.push({ role: 'assistant', content: result });
         setDialogPreviews(prev => ({ ...prev, [i]: result }));
@@ -503,14 +504,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         if (!plot.pages[i].dialogPrompt?.trim()) continue;
         const expandedPrompt = expandDialogPrompt(plot.pages[i].dialogPrompt, enabledParts);
         const expandedPage = { ...plot.pages[i], dialogPrompt: expandedPrompt };
-        const result = await generateDialog({
+        const result = filterDialogText(await generateDialog({
           character,
           locationAttributeValue,
           outfitText,
           page: expandedPage,
           dialogConfig,
           history,
-        });
+        }));
         history.push({ role: 'user', content: expandedPrompt });
         history.push({ role: 'assistant', content: result });
         setDialogPreviews(prev => ({ ...prev, [i]: result }));
@@ -715,21 +716,23 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       />
 
       <!-- Row 3: Create/Save, Revert, Delete, Clear (right aligned) -->
-      <${HorizontalLayout} gap="small" justifyContent="flex-end">
-        <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${!saveEnabled}>
-          ${saveLabel}
-        <//>
-        <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${!revertEnabled}>
-          Revert
-        <//>
-        <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!deleteEnabled}>
-          Delete
-        <//>
+      <${HorizontalEdgesLayout}>
         <${Button} variant="small-text" color="danger" icon="x" onClick=${handleClear}>
-          Clear Plot
+          New Plot
         <//>
-      </${HorizontalLayout}>
-
+        <${HorizontalLayout} gap="small" justifyContent="flex-end">
+          <${Button} variant="small-text" color="primary" icon="save" onClick=${handleSave} disabled=${!saveEnabled}>
+            ${saveLabel}
+          <//>
+          <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${!revertEnabled}>
+            Revert
+          <//>
+          <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!deleteEnabled}>
+            Delete
+          <//>
+        </${HorizontalLayout}>
+      </${HorizontalEdgesLayout}>
+      
       <${SearchSelectModal}
         isOpen=${loadModalOpen}
         title="Load Plot"

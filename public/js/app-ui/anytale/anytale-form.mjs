@@ -990,7 +990,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               deleteLabel="Remove"
             />
 
-            <${HorizontalLayout} gap="small" justifyContent="flex-end">
+            <${HorizontalLayout} gap="small" justifyContent="flex-start">
               <${Button}
                 variant="small-text"
                 color="danger"
