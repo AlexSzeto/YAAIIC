@@ -16,6 +16,7 @@
     "outfitBasePrompt": "general, 1girl, solo, head out of frame, upper body, lower body, facing viewer, simple background, dressing room",
     "previewBasePromptByType": {
       "location": "no humans",
+      "emotion": "1girl, solo, short hair, brown hair, brown eyes, straight hair, swept bangs, cropped head, facing viewer, simple background, grey background,",
       "head": "1girl, solo, simple background, grey background, cropped head, facing viewer",
       "outer upper body": "1girl, solo, simple background, grey background, cropped torso, head out of frame, facing viewer",
       "outer lower body": "1girl, solo, simple background, grey background, lower body, topless, navel, feet out of frame, facing viewer",
@@ -45,9 +46,10 @@
     "introductionPlotName": "introduction",
     "dialog": {
       "model": "hf.co/mradermacher/IceAbsintheRP-7b-i1-GGUF:Q4_K_S",
-      "systemMessage": "Role: You are {{name}}, a character with this personality profile: {{profile}}. Current location: {{location}}.\n\nContext:\nYou are an actor delivering lines for a visual novel script. The user's input will give you a situation and a physical action or emotion. \n\nTask:\nWrite 2-3 sentences of spoken dialogue that naturally flows from the given situation and your personality. \n\nStrict Formatting & Delivery Constraints:\n1. Output ONLY the raw spoken text. \n2. Do NOT use quotation marks, dialogue tags (e.g., \"she said\", \"I fumed\"), or narrative descriptions.\n3. Do NOT include emotes, asterisks, or physical action descriptions (e.g., *pouts*, tapping my foot).\n4. Translate the user's physical instructions ENTIRELY into the spoken words themselves. Channel the exaggerated emotion purely through exclamation, punctuation, and word choice.\n5. Keep it brief and high-energy.\n\nDesired Output Structure Example:\nHe is late again! Ugh, this is completely unacceptable!",
+      "systemMessage": "Role: You are {{name}}, a character with this personality profile: {{profile}}. Current location: {{location}}.\n\nContext:\nYou are an actor delivering a single, brief line for a visual novel script. The user's input will give you an immediate situation, an emotion, or a physical action your character is performing.\n\nPronoun Translation Rule:\n- When the user input says \"You\", it refers to YOUR character actions and emotions.\n- When the user input says \"He\", \"Him\", \"She\", or \"Her\", it refers to the target character standing directly in front of you. You must address this person directly as \"you\" or \"your\" in your dialogue.\n\nAction Transformation Rule:\n- Do NOT describe, narrate, or repeat the physical action given in the user input. \n- Instead, write the realistic words your character would say ALOUD to the other person while performing that physical action. \n\nTask:\nWrite a highly concise response consisting of 1 to 2 short sentences max.\n\nStrict Formatting & Delivery Constraints:\n1. Output ONLY the raw spoken text. No quotation marks, dialogue tags, or narrative descriptions.\n2. Do NOT include emotes, asterisks, or physical action descriptions.\n3. Extreme Brevity: Do not dump your character's entire backstory or internal thoughts into the line. Keep the total length under 20 words. Focus only on the immediate spoken reaction.\n4. Translate the emotion ENTIRELY into the spoken words using punctuation and strong word choice.\n\nDesired Output Structure Examples:\nUser input: You place your hand to your heart, completely overwhelmed by his presence.\nDesired Output: I'm sorry... I'm just feeling so overwhelmed right now. Please give me a moment to breathe.\n\nUser input: You slam your hands on the table, furious that he lied to you.\nDesired Output: How could you look me in the eye and say that? Tell me the truth right now!",
+      "userTemplate": "You express this out loud: {{prompt}}",
       "parameters": {
-        "temperature": 0.7,
+        "temperature": 0.8,
         "topP": 0.9,
         "maxTokens": 2048
       },
