@@ -13,3 +13,5 @@ Improve visual and interaction consistency across the app by formalizing reusabl
 - All hover/title attributes in `public/js/` should be replaced with `TooltipProvider` calls.
 - Add a standardized generic list layout component: list items optionally rendered as buttons, with an optional right-edge action button group per row. Unify the following list-like sections/components under this layout (non-exhaustive): select folder, compact dynamic lists, search select, list select, queue modal, music playlist modal.
 - Update the Select component to use a custom dropdown panel like MultiSelect (instead of native `<select>`), but fix the highlight coloring so the hover color doesn't visually blend with the checkbox outline color in the deselected state.
+- Reorganize the workflow editor page: move the upload section out of its modal and into the main page layout.
+- Use drag-and-drop UI for list rearrangement throughout the app.

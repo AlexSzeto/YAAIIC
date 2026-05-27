@@ -307,10 +307,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;
-    if (outfit.parts.some(op => op.partUid === match.uid)) {
-      toast.info(`Part '${match.name}' is already added`);
-      return;
-    }
+    // Avoid duplicates (guard for programmatic callers; modal pre-checks prevent this)
+    if (outfit.parts.some(op => op.partUid === match.uid)) return;
     const newIndex = outfit.parts.length;
     const newPart = { partUid: match.uid, attributeValues: {}, previewImageUrl: '' };
     setOutfit(prev => ({
@@ -318,7 +316,14 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
       parts: [...prev.parts, newPart],
     }));
     requestPartPreviewCache(newIndex, newPart);
-  }, [outfit.parts, requestPartPreviewCache, toast]);
+  }, [outfit.parts, requestPartPreviewCache]);
+
+  const handleLibraryRemove = useCallback((uid) => {
+    setOutfit(prev => ({
+      ...prev,
+      parts: prev.parts.filter(p => p.partUid !== uid),
+    }));
+  }, []);
 
   const handlePartChange = useCallback((index, updatedPart) => {
     const currentPart = outfit.parts[index];
@@ -720,8 +725,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
               <${LibraryPartPicker}
                 libraryParts=${libraryParts}
+                currentPartUids=${outfit.parts.map(p => p.partUid)}
                 onSelectPart=${handleLibrarySelect}
-                onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
+                onRemovePart=${handleLibraryRemove}
               />
 
               <${DynamicList}

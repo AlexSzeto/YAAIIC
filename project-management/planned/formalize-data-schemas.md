@@ -1,6 +1,6 @@
 # Formalize Data Schemas
 
-**Priority:** medium
+**Priority:** high
 
 ## Goal
 

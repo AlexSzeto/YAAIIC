@@ -1,121 +1,85 @@
 /**
- * library-part-picker.mjs - Shared "Add Part from Library" picker.
+ * library-part-picker.mjs - Shared "Add Parts from Library" picker.
  *
- * Combines the standard autocomplete input with a single-select browse modal.
- * Parent components own the resulting add behavior because each stores parts in
- * a different shape.
+ * Opens a searchable multi-select modal so the user can add or remove multiple
+ * parts in one interaction.  Pre-checks parts that are already present in the
+ * active list (via currentPartUids).  Parent components own add/remove because
+ * each stores parts in a different shape.
  */
 import { html } from 'htm/preact';
 import { useState, useCallback } from 'preact/hooks';
-import { styled } from '../../custom-ui/goober-setup.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
-import { AutocompleteInput } from '../autocomplete-input.mjs';
-
-// ============================================================================
-// Styled Components
-// ============================================================================
-
-const PickerRow = styled('div')`
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  width: 100%;
-`;
-PickerRow.className = 'library-part-picker-row';
-
-const InputFlex = styled('div')`
-  flex: 1;
-  min-width: 0;
-`;
-InputFlex.className = 'library-part-picker-input-flex';
-
-const ButtonWrapper = styled('div')`
-  display: flex;
-  align-items: center;
-  height: 44px;
-`;
-ButtonWrapper.className = 'autocomplete-input-button-wrapper';
 
 // ============================================================================
 // Component
 // ============================================================================
 
 /**
- * @param {Object} props
- * @param {Array} props.libraryParts
- * @param {Function} props.onSelectPart - (partConfig) => void
- * @param {Function} [props.onMissingPart] - (inputValue) => void
- * @param {boolean} [props.disabled=false]
- * @param {string} [props.label='Add Part from Library']
- * @param {string} [props.placeholder='Type to search saved parts...']
- * @param {string} [props.modalTitle='Add Part from Library']
+ * @param {Object}   props
+ * @param {Array}    props.libraryParts        - All available library parts
+ * @param {string[]} [props.currentPartUids=[]] - UIDs of parts already in the active list;
+ *                                               used to pre-check items in the modal
+ * @param {Function} props.onSelectPart        - (partConfig) => void — called for each newly added part
+ * @param {Function} [props.onRemovePart]      - (uid) => void — called for each part removed
+ * @param {boolean}  [props.disabled=false]
+ * @param {string}   [props.label='Browse Library']
+ * @param {string}   [props.modalTitle='Add Parts from Library']
  */
 export function LibraryPartPicker({
   libraryParts = [],
+  currentPartUids = [],
   onSelectPart,
-  onMissingPart,
+  onRemovePart,
   disabled = false,
-  label = 'Add Part from Library',
-  placeholder = 'Type to search saved parts...',
-  modalTitle = 'Add Part from Library',
+  label = 'Browse Library',
+  modalTitle = 'Add Parts from Library',
 }) {
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleAutocompleteSelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) return;
+  // Called by SearchSelectModal on every toggle: array of all currently-selected UIDs.
+  const handleModalSelect = useCallback((selectedUids) => {
+    const selectedSet = new Set(selectedUids);
+    const currentSet = new Set(currentPartUids);
 
-    const match = libraryParts.find(part =>
-      part.name?.toLowerCase() === trimmed.toLowerCase()
-    );
-
-    if (!match) {
-      onMissingPart?.(trimmed);
-      return;
+    // Add newly checked parts
+    for (const uid of selectedSet) {
+      if (!currentSet.has(uid)) {
+        const match = libraryParts.find(p => p.uid === uid);
+        if (match) onSelectPart?.(match);
+      }
     }
 
-    onSelectPart?.(match);
-  }, [libraryParts, onMissingPart, onSelectPart]);
-
-  const handleModalSelect = useCallback((uid) => {
-    const match = libraryParts.find(part => part.uid === uid);
-    if (match) onSelectPart?.(match);
-  }, [libraryParts, onSelectPart]);
+    // Remove newly unchecked parts
+    for (const uid of currentSet) {
+      if (!selectedSet.has(uid)) {
+        onRemovePart?.(uid);
+      }
+    }
+  }, [libraryParts, currentPartUids, onSelectPart, onRemovePart]);
 
   return html`
-    <${PickerRow}>
-      <${InputFlex}>
-        <${AutocompleteInput}
-          label=${label}
-          placeholder=${placeholder}
-          suggestions=${libraryParts.map(part => part.name)}
-          onSelect=${handleAutocompleteSelect}
-          disabled=${disabled}
-        />
-      </${InputFlex}>
-      <${ButtonWrapper}>
-        <${Button}
-          variant="medium-icon"
-          icon="search"
-          title="Browse saved parts"
-          disabled=${disabled || libraryParts.length === 0}
-          onClick=${() => setModalOpen(true)}
-        />
-      </${ButtonWrapper}>
-      <${SearchSelectModal}
-        isOpen=${modalOpen}
-        title=${modalTitle}
-        items=${libraryParts.map(part => ({
-          label: part.name || part.referenceTag || part.uid,
-          value: part.uid,
-          subtitle: Array.isArray(part.type) ? part.type.join(', ') : '',
-        }))}
-        mode="single"
-        onSelect=${handleModalSelect}
-        onClose=${() => setModalOpen(false)}
-      />
-    </${PickerRow}>
+    <${Button}
+      variant="medium-text"
+      icon="search"
+      widthScale="full"
+      disabled=${disabled || libraryParts.length === 0}
+      onClick=${() => setModalOpen(true)}
+    >${label}<//>
+
+    <${SearchSelectModal}
+      isOpen=${modalOpen}
+      title=${modalTitle}
+      items=${libraryParts.map(part => ({
+        label: part.name || part.referenceTag || part.uid,
+        value: part.uid,
+        subtitle: Array.isArray(part.type) ? part.type.join(', ') : '',
+      }))}
+      mode="multi"
+      initialSelected=${currentPartUids}
+      onSelect=${handleModalSelect}
+      onClose=${() => setModalOpen(false)}
+    />
   `;
 }
 

@@ -1,18 +1,22 @@
-# Auto Model Download from Hugging Face
+# Installation Wizard
 
-**Priority:** medium
+**Priority:** high
 
 ## Goal
 
-Allow users to trigger model downloads from Hugging Face directly through the app, rather than manually placing files in ComfyUI directories. The server fetches the file from a given URL and saves it to the appropriate model folder.
+Provide a guided first-run setup experience after a fresh GitHub clone that walks the user through connecting YAAIIC to ComfyUI and Ollama, then automatically downloads all required ComfyUI extensions and models and requests Ollama to pull any required LLM models. The wizard depends on the Settings Page (config screen) and replaces the standalone auto-model-download feature.
 
 ## Notes
 
-- Download URLs and target subfolders (unet, lora, vae, text_encoders, checkpoints, etc.) need to be specified.
-- Progress reporting during download would be valuable.
-- Could be integrated into the settings page or as a standalone model management section.
+- Prerequisites that must exist before this feature can be built: Settings Page (config screen), and the model self-install capability (formerly tracked in auto-model-download).
+- Wizard steps (rough order): configure ComfyUI connection → configure Ollama connection → install ComfyUI custom nodes/extensions → download ComfyUI models → pull Ollama models.
+- Model downloads from Hugging Face (previously tracked separately in auto-model-download.md) are now part of this wizard's model install step. Known model URLs are documented in the absorbed auto-model-download file.
+- ComfyUI extension install: needs a mechanism to install custom nodes (e.g. ComfyUI Manager API or direct git clone).
+- Ollama model pull: call Ollama's `/api/pull` endpoint for each required model.
+- Should be skippable / re-runnable for users who want to add models later.
+- Open question: how does the wizard know which models are "required" for the currently configured workflows?
 
-## Known Model URLs
+## Absorbed: Known Model URLs (from auto-model-download)
 
 **Wan 2.2 5B (image-to-video)**
 - `diffusion_models/wan2.2_ti2v_5B_fp16.safetensors` — https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors

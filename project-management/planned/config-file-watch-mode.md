@@ -1,6 +1,6 @@
 # Config File Watch Mode
 
-**Priority:** medium
+**Priority:** high
 
 ## Goal
 

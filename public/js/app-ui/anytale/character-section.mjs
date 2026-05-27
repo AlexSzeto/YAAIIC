@@ -378,11 +378,8 @@ export function CharacterSection({
 
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;
-    // Avoid duplicates
-    if (character.parts.some(cp => cp.partUid === match.uid)) {
-      toast.info(`Part '${match.name}' is already added`);
-      return;
-    }
+    // Avoid duplicates (guard for programmatic callers; modal pre-checks prevent this)
+    if (character.parts.some(cp => cp.partUid === match.uid)) return;
     const newIndex = character.parts.length;
     const newPart = { partUid: match.uid, attributeValues: {}, previewImageUrl: '' };
     setCharacter(prev => ({
@@ -390,7 +387,14 @@ export function CharacterSection({
       parts: [...prev.parts, newPart],
     }));
     requestPartPreviewCache(newIndex, newPart);
-  }, [character.parts, requestPartPreviewCache, toast]);
+  }, [character.parts, requestPartPreviewCache]);
+
+  const handleLibraryRemove = useCallback((uid) => {
+    setCharacter(prev => ({
+      ...prev,
+      parts: prev.parts.filter(p => p.partUid !== uid),
+    }));
+  }, []);
 
   const handlePartLoadSelect = useCallback((uid) => {
     const match = libraryParts.find(p => p.uid === uid);
@@ -932,8 +936,9 @@ export function CharacterSection({
 
             <${LibraryPartPicker}
               libraryParts=${libraryParts}
+              currentPartUids=${character.parts.map(p => p.partUid)}
               onSelectPart=${handleLibrarySelect}
-              onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
+              onRemovePart=${handleLibraryRemove}
             />
 
             <${DynamicList}

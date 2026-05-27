@@ -1,6 +1,6 @@
 # Settings Page
 
-**Priority:** low
+**Priority:** high
 
 ## Goal
 

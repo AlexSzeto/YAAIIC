@@ -152,6 +152,7 @@ const MultiItem = styled('div')`
   padding: 10px 12px 10px 16px;
   margin-right: 8px;
   cursor: pointer;
+  gap: 10px;
   transition: background-color ${props => props.transition};
 
   &:hover {
@@ -160,6 +161,36 @@ const MultiItem = styled('div')`
   }
 `;
 MultiItem.className = 'search-select-multi-item';
+
+// Stacks label + subtitle for multi-select items
+const MultiItemContent = styled('div')`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+`;
+MultiItemContent.className = 'search-select-multi-item-content';
+
+const MultiItemLabel = styled('span')`
+  font-family: ${props => props.fontFamily};
+  font-size: ${props => props.fontSize};
+  color: ${props => props.color};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+MultiItemLabel.className = 'search-select-multi-item-label';
+
+const MultiItemSubtitle = styled('span')`
+  font-family: ${props => props.fontFamily};
+  font-size: ${props => props.fontSize};
+  color: ${props => props.color};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+MultiItemSubtitle.className = 'search-select-multi-item-subtitle';
 
 // ============================================================================
 // Helpers
@@ -349,9 +380,22 @@ export function SearchSelectModal({
                   >
                     <${Checkbox}
                       checked=${isChecked}
-                      label=${item.label}
                       interactive=${false}
                     />
+                    <${MultiItemContent}>
+                      <${MultiItemLabel}
+                        fontFamily=${theme.typography.fontFamily}
+                        fontSize=${theme.typography.fontSize.medium}
+                        color=${theme.colors.text.primary}
+                      >${item.label}</${MultiItemLabel}>
+                      ${item.subtitle ? html`
+                        <${MultiItemSubtitle}
+                          fontFamily=${theme.typography.fontFamily}
+                          fontSize=${theme.typography.fontSize.small}
+                          color=${theme.colors.text.secondary}
+                        >${item.subtitle}</${MultiItemSubtitle}>
+                      ` : null}
+                    </${MultiItemContent}>
                   </${MultiItem}>
                 `;
               }

@@ -400,11 +400,17 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
   const handleLibrarySelect = useCallback((match) => {
     if (!match) return;
+    // Avoid duplicates (guard for programmatic callers; modal pre-checks prevent this)
+    if (parts.some(p => p.config?.uid === match.uid)) return;
     const newPart = createDefaultPart();
     newPart.config = { ...newPart.config, ...match };
     setParts(prev => [...prev, newPart]);
     requestPartPreviewCacheForFormPart(newPart);
-  }, [requestPartPreviewCacheForFormPart]);
+  }, [parts, requestPartPreviewCacheForFormPart]);
+
+  const handleLibraryRemove = useCallback((uid) => {
+    setParts(prev => prev.filter(p => p.config?.uid !== uid));
+  }, []);
 
   const handlePartLoadSelect = useCallback((uid) => {
     const match = libraryParts.find(p => p.uid === uid);
@@ -938,8 +944,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
               </${HorizontalEdgesLayout}>
               <${LibraryPartPicker}
                 libraryParts=${libraryParts}
+                currentPartUids=${parts.map(p => p.config?.uid).filter(Boolean)}
                 onSelectPart=${handleLibrarySelect}
-                onMissingPart=${(name) => toast.info(`No saved part named '${name}' found`)}
+                onRemovePart=${handleLibraryRemove}
               />
 
             <${DynamicList}
