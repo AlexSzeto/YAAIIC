@@ -17,6 +17,7 @@
  *   @param {Map<string, 'covering'|'revealing'|'removed'>} props.slotStatuses – currently active slots and their resolved status
  *   @param {string[]} [props.allSlots=[]] – all known slot types; inactive ones render as outline-only pills
  *   @param {Array}    [props.allLibraryParts=[]] – all library parts ({ config: { uid, name } }); shown in Parts section
+ *   @param {Array}    [props.libraryParts=[]] – full flat library ({ uid, name }) for resolving orphaned hidden-part names
  *   @param {Object}   props.page         – current PlotPage { requirements, actions, hiddenParts }
  *   @param {Function} props.onChange     – called with updated page object
  *   @param {boolean}  [props.disabled]
@@ -121,7 +122,7 @@ function nextTransition(currentStatus, currentTransition) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [], page = {}, onChange, disabled = false }) {
+export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [], libraryParts = [], page = {}, onChange, disabled = false }) {
   const requirements = page.requirements || [];
   const actions = page.actions || [];
   const hiddenParts = page.hiddenParts || [];
@@ -247,6 +248,31 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
               </${Pill}>
             `;
           })}
+          ${(() => {
+            // Orphaned hidden parts: UIDs in hiddenParts that are no longer in the active
+            // parts list. Always shown as "hidden"; clicking removes them from hiddenParts
+            // (after which they disappear since they're not in allLibraryParts either).
+            const activeUids = new Set(allLibraryParts.map(p => p.config?.uid).filter(Boolean));
+            return hiddenParts
+              .filter(uid => !activeUids.has(uid))
+              .map(uid => {
+                const libMatch = libraryParts.find(p => p.uid === uid);
+                const name = (libMatch?.name || uid || '').trim();
+                const pillStyle = { backgroundColor: currentTheme.value.colors.danger.backgroundLight, border: '1px solid ' + currentTheme.value.colors.danger.background, opacity: '0.6' };
+                return html`
+                  <${Pill} key=${'orphan-' + uid} style=${pillStyle}>
+                    <${PillBody}
+                      style=${{ cursor: disabled ? 'default' : 'pointer', paddingLeft: '10px' }}
+                      onClick=${() => toggleHiddenPart(uid)}
+                      title="Part no longer in parts list — click to remove from hidden list"
+                    >
+                      <${SlotText}>${name}</${SlotText}>
+                      ${html` → <${HiddenLabel}>hidden</${HiddenLabel}>`}
+                    </${PillBody}>
+                  </${Pill}>
+                `;
+              });
+          })()}
         </${PillRow}>
       </${VerticalLayout}>
 

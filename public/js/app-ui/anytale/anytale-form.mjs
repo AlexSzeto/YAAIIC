@@ -1005,6 +1005,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
           <${PlotSection}
             parts=${parts}
+            libraryParts=${libraryParts}
             activePage=${activePlotPage}
             onPageChange=${setActivePlotPage}
             pageLocked=${pageLocked}

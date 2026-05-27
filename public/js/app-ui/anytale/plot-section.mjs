@@ -78,8 +78,9 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
  * @param {Function} [props.onReject]                  – Called with ({ plotUid, pageIndex }) after page is unlocked
  * @param {Function} [props.onBulkDialogReady]         – Called with (fn) when bulkDialogGenerate is ready; null on unmount
+ * @param {Array}    [props.libraryParts=[]]           – Up-to-date library parts from the parent; used to build slot type options
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, libraryParts = [] }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -98,8 +99,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   }, [refreshKey, onPageChange, onPlotReset]);
   // Load-plot modal state
   const [loadModalOpen, setLoadModalOpen] = useState(false);
-  // All library parts — used for slot action editor
-  const [libraryParts, setLibraryParts] = useState([]);
+  // libraryParts is received as a prop from anytale-form.mjs (always up-to-date)
   const [characterSlotTypes, setCharacterSlotTypes] = useState([]);
   const [dialogConfig, setDialogConfig] = useState(null);
   const [dialogPreview, setDialogPreview] = useState(null);
@@ -130,12 +130,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       .catch(err => console.error('[PlotSection] Failed to fetch plot list:', err));
   }, []);
 
-  // ── Load library parts and character slot types ───────────────────────────
+  // ── Load character slot types and dialog config ───────────────────────────
   useEffect(() => {
-    fetch('/anytale/parts')
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then(data => { if (Array.isArray(data)) setLibraryParts(data); })
-      .catch(err => console.error('[PlotSection] Failed to fetch library parts:', err));
     fetch('/anytale/config')
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(data => {
@@ -600,6 +596,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           slotStatuses=${filteredSlotStatuses}
           allSlots=${slotOptions}
           allLibraryParts=${parts}
+          libraryParts=${libraryParts}
           page=${currentPage}
           onChange=${(updatedPage) => updatePage(currentPageIndex, updatedPage)}
           disabled=${isCurrentPageLocked}
