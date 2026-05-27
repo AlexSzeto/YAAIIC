@@ -211,7 +211,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         onComplete: (data) => {
           if (data.result?.characterUid === selectedCharacterUidRef.current) {
             if (applyVoiceRef.current) {
-              applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
+              applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null, data.result?.description || null);
             }
           }
           setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
@@ -264,7 +264,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             onComplete: (data) => {
               if (data.result?.characterUid === selectedCharacterUidRef.current) {
                 if (applyVoiceRef.current) {
-                  applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null);
+                  applyVoiceRef.current(data.result?.audioUrl || null, data.result?.summary || null, data.result?.description || null);
                 }
               }
               setVoiceTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
@@ -1044,7 +1044,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         isOpen=${loadPartModalOpen}
         title="Load Part"
         items=${libraryParts.map(p => ({
-          label: p.name || p.uid,
+          label: p.name || p.referenceTag || p.uid,
           value: p.uid,
           subtitle: Array.isArray(p.type) ? p.type.join(', ') : '',
         }))}

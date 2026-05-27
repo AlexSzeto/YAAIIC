@@ -8,7 +8,8 @@
  *   parts: Array<{
  *     id: string,
  *     config: {
- *       name: string,
+ *       name: string,        // display name shown in play mode
+ *       referenceTag: string, // prompt identifier token
  *       type: string[],
  *       previewBaseline: string,
  *       baseline: string,
@@ -84,6 +85,7 @@ export function createDefaultPart() {
     id: 'part-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     config: {
       name: '',
+      referenceTag: '',
       type: [],
       previewBaseline: '',
       baseline: '',
@@ -191,6 +193,8 @@ export function createBlankCharacter() {
     uid: '',
     name: '',
     personality: '',
+    selfProfile: '',
+    voiceProfile: '',
     portraitUrl: '',
     audioUrl: '',
     introTranscript: '',
@@ -213,6 +217,8 @@ export function loadCharacter() {
       uid: parsed.uid ?? '',
       name: parsed.name ?? '',
       personality: parsed.personality ?? '',
+      selfProfile: parsed.selfProfile ?? '',
+      voiceProfile: parsed.voiceProfile ?? '',
       portraitUrl: parsed.portraitUrl ?? '',
       audioUrl: parsed.audioUrl ?? '',
       introTranscript: parsed.introTranscript ?? '',
@@ -252,6 +258,7 @@ export function createBlankOutfit() {
   return {
     uid: '',
     name: '',
+    description: '',
     parts: [],
     preferredLocations: [],
     renderUrl: '',
@@ -271,6 +278,7 @@ export function loadOutfit() {
     return {
       uid: parsed.uid ?? '',
       name: parsed.name ?? '',
+      description: parsed.description ?? '',
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
       preferredLocations: Array.isArray(parsed.preferredLocations) ? parsed.preferredLocations : [],
       renderUrl: parsed.renderUrl ?? '',

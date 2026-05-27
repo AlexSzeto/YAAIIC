@@ -330,7 +330,7 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
       workflow: voiceWorkflow,
       name,
       prompt: personality,
-      voiceProfile,
+      voiceProfile: voiceProfile,
       seed: Math.floor(Math.random() * 4294967295),
       tags: '',
       description: '',
@@ -506,10 +506,11 @@ router.post('/anytale/outfits/:uid/render-outfit', async (req, res) => {
     const outfit = getAllOutfits().find(o => o.uid === uid);
     if (!outfit) return res.status(404).json({ error: 'Outfit not found' });
 
-    const { visiblePartUids } = req.body || {};
+    const { visiblePartUids, parts: clientParts } = req.body || {};
+    const sourceParts = Array.isArray(clientParts) ? clientParts : (outfit.parts || []);
     const activeParts = visiblePartUids
-      ? (outfit.parts || []).filter(op => visiblePartUids.includes(op.partUid))
-      : (outfit.parts || []);
+      ? sourceParts.filter(op => visiblePartUids.includes(op.partUid))
+      : sourceParts;
 
     const libraryParts = getAllParts();
 

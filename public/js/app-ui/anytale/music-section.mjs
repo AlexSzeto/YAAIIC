@@ -12,6 +12,7 @@ import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
+import { Checkbox } from '../../custom-ui/io/checkbox.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { MultiSelect } from '../../custom-ui/io/multi-select.mjs';
@@ -107,6 +108,7 @@ function arrayToCsv(arr) {
 function genreToEdit(genre) {
   return {
     name: genre.name || '',
+    disabled: genre.disabled ?? false,
     musicPrompt: genre.musicPrompt || '',
     variationsStr: arrayToCsv(genre.variations),
     adjectivesStr: arrayToCsv(genre.adjectives),
@@ -122,6 +124,7 @@ function editToGenre(edit, genre) {
   return {
     ...genre,
     name: edit.name,
+    disabled: edit.disabled ?? false,
     musicPrompt: edit.musicPrompt,
     variations: csvToArray(edit.variationsStr),
     adjectives: csvToArray(edit.adjectivesStr),
@@ -136,6 +139,7 @@ function editToGenre(edit, genre) {
 function makeEditKey(edit) {
   return JSON.stringify({
     name: edit.name,
+    disabled: edit.disabled ?? false,
     musicPrompt: edit.musicPrompt,
     variationsStr: edit.variationsStr,
     adjectivesStr: edit.adjectivesStr,
@@ -643,6 +647,13 @@ function GenreCard({ genre, onSaved, onGenerateTrack, onTrackPlay, onDirtyChange
   return html`
     <${VerticalLayout} gap="medium">
       <${GenreFormGrid}>
+        <${FullSpan}>
+          <${Checkbox}
+            label="Hidden from AnyTale Play"
+            checked=${!!edit.disabled}
+            onChange=${() => setEdit(p => ({ ...p, disabled: !p.disabled }))}
+          />
+        </${FullSpan}>
         <${FullSpan}>
           <${Input}
             label="Genre Name"

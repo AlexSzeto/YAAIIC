@@ -83,6 +83,8 @@ function charactersEqual(a, b) {
   if (!a || !b) return false;
   return a.name === b.name &&
     a.personality === b.personality &&
+    (a.selfProfile || '') === (b.selfProfile || '') &&
+    (a.voiceProfile || '') === (b.voiceProfile || '') &&
     (a.portraitUrl || '') === (b.portraitUrl || '') &&
     (a.audioUrl || '') === (b.audioUrl || '') &&
     (a.introTranscript || '') === (b.introTranscript || '') &&
@@ -102,6 +104,7 @@ function characterPartsToPromptParts(characterParts, libraryParts) {
       return {
         config: {
           name: lib.name,
+          referenceTag: lib.referenceTag || lib.name,
           type: lib.type,
           baseline: lib.baseline,
           previewBaseline: lib.previewBaseline,
@@ -531,7 +534,7 @@ export function CharacterSection({
     if (isGeneratingVoice) return;
     const uid = character.uid || 'temp-voice';
     try {
-      await generateCharacterVoice(uid, character.personality, character.name);
+      await generateCharacterVoice(uid, character.voiceProfile, character.name, character.personality);
     } catch (err) {
       console.error('[CharacterSection] Voice generation failed:', err);
       toast.error(`Voice generation failed: ${err.message}`);
@@ -661,11 +664,12 @@ export function CharacterSection({
     toast.success('Portrait generated');
   }, [toast]);
 
-  const applyVoiceResult = useCallback((audioUrl, introTranscript) => {
+  const applyVoiceResult = useCallback((audioUrl, introTranscript, voiceProfile) => {
     setCharacter(prev => {
       const updates = {};
       if (audioUrl) updates.audioUrl = audioUrl;
       if (introTranscript) updates.introTranscript = introTranscript;
+      if (voiceProfile) updates.voiceProfile = voiceProfile;
       return { ...prev, ...updates };
     });
     toast.success('Voice generated');
@@ -774,7 +778,7 @@ export function CharacterSection({
                 icon="image"
                 onClick=${handleGeneratePortrait}
                 loading=${isPortraitDuplicate}
-                disabled=${dirty || isPortraitDuplicate}
+                disabled=${!character.uid || isPortraitDuplicate}
               >
                 ${isPortraitDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Portrait' : 'Generate Portrait'}
               <//>
@@ -784,7 +788,7 @@ export function CharacterSection({
                 icon="microphone"
                 onClick=${handleGenerateVoice}
                 loading=${isVoiceDuplicate}
-                disabled=${dirty || !character.personality?.trim() || isVoiceDuplicate}
+                disabled=${!character.uid || isVoiceDuplicate}
               >
                 ${isVoiceDuplicate ? 'Generating...' : queueCount > 0 ? 'Queue Voice' : 'Generate Voice'}
               <//>
@@ -805,6 +809,26 @@ export function CharacterSection({
               widthScale="full"
               multiline
               rows=${3}
+            />
+
+            <${Input}
+              label="Self Profile"
+              value=${character.selfProfile || ''}
+              onInput=${(e) => handleFieldChange('selfProfile', e.target.value)}
+              placeholder="Shown as subtitle in play mode character selection"
+              widthScale="full"
+              multiline
+              rows=${2}
+            />
+
+            <${Input}
+              label="Voice Profile"
+              value=${character.voiceProfile || ''}
+              onInput=${(e) => handleFieldChange('voiceProfile', e.target.value)}
+              placeholder="Used for voice generation (populated automatically after generating)"
+              widthScale="full"
+              multiline
+              rows=${2}
             />
 
             <${ChipAutocompleteInput}
@@ -916,11 +940,11 @@ export function CharacterSection({
             isOpen=${loadCharModalOpen}
             title="Load Character"
             items=${characterList.map(c => {
-              const personality = c.personality?.trim() || '';
-              const subtitle = personality.length <= 60 ? personality
-                : (personality.lastIndexOf(' ', 60) > 0
-                  ? personality.slice(0, personality.lastIndexOf(' ', 60))
-                  : personality.slice(0, 60)) + '…';
+              const selfProfile = (c.selfProfile || c.personality || '').trim();
+              const subtitle = selfProfile.length <= 60 ? selfProfile
+                : (selfProfile.lastIndexOf(' ', 60) > 0
+                  ? selfProfile.slice(0, selfProfile.lastIndexOf(' ', 60))
+                  : selfProfile.slice(0, 60)) + '…';
               return { label: c.name || c.uid, value: c.uid, subtitle };
             })}
             mode="single"
@@ -932,7 +956,7 @@ export function CharacterSection({
             isOpen=${loadPartModalOpen}
             title="Load Part"
             items=${libraryParts.map(p => ({
-              label: p.name || p.uid,
+              label: p.name || p.referenceTag || p.uid,
               value: p.uid,
               subtitle: Array.isArray(p.type) ? p.type.join(', ') : '',
             }))}

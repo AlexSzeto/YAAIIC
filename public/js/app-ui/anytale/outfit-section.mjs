@@ -72,6 +72,7 @@ ScrollArea.className = 'outfit-scroll-area';
 function outfitsEqual(a, b) {
   if (!a || !b) return false;
   return a.name === b.name &&
+    a.description === b.description &&
     JSON.stringify(a.parts || []) === JSON.stringify(b.parts || []) &&
     JSON.stringify(a.preferredLocations || []) === JSON.stringify(b.preferredLocations || []);
 }
@@ -502,7 +503,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         })
         .map(op => op.partUid);
 
-      await renderOutfit(outfit.uid, visiblePartUids);
+      await renderOutfit(outfit.uid, visiblePartUids, outfit.parts);
     } catch (err) {
       console.error('[OutfitSection] Render generation failed:', err);
       toast.error(`Render failed: ${err.message}`);
@@ -640,6 +641,15 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                 onInput=${(e) => setOutfit(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Outfit name"
                 widthScale="full"
+              />
+
+              <${Input}
+                label="Description"
+                value=${outfit.description || ''}
+                onInput=${(e) => setOutfit(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Shown as subtitle in play mode outfit selection"
+                widthScale="full"
+                multiline
               />
 
               <${ChipAutocompleteInput}

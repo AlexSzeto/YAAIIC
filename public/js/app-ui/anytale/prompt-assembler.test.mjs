@@ -5,7 +5,7 @@ import { assemblePrompt, expandPageTags } from './prompt-assembler.mjs';
 
 function makePart(uid, baseline, types = ['body'], enabled = true, attrValues = {}) {
   return {
-    config: { uid, name: uid, baseline, type: types },
+    config: { uid, referenceTag: uid, name: '', baseline, type: types },
     data: { enabled, attributeValues: attrValues },
   };
 }

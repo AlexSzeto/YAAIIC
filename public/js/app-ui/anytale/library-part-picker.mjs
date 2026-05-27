@@ -107,7 +107,7 @@ export function LibraryPartPicker({
         isOpen=${modalOpen}
         title=${modalTitle}
         items=${libraryParts.map(part => ({
-          label: part.name || part.uid,
+          label: part.name || part.referenceTag || part.uid,
           value: part.uid,
           subtitle: Array.isArray(part.type) ? part.type.join(', ') : '',
         }))}

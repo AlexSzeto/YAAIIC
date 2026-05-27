@@ -78,8 +78,8 @@ function pillStyle(reqValue, theme) {
 
 function pillLabel(key, reqValue, libraryParts) {
   const name = resolveLabel(key, libraryParts);
-  if (reqValue === 'present') return `${name} → covering / revealing`;
-  if (reqValue === 'absent') return `${name} → removed / missing`;
+  if (reqValue === 'present') return `${name} → present`;
+  if (reqValue === 'absent') return `${name} → absent`;
   return name;
 }
 

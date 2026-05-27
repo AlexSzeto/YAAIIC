@@ -89,15 +89,16 @@ export async function generateCharacterPortrait(uid, parts) {
 /**
  * Generate voice audio for a character using the configured voice workflow.
  * @param {string} uid
- * @param {string} personality
+ * @param {string} voiceProfile
  * @param {string} [name]
+ * @param {string} [personality]
  * @returns {Promise<{audioUrl: string|null, transcript: string|null}>}
  */
-export async function generateCharacterVoice(uid, personality, name) {
+export async function generateCharacterVoice(uid, voiceProfile, name, personality) {
   const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}/generate-voice?queueOnly=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ personality, name, clientId: getClientId() }),
+    body: JSON.stringify({ voiceProfile, personality, name, clientId: getClientId() }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

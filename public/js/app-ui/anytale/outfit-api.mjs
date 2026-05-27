@@ -56,13 +56,17 @@ export async function saveOutfit(uid, outfit) {
  * Enqueue a render image generation for an outfit.
  * @param {string}   uid
  * @param {string[]} [visiblePartUids] – If provided, only these parts are included in the prompt.
+ * @param {Array}    [parts]           – WIP parts array with attributeValues; overrides saved server data.
  * @returns {Promise<void>}
  */
-export async function renderOutfit(uid, visiblePartUids) {
+export async function renderOutfit(uid, visiblePartUids, parts) {
+  const body = { clientId: getClientId() };
+  if (visiblePartUids) body.visiblePartUids = visiblePartUids;
+  if (parts) body.parts = parts;
   const response = await fetch(`/anytale/outfits/${encodeURIComponent(uid)}/render-outfit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(visiblePartUids ? { visiblePartUids, clientId: getClientId() } : { clientId: getClientId() }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

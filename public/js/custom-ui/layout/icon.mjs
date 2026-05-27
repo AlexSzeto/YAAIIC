@@ -69,6 +69,7 @@ const ICON_MAP = {
   'book': 'book_2',
   'file-detail': 'docs',
   'message-detail': 'chat',
+  'captions': 'subtitles',
   
   // Communicationrc
   'search': 'search',

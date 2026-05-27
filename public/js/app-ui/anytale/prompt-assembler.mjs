@@ -85,7 +85,7 @@ export function expandPageTags(tagsString, enabledParts) {
           const types = Array.isArray(p.config?.type) ? p.config.type : [];
           return types.some(t => t.trim().toLowerCase() === tokenType);
         })
-        .map(p => p.config?.name || '');
+        .map(p => p.config?.referenceTag || '');
     });
 
     // If any token has no matches, drop the segment
@@ -155,8 +155,8 @@ export function assemblePrompt(parts, activePage, slotVisibility) {
     const attrValues = part.data?.attributeValues || {};
     const attrValueList = collectValues(attrValues);
 
-    // Baseline tags: excluded only when an attribute value references the part name
-    const partName = (part.config.name || '').toLowerCase();
+    // Baseline tags: excluded only when an attribute value references the reference tag
+    const partName = (part.config.referenceTag || '').toLowerCase();
     const attrReferencesPartName = partName && attrValueList.some(v => v.toLowerCase().includes(partName));
     if (!attrReferencesPartName) {
       tags.push(...splitTags(part.config.baseline));
@@ -188,8 +188,8 @@ export function assemblePartPreviewPrompt(part) {
   const attrValues = part.data?.attributeValues || {};
   const attrValueList = collectValues(attrValues);
 
-  // Baseline tags: excluded only when an attribute value references the part name
-  const partName = (part.config.name || '').toLowerCase();
+  // Baseline tags: excluded only when an attribute value references the reference tag
+  const partName = (part.config.referenceTag || '').toLowerCase();
   const attrReferencesPartName = partName && attrValueList.some(v => v.toLowerCase().includes(partName));
   if (!attrReferencesPartName) {
     tags.push(...splitTags(part.config.baseline));

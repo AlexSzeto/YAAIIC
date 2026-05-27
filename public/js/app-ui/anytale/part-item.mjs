@@ -297,7 +297,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   const COMMON_PATTERNS = ['argyle', 'camouflage', 'checkered', 'diagonal-striped', 'floral print', 'frilled', 'pinstripe', 'plaid', 'pleated', 'polka dot', 'print', 'ribbed', 'striped', 'vertical-striped' ];
 
   const generateCategorizedOptions = async (attrIndex, promptTitle, hint, categorizedOptions, defaultName) => {
-    const keyword = await showTextPrompt(promptTitle, config.name.toLowerCase(), hint);
+    const keyword = await showTextPrompt(promptTitle, config.referenceTag.toLowerCase(), hint);
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
     const validTags = categorizedOptions
@@ -316,17 +316,17 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
 
   const handleRainbowAction = useCallback(async (attr, attrIndex) => {
     generateCategorizedOptions(attrIndex, 'Color Keyword', 'e.g. eyeshadow', RAINBOW_COLORS, 'color');
-  }, [config.attributes, config.name, handleAttrsChange, toast]);
+  }, [config.attributes, config.referenceTag, handleAttrsChange, toast]);
 
   const handlePatternAction = useCallback(async (attr, attrIndex) => {
     generateCategorizedOptions(attrIndex, 'Pattern Keyword', 'e.g. shirt', COMMON_PATTERNS, 'pattern');
-  }, [config.attributes, config.name, handleAttrsChange, toast]);
+  }, [config.attributes, config.referenceTag, handleAttrsChange, toast]);
 
 
   const BANNED_VARIATION_KEYWORDS = ['holding', 'holding unworn', 'mismatched', 'no', 'removing', 'adjusting', 'torn', 'see-through', 'layered', 'impossible', 'gradient', 'two-tone', 'multicolored', 'unworn', 'wet']
 
   const handleVariationsAction = useCallback(async (attr, attrIndex) => {
-    const keyword = await showTextPrompt('Leftover Variation Keyword', config.name.toLowerCase(), 'e.g. camisole');
+    const keyword = await showTextPrompt('Leftover Variation Keyword', config.referenceTag.toLowerCase(), 'e.g. camisole');
     if (!keyword || !keyword.trim()) return;
     const kw = keyword.trim().toLowerCase();
 
@@ -358,7 +358,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
     const autoName = next[attrIndex].name || 'style';
     next[attrIndex] = { ...next[attrIndex], name: autoName, options: validTags.join(', ') };
     handleAttrsChange(next);
-  }, [config.attributes, config.name, handleAttrsChange, toast]);
+  }, [config.attributes, config.referenceTag, handleAttrsChange, toast]);
 
   // ── Header select: value picker shown inside each attribute item header ──
   const getAttrSelectOptions = useCallback((attr) => getAttrOptions(attr.options), []);
@@ -368,8 +368,8 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
 
   // ── Library: Save to Library ────────────────────────────────────────────
   const handleSaveToLibrary = useCallback(async () => {
-    if (!config.name || !config.name.trim()) {
-      toast.info('Part must have a name before saving');
+    if (!config.referenceTag || !config.referenceTag.trim()) {
+      toast.info('Part must have a reference tag before saving');
       return;
     }
     setIsSaving(true);
@@ -403,7 +403,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       }
       onChange({ ...part, config: { ...config, uid: savedUid } });
       if (onLibraryChanged) onLibraryChanged();
-      toast.success(`Saved ${config.name} to library`);
+      toast.success(`Saved ${config.referenceTag} to library`);
     } catch (err) {
       console.error('[PartItem] Save to library failed:', err);
       toast.error(`Failed to save: ${err.message}`);
@@ -414,15 +414,15 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
 
   // ── Library: Delete from Library ────────────────────────────────────────
   const handleDeleteFromLibrary = useCallback(async () => {
-    if (!config.name || !config.name.trim()) return;
-    const uid = config.uid || toPartUid(config.name);
-    const result = await showDialog(`Delete '${config.name}' from the library? This cannot be undone.`, 'Delete from Library', ['Delete', 'Cancel']);
+    if (!config.referenceTag || !config.referenceTag.trim()) return;
+    const uid = config.uid || toPartUid(config.referenceTag);
+    const result = await showDialog(`Delete '${config.referenceTag}' from the library? This cannot be undone.`, 'Delete from Library', ['Delete', 'Cancel']);
     if (result !== 'Delete') return;
     setIsDeleting(true);
     try {
       const response = await fetch(`/anytale/parts/${uid}`, { method: 'DELETE' });
       if (response.status === 404) {
-        toast.info(`${config.name} is not in the library`);
+        toast.info(`${config.referenceTag} is not in the library`);
         return;
       }
       if (!response.ok) {
@@ -431,7 +431,7 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
       }
       if (onLibraryChanged) onLibraryChanged();
       if (onDeletedFromLibrary) onDeletedFromLibrary();
-      toast.success(`Deleted ${config.name} from library`);
+      toast.success(`Deleted ${config.referenceTag} from library`);
     } catch (err) {
       console.error('[PartItem] Delete from library failed:', err);
       toast.error(`Failed to delete: ${err.message}`);
@@ -449,10 +449,10 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
   }, [libraryPart, part, onChange]);
 
   const isUnchangedFromLibrary = !!libraryPart && JSON.stringify({
-    name: config.name, type: config.type, baseline: config.baseline,
+    referenceTag: config.referenceTag, name: config.name, type: config.type, baseline: config.baseline,
     previewBaseline: config.previewBaseline, attributes: config.attributes,
   }) === JSON.stringify({
-    name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
+    referenceTag: libraryPart.referenceTag, name: libraryPart.name, type: libraryPart.type, baseline: libraryPart.baseline,
     previewBaseline: libraryPart.previewBaseline, attributes: libraryPart.attributes,
   });
   const { saveLabel, saveEnabled, deleteEnabled, revertEnabled } = formButtonStates(!!libraryPart, !isUnchangedFromLibrary);
@@ -494,7 +494,15 @@ export function PartItem({ part, onChange, allTypes = [], libraryPart, onLibrary
             label="Name"
             value=${config.name}
             onInput=${(e) => updateConfig({ name: e.target.value })}
-            placeholder="Part name"
+            placeholder="Display name (shown in play mode)"
+            widthScale="full"
+            heightScale="compact"
+          />
+          <${Input}
+            label="Reference Tag"
+            value=${config.referenceTag}
+            onInput=${(e) => updateConfig({ referenceTag: e.target.value })}
+            placeholder="Prompt identifier token"
             widthScale="full"
             heightScale="compact"
           />
