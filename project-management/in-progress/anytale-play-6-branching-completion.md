@@ -54,6 +54,16 @@ Complete the full play loop by implementing end-of-chapter branching, chapter tr
 
 - [x] **Multi-slot part removal uses any-slot rule:** Add a top-of-file constant `PART_REMOVED_ON_ANY_SLOT = true` (boolean). When evaluating whether a part is removed based on its slot statuses: if `PART_REMOVED_ON_ANY_SLOT` is `true`, the part is removed if **any** of its occupied slots has status `'removed'`; if `false`, the part is removed only if **all** of its occupied slots have status `'removed'` (existing behaviour). Apply this constant wherever slot-driven part removal is determined.
 
+#### Bug fixes round 4
+
+- [x] **Glass button disabled opacity → 0.20:** Reduce the `:disabled` opacity on `GlassButton` in `glass-button.mjs` from `0.6` to `0.20` for a more visually recessive disabled state.
+
+- [x] **Stop autoplay on end screen:** When the session transitions to `phase: 'end'`, immediately stop autoplay. Add a `useEffect` in `anytale-play.mjs` that watches `session.phase` and calls `setIsAutoplay(false)` whenever it becomes `'end'`.
+
+- [x] **Autoplay stuck on first page during loading with dialog disabled:** When autoplay starts on a chapter that is still loading and dialog/voice is disabled, the advance timer never starts because the "next page must be complete" guard prevents it. Fix by replacing that guard with a "current page image must be complete" guard: the timer starts as soon as the current page's image is ready, regardless of whether the next page has loaded. When the timer fires, advance normally (the loading state shows briefly if needed). This means the timer reacts to the current page being ready rather than the next.
+
+- [x] **Responsive play area:** Drop the fixed `896 × 1152` pixel dimensions from `PortraitFrame`. Set `width: min(896px, 100vw, calc(100vh * 896 / 1152))` so the frame fills the viewport width on mobile and scales down in landscape to never exceed `100vh`. Use `aspect-ratio: 896 / 1152` to derive height, removing the hard-coded `height: 1152px`. Background image already uses `object-fit: cover` so it adapts automatically.
+
 #### Fixes and Changes
 
 - [x] **Separate last content page from decision page:** The last content page shows dialog/image/TTS as normal. A virtual decision page (`pageIndex === visiblePageIndices.length`) follows it; its background is the last content page's image URL (not `displayedImageUrl`), its caption is the hardcoded string `"What's your next move?"`, and its options use `plot.description || plot.name` (not name). `goToNext` allows advancing to `visiblePageIndices.length`; canGoNext gates on last content page readiness and blocks epilogue chapters from advancing past last content page (epilogue auto-transitions to end). Guard voice/image advance effect against the decision page index.

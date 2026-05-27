@@ -663,13 +663,11 @@ export function AnyTalePlayPage() {
       });
   }, [session.phase, session.currentPlotUid, playData, currentPlot?.uid, initChapter, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-generate end screen image when entering 'end' phase.
-  // Uses background-only prompt — no end plot fetch required.
+  // Stop autoplay and generate end screen image when entering 'end' phase.
   useEffect(() => {
     if (session.phase !== 'end') return;
-    if (session.endImageUrl) return; // already have it
-    if (!playData) return;
-    generateEndScreenImage(session, playData);
+    setIsAutoplay(false);
+    if (!session.endImageUrl && playData) generateEndScreenImage(session, playData);
   }, [session.phase, session.endImageUrl, playData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // (Epilogue end-transition is handled by goToNext and the autoplay effect —
@@ -1064,11 +1062,12 @@ export function AnyTalePlayPage() {
     // Already at or past the decision page — nothing to advance to
     if (nextVisIdx > visiblePageIndices.length) return;
 
-    // For content→content advance, the next content page must be fully loaded
-    if (!isAdvancingToDecisionPage) {
-      const nextPlotPageIdx = visiblePageIndices[nextVisIdx];
-      if (pageStatuses[nextPlotPageIdx] !== 'complete') return;
-    }
+    // Wait for the current page's image to be complete before starting the advance timer.
+    // This replaces the old "next page must be ready" guard: the timer now starts as soon as
+    // the current page is ready, even if the next page is still loading. This prevents autoplay
+    // from stalling on the first page of a loading chapter when dialog is disabled.
+    const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
+    if (pageStatuses[currentPlotPageIdx] !== 'complete') return;
 
     // What happens when the timer fires: advance to decision page, or cross to next chapter.
     // Read session from ref inside the callback to avoid stale-closure issues.
@@ -1095,8 +1094,6 @@ export function AnyTalePlayPage() {
         updateSession({ pageIndex: nextVisIdx });
       }
     };
-
-    const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
     const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
     const currentDialogText = pageDialogTexts[currentPlotPageIdx];
 

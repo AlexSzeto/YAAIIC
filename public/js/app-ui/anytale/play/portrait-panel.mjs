@@ -22,8 +22,8 @@ const PortraitFrame = styled('div')`
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 896px;
-  height: 1152px;
+  width: min(896px, 100vw, calc(100vh * 896 / 1152));
+  aspect-ratio: 896 / 1152;
   border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
   overflow: hidden;
 `;
