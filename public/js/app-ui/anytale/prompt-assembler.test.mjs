@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { assemblePrompt, expandPageTags } from './prompt-assembler.mjs';
+import { assemblePrompt, expandPageTags, expandDialogPrompt } from './prompt-assembler.mjs';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +83,24 @@ describe('assemblePrompt', () => {
     expect(result).toContain('b-tag');
   });
 
+  test('includes typeless parts (empty type array) even when slotVisibility is provided', () => {
+    const typelessPart = makePart('expr', 'happy face', []); // type: []
+    const slotVis = new Map([['body', true]]);
+    const result = assemblePrompt([typelessPart], undefined, slotVis);
+    expect(result).toContain('happy face');
+  });
+
+  test('typeless part included alongside typed parts when slotVisibility filters', () => {
+    const typeless = makePart('expr', 'expression-tag', []);
+    const shown = makePart('body-part', 'body-tag', ['body']);
+    const hidden = makePart('hidden-part', 'hidden-tag', ['inner']);
+    const slotVis = new Map([['body', true], ['inner', false]]);
+    const result = assemblePrompt([typeless, shown, hidden], undefined, slotVis);
+    expect(result).toContain('expression-tag');
+    expect(result).toContain('body-tag');
+    expect(result).not.toContain('hidden-tag');
+  });
+
   // ── page tags ─────────────────────────────────────────────────────────────
 
   test('includes plain page tags', () => {
@@ -126,5 +144,70 @@ describe('expandPageTags', () => {
     const result = expandPageTags('{{outfit}} pose', parts);
     expect(result).toContain('PartA pose');
     expect(result).toContain('PartB pose');
+  });
+});
+
+// ── expandDialogPrompt ────────────────────────────────────────────────────────
+
+function makeNamedPart(uid, name, types = ['body']) {
+  return {
+    config: { uid, referenceTag: uid, name, type: types },
+    data: { enabled: true, attributeValues: {} },
+  };
+}
+
+describe('expandDialogPrompt', () => {
+  test('returns unchanged string when no tokens', () => {
+    const parts = [makeNamedPart('a', 'Shirt', ['upper body'])];
+    expect(expandDialogPrompt('Hello there', parts)).toBe('Hello there');
+  });
+
+  test('returns empty string for falsy input', () => {
+    expect(expandDialogPrompt('', [])).toBe('');
+    expect(expandDialogPrompt(null, [])).toBe('');
+  });
+
+  test('substitutes token with matching part name', () => {
+    const parts = [makeNamedPart('a', 'Shirt', ['outer upper body'])];
+    expect(expandDialogPrompt('wearing a {{outer upper body}}', parts)).toBe('wearing a Shirt');
+  });
+
+  test('joins multiple matching parts with " and "', () => {
+    const parts = [
+      makeNamedPart('a', 'Shirt', ['outer upper body']),
+      makeNamedPart('b', 'Jacket', ['outer upper body']),
+    ];
+    expect(expandDialogPrompt('{{outer upper body}}', parts)).toBe('Shirt and Jacket');
+  });
+
+  test('substitutes empty string when no parts match', () => {
+    const parts = [makeNamedPart('a', 'Pants', ['lower body'])];
+    expect(expandDialogPrompt('{{outer upper body}}', parts)).toBe('');
+  });
+
+  test('does not use referenceTag — uses name field only', () => {
+    const part = { config: { uid: 'x', referenceTag: 'technical-tag', name: 'Display Name', type: ['top'] }, data: { enabled: true } };
+    expect(expandDialogPrompt('{{top}}', [part])).toBe('Display Name');
+  });
+
+  test('match is case-insensitive for slot type', () => {
+    const parts = [makeNamedPart('a', 'Hat', ['Outer Upper Body'])];
+    expect(expandDialogPrompt('{{outer upper body}}', parts)).toBe('Hat');
+  });
+
+  test('expands multiple different tokens in one string', () => {
+    const parts = [
+      makeNamedPart('a', 'Shirt', ['top']),
+      makeNamedPart('b', 'Jeans', ['bottom']),
+    ];
+    expect(expandDialogPrompt('{{top}} and {{bottom}}', parts)).toBe('Shirt and Jeans');
+  });
+
+  test('skips parts with empty name when building join list', () => {
+    const parts = [
+      makeNamedPart('a', '', ['top']),
+      makeNamedPart('b', 'Vest', ['top']),
+    ];
+    expect(expandDialogPrompt('{{top}}', parts)).toBe('Vest');
   });
 });

@@ -168,7 +168,7 @@ export class Button extends Component {
       icon = null,
       label = null,
       tooltip = null,
-      widthScale = 'normal',
+      widthScale = 'auto',
       children, 
       ...rest 
     } = this.props;
@@ -266,8 +266,8 @@ export class Button extends Component {
     }
 
     const { width: scaleWidth, flex: scaleFlex } = getWidthScaleStyle(widthScale);
-    const buttonWidth = widthScale !== 'normal' ? scaleWidth : (isIconOnly ? size.height : undefined);
-    const buttonFlex = widthScale !== 'normal' ? (scaleFlex || undefined) : undefined;
+    const buttonWidth = widthScale !== 'auto' ? scaleWidth : (isIconOnly ? size.height : undefined);
+    const buttonFlex = widthScale !== 'auto' ? (scaleFlex || undefined) : undefined;
 
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
     // Use theme spinner color for loading state for better visibility across themes

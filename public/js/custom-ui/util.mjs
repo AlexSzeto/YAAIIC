@@ -417,14 +417,15 @@ export function setCookie(name, value, days = 365) {
 
 /**
  * Returns CSS width/flex styles for a widthScale enum value.
- * @param {'normal'|'compact'|'full'} widthScale
+ * @param {'auto'|'normal'|'compact'|'full'} widthScale
  * @returns {{ width: string, flex?: string }}
  */
 export function getWidthScaleStyle(widthScale) {
   if (widthScale === 'full')    return { width: '100%', flex: '1 0 0' };
-  if (widthScale === 'compact') return { width: '100px' };
+  if (widthScale === 'compact') return { width: '80px' };
   if (widthScale === 'wide')    return { width: '400px' };
-  return { width: '200px' }; // 'normal' (default)
+  if (widthScale === 'normal')  return { width: '160px' };
+  return { width: '200px' }; // 'auto' (default)
 }
 
 /**

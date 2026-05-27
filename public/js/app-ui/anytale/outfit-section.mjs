@@ -53,6 +53,12 @@ const ButtonRow = styled('div')`
 `;
 ButtonRow.className = 'outfit-button-row';
 
+const GenerateButtonWrap = styled('div')`
+  padding-bottom: 4px;
+  flex-shrink: 0;
+`;
+GenerateButtonWrap.className = 'outfit-generate-button-wrap';
+
 const ScrollArea = styled('div')`
   display: flex;
   flex-direction: column;
@@ -243,6 +249,8 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   // ── Recommended part types config ────────────────────────────────────
   const [recommendedOutfitPartTypes, setRecommendedOutfitPartTypes] = useState([]);
   const [parsedRules, setParsedRules] = useState([]);
+  const [generateText, setGenerateText] = useState(null);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   useEffect(() => {
     fetch('/anytale/config')
@@ -254,6 +262,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
         if (typeof data.slotRules === 'string') {
           setParsedRules(parseRules(data.slotRules));
         }
+        if (data.generateText) setGenerateText(data.generateText);
       })
       .catch(err => console.error('[OutfitSection] Failed to load AnyTale config:', err));
   }, []);
@@ -510,6 +519,35 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     }
   }, [outfit.uid, outfit.parts, libraryParts, parsedRules, isRenderBusy, toast]);
 
+  // ── LLM description generation ──────────────────────────────────────────
+
+  const handleGenerateDescription = useCallback(async () => {
+    if (!generateText || isGeneratingDescription) return;
+    const template = generateText.templates?.outfitDescriptions || '';
+    const partNames = (outfit.parts || [])
+      .map(op => libraryParts.find(p => p.uid === op.partUid)?.name || '')
+      .filter(Boolean)
+      .join(', ');
+    const filled = template
+      .replace('{{name}}', outfit.name || '')
+      .replace('{{parts}}', partNames);
+    setIsGeneratingDescription(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: generateText.model, messages: [{ role: 'user', content: filled }], stream: false, mode: 'chat' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setOutfit(prev => ({ ...prev, description: data.message?.content || '' }));
+    } catch (err) {
+      toast.error(`Failed to generate description: ${err.message}`);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  }, [generateText, isGeneratingDescription, outfit.name, outfit.parts, libraryParts, toast]);
+
   // ── Outfit CRUD actions ──────────────────────────────────────────────
 
   const isInLibrary = !!(outfit.uid && outfitList.some(o => o.uid === outfit.uid));
@@ -643,14 +681,25 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                 widthScale="full"
               />
 
-              <${Input}
-                label="Description"
-                value=${outfit.description || ''}
-                onInput=${(e) => setOutfit(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Shown as subtitle in play mode outfit selection"
-                widthScale="full"
-                multiline
-              />
+              <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
+                <${Input}
+                  label="Description"
+                  value=${outfit.description || ''}
+                  onInput=${(e) => setOutfit(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Shown as subtitle in play mode outfit selection"
+                  widthScale="full"
+                  multiline
+                />
+                <${GenerateButtonWrap}>
+                  <${Button}
+                    variant="medium-icon"
+                    icon="captions"
+                    onClick=${handleGenerateDescription}
+                    disabled=${!generateText || isGeneratingDescription}
+                    loading=${isGeneratingDescription}
+                  />
+                </${GenerateButtonWrap}>
+              </${HorizontalLayout}>
 
               <${ChipAutocompleteInput}
                 label="Preferred Locations"
@@ -719,7 +768,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                   icon="x"
                   onClick=${handleClear}
                 >
-                  Clear Parts
+                  New Outfit
                 <//>
               </${HorizontalLayout}>
               <${HorizontalLayout} gap="small">

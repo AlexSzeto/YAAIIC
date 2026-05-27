@@ -10,6 +10,8 @@
     "portraitWorkflow": "Text to Image (Illustrious Portrait)",
     "generationWorkflow": "Text to Image (Illustrious Characters)",
     "voiceWorkflow": "Personality to Voice Design (Qwen3-TTS)",
+    "musicWorkflow": "Text to Background Track (Stable Audio 3 Medium)",
+    "defaultMusicLength": 120,
     "portraitBasePrompt": "1girl, solo, portrait, facing forward, looking at viewer, outdoors",
     "outfitBasePrompt": "general, 1girl, solo, head out of frame, upper body, lower body, facing viewer, simple background, dressing room",
     "previewBasePromptByType": {
@@ -24,37 +26,48 @@
       "arms": "1girl, solo, simple background, grey background, hand focus",
       "feet": "1girl, solo, simple background, grey background, feet only, facing viewer"
     },
-    "portraitParts": ["head", "default expression"],
-    "recommendedCharacterPartTypes": ["head", "body", "nude upper body", "nude lower body"],
-    "recommendedOutfitPartTypes": ["outer upper body", "outer lower body", "inner upper body", "inner lower body"],
-    "musicWorkflow": "Text to Background Track (ACE-Step 1.5 XL)",
-    "defaultMusicLength": 120,
+    "portraitParts": [
+      "head",
+      "default expression"
+    ],
+    "recommendedCharacterPartTypes": [
+      "head",
+      "body",
+      "nude upper body",
+      "nude lower body"
+    ],
+    "recommendedOutfitPartTypes": [
+      "outer upper body",
+      "outer lower body",
+      "inner upper body",
+      "inner lower body"
+    ],
     "introductionPlotName": "introduction",
     "dialog": {
       "model": "hf.co/mradermacher/IceAbsintheRP-7b-i1-GGUF:Q4_K_S",
-      "systemMessage": "You are a chat companion that is writing spoken lines of dialog to roleplay with a third party user outside of the current conversation. The incoming user texts are instructions to inform you what your character is physically doing. Instead of responding to the user, write a dialog that naturally follows the context of your previous and current actions, as well as your character's personality.\n\nKeep your dialog extremely brief, no longer that two or three lines. Inject your dialog with exaggerated emotion. Write the dialog only, with no quotes or emotes. Do not inject additional instructions.\n\nA good example:\n\nI need you tonight.\n\nAvoid any of these:\n\n\"I need you tonight\", she said\nI need you tonight *winks*\nI wink, gesturing my needs for you\n\nYour character profile:\nYou are {{name}}, {{profile}}.\n\nCurrent location:\n{{location}}",
+      "systemMessage": "Role: You are {{name}}, a character with this personality profile: {{profile}}. Current location: {{location}}.\n\nContext:\nYou are an actor delivering lines for a visual novel script. The user's input will give you a situation and a physical action or emotion. \n\nTask:\nWrite 2-3 sentences of spoken dialogue that naturally flows from the given situation and your personality. \n\nStrict Formatting & Delivery Constraints:\n1. Output ONLY the raw spoken text. \n2. Do NOT use quotation marks, dialogue tags (e.g., \"she said\", \"I fumed\"), or narrative descriptions.\n3. Do NOT include emotes, asterisks, or physical action descriptions (e.g., *pouts*, tapping my foot).\n4. Translate the user's physical instructions ENTIRELY into the spoken words themselves. Channel the exaggerated emotion purely through exclamation, punctuation, and word choice.\n5. Keep it brief and high-energy.\n\nDesired Output Structure Example:\nHe is late again! Ugh, this is completely unacceptable!",
       "parameters": {
-        "temperature": 0.9,
+        "temperature": 0.7,
         "topP": 0.9,
         "maxTokens": 2048
       },
-      "mode": "chat",
+      "mode": "generate",
       "stream": false
     },
+    "speechWorkflow": "Dialog to Speech (Chatterbox)",
     "generateText": {
       "model": "ssfdre38/gemma4-nano:latest",
       "templates": {
-        "selfProfile": "You are {{name}}, with the following personality profile: {{personality}}. Write a single sentence describing yourself on a dating profile, using the personality profile as a guide. Do not use more than 20 words.",
+        "selfProfile": "You are {{name}}. Your personality profile is: {{personality}}.\n\nWrite a single, compelling one-line dating profile introduction in the first person (\"I\").\n\nStrict Constraints:\n\n1. Output ONLY the introduction sentence. No labels, no introductory text, no quotation marks, and no multiple options.\n2. Max length: 15 words.\n3. Tone: Direct, confident, and reflective of your personality without explicitly listing your traits.\n\nExample of the exact desired format:\n\nI trust that you know what you want. Just give me a time and a place.",
         "voiceProfile": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{personality}}. \n\nUse the following example as a template:\nA female voice, clear and natural, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nALWAYS start the output with either \"A female voice\" or \"A male voice\". Output the vocal characteristics as prose ONLY.",
-        "outfitDescriptions": "Write a short, one line description for an outfit named {{name}}, consisting of the following parts: {{parts}}. Do not use more than 20 words."
+        "outfitDescriptions": "You are writing an item description for an outfit named \"{{name}}\", which includes: {{parts}}.\n\nWrite a single, evocative one-line description for this outfit.\n\nStrict Constraints:\n1. Output ONLY the description sentence. No labels, no introductory text, and no quotation marks.\n2. Max length: 15 words.\n3. Do NOT use the outfit name (\"{{name}}\") or any variation of it in the text.\n4. Do NOT mention or hint at undergarments (like bras, panties, or underwear).\n5. Focus on the style, profession, or aesthetic implied by the outfit name. Do not just list the clothing parts.\n\nExample of the exact desired style:\nA form fitting uniform for the restaurant industry's finest."
       }
     },
-    "speechWorkflow": "Dialog to Speech (Chatterbox)",
     "dialogPreview": {
-      "name": "",
-      "personality": "",
-      "outfit": ""
-    }
+      "name": "Alice",
+      "personality": "A cheerful and good natured young woman.",
+      "outfit": "Shirt, Shorts, Bra, Panties, Socks, Shoes"
+    }    
   },
   "exports": [
     {

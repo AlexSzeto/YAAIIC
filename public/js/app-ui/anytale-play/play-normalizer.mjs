@@ -13,6 +13,8 @@ export function normalizeCharacter(c) {
     ...c,
     name:             c.name             ?? '',
     personality:      c.personality      ?? '',
+    selfProfile:      c.selfProfile      ?? '',
+    voiceProfile:     c.voiceProfile     ?? '',
     parts:            Array.isArray(c.parts)            ? c.parts            : [],
     preferredOutfits: Array.isArray(c.preferredOutfits) ? c.preferredOutfits : [],
     portraitUrl:      c.portraitUrl      ?? '',
@@ -24,6 +26,8 @@ export function normalizeCharacter(c) {
 export function normalizePart(p) {
   return {
     ...p,
+    name:             p.name             ?? '',
+    referenceTag:     p.referenceTag     ?? '',
     baseline:         p.baseline         ?? '',
     previewBaseline:  p.previewBaseline  ?? '',
     attributes:       Array.isArray(p.attributes) ? p.attributes : [],
@@ -37,9 +41,17 @@ export function normalizeOutfit(o) {
   })) : [];
   return {
     ...o,
-    name:       o.name       ?? '',
+    name:        o.name        ?? '',
+    description: o.description ?? '',
     parts,
-    previewUrl: o.previewUrl ?? '',
+    previewUrl:  o.previewUrl  ?? '',
+  };
+}
+
+export function normalizeGenre(g) {
+  return {
+    ...g,
+    disabled: g.disabled ?? false,
   };
 }
 
@@ -65,12 +77,13 @@ export function normalizePlot(p) {
 
 // ── Bulk normalizers ──────────────────────────────────────────────────────────
 
-export function normalizePlayData({ parts, plots, characters, outfits, config }) {
+export function normalizePlayData({ parts, plots, characters, outfits, genres, config }) {
   return {
     parts:      (parts      || []).map(normalizePart),
     plots:      (plots      || []).map(normalizePlot),
     characters: (characters || []).map(normalizeCharacter),
     outfits:    (outfits    || []).map(normalizeOutfit),
+    genres:     (genres     || []).map(normalizeGenre),
     config:     config || {},
   };
 }

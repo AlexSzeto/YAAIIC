@@ -20,6 +20,7 @@ const STORAGE_KEY = 'anytale-play-session';
  * @property {string} uid
  * @property {string} name
  * @property {string} personality
+ * @property {string} selfProfile
  * @property {string} portraitUrl
  * @property {string} voiceSampleUrl - URL to character's generated voice audio (used for TTS)
  * @property {string} introTranscript - Text spoken in the voice intro sample
@@ -49,7 +50,7 @@ const STORAGE_KEY = 'anytale-play-session';
  */
 
 const DEFAULT_SESSION = {
-  character: { uid: '', name: '', personality: '', portraitUrl: '', voiceSampleUrl: '', introTranscript: '', parts: [] },
+  character: { uid: '', name: '', personality: '', selfProfile: '', portraitUrl: '', voiceSampleUrl: '', introTranscript: '', parts: [] },
   outfitUid: '',
   location: { partUid: '', attributeMap: {} },
   music: { genre: '' },

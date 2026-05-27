@@ -8,7 +8,7 @@ import {
   clear as clearSession,
 } from '../anytale/play/play-session.mjs';
 import { PortraitPanel } from '../anytale/play/portrait-panel.mjs';
-import { assemblePrompt } from '../anytale/prompt-assembler.mjs';
+import { assemblePrompt, expandDialogPrompt } from '../anytale/prompt-assembler.mjs';
 import { fetchJson } from '../../custom-ui/util.mjs';
 import { getClientId } from '../client-id.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
@@ -281,15 +281,25 @@ export function AnyTalePlayPage() {
 
   const queuePageDialog = useCallback(async (plotPageIdx, plot, sess, data, cacheKey, history = []) => {
     const page = plot.pages[plotPageIdx];
-    const dialogPrompt = (page.dialogPrompt || '').trim();
+    const rawDialogPrompt = (page.dialogPrompt || '').trim();
     const personality = (sess.character.personality || '').trim();
     const locationAttrValue = Object.values(sess.location.attributeMap || {}).find(v => v) || '';
     const dialogConfig = data.config.dialog;
 
-    console.log('[Dialog] page', plotPageIdx, { dialogPrompt, personality, locationAttrValue, dialogConfig: !!dialogConfig });
+    // Build enabled parts from character + outfit for {{slot type}} template expansion
+    const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
+    const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
+    const outfitParts = outfit ? outfit.parts : [];
+    const dialogEnabledParts = [
+      ...(sess.character?.parts || []).map(p => buildPartForPrompt(p.partUid, p.attributeValues, partsMap)),
+      ...outfitParts.map(p => buildPartForPrompt(p.partUid, p.attributeValues, partsMap)),
+    ].filter(Boolean);
+    const expandedPrompt = expandDialogPrompt(rawDialogPrompt, dialogEnabledParts);
 
-    if (!dialogPrompt || !personality || !locationAttrValue || !dialogConfig) {
-      console.log('[Dialog] skipping page', plotPageIdx, { missingPrompt: !dialogPrompt, missingPersonality: !personality, missingLocation: !locationAttrValue, missingConfig: !dialogConfig });
+    console.log('[Dialog] page', plotPageIdx, { expandedPrompt, personality, locationAttrValue, dialogConfig: !!dialogConfig });
+
+    if (!expandedPrompt || !personality || !locationAttrValue || !dialogConfig) {
+      console.log('[Dialog] skipping page', plotPageIdx, { missingPrompt: !expandedPrompt, missingPersonality: !personality, missingLocation: !locationAttrValue, missingConfig: !dialogConfig });
       updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'skipped' });
       setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
       return null;
@@ -304,7 +314,7 @@ export function AnyTalePlayPage() {
       const text = await generateDialog({
         character: sess.character,
         locationAttributeValue: locationAttrValue,
-        page,
+        page: { ...page, dialogPrompt: expandedPrompt },
         dialogConfig,
         history,
         onChunk: isStreaming ? (partial) => {
@@ -314,7 +324,7 @@ export function AnyTalePlayPage() {
       console.log('[Dialog] page', plotPageIdx, 'result:', text);
       updateCacheEntry(cacheKey, { dialogText: text, dialogStatus: 'complete' });
       setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: text }));
-      return text;
+      return { text, expandedPrompt };
     } catch (err) {
       console.error('[Dialog] catch for page', plotPageIdx, err.name, err.message, err);
       updateCacheEntry(cacheKey, { dialogStatus: 'error' });
@@ -452,12 +462,13 @@ export function AnyTalePlayPage() {
     if (dialogEnabled) {
       for (const { plotPageIdx, cacheKey } of toQueueDialog) {
         const history = [...dialogHistoryRef.current];
-        const text = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
-        const prompt = (plot.pages[plotPageIdx].dialogPrompt || '').trim();
-        if (text && prompt) {
+        const result = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
+        const text = result?.text ?? null;
+        const expandedPrompt = result?.expandedPrompt ?? '';
+        if (text && expandedPrompt) {
           dialogHistoryRef.current = [
             ...dialogHistoryRef.current,
-            { role: 'user', content: prompt },
+            { role: 'user', content: expandedPrompt },
             { role: 'assistant', content: text },
           ];
         }
@@ -647,7 +658,9 @@ export function AnyTalePlayPage() {
           if (opts.length > 0) locationAttributeMap[attr.name] = randomPickN(opts, 1)[0];
         }
 
-        const genres = playData.genres || [];
+        const allGenres = playData.genres || [];
+        const eligibleGenres = allGenres.filter(g => !g.disabled);
+        const genres = eligibleGenres.length > 0 ? eligibleGenres : allGenres;
         const genre = genres.length > 0 ? randomPickN(genres, 1)[0] : null;
 
         const allActiveParts = [
@@ -677,6 +690,7 @@ export function AnyTalePlayPage() {
             uid: character.uid,
             name: character.name,
             personality: character.personality || '',
+            selfProfile: character.selfProfile || '',
             portraitUrl: character.portraitUrl || '',
             voiceSampleUrl: character.voiceSampleUrl || character.audioUrl || '',
             introTranscript: character.introTranscript || '',
@@ -1013,6 +1027,7 @@ export function AnyTalePlayPage() {
         character: {
           uid: char.uid, name: char.name,
           personality: char.personality || '',
+          selfProfile: char.selfProfile || '',
           portraitUrl: char.portraitUrl || '',
           voiceSampleUrl: char.voiceSampleUrl || char.audioUrl || '',
           introTranscript: char.introTranscript || '',
@@ -1087,7 +1102,9 @@ export function AnyTalePlayPage() {
   }, [introPlot, playData, generateIntroImage]);
 
   const enterMusicPick = useCallback(() => {
-    const genres = playData?.genres || [];
+    const allGenres = playData?.genres || [];
+    const eligibleGenres = allGenres.filter(g => !g.disabled);
+    const genres = eligibleGenres.length > 0 ? eligibleGenres : allGenres;
     setGenreDraft(randomPickN(genres, 3));
     updateSession({ phase: 'music-pick' });
   }, [playData, updateSession]);
@@ -1282,7 +1299,7 @@ export function AnyTalePlayPage() {
     decisions = [
       ...charDraft.map(char => ({
         text: char.name,
-        subtitle: char.personality || undefined,
+        subtitle: char.selfProfile || undefined,
         image: char.portraitUrl || undefined,
         onClick: () => pickCharacter(char),
       })),
@@ -1295,6 +1312,7 @@ export function AnyTalePlayPage() {
     decisions = [
       ...outfitDraft.map(outfit => ({
         text: outfit.name,
+        subtitle: outfit.description || undefined,
         image: outfit.renderUrl || undefined,
         onClick: () => pickOutfit(outfit),
       })),

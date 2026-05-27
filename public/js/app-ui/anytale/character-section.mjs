@@ -53,6 +53,12 @@ const ButtonRow = styled('div')`
 `;
 ButtonRow.className = 'char-button-row';
 
+const GenerateButtonWrap = styled('div')`
+  padding-bottom: 4px;
+  flex-shrink: 0;
+`;
+GenerateButtonWrap.className = 'char-generate-button-wrap';
+
 const StickySection = styled('div')`
   flex: none;
   display: flex;
@@ -281,8 +287,11 @@ export function CharacterSection({
   }, [outfitListProp]);
 
   const [recommendedPartTypes, setRecommendedPartTypes] = useState([]);
+  const [generateText, setGenerateText] = useState(null);
+  const [isGeneratingSelfProfile, setIsGeneratingSelfProfile] = useState(false);
+  const [isGeneratingVoiceProfile, setIsGeneratingVoiceProfile] = useState(false);
 
-  // Fetch recommended part types config on mount
+  // Fetch config on mount
   useEffect(() => {
     fetch('/anytale/config')
       .then(res => res.json())
@@ -290,6 +299,7 @@ export function CharacterSection({
         if (Array.isArray(data.recommendedCharacterPartTypes)) {
           setRecommendedPartTypes(data.recommendedCharacterPartTypes);
         }
+        if (data.generateText) setGenerateText(data.generateText);
       })
       .catch(err => console.error('[CharacterSection] Failed to load AnyTale config:', err));
   }, []);
@@ -527,6 +537,52 @@ export function CharacterSection({
       toast.error(`Portrait generation failed: ${err.message}`);
     }
   }, [character, isGeneratingPortrait, toast]);
+
+  // ── LLM text generation ──────────────────────────────────────────────────
+
+  const handleGenerateSelfProfile = useCallback(async () => {
+    if (!generateText || isGeneratingSelfProfile) return;
+    const template = generateText.templates?.selfProfile || '';
+    const filled = template
+      .replace('{{name}}', character.name || '')
+      .replace('{{personality}}', character.personality || '');
+    setIsGeneratingSelfProfile(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: generateText.model, messages: [{ role: 'user', content: filled }], stream: false, mode: 'chat' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      handleFieldChange('selfProfile', data.message?.content || '');
+    } catch (err) {
+      toast.error(`Failed to generate self profile: ${err.message}`);
+    } finally {
+      setIsGeneratingSelfProfile(false);
+    }
+  }, [generateText, isGeneratingSelfProfile, character.name, character.personality, handleFieldChange, toast]);
+
+  const handleGenerateVoiceProfile = useCallback(async () => {
+    if (!generateText || isGeneratingVoiceProfile) return;
+    const template = generateText.templates?.voiceProfile || '';
+    const filled = template.replace('{{personality}}', character.personality || '');
+    setIsGeneratingVoiceProfile(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: generateText.model, messages: [{ role: 'user', content: filled }], stream: false, mode: 'chat' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      handleFieldChange('voiceProfile', data.message?.content || '');
+    } catch (err) {
+      toast.error(`Failed to generate voice profile: ${err.message}`);
+    } finally {
+      setIsGeneratingVoiceProfile(false);
+    }
+  }, [generateText, isGeneratingVoiceProfile, character.personality, handleFieldChange, toast]);
 
   // ── Voice generation ─────────────────────────────────────────────────────
 
@@ -811,25 +867,47 @@ export function CharacterSection({
               rows=${3}
             />
 
-            <${Input}
-              label="Self Profile"
-              value=${character.selfProfile || ''}
-              onInput=${(e) => handleFieldChange('selfProfile', e.target.value)}
-              placeholder="Shown as subtitle in play mode character selection"
-              widthScale="full"
-              multiline
-              rows=${2}
-            />
+            <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
+              <${Input}
+                label="Self Profile"
+                value=${character.selfProfile || ''}
+                onInput=${(e) => handleFieldChange('selfProfile', e.target.value)}
+                placeholder="Shown as subtitle in play mode character selection"
+                widthScale="full"
+                multiline
+                rows=${2}
+              />
+              <${GenerateButtonWrap}>
+                <${Button}
+                  variant="medium-icon"
+                  icon="captions"
+                  onClick=${handleGenerateSelfProfile}
+                  disabled=${!generateText || isGeneratingSelfProfile}
+                  loading=${isGeneratingSelfProfile}
+                />
+              </${GenerateButtonWrap}>
+            </${HorizontalLayout}>
 
-            <${Input}
-              label="Voice Profile"
-              value=${character.voiceProfile || ''}
-              onInput=${(e) => handleFieldChange('voiceProfile', e.target.value)}
-              placeholder="Used for voice generation (populated automatically after generating)"
-              widthScale="full"
-              multiline
-              rows=${2}
-            />
+            <${HorizontalLayout} gap="small" style=${{ alignItems: 'flex-end' }}>
+              <${Input}
+                label="Voice Profile"
+                value=${character.voiceProfile || ''}
+                onInput=${(e) => handleFieldChange('voiceProfile', e.target.value)}
+                placeholder="Used for voice generation (populated automatically after generating)"
+                widthScale="full"
+                multiline
+                rows=${2}
+              />
+              <${GenerateButtonWrap}>
+                <${Button}
+                  variant="medium-icon"
+                  icon="captions"
+                  onClick=${handleGenerateVoiceProfile}
+                  disabled=${!generateText || isGeneratingVoiceProfile}
+                  loading=${isGeneratingVoiceProfile}
+                />
+              </${GenerateButtonWrap}>
+            </${HorizontalLayout}>
 
             <${ChipAutocompleteInput}
               label="Preferred Outfits"
@@ -902,7 +980,7 @@ export function CharacterSection({
                 icon="x"
                 onClick=${handleClear}
               >
-                Clear Parts
+                New Character
               <//>
             </${HorizontalLayout}>
             <${HorizontalLayout} gap="small">

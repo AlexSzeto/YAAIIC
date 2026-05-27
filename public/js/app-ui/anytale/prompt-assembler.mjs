@@ -118,6 +118,39 @@ export function expandPageTags(tagsString, enabledParts) {
 }
 
 /**
+ * Expand template tokens `{{slot type}}` in a dialog prompt string using enabled parts.
+ *
+ * For each `{{slot type}}` token, finds enabled parts whose config.type includes that
+ * slot type (case-insensitive), collects their config.name display values, and substitutes
+ * the token with those names joined by " and ". If no parts match a token, substitutes
+ * an empty string. Text outside tokens is left unchanged.
+ *
+ * Unlike expandPageTags (which produces a cartesian product for image prompts), this
+ * replaces each token once with all matching names concatenated — suitable for natural
+ * language dialog prompts.
+ *
+ * @param {string} promptText   – Raw dialog prompt (may contain `{{slot type}}` tokens)
+ * @param {Array}  enabledParts – Enabled part objects ({ config: { type, name } })
+ * @returns {string} The expanded prompt string
+ */
+export function expandDialogPrompt(promptText, enabledParts) {
+  if (!promptText) return promptText || '';
+  if (!enabledParts || enabledParts.length === 0) return promptText;
+
+  return promptText.replace(/\{\{([^}]+)\}\}/g, (_match, slotName) => {
+    const slotType = slotName.trim().toLowerCase();
+    const matchingNames = (enabledParts)
+      .filter(p => {
+        const types = Array.isArray(p.config?.type) ? p.config.type : [];
+        return types.some(t => t.trim().toLowerCase() === slotType);
+      })
+      .map(p => (p.config?.name || '').trim())
+      .filter(n => n.length > 0);
+    return matchingNames.join(' and ');
+  });
+}
+
+/**
  * Assemble the final image prompt from visible parts.
  *
  * Collects: baseline + attributeValues
@@ -142,6 +175,7 @@ export function assemblePrompt(parts, activePage, slotVisibility) {
     if (hiddenSet.has(p.config.uid)) return false;
     if (!slotVisibility) return true;
     const types = Array.isArray(p.config.type) ? p.config.type : [];
+    if (types.length === 0) return true; // Typeless parts don't participate in slot rules — always include
     return types.some(t => slotVisibility.get(t.trim().toLowerCase()) === true);
   });
 

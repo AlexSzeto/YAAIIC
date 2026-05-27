@@ -21,8 +21,9 @@ import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { TagInput } from '../tags/tag-input.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
-import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, Label, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot, getPartsCoverage } from './anytale-state.mjs';
+import { expandDialogPrompt } from './prompt-assembler.mjs';
 import { formButtonStates } from '../forms.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
@@ -30,6 +31,7 @@ import { PlotPagePills } from './plot-page-pills.mjs';
 import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
+import { generateDialog } from '../anytale-play/play-dialog.mjs';
 
 // ============================================================================
 // Styled Components
@@ -76,7 +78,7 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
  * @param {Function} [props.onReject]                  – Called with ({ plotUid, pageIndex }) after page is unlocked
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -98,6 +100,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   // All library parts — used for slot action editor
   const [libraryParts, setLibraryParts] = useState([]);
   const [characterSlotTypes, setCharacterSlotTypes] = useState([]);
+  const [dialogConfig, setDialogConfig] = useState(null);
+  const [dialogPreview, setDialogPreview] = useState(null);
+  const [dialogPreviews, setDialogPreviews] = useState({});
+  const [isPreviewingDialog, setIsPreviewingDialog] = useState(false);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -135,6 +141,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         if (Array.isArray(data.recommendedCharacterPartTypes)) {
           setCharacterSlotTypes(data.recommendedCharacterPartTypes.map(t => t.toLowerCase()));
         }
+        if (data.dialog) setDialogConfig(data.dialog);
+        if (data.dialogPreview) setDialogPreview(data.dialogPreview);
       })
       .catch(err => console.error('[PlotSection] Failed to fetch anytale config:', err));
   }, []);
@@ -424,6 +432,45 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageLockedChange(next);
   }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);  
 
+  // ── Dialog preview ───────────────────────────────────────────────────────
+  const handlePreviewDialog = useCallback(async () => {
+    if (!dialogConfig || !dialogPreview) return;
+    if (isPreviewingDialog) return;
+    setIsPreviewingDialog(true);
+    try {
+      const character = {
+        name: dialogPreview.name || '',
+        personality: dialogPreview.personality || '',
+      };
+      const locationAttributeValue = dialogPreview.outfit || '';
+      const pages = plot.pages.slice(0, currentPageIndex + 1);
+      const history = [];
+      for (let i = 0; i < pages.length; i++) {
+        if (!pages[i].dialogPrompt?.trim()) continue;
+        // Expand {{slot type}} tokens in the dialog prompt using enabled parts' display names
+        const expandedPrompt = expandDialogPrompt(pages[i].dialogPrompt, enabledParts);
+        const expandedPage = { ...pages[i], dialogPrompt: expandedPrompt };
+        const result = await generateDialog({
+          character,
+          locationAttributeValue,
+          page: expandedPage,
+          dialogConfig,
+          history,
+        });
+        history.push({ role: 'user', content: expandedPrompt });
+        history.push({ role: 'assistant', content: result });
+        setDialogPreviews(prev => ({ ...prev, [i]: result }));
+      }
+    } catch (err) {
+      toast.error(`Dialog preview failed: ${err.message}`);
+    } finally {
+      setIsPreviewingDialog(false);
+    }
+  }, [dialogConfig, dialogPreview, isPreviewingDialog, plot.pages, currentPageIndex, enabledParts, toast]);
+
+  const previewDialogDisabled = !currentPage.dialogPrompt?.trim() || !dialogConfig || !dialogPreview
+    || !(dialogPreview.name?.trim() && dialogPreview.personality?.trim());
+
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
   const plotDirty = !(isInLibrary && savedPlot !== null && JSON.stringify(plot) === JSON.stringify(savedPlot));
@@ -522,6 +569,23 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           disabled=${isCurrentPageLocked}
         />
 
+        <!-- Dialog Preview -->
+        <${VerticalLayout} gap="small">
+          <div>
+          <${Button}
+            variant="small-text"
+            widthScale="normal"
+            icon="message-detail"
+            onClick=${handlePreviewDialog}
+            disabled=${previewDialogDisabled || isPreviewingDialog}
+            loading=${isPreviewingDialog}
+          >${isPreviewingDialog ? 'Generating...' : 'Preview Dialog'}<//>
+          </div>
+          ${dialogPreviews[currentPageIndex] ? html`
+            <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
+          ` : null}
+        </${VerticalLayout}>
+
         <!-- Page Tags -->
         <${TagInput}
           label="Page Tags"
@@ -533,31 +597,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
 
         <${HorizontalEdgesLayout}>
-          <${HorizontalLayout} gap="small">
-            <${NavigatorControl}
-              currentPage=${currentPageIndex}
-              totalPages=${pageCount}
-              onPrev=${() => navigateTo(currentPageIndex - 1)}
-              onNext=${() => navigateTo(currentPageIndex + 1)}
-              onFirst=${() => navigateTo(0)}
-              onLast=${() => navigateTo(pageCount - 1)}
-              showFirstLast=${true}
-            />
-            <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage} />
-            <${Button}
-              variant="medium-icon"
-              icon="unlock"
-              disabled=${!isCurrentPageLocked}
-              onClick=${handleUnlock}
-            />
-            <${Button}
-              variant="medium-icon"
-              icon="trash"
-              color="danger"
-              onClick=${handleDeletePage}
-              disabled=${pageCount <= 1}
-            />
-          </${HorizontalLayout}>
+          <${Button}
+            variant="small-text"
+            widthScale="normal"
+            icon="image-alt"
+            onClick=${() => onViewPageImage?.({ plotUid: plot.uid, pageIndex: currentPageIndex })}
+            disabled=${!plot.uid || !onViewPageImage}
+          >View Image<//>
           <${HorizontalLayout} gap="small">
             <${Button}
               variant="small-text"
@@ -574,6 +620,32 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             >Extend<//>
           </${HorizontalLayout}>
         </${HorizontalEdgesLayout}>
+
+        <${HorizontalLayout} gap="small">
+          <${NavigatorControl}
+            currentPage=${currentPageIndex}
+            totalPages=${pageCount}
+            onPrev=${() => navigateTo(currentPageIndex - 1)}
+            onNext=${() => navigateTo(currentPageIndex + 1)}
+            onFirst=${() => navigateTo(0)}
+            onLast=${() => navigateTo(pageCount - 1)}
+            showFirstLast=${true}
+          />
+          <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage} />
+          <${Button}
+            variant="medium-icon"
+            icon="unlock"
+            disabled=${!isCurrentPageLocked}
+            onClick=${handleUnlock}
+          />
+          <${Button}
+            variant="medium-icon"
+            icon="trash"
+            color="danger"
+            onClick=${handleDeletePage}
+            disabled=${pageCount <= 1}
+          />
+        </${HorizontalLayout}>
       </${VerticalLayout}>
 
       <!-- Progression Sections -->

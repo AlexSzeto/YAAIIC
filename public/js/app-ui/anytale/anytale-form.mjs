@@ -113,7 +113,7 @@ PromptPreview.className = 'prompt-preview';
  * @param {Function} [props.onImportReady] – Called with import handlers when they change; null on unmount
  * @param {Function} [props.onReject]      – Called with ({ plotUid, pageIndex }) when a page is rejected
  */
-export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onReject }) {
+export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onReject, onViewPageImage }) {
   const toast = useToast();
   const { show: progressShow, activeTasks } = useProgress();
   const { items: queueItems } = useQueueStatus();
@@ -999,6 +999,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
             onReject=${onReject}
+            onViewPageImage=${onViewPageImage}
           />
         </${VerticalLayout}>
       </${PartsScrollArea}>

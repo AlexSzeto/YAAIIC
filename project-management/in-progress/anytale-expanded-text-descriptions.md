@@ -29,9 +29,9 @@ Expand the user-facing textual data throughout AnyTale by: (1) separating techni
 
 ### Phase 3 — Play mode display
 
-- [ ] **Data normalizers:** In `public/js/app-ui/anytale-play/play-normalizer.mjs`, add `selfProfile` and `voiceProfile` to `normalizeCharacter`; add `referenceTag` and `name` defaults to `normalizePart`; add `description` to `normalizeOutfit`; add a new `normalizeGenre` function defaulting `disabled: false`.
-- [ ] **Session shape:** In `public/js/app-ui/anytale/play/play-session.mjs`, add `selfProfile` to the `SessionCharacter` typedef and `DEFAULT_SESSION.character`.
-- [ ] **Play mode selection screens:** In `public/js/app-ui/anytale-play/anytale-play.mjs`:
+- [x] **Data normalizers:** In `public/js/app-ui/anytale-play/play-normalizer.mjs`, add `selfProfile` and `voiceProfile` to `normalizeCharacter`; add `referenceTag` and `name` defaults to `normalizePart`; add `description` to `normalizeOutfit`; add a new `normalizeGenre` function defaulting `disabled: false`.
+- [x] **Session shape:** In `public/js/app-ui/anytale/play/play-session.mjs`, add `selfProfile` to the `SessionCharacter` typedef and `DEFAULT_SESSION.character`.
+- [x] **Play mode selection screens:** In `public/js/app-ui/anytale-play/anytale-play.mjs`:
   - Character pick: use `char.selfProfile` as subtitle instead of `char.personality`.
   - Outfit pick: add `subtitle: outfit.description || undefined`.
   - Cold start bootstrap and `pickCharacter`: include `selfProfile` in the session character object.
@@ -39,7 +39,7 @@ Expand the user-facing textual data throughout AnyTale by: (1) separating techni
 
 ### Phase 4 — Plot page dialog preview
 
-- [ ] **Dialog preview in plot editor:** In `public/js/app-ui/anytale/plot-section.mjs`:
+- [x] **Dialog preview in plot editor:** In `public/js/app-ui/anytale/plot-section.mjs`:
   - Extend the existing `/anytale/config` fetch to also read the `dialog` and `dialogPreview` config objects into local state.
   - Below the "Action Description for Dialog Prompt" input, render a "Dialog Preview" label (secondary text style) and a "Preview Dialog" icon-text button (icon: `message-detail`).
   - On click, generate dialog for pages 0 through the current page sequentially — same history-building process as play mode (`generateDialog` from `../anytale-play/play-dialog.mjs`, accumulating `{ role, content }` history entries). Use `dialogPreview.name` as `character.name`, `dialogPreview.personality` as `character.personality`, `dialogPreview.outfit` as `locationAttributeValue`.
@@ -48,19 +48,25 @@ Expand the user-facing textual data throughout AnyTale by: (1) separating techni
 
 ### Phase 5 — View Image button and Reject/Extend relayout
 
-- [ ] **View Image button:** In `public/js/app-ui/anytale/plot-section.mjs`:
+- [x] **View Image button:** In `public/js/app-ui/anytale/plot-section.mjs`:
   - Add `onViewPageImage` prop (called with `{ plotUid, pageIndex }`).
   - Insert a new `HorizontalEdgesLayout` row between the "Page Tags" input and the navigation controls row: "View Image" icon-text button (icon: `image-alt`) on the left; Reject and Extend buttons on the right edge.
   - Remove the old standalone Reject/Extend `HorizontalLayout` row.
-- [ ] **Wire callback in parent:** In `public/js/app-ui/anytale/anytale.mjs`, define `handleViewPageImage({ plotUid, pageIndex })` that searches `history` for the first item where `item.plot?.uid === plotUid && item.plot?.page === pageIndex`, calls `nav.selectByIndex` with that index, or toasts `'Page image not found'` if none matches. Pass as `onViewPageImage` to `AnyTaleForm`; thread through `AnyTaleForm` down to `PlotSection`.
+- [x] **Wire callback in parent:** In `public/js/app-ui/anytale/anytale.mjs`, define `handleViewPageImage({ plotUid, pageIndex })` that searches `history` for the first item where `item.plot?.uid === plotUid && item.plot?.page === pageIndex`, calls `nav.selectByIndex` with that index, or toasts `'Page image not found'` if none matches. Pass as `onViewPageImage` to `AnyTaleForm`; thread through `AnyTaleForm` down to `PlotSection`.
 - [ ] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
 
 ### Phase 6 — LLM text generation buttons
 
-- [ ] **Config migration:** Add `scripts/migrate/config/1-to-2.mjs` that sets `config.anytale.generateText` from the default values if absent; bump `config.currentVersion` to 2 in `server/core/data-versions.mjs`.
-- [ ] **Character editor — selfProfile generate button:** In `public/js/app-ui/anytale/character-section.mjs`, extend the `/anytale/config` fetch (or add one if absent) to read `generateText` into local state. Wrap the "Self Profile" `Input` in a `HorizontalLayout`; add a styled `div` with `padding-bottom: 4px` containing an icon-only `Button` (icon: `caption`) to the right. On click, fill `{{name}}` and `{{personality}}` into `generateText.templates.selfProfile`, POST to `/api/chat` with `{ model: generateText.model, messages: [{ role: 'user', content: filledTemplate }], stream: false, mode: 'chat' }`, and apply `response.message.content` to `character.selfProfile`. Disable the button when `generateText` config is absent or a generation is in flight.
-- [ ] **Character editor — voiceProfile generate button:** Same pattern in `character-section.mjs` for the "Voice Profile" `Input`. Fill `{{personality}}` into `generateText.templates.voiceProfile`, POST to `/api/chat`, apply result to `character.voiceProfile`.
-- [ ] **Outfit editor — description generate button:** In `public/js/app-ui/anytale/outfit-section.mjs`, extend the `/anytale/config` fetch to read `generateText`. Wrap the "Description" `Input` in a `HorizontalLayout`; add the same styled icon button. On click, fill `{{name}}` (outfit name) and `{{parts}}` (comma-separated list of `libraryParts.find(p => p.uid === op.partUid)?.name || ''` for each `outfit.parts` entry, filtered to non-empty) into `generateText.templates.outfitDescriptions`, POST to `/api/chat`, apply result to `outfit.description`.
+- [x] **Config migration:** Add `scripts/migrate/config/1-to-2.mjs` that sets `config.anytale.generateText` from the default values if absent; bump `config.currentVersion` to 2 in `server/core/data-versions.mjs`.
+- [x] **Character editor — selfProfile generate button:** In `public/js/app-ui/anytale/character-section.mjs`, extend the `/anytale/config` fetch (or add one if absent) to read `generateText` into local state. Wrap the "Self Profile" `Input` in a `HorizontalLayout`; add a styled `div` with `padding-bottom: 4px` containing an icon-only `Button` (icon: `caption`) to the right. On click, fill `{{name}}` and `{{personality}}` into `generateText.templates.selfProfile`, POST to `/api/chat` with `{ model: generateText.model, messages: [{ role: 'user', content: filledTemplate }], stream: false, mode: 'chat' }`, and apply `response.message.content` to `character.selfProfile`. Disable the button when `generateText` config is absent or a generation is in flight.
+- [x] **Character editor — voiceProfile generate button:** Same pattern in `character-section.mjs` for the "Voice Profile" `Input`. Fill `{{personality}}` into `generateText.templates.voiceProfile`, POST to `/api/chat`, apply result to `character.voiceProfile`.
+- [x] **Outfit editor — description generate button:** In `public/js/app-ui/anytale/outfit-section.mjs`, extend the `/anytale/config` fetch to read `generateText`. Wrap the "Description" `Input` in a `HorizontalLayout`; add the same styled icon button. On click, fill `{{name}}` (outfit name) and `{{parts}}` (comma-separated list of `libraryParts.find(p => p.uid === op.partUid)?.name || ''` for each `outfit.parts` entry, filtered to non-empty) into `generateText.templates.outfitDescriptions`, POST to `/api/chat`, apply result to `outfit.description`.
+
+### Phase 7 — Dialog prompt template expansion
+
+- [x] **`expandDialogPrompt` helper:** In `public/js/app-ui/anytale/prompt-assembler.mjs`, export a new function `expandDialogPrompt(promptText, enabledParts)` that replaces each `{{slot type}}` token in `promptText` with the `config.name` values (not `referenceTag`) of all matching enabled parts joined by `" and "`. If no parts match a token, substitute an empty string. Parts are matched by checking whether `config.type` contains the slot type (case-insensitive). Add tests in `prompt-assembler.test.mjs` covering: basic substitution, multi-part join with " and ", no-match yields empty string, non-token text is unchanged.
+- [x] **Plot section dialog preview — expand prompt:** In `public/js/app-ui/anytale/plot-section.mjs`, import `expandDialogPrompt`. In `handlePreviewDialog`, before calling `generateDialog` for each page, compute the expanded prompt via `expandDialogPrompt(pages[i].dialogPrompt, enabledParts)`. Pass the expanded prompt as `dialogPrompt` in the page object given to `generateDialog`, and use it (not the raw prompt) in the `history.push` call.
+- [x] **Play mode dialog generation — expand prompt:** In `public/js/app-ui/anytale-play/anytale-play.mjs`, import `expandDialogPrompt` from `../anytale/prompt-assembler.mjs`. In `queuePageDialog`, build `dialogEnabledParts` from character parts + outfit parts using `buildPartForPrompt` and a `partsMap`, then expand `rawDialogPrompt` with `expandDialogPrompt` before the skip-check and before passing to `generateDialog`. Change the return value to `{ text, expandedPrompt }` (returning `null` unchanged on skip/error). Update the call site in `initChapter` to destructure `{ text, expandedPrompt }` and use `expandedPrompt` instead of `prompt` for `dialogHistoryRef.current` updates.
 
 ## Implementation Details
 
@@ -188,7 +194,7 @@ Each generate button uses the same layout:
 <HorizontalLayout align="end" gap="small">
   <Input ... widthScale="full" />           ← grows to fill
   <StyledGenerateDiv>                        ← padding-bottom: 4px, flex-shrink: 0
-    <Button variant="icon" icon="caption" onClick=... disabled=... />
+    <Button variant="icon" icon="captions" onClick=... disabled=... />
   </StyledGenerateDiv>
 </HorizontalLayout>
 ```

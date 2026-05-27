@@ -232,6 +232,14 @@ export function AnyTalePage() {
     }
   }, [history, nav]);
 
+  const handleViewPageImage = useCallback(({ plotUid, pageIndex }) => {
+    const idx = history.findIndex(
+      item => item.plot?.uid === plotUid && item.plot?.page === pageIndex
+    );
+    if (idx === -1) { toast.show('Page image not found', 'warning'); return; }
+    nav.selectByIndex(idx);
+  }, [history, nav, toast]);
+
   const handleReject = useCallback(async ({ plotUid, pageIndex }) => {
     if (!plotUid) return;
     const matching = history.filter(item => item.plot?.uid === plotUid && item.plot?.page === pageIndex);
@@ -352,6 +360,7 @@ export function AnyTalePage() {
             onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
             onReject=${handleReject}
+            onViewPageImage=${handleViewPageImage}
           />
         </${RightColumn}>
       </${TwoColumn}>
