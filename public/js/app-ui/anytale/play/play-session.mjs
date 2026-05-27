@@ -34,6 +34,13 @@ const STORAGE_KEY = 'anytale-play-session';
  */
 
 /**
+ * @typedef {Object} TimelineEntry
+ * @property {string} plotUid
+ * @property {number} pageCount - count of visible pages in this chapter (0 until initChapter completes)
+ * @property {{ [slotType: string]: string }} slotStateAtEntry - serialised Map of slot statuses at the start of this chapter
+ */
+
+/**
  * @typedef {Object} PlaySession
  * @property {SessionCharacter} character
  * @property {string} outfitUid
@@ -43,8 +50,11 @@ const STORAGE_KEY = 'anytale-play-session';
  * @property {string} preludePlotUid
  * @property {string} currentPlotUid - UID of the chapter plot currently being played
  * @property {number} pageIndex - 0-based index into the visible pages array for the current chapter
- * @property {string} phase - 'intro-main'|'intro-mood'|'character-pick'|'outfit-pick'|'location-pick'|'music-pick'|'plot'
+ * @property {string} phase - 'intro-main'|'intro-mood'|'character-pick'|'outfit-pick'|'location-pick'|'music-pick'|'plot'|'end'
  * @property {string|null} introImageUrl
+ * @property {string|null} endImageUrl - image URL for the 'end' phase screen
+ * @property {TimelineEntry[]} timeline - ordered chapters entered this session
+ * @property {number} timelineIndex - which chapter in the timeline the user is currently viewing
  * @property {boolean} muted - sourced from play-prefs, not written here
  * @property {boolean} musicOn - sourced from play-prefs, not written here
  */
@@ -60,6 +70,9 @@ const DEFAULT_SESSION = {
   pageIndex: 0,
   phase: 'intro-main',
   introImageUrl: null,
+  endImageUrl: null,
+  timeline: [],
+  timelineIndex: 0,
 };
 
 /** Load session from localStorage, merge missing keys with defaults, then overlay prefs. */

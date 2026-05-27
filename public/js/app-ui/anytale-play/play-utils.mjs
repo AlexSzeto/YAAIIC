@@ -129,16 +129,20 @@ export function buildActiveParts(session, outfitParts, partsMap) {
  * @param {Array} activeParts - slot-resolver format parts (from buildActiveParts)
  * @param {Object} plot - full plot object with pages array
  * @param {string} slotRulesText - raw rules text from config.slotRules
+ * @param {Map<string,string>|null} [initialStatuses=null] - when provided, overrides the active-parts
+ *   initialisation and uses these slot statuses as the starting state (for cross-chapter continuity).
  * @returns {{ visibleIndices: number[], pageSlotStatuses: Map[] }}
  *   visibleIndices: actual plot page indices that are visible to the player
  *   pageSlotStatuses: Map[] indexed by actual plot page index; post-action slot statuses for prompt assembly
  */
-export function computeVisiblePages(activeParts, plot, slotRulesText) {
+export function computeVisiblePages(activeParts, plot, slotRulesText, initialStatuses = null) {
   const pages = (plot && Array.isArray(plot.pages)) ? plot.pages : [];
   const parsedRules = parseRules(slotRulesText || '');
 
-  // Build initial statuses from active parts only (no page actions yet)
-  let currentStatuses = resolveSlotStatuses(activeParts, [], 0);
+  // Build initial statuses: use provided initial state (cross-chapter continuity) or compute from active parts.
+  let currentStatuses = initialStatuses
+    ? new Map(initialStatuses)
+    : resolveSlotStatuses(activeParts, [], 0);
 
   const visibleIndices = [];
   const pageSlotStatuses = [];

@@ -14,6 +14,7 @@ import { getClientId } from '../client-id.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { globalBgmPlayer, globalAudioPlayer } from '../../custom-ui/global-audio-player.mjs';
+import { showModal } from '../../custom-ui/overlays/modal.mjs';
 import {
   randomPickN,
   splitOptions,
@@ -39,6 +40,7 @@ export function AnyTalePlayPage() {
   const [playData, setPlayData] = useState(null);
   const [session, setSession] = useState(() => loadSession());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEndGenerating, setIsEndGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [introPlot, setIntroPlot] = useState(null);
 
@@ -58,7 +60,6 @@ export function AnyTalePlayPage() {
   const [isAutoplay, setIsAutoplay] = useState(false);
   // URL currently shown in PortraitPanel — only advances to a new page's image once ALL page assets are ready
   const [displayedImageUrl, setDisplayedImageUrl] = useState('');
-
 
   // Phase-specific draft state (intro)
   const [charDraft, setCharDraft] = useState([]);
@@ -144,11 +145,66 @@ export function AnyTalePlayPage() {
     }).catch(err => console.error('[AnyTalePlayPage] Failed to submit intro generation:', err));
   }, []);
 
+  // --- End screen image generation ---
+
+  const generateEndScreenImage = useCallback((endPlot, sess, data) => {
+    if (!endPlot?.pages?.length) return;
+    const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
+    const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
+
+    const activeParts = buildActiveParts(sess, outfit ? outfit.parts : [], partsMap);
+    const slotStatuses = resolveSlotStatuses(activeParts, [], 0);
+    const parsedRules = parseRules(data.config.slotRules || '');
+    const visibility = applyRules(slotStatuses, parsedRules);
+
+    const rawParts = [
+      ...(sess.character.parts || []).map(p =>
+        buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
+      ),
+      ...(outfit ? outfit.parts : []).map(p =>
+        buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
+      ),
+    ].filter(Boolean);
+
+    const enabledParts = rawParts.filter(p => {
+      const types = Array.isArray(p.config?.type) ? p.config.type : [];
+      if (types.length === 0) return true;
+      return types.some(t => visibility.get(t.trim().toLowerCase()) !== false);
+    });
+
+    if (sess.location.partUid) {
+      const locPartConfig = partsMap.get(sess.location.partUid);
+      if (locPartConfig) {
+        const locTypes = Array.isArray(locPartConfig.type) ? locPartConfig.type : [];
+        for (const t of locTypes) visibility.set(t.trim().toLowerCase(), true);
+      }
+      const locPart = buildPartForPrompt(sess.location.partUid, sess.location.attributeMap, partsMap);
+      if (locPart) enabledParts.push(locPart);
+    }
+
+    const endPage = endPlot.pages[0];
+    const prompt = assemblePrompt(enabledParts, endPage, visibility);
+    const workflow = data.config.generationWorkflow || 'Text to Image (Illustrious Characters)';
+
+    fetchJson('/anytale/play/generate-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow,
+        name: `${sess.character.name} - End`,
+        prompt,
+        seed: Math.floor(Math.random() * 2 ** 32),
+        orientation: 'portrait',
+        clientId: getClientId(),
+      }),
+    }).catch(err => console.error('[AnyTalePlayPage] Failed to submit end screen generation:', err));
+  }, []);
+
   // --- Chapter page image queuing ---
 
   // Accumulated dialog history for the current chapter (cleared on chapter entry / reset)
   const dialogHistoryRef = useRef([]);
-  // Tracks which character UID intro voice was last played for — prevents replaying on outfit/location changes
+  // Tracks which character UID intro voice was last played for
   const introVoicePlayedForRef = useRef('');
 
   // Stable ref to latest values needed inside callbacks / effects
@@ -159,8 +215,7 @@ export function AnyTalePlayPage() {
   useEffect(() => { sessionRef.current = session; }, [session]);
   useEffect(() => { visiblePageIndicesRef.current = visiblePageIndices; }, [visiblePageIndices]);
 
-  // Maps queue item UUID (from HTTP 202) → { plotPageIdx, cacheKey, type: 'image'|'voice' }
-  // Used to route queue:task-started events to the correct page subscriber
+  // Maps queue item UUID → { plotPageIdx, cacheKey, type: 'image'|'voice' }
   const taskToPageRef = useRef(new Map());
   // Buffer for queue:task-started events that arrive before queuePageImage.then() fires
   const pendingChapterEventsRef = useRef([]);
@@ -170,10 +225,19 @@ export function AnyTalePlayPage() {
   const currentPlotRef = useRef(currentPlot);
   useEffect(() => { currentPlotRef.current = currentPlot; }, [currentPlot]);
 
-  // Open a progress SSE subscription for a chapter page using the SSE task ID
+  // Stale generation guard: incremented on every initChapter call.
+  // Callbacks that captured a stale ID are discarded.
+  const chapterStaleRef = useRef(0);
+
+  // AbortController for dialog generation — replaced on each initChapter call.
+  const dialogAbortControllerRef = useRef(null);
+
+  // Open a progress SSE subscription for a chapter page
   const subscribePageProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
+    const capturedStaleId = chapterStaleRef.current;
     progressShow(sseTaskId, {
       onComplete: (result) => {
+        if (chapterStaleRef.current !== capturedStaleId) return; // stale chapter
         if (result?.result?.imageUrl) {
           const url = result.result.imageUrl;
           setPageImageUrls(prev => ({ ...prev, [plotPageIdx]: url }));
@@ -185,33 +249,42 @@ export function AnyTalePlayPage() {
         }
       },
       onError: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
         setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
         updateCacheEntry(cacheKey, { imageStatus: 'error' });
       },
-      onCancelled: () => setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
+      onCancelled: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
+        setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+      },
     });
   }, [progressShow]);
 
   // Open a voice/speech SSE subscription for a chapter page
   const subscribeVoiceProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
+    const capturedStaleId = chapterStaleRef.current;
     progressShow(sseTaskId, {
       onComplete: (result) => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
         if (result?.result?.audioUrl) {
           const url = result.result.audioUrl;
           setPageVoiceUrls(prev => ({ ...prev, [plotPageIdx]: url }));
           setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
           updateCacheEntry(cacheKey, { voiceUrl: url, voiceStatus: 'complete' });
-          // Playback is triggered by the page-ready effect when all assets are settled
         } else {
           setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
           updateCacheEntry(cacheKey, { voiceStatus: 'error' });
         }
       },
       onError: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
         setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
         updateCacheEntry(cacheKey, { voiceStatus: 'error' });
       },
-      onCancelled: () => setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' })),
+      onCancelled: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
+        setPageVoiceStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+      },
     });
   }, [progressShow]);
 
@@ -262,13 +335,11 @@ export function AnyTalePlayPage() {
       updateCacheEntry(cacheKey, { imageTaskId: queueItemId, imageStatus: 'generating' });
       setPageStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
 
-      // Check if queue:task-started arrived before this .then() ran
       const earlyIdx = pendingChapterEventsRef.current.findIndex(e => e.id === queueItemId);
       if (earlyIdx !== -1) {
         const [earlyEvent] = pendingChapterEventsRef.current.splice(earlyIdx, 1);
         subscribePageProgress(earlyEvent.taskId, plotPageIdx, cacheKey);
       } else {
-        // Store mapping so queue:task-started can find the page info when it arrives
         taskToPageRef.current.set(queueItemId, { plotPageIdx, cacheKey });
       }
     }).catch(err => {
@@ -279,14 +350,13 @@ export function AnyTalePlayPage() {
 
   // --- Dialog generation ---
 
-  const queuePageDialog = useCallback(async (plotPageIdx, plot, sess, data, cacheKey, history = []) => {
+  const queuePageDialog = useCallback(async (plotPageIdx, plot, sess, data, cacheKey, history = [], signal) => {
     const page = plot.pages[plotPageIdx];
     const rawDialogPrompt = (page.dialogPrompt || '').trim();
     const personality = (sess.character.personality || '').trim();
     const locationAttrValue = Object.values(sess.location.attributeMap || {}).find(v => v) || '';
     const dialogConfig = data.config.dialog;
 
-    // Build enabled parts from character + outfit for {{slot type}} template expansion
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfitParts = outfit ? outfit.parts : [];
@@ -296,14 +366,10 @@ export function AnyTalePlayPage() {
     ].filter(Boolean);
     const expandedPrompt = expandDialogPrompt(rawDialogPrompt, dialogEnabledParts);
 
-    // Assemble outfit text from the outfit's parts for the {{outfit}} template slot
     const outfitPartsForPrompt = outfitParts.map(p => buildPartForPrompt(p.partUid, p.attributeValues, partsMap)).filter(Boolean);
     const outfitText = assemblePrompt(outfitPartsForPrompt, null, null);
 
-    console.log('[Dialog] page', plotPageIdx, { expandedPrompt, personality, locationAttrValue, outfitText, dialogConfig: !!dialogConfig });
-
     if (!expandedPrompt || !personality || !locationAttrValue || !dialogConfig) {
-      console.log('[Dialog] skipping page', plotPageIdx, { missingPrompt: !expandedPrompt, missingPersonality: !personality, missingLocation: !locationAttrValue, missingConfig: !dialogConfig });
       updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'skipped' });
       setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
       return null;
@@ -312,7 +378,6 @@ export function AnyTalePlayPage() {
     updateCacheEntry(cacheKey, { dialogText: null, dialogStatus: 'generating' });
 
     const isStreaming = dialogConfig.stream === true;
-    console.log('[Dialog] calling generateDialog for page', plotPageIdx, 'isStreaming:', isStreaming, 'generateDialog type:', typeof generateDialog);
 
     try {
       const text = await generateDialog({
@@ -322,19 +387,23 @@ export function AnyTalePlayPage() {
         page: { ...page, dialogPrompt: expandedPrompt },
         dialogConfig,
         history,
+        signal,
         onChunk: isStreaming ? (partial) => {
           setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: partial }));
         } : undefined,
       });
-      console.log('[Dialog] page', plotPageIdx, 'result:', text);
       updateCacheEntry(cacheKey, { dialogText: text, dialogStatus: 'complete' });
       setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: text }));
       return { text, expandedPrompt };
     } catch (err) {
-      console.error('[Dialog] catch for page', plotPageIdx, err.name, err.message, err);
-      updateCacheEntry(cacheKey, { dialogStatus: 'error' });
-      // Treat error as no-dialog so isVoiceSettled returns true and the page can still show
-      setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
+      if (err.name === 'AbortError') {
+        // Dialog was aborted due to chapter change — treat as skipped to avoid blocking
+        updateCacheEntry(cacheKey, { dialogStatus: 'skipped', dialogText: null });
+        setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
+      } else {
+        updateCacheEntry(cacheKey, { dialogStatus: 'error' });
+        setPageDialogTexts(prev => ({ ...prev, [plotPageIdx]: null }));
+      }
       return null;
     }
   }, []);
@@ -381,11 +450,28 @@ export function AnyTalePlayPage() {
 
   // --- Chapter initialization ---
 
-  const initChapter = useCallback(async (plot, sess, data) => {
-    // Phase 1: flush all anytale-play items from the queue for a clean slate
+  /**
+   * @param {Object} plot - full plot object
+   * @param {Object} sess - session snapshot
+   * @param {Object} data - play data
+   * @param {Map<string,string>|null} [initialSlotStatuses=null] - carried slot state for cross-chapter continuity
+   */
+  const initChapter = useCallback(async (plot, sess, data, initialSlotStatuses = null) => {
+    // Increment stale ID — callbacks that captured the old ID will be discarded.
+    const staleId = ++chapterStaleRef.current;
+
+    // Abort any in-progress dialog generation from a previous chapter.
+    dialogAbortControllerRef.current?.abort();
+    const dialogAbortCtrl = new AbortController();
+    dialogAbortControllerRef.current = dialogAbortCtrl;
+
+    // Phase 1: flush all anytale-play items from the queue
     taskToPageRef.current.clear();
     pendingChapterEventsRef.current = [];
     await fetch('/queue/items/source/anytale-play', { method: 'DELETE' }).catch(() => {});
+
+    // Guard: if chapter changed again while we awaited, abort.
+    if (chapterStaleRef.current !== staleId) return;
 
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
@@ -394,12 +480,35 @@ export function AnyTalePlayPage() {
     const { visibleIndices, pageSlotStatuses: slotStatuses } = computeVisiblePages(
       activeParts,
       plot,
-      data.config.slotRules || ''
+      data.config.slotRules || '',
+      initialSlotStatuses
     );
+
+    // Compute the actual initial statuses used (for timeline storage)
+    const actualInitialStatuses = initialSlotStatuses
+      ? initialSlotStatuses
+      : resolveSlotStatuses(activeParts, [], 0);
 
     setCurrentPlot(plot);
     setVisiblePageIndices(visibleIndices);
     setPageSlotStatuses(slotStatuses);
+
+    // Update timeline entry for this chapter with pageCount and actual initial slot state.
+    // We use setSession here (not updateSession) to avoid stale closure issues inside the async fn.
+    setSession(prev => {
+      const idx = prev.timelineIndex ?? 0;
+      const newTimeline = [...(prev.timeline || [])];
+      if (newTimeline[idx]) {
+        newTimeline[idx] = {
+          ...newTimeline[idx],
+          pageCount: visibleIndices.length,
+          slotStateAtEntry: Object.fromEntries(actualInitialStatuses),
+        };
+      }
+      const next = { ...prev, timeline: newTimeline };
+      saveSession(next);
+      return next;
+    });
 
     const dialogEnabled = !!data.config.dialog;
 
@@ -446,11 +555,8 @@ export function AnyTalePlayPage() {
       } else if (entry?.voiceStatus === 'skipped') {
         newVoiceStatuses[plotPageIdx] = 'skipped';
       } else if (entry?.voiceStatus === 'generating' || entry?.voiceStatus === 'error') {
-        // Phase 1 flushed the queue so 'generating' tasks are gone; reset for Phase 3 to re-queue.
-        // Also retry 'error' entries on fresh init.
         updateCacheEntry(cacheKey, { voiceStatus: 'pending', voiceTaskId: null });
       }
-      // undefined/pending: Phase 3 will queue
     }
 
     setPageImageUrls(newImageUrls);
@@ -461,13 +567,16 @@ export function AnyTalePlayPage() {
 
     dialogHistoryRef.current = [];
 
-    console.log('[Queue] Phase 2 start — toQueueDialog:', toQueueDialog.map(x => x.plotPageIdx), 'toQueueImage:', toQueueImage.map(x => x.plotPageIdx), 'dialogEnabled:', dialogEnabled);
-
-    // Phase 2: generate all missing dialog sequentially; no images or TTS until complete
+    // Phase 2: generate all missing dialog sequentially
     if (dialogEnabled) {
       for (const { plotPageIdx, cacheKey } of toQueueDialog) {
+        // Guard: abort if another initChapter was called
+        if (chapterStaleRef.current !== staleId) return;
         const history = [...dialogHistoryRef.current];
-        const result = await queuePageDialog(plotPageIdx, plot, sess, data, cacheKey, history);
+        const result = await queuePageDialog(
+          plotPageIdx, plot, sess, data, cacheKey, history, dialogAbortCtrl.signal
+        );
+        if (chapterStaleRef.current !== staleId) return; // stale check after await
         const text = result?.text ?? null;
         const expandedPrompt = result?.expandedPrompt ?? '';
         if (text && expandedPrompt) {
@@ -480,11 +589,11 @@ export function AnyTalePlayPage() {
       }
     }
 
-    // Phase 3: for each page, queue image (if missing) and TTS (if missing and applicable)
+    if (chapterStaleRef.current !== staleId) return;
+
+    // Phase 3: queue images and TTS for missing pages
     const voiceOn = dialogEnabled && !sess.muted && !!sess.character.voiceSampleUrl;
     const needsImage = new Set(toQueueImage.map(item => item.plotPageIdx));
-
-    console.log('[Queue] Phase 3 start — voiceOn:', voiceOn);
 
     for (const plotPageIdx of visibleIndices) {
       const cacheKey = buildCacheKey({
@@ -511,8 +620,6 @@ export function AnyTalePlayPage() {
         }
       }
     }
-
-    console.log('[Queue] Phase 3 complete');
   }, [queuePageImage, queuePageDialog]);
 
   useEffect(() => { initChapterRef.current = initChapter; }, [initChapter]);
@@ -524,17 +631,77 @@ export function AnyTalePlayPage() {
     if (!playData) return;
     if (currentPlot?.uid === session.currentPlotUid) return;
 
+    // Read slotStateAtEntry from the current timeline entry for cross-chapter continuity
+    const timelineEntry = (session.timeline || [])[session.timelineIndex ?? 0];
+    const storedSlotState = timelineEntry?.slotStateAtEntry;
+    const initialSlotStatuses =
+      storedSlotState && Object.keys(storedSlotState).length > 0
+        ? new Map(Object.entries(storedSlotState))
+        : null;
+
     fetchJson(`/anytale/plot/${session.currentPlotUid}`)
-      .then(plot => initChapter(plot, session, playData))
+      .then(plot => initChapter(plot, session, playData, initialSlotStatuses))
       .catch(err => {
         console.error('[AnyTalePlayPage] Failed to load chapter:', err);
         updateSession({ phase: 'intro-main' });
       });
-  }, [session.phase, session.currentPlotUid, playData, currentPlot?.uid, initChapter, updateSession]);
+  }, [session.phase, session.currentPlotUid, playData, currentPlot?.uid, initChapter, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-generate end screen image when entering 'end' phase
+  useEffect(() => {
+    if (session.phase !== 'end') return;
+    if (session.endImageUrl) return; // already have it
+    if (!playData) return;
+
+    const endPlot = (playData.plots || []).find(
+      p => (p.section || '').toLowerCase() === 'end'
+    );
+    if (!endPlot) return;
+
+    fetchJson(`/anytale/plot/${endPlot.uid}`)
+      .then(fullEndPlot => generateEndScreenImage(fullEndPlot, session, playData))
+      .catch(err => console.error('[AnyTalePlayPage] Failed to load end plot:', err));
+  }, [session.phase, session.endImageUrl, playData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-transition to 'end' phase when at the last page of an epilogue chapter
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+    const isEpilogue = (currentPlot.section || '').toLowerCase() === 'epilogue';
+    if (!isEpilogue) return;
+
+    const isAtLastPage =
+      visiblePageIndices.length > 0 &&
+      session.pageIndex === visiblePageIndices.length - 1;
+    if (!isAtLastPage) return;
+
+    const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
+    if (currentPlotPageIdx == null) return;
+
+    const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
+    const isVoiceSettled = (() => {
+      const vs = pageVoiceStatuses[currentPlotPageIdx];
+      if (vs === 'complete' || vs === 'skipped' || vs === 'error') return true;
+      if (pageDialogTexts[currentPlotPageIdx] === null) return true;
+      return false;
+    })();
+    const currentPageReady =
+      pageStatuses[currentPlotPageIdx] === 'complete' &&
+      (!voiceApplicable || isVoiceSettled);
+
+    if (!currentPageReady) return;
+
+    const timer = setTimeout(() => {
+      updateSession({ phase: 'end' });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    session.phase, session.pageIndex, session.muted, session.character.voiceSampleUrl,
+    currentPlot, visiblePageIndices, pageStatuses, pageVoiceStatuses, pageDialogTexts,
+    updateSession,
+  ]);
 
   // --- SSE subscriptions ---
 
-  // Stable ref so the SSE handler can read current phase without re-subscribing
   const sessionPhaseRef = useRef(session.phase);
   useEffect(() => { sessionPhaseRef.current = session.phase; }, [session.phase]);
 
@@ -545,7 +712,6 @@ export function AnyTalePlayPage() {
         if (clientId !== getClientId()) return;
 
         if (sessionPhaseRef.current === 'plot') {
-          // Chapter page task (image or voice) — route via taskToPageRef
           const pageInfo = taskToPageRef.current.get(queueItemId);
           if (pageInfo) {
             taskToPageRef.current.delete(queueItemId);
@@ -555,9 +721,23 @@ export function AnyTalePlayPage() {
               subscribePageProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
             }
           } else {
-            // .then() hasn't run yet — buffer for deferred processing
             pendingChapterEventsRef.current.push({ id: queueItemId, taskId: sseTaskId });
           }
+          return;
+        }
+
+        if (sessionPhaseRef.current === 'end') {
+          setIsEndGenerating(true);
+          progressShow(sseTaskId, {
+            onComplete: (data) => {
+              setIsEndGenerating(false);
+              if (data.result?.imageUrl) {
+                updateSession({ endImageUrl: data.result.imageUrl });
+              }
+            },
+            onError: () => setIsEndGenerating(false),
+            onCancelled: () => setIsEndGenerating(false),
+          });
           return;
         }
 
@@ -577,14 +757,20 @@ export function AnyTalePlayPage() {
     });
   }, [progressShow, subscribePageProgress, subscribeVoiceProgress, updateSession]);
 
-  // Reconnect recovery: re-run chapter init (if in plot phase) or refresh queue status
+  // Reconnect recovery
   useEffect(() => {
     return queueSSEManager.onConnect(() => {
       const sess = sessionRef.current;
       const data = playDataRef.current;
       const plot = currentPlotRef.current;
       if (sess.phase === 'plot' && plot && data) {
-        initChapterRef.current?.(plot, sess, data);
+        const timelineEntry = (sess.timeline || [])[sess.timelineIndex ?? 0];
+        const storedSlotState = timelineEntry?.slotStateAtEntry;
+        const initialSlotStatuses =
+          storedSlotState && Object.keys(storedSlotState).length > 0
+            ? new Map(Object.entries(storedSlotState))
+            : null;
+        initChapterRef.current?.(plot, sess, data, initialSlotStatuses);
       } else {
         fetch('/queue/status')
           .then(r => r.json())
@@ -627,7 +813,7 @@ export function AnyTalePlayPage() {
         const current = loadSession();
         if (current.character.uid) {
           setSession(current);
-          if (current.phase !== 'plot' && !current.introImageUrl) {
+          if (current.phase !== 'plot' && current.phase !== 'end' && !current.introImageUrl) {
             generateIntroImage(current, fullIntroPl, playData);
           }
           return;
@@ -708,6 +894,9 @@ export function AnyTalePlayPage() {
           preludePlotUid: preludePlot.uid,
           phase: 'intro-main',
           introImageUrl: null,
+          endImageUrl: null,
+          timeline: [],
+          timelineIndex: 0,
         };
         applySession(newSession);
         generateIntroImage(newSession, fullIntroPl, playData);
@@ -716,14 +905,13 @@ export function AnyTalePlayPage() {
         console.error('[AnyTalePlayPage] Failed to fetch intro plot:', err);
         setError('Failed to load introduction plot. Please refresh.');
       });
-  }, [playData, generateIntroImage, applySession]);
+  }, [playData, generateIntroImage, applySession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- BGM control ---
 
-  // Restore BGM playlist on session load when genre is already selected
   useEffect(() => {
     if (!audioUnlocked || !playData || !session.music?.genre) return;
-    if (globalBgmPlayer.isPlaying()) return; // already playing from pick
+    if (globalBgmPlayer.isPlaying()) return;
     const genres = playData.genres || [];
     const genre = genres.find(g => g.name === session.music.genre);
     if (!genre || !genre.tracks?.length) return;
@@ -735,11 +923,9 @@ export function AnyTalePlayPage() {
     }
   }, [audioUnlocked, playData, session.music?.genre]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync BGM play/stop with session.musicOn
   useEffect(() => {
     if (session.musicOn) {
       if (!globalBgmPlayer.isPlaying()) {
-        // stop() clears the playlist — reload it before playing when toggling back on
         const genres = playData?.genres || [];
         const genre = genres.find(g => g.name === session.music?.genre);
         if (genre?.tracks?.length) {
@@ -756,16 +942,11 @@ export function AnyTalePlayPage() {
 
   // --- Voice playback ---
 
-  // Stop voice immediately on page navigation; playback is restarted by the page-ready effect below
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
     globalAudioPlayer.stop();
   }, [session.pageIndex, session.phase, currentPlot]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When all page assets are ready (image + dialog + voice if applicable), simultaneously:
-  // crossfade to the new background image, reveal dialog, and begin voice playback.
-  // Only fires when the displayed URL is actually changing — prevents voice from replaying
-  // when an unrelated dep (e.g. the next page's voice URL) causes the effect to re-run.
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
     const plotIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
@@ -776,8 +957,6 @@ export function AnyTalePlayPage() {
 
     const isNewTransition = imgUrl !== displayedImageUrl;
 
-    // Preload early — warm the browser cache while voice is still generating
-    // so the crossfade is instant the moment all assets settle.
     if (isNewTransition) {
       const img = new Image();
       img.src = imgUrl;
@@ -800,15 +979,13 @@ export function AnyTalePlayPage() {
     pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, displayedImageUrl,
   ]);
 
-  // Handle mute toggle: cancel TTS on mute; re-queue TTS and navigate on unmute
+  // Handle mute toggle
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
 
     if (session.muted) {
-      // Stop playback immediately
       globalAudioPlayer.stop();
 
-      // Cancel all generating TTS tasks and mark them skipped
       for (const plotPageIdx of visiblePageIndices) {
         if (pageVoiceStatuses[plotPageIdx] !== 'generating') continue;
         const cacheKey = buildCacheKey({
@@ -828,15 +1005,10 @@ export function AnyTalePlayPage() {
         updateCacheEntry(cacheKey, { voiceStatus: 'skipped', voiceTaskId: null });
       }
     } else if (session.character.voiceSampleUrl) {
-      // Play current page voice immediately if already available.
-      // The page-ready effect only fires when displayedImageUrl changes, so unmute
-      // must trigger playback here for pages that are already fully displayed.
       const currentPlotIdx = visiblePageIndices[session.pageIndex];
       const currentVoiceUrl = pageVoiceUrls[currentPlotIdx];
       if (currentVoiceUrl) globalAudioPlayer.play(currentVoiceUrl);
 
-      // Reset 'skipped' voice cache entries that were cancelled due to muting (have dialog text)
-      // so that initChapter will re-queue TTS for them
       let anyVoiceReset = false;
       for (const plotPageIdx of visiblePageIndices) {
         const cacheKey = buildCacheKey({
@@ -856,13 +1028,18 @@ export function AnyTalePlayPage() {
       }
 
       if (anyVoiceReset) {
-        initChapterRef.current?.(currentPlot, session, playDataRef.current);
+        const timelineEntry = (session.timeline || [])[session.timelineIndex ?? 0];
+        const storedSlotState = timelineEntry?.slotStateAtEntry;
+        const initialSlotStatuses =
+          storedSlotState && Object.keys(storedSlotState).length > 0
+            ? new Map(Object.entries(storedSlotState))
+            : null;
+        initChapterRef.current?.(currentPlot, session, playDataRef.current, initialSlotStatuses);
       }
     }
   }, [session.muted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Play intro voice only after the intro image finishes loading and the screen becomes visible.
-  // Only triggers on character change — outfit/location/music regenerations are ignored.
+  // Intro voice playback
   useEffect(() => {
     if (session.phase !== 'intro-main' || !audioUnlocked || session.muted) return;
     if (!session.character.voiceSampleUrl || !session.character.introTranscript) return;
@@ -872,8 +1049,7 @@ export function AnyTalePlayPage() {
     globalAudioPlayer.play(session.character.voiceSampleUrl);
   }, [session.phase, session.character.uid, audioUnlocked, session.muted, isGenerating, session.introImageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Dynamic voice reprioritization: when navigating to a page whose voice is generating,
-  // move its queue item to position 1 (right after any currently-running task)
+  // Dynamic voice reprioritization
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
     const plotPageIdx = visiblePageIndices[session.pageIndex];
@@ -905,6 +1081,7 @@ export function AnyTalePlayPage() {
     if (!isAutoplay || !currentPlot) return;
 
     const nextVisIdx = session.pageIndex + 1;
+    // Autoplay stops at the last page of the chapter (decision page handles progression)
     if (nextVisIdx >= visiblePageIndices.length) {
       setIsAutoplay(false);
       return;
@@ -917,8 +1094,6 @@ export function AnyTalePlayPage() {
     const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
     const currentDialogText = pageDialogTexts[currentPlotPageIdx];
 
-    // Voice-gated: wait for the current page's voice to finish, then 3 s.
-    // Falls back to timer behavior when muted or no voice on this page.
     if (!session.muted && currentVoiceUrl) {
       let timer = null;
       const scheduleAdvance = () => {
@@ -944,7 +1119,6 @@ export function AnyTalePlayPage() {
       };
     }
 
-    // Timer-based: 5 s base + 3 s extra if dialog text is showing.
     const delay = 5000 + (currentDialogText ? 3000 : 0);
     const timer = setTimeout(() => updateSession({ pageIndex: nextVisIdx }), delay);
     return () => clearTimeout(timer);
@@ -952,21 +1126,21 @@ export function AnyTalePlayPage() {
 
   // --- Reset ---
 
-  const handleReset = useCallback(() => {
-    // Cancel all in-progress/queued play mode generations on the server
+  const doReset = useCallback(() => {
+    // Abort any in-progress dialog generation
+    dialogAbortControllerRef.current?.abort();
+    dialogAbortControllerRef.current = null;
+
     fetch('/queue/items/source/anytale-play', { method: 'DELETE' })
       .catch(err => console.error('[AnyTalePlayPage] Failed to cancel play queue items:', err));
 
-    // Stop audio players
     globalAudioPlayer.stop();
     globalBgmPlayer.stop();
 
-    // Clear pending routing state so stale mappings don't survive the reset
     taskToPageRef.current.clear();
     pendingChapterEventsRef.current = [];
     dialogHistoryRef.current = [];
 
-    // Wipe the entire client-side asset cache so stale images never resurface
     clearAllCache();
 
     clearSession();
@@ -975,6 +1149,7 @@ export function AnyTalePlayPage() {
     setIntroPlot(null);
     setError(null);
     setIsGenerating(false);
+    setIsEndGenerating(false);
     setCurrentPlot(null);
     setVisiblePageIndices([]);
     setPageSlotStatuses([]);
@@ -993,6 +1168,18 @@ export function AnyTalePlayPage() {
         setError('Failed to reload data. Please refresh.');
       });
   }, []);
+
+  const handleReset = useCallback(() => {
+    showModal({
+      title: 'Start over?',
+      size: 'small',
+      content: html`<p>All progress will be lost and a new story will begin.</p>`,
+      footer: [
+        { label: 'Cancel', color: 'secondary', onClick: () => {} },
+        { label: 'Start over', color: 'primary', onClick: doReset },
+      ],
+    });
+  }, [doReset]);
 
   // --- Intro phase transitions ---
 
@@ -1054,7 +1241,14 @@ export function AnyTalePlayPage() {
   // "Begin the tale" — enter the chapter
   const beginTale = useCallback(() => {
     if (!playData || !session.preludePlotUid) return;
-    updateSession({ phase: 'plot', currentPlotUid: session.preludePlotUid, pageIndex: 0 });
+    // Initialise timeline with the first chapter; pageCount and slotStateAtEntry are filled in by initChapter.
+    updateSession({
+      phase: 'plot',
+      currentPlotUid: session.preludePlotUid,
+      pageIndex: 0,
+      timelineIndex: 0,
+      timeline: [{ plotUid: session.preludePlotUid, pageCount: 0, slotStateAtEntry: {} }],
+    });
   }, [playData, session.preludePlotUid, updateSession]);
 
   const enterOutfitPick = useCallback(() => {
@@ -1130,22 +1324,42 @@ export function AnyTalePlayPage() {
 
   const goToPrev = useCallback(() => {
     setIsAutoplay(false);
-    setSession(prev => {
-      if (prev.pageIndex <= 0) return prev;
-      const next = { ...prev, pageIndex: prev.pageIndex - 1 };
-      saveSession(next);
-      return next;
+    const sess = sessionRef.current;
+
+    if (sess.pageIndex > 0) {
+      // Simple: go to previous page within this chapter
+      updateSession({ pageIndex: sess.pageIndex - 1 });
+      return;
+    }
+
+    // At first page: go back to the previous chapter in the timeline
+    const prevTimelineIndex = (sess.timelineIndex ?? 0) - 1;
+    if (prevTimelineIndex < 0) return; // no previous chapter
+
+    const prevEntry = (sess.timeline || [])[prevTimelineIndex];
+    if (!prevEntry) return;
+
+    const prevPageIndex = Math.max(0, (prevEntry.pageCount || 1) - 1);
+
+    // Clear current chapter state so we show loading while prev chapter re-initialises
+    setCurrentPlot(null);
+    setVisiblePageIndices([]);
+
+    updateSession({
+      currentPlotUid: prevEntry.plotUid,
+      timelineIndex: prevTimelineIndex,
+      pageIndex: prevPageIndex,
     });
-  }, []);
+  }, [updateSession]);
 
   const goToNext = useCallback(() => {
     setSession(prev => {
-      if (prev.pageIndex >= visiblePageIndices.length - 1) return prev;
+      if (prev.pageIndex >= visiblePageIndicesRef.current.length - 1) return prev;
       const next = { ...prev, pageIndex: prev.pageIndex + 1 };
       saveSession(next);
       return next;
     });
-  }, [visiblePageIndices]);
+  }, []);
 
   const startAutoplay = useCallback(() => setIsAutoplay(true), []);
   const stopAutoplay = useCallback(() => setIsAutoplay(false), []);
@@ -1162,12 +1376,96 @@ export function AnyTalePlayPage() {
     updateSession({ musicOn: next });
   }, [session.musicOn, updateSession]);
 
+  // --- Chapter decision (end-of-chapter branching) ---
+
+  /**
+   * Compute post-chapter slot state as a plain object for use with checkSlotRequirements.
+   * The post-chapter state is the slot statuses after ALL plot pages (including hidden ones).
+   */
+  const getPostChapterSlotStateObj = useCallback(() => {
+    if (!currentPlot || !pageSlotStatuses.length) return {};
+    const lastIdx = currentPlot.pages.length - 1;
+    const lastMap = pageSlotStatuses[lastIdx];
+    return lastMap ? Object.fromEntries(lastMap) : {};
+  }, [currentPlot, pageSlotStatuses]);
+
+  const handleChapterChoice = useCallback((chosenPlot) => {
+    const postChapterSlotState = getPostChapterSlotStateObj();
+
+    const newTimeline = [
+      ...(sessionRef.current.timeline || []),
+      { plotUid: chosenPlot.uid, pageCount: 0, slotStateAtEntry: postChapterSlotState },
+    ];
+    const newTimelineIndex = newTimeline.length - 1;
+
+    // Clear current chapter state to show loading immediately
+    setCurrentPlot(null);
+    setVisiblePageIndices([]);
+
+    updateSession({
+      currentPlotUid: chosenPlot.uid,
+      timeline: newTimeline,
+      timelineIndex: newTimelineIndex,
+      pageIndex: 0,
+    });
+  }, [getPostChapterSlotStateObj, updateSession]);
+
+  /**
+   * Build the decision options array shown at the end of a chapter.
+   * Defined after handleChapterChoice so it can safely reference it in deps.
+   * Returns an array of PortraitPanel decision option objects.
+   */
+  const computeChapterDecisions = useCallback(() => {
+    if (!currentPlot || !playData) return [];
+    const postChapterSlotState = getPostChapterSlotStateObj();
+    const progressionSections = currentPlot.progressionSections || [];
+
+    // --- Chapter candidates ---
+    let candidates = [];
+    if (progressionSections.length > 0) {
+      const sectionMatches = (playData.plots || []).filter(
+        p => progressionSections.includes(p.section)
+      );
+      // Primary: section match + slot requirements satisfied
+      const primary = sectionMatches.filter(
+        p => checkSlotRequirements(postChapterSlotState, p.slotRequirements || {})
+      );
+      candidates = primary.length > 0 ? primary : sectionMatches;
+    }
+
+    const decisions = candidates.map(plot => ({
+      text: plot.name,
+      subtitle: plot.description || undefined,
+      onClick: () => handleChapterChoice(plot),
+    }));
+
+    // --- "Let's say goodbye" epilogue option (always present) ---
+    const epiloguePlots = (playData.plots || []).filter(
+      p => (p.section || '').toLowerCase() === 'epilogue'
+    );
+    const satisfyingEpilogues = epiloguePlots.filter(
+      p => checkSlotRequirements(postChapterSlotState, p.slotRequirements || {})
+    );
+    const epiloguePlot = randomPickN(
+      satisfyingEpilogues.length > 0 ? satisfyingEpilogues : epiloguePlots,
+      1
+    )[0];
+
+    if (epiloguePlot) {
+      decisions.push({
+        text: "Let's say goodbye for now",
+        onClick: () => handleChapterChoice(epiloguePlot),
+      });
+    }
+
+    return decisions;
+  }, [currentPlot, playData, getPostChapterSlotStateObj, handleChapterChoice]);
+
   // --- Render ---
 
   if (!audioUnlocked) {
     const handleStart = () => {
       setAudioUnlocked(true);
-      // Start BGM immediately on user gesture if genre is ready
       if (session.musicOn && session.music?.genre && playData) {
         const genres = playData.genres || [];
         const genre = genres.find(g => g.name === session.music.genre);
@@ -1204,14 +1502,62 @@ export function AnyTalePlayPage() {
 
   const { phase } = session;
 
+  // ── End phase ────────────────────────────────────────────────────────────────
+  if (phase === 'end') {
+    const endMode = (!session.endImageUrl || isEndGenerating) ? 'loading' : 'decision';
+
+    const backFromEnd = () => {
+      // Navigate back to the last chapter in the timeline (epilogue)
+      const lastTimelineIndex = (session.timeline || []).length - 1;
+      if (lastTimelineIndex < 0) {
+        updateSession({ phase: 'plot' });
+        return;
+      }
+      const lastEntry = session.timeline[lastTimelineIndex];
+      const lastPageIndex = Math.max(0, (lastEntry.pageCount || 1) - 1);
+      setCurrentPlot(null);
+      setVisiblePageIndices([]);
+      updateSession({
+        phase: 'plot',
+        currentPlotUid: lastEntry.plotUid,
+        timelineIndex: lastTimelineIndex,
+        pageIndex: lastPageIndex,
+      });
+    };
+
+    return html`
+      <${PortraitPanel}
+        mode=${endMode}
+        backgroundUrl=${session.endImageUrl || displayedImageUrl}
+        bubbleText="You have reached the end of this tale."
+        bubbleType="caption"
+        muted=${session.muted}
+        musicEnabled=${session.musicOn}
+        decisions=${[]}
+        onBack=${backFromEnd}
+        onReset=${handleReset}
+        onToggleMute=${handleToggleMute}
+        onToggleMusic=${handleToggleMusic}
+      />
+    `;
+  }
+
   // ── Chapter (plot) phase ─────────────────────────────────────────────────
   if (phase === 'plot') {
     if (!currentPlot || visiblePageIndices.length === 0) {
-      return html`<${PortraitPanel} mode="loading" />`;
+      return html`
+        <${PortraitPanel}
+          mode="loading"
+          muted=${session.muted}
+          musicEnabled=${session.musicOn}
+          onReset=${handleReset}
+          onToggleMute=${handleToggleMute}
+          onToggleMusic=${handleToggleMusic}
+        />
+      `;
     }
 
     const currentPlotPageIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
-    const currentImageUrl = pageImageUrls[currentPlotPageIdx];
     const currentDialogText = pageDialogTexts[currentPlotPageIdx] || '';
 
     const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
@@ -1223,8 +1569,10 @@ export function AnyTalePlayPage() {
       return false;
     };
 
-    const currentPageReady = pageStatuses[currentPlotPageIdx] === 'complete' &&
+    const currentPageReady =
+      pageStatuses[currentPlotPageIdx] === 'complete' &&
       (!voiceApplicable || isVoiceSettled(currentPlotPageIdx));
+
     const loadedCount = visiblePageIndices.filter(i => {
       const imageReady = pageStatuses[i] === 'complete';
       if (!voiceApplicable) return imageReady;
@@ -1235,24 +1583,49 @@ export function AnyTalePlayPage() {
     const currentPercent = visiblePageIndices.length > 0
       ? ((session.pageIndex + 1) / visiblePageIndices.length) * 100 : 0;
 
-    // Chapter number = position of this plot in the full plots list (1-indexed)
-    const chapterNum = (playData.plots || []).findIndex(p => p.uid === currentPlot.uid) + 1 || 1;
+    const chapterNum = (session.timelineIndex ?? 0) + 1;
 
-    const prevPlotPageIdx = session.pageIndex > 0 ? visiblePageIndices[session.pageIndex - 1] : null;
-    const nextPlotPageIdx = session.pageIndex < visiblePageIndices.length - 1
-      ? visiblePageIndices[session.pageIndex + 1] : null;
+    const isAtLastPage = session.pageIndex === visiblePageIndices.length - 1;
 
-    const isPageReady = (plotIdx) =>
-      pageStatuses[plotIdx] === 'complete' && (!voiceApplicable || isVoiceSettled(plotIdx));
+    // Mode: loading if page not ready, decision at last page, normal page otherwise
+    const pageMode = !currentPageReady ? 'loading'
+      : isAtLastPage ? 'decision'
+      : 'page';
 
-    const canGoPrev = prevPlotPageIdx !== null && isPageReady(prevPlotPageIdx);
-    const canGoNext = nextPlotPageIdx !== null && isPageReady(nextPlotPageIdx);
+    // Navigation: allowed on any page; blocked only at the absolute boundary
+    const canGoPrev = session.pageIndex > 0 || (session.timelineIndex ?? 0) > 0;
+    // onNext only applies in page mode (decision mode uses decision options, loading has no controls)
+    const canGoNext = !isAtLastPage && session.pageIndex < visiblePageIndices.length - 1;
+
+    // Chapter decision options (only computed when at last page)
+    const chapterDecisions = (currentPageReady && isAtLastPage)
+      ? computeChapterDecisions()
+      : [];
+
+    // If at last page, no chapter options AND no epilogue fallback: show error
+    const hasNoOptions = currentPageReady && isAtLastPage && chapterDecisions.length === 0;
+
+    if (hasNoOptions) {
+      return html`
+        <${PortraitPanel}
+          mode="page"
+          backgroundUrl=${displayedImageUrl}
+          bubbleText="No story options found. Please check your plot configuration."
+          muted=${session.muted}
+          musicEnabled=${session.musicOn}
+          onReset=${handleReset}
+          onToggleMute=${handleToggleMute}
+          onToggleMusic=${handleToggleMusic}
+        />
+      `;
+    }
 
     return html`
       <${PortraitPanel}
-        mode=${currentPageReady ? 'page' : 'loading'}
+        mode=${pageMode}
         backgroundUrl=${displayedImageUrl}
         bubbleText=${currentPageReady ? currentDialogText : ''}
+        bubbleType="caption"
         muted=${session.muted}
         musicEnabled=${session.musicOn}
         chapter=${chapterNum}
@@ -1261,9 +1634,11 @@ export function AnyTalePlayPage() {
         currentPercent=${currentPercent}
         isAutoplay=${isAutoplay}
         onPrev=${canGoPrev ? goToPrev : undefined}
-        onPlay=${currentPageReady ? startAutoplay : undefined}
+        onPlay=${(currentPageReady && !isAtLastPage) ? startAutoplay : undefined}
         onStop=${stopAutoplay}
         onNext=${canGoNext ? goToNext : undefined}
+        onBack=${(isAtLastPage && currentPageReady) ? goToPrev : undefined}
+        decisions=${chapterDecisions}
         onReset=${handleReset}
         onToggleMute=${handleToggleMute}
         onToggleMusic=${handleToggleMusic}
