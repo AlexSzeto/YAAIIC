@@ -34,8 +34,16 @@ export function removePartByUid(uid) {
 // ── Plot ──────────────────────────────────────────────────────────────────
 
 export function getAllPlots() {
-  // Return lightweight summary objects for autocomplete
-  return listPlots().map(p => ({ uid: p.uid, name: p.name, section: p.section ?? '' }));
+  // Return lightweight summary objects for the play mode and editor autocomplete.
+  // description is included so decision options can display it instead of the name.
+  return listPlots().map(p => ({
+    uid: p.uid,
+    name: p.name,
+    section: p.section ?? '',
+    description: p.description ?? '',
+    progressionSections: p.progressionSections ?? [],
+    slotRequirements: p.slotRequirements ?? {},
+  }));
 }
 
 export function getPlotByUid(uid) {

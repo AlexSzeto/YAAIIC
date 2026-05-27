@@ -107,7 +107,7 @@ const ChapterPill = styled('div')`
   justify-content: center;
   gap: 8px;
   padding: 0 24px;
-  max-width: 200px;
+  max-width: 240px;
   border-radius: 9999px;
   background-color: ${() => currentTheme.value.colors.overlay.glass};
   backdrop-filter: blur(4px);
@@ -128,10 +128,18 @@ ChapterLabel.className = 'chapter-label';
 const ShowUICorner = styled('div')`
   position: absolute;
   bottom: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 2;
 `;
 ShowUICorner.className = 'show-ui-corner';
+
+const HomeCorner = styled('div')`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+`;
+HomeCorner.className = 'home-corner';
 
 const CROSSFADE_MS = 600;
 
@@ -152,7 +160,7 @@ const CROSSFADE_MS = 600;
  * @param {Function} [props.onReset]
  * @param {Function} [props.onToggleMute]
  * @param {Function} [props.onToggleMusic]
- * @param {number} [props.chapter=1]
+ * @param {string|number} [props.chapter=1] - Chapter name or number displayed in the bottom pill
  * @param {number} [props.page=1]
  * @param {number} [props.loadedPercent=0]
  * @param {number} [props.currentPercent=0]
@@ -240,6 +248,10 @@ export function PortraitPanel({
         </${StartOverlay}>
       ` : null}
 
+      <${HomeCorner}>
+        <${PlayButton} icon="x" onClick=${() => { window.location.href = '/'; }} />
+      </${HomeCorner}>
+
       ${mode !== 'start' && (uiVisible ? html`
         <${ContentLayer}>
           <${TopControls}>
@@ -272,18 +284,18 @@ export function PortraitPanel({
             <${BottomRow}>
               <${HorizontalEdgesLayout}>
                 <${HorizontalLayout}>
-                  ${isAutoplay
-                    ? html`<${PlayButton} icon="stop" onClick=${onStop} />`
-                    : html`
-                      <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
-                      <${PlayButton} icon="play" onClick=${onPlay} disabled=${!onPlay} />
-                      <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
-                      <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
-                    `
-                  }
+                  ${isAutoplay ? html`
+                    <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                    <${PlayButton} icon="stop" onClick=${onStop} />
+                  ` : html`
+                    <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                    ${onPlay ? html`<${PlayButton} icon="play" onClick=${onPlay} />` : null}
+                    <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
+                    <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
+                  `}
                 </${HorizontalLayout}>
                 <${ChapterPill}>
-                  <${ChapterLabel}>Chapter ${chapter}, Page ${page}</${ChapterLabel}>
+                  <${ChapterLabel}>${chapter}, Page ${page}</${ChapterLabel}>
                   <${PlayProgressBar} loadedPercent=${loadedPercent} currentPercent=${currentPercent} />
                 </${ChapterPill}>
               </${HorizontalEdgesLayout}>

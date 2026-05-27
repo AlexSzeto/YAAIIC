@@ -1094,13 +1094,37 @@ export function AnyTalePlayPage() {
     if (!isAutoplay || !currentPlot) return;
 
     const nextVisIdx = session.pageIndex + 1;
-    // Autoplay pauses at the last content page — flag stays true so it resumes in the next chapter
-    if (nextVisIdx >= visiblePageIndices.length) {
-      return;
+    const isAdvancingToDecisionPage = nextVisIdx === visiblePageIndices.length;
+
+    // Already at or past the decision page — nothing to advance to
+    if (nextVisIdx > visiblePageIndices.length) return;
+
+    // For content→content advance, the next content page must be fully loaded
+    if (!isAdvancingToDecisionPage) {
+      const nextPlotPageIdx = visiblePageIndices[nextVisIdx];
+      if (pageStatuses[nextPlotPageIdx] !== 'complete') return;
     }
 
-    const nextPlotPageIdx = visiblePageIndices[nextVisIdx];
-    if (pageStatuses[nextPlotPageIdx] !== 'complete') return;
+    // What happens when the timer fires: advance to decision page, or cross to next chapter.
+    // Read session from ref inside the callback to avoid stale-closure issues.
+    const doAdvance = () => {
+      const sess = sessionRef.current;
+      if (isAdvancingToDecisionPage) {
+        const nextTlIdx = (sess.timelineIndex ?? 0) + 1;
+        const nextTlEntry = (sess.timeline || [])[nextTlIdx];
+        if (nextTlEntry) {
+          // Completed chapter: skip the decision page and go straight to next chapter
+          setCurrentPlot(null);
+          setVisiblePageIndices([]);
+          updateSession({ currentPlotUid: nextTlEntry.plotUid, timelineIndex: nextTlIdx, pageIndex: 0 });
+        } else {
+          // No successor yet: advance to the decision page
+          updateSession({ pageIndex: nextVisIdx });
+        }
+      } else {
+        updateSession({ pageIndex: nextVisIdx });
+      }
+    };
 
     const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
     const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
@@ -1110,7 +1134,7 @@ export function AnyTalePlayPage() {
       let timer = null;
       const scheduleAdvance = () => {
         if (timer !== null) return;
-        timer = setTimeout(() => updateSession({ pageIndex: nextVisIdx }), 3000);
+        timer = setTimeout(doAdvance, 3000);
       };
 
       if (!globalAudioPlayer.isPlaying(currentVoiceUrl)) {
@@ -1132,9 +1156,9 @@ export function AnyTalePlayPage() {
     }
 
     const delay = 5000 + (currentDialogText ? 3000 : 0);
-    const timer = setTimeout(() => updateSession({ pageIndex: nextVisIdx }), delay);
+    const timer = setTimeout(doAdvance, delay);
     return () => clearTimeout(timer);
-  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]);
+  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Reset ---
 
@@ -1171,7 +1195,7 @@ export function AnyTalePlayPage() {
     setPageVoiceUrls({});
     setPageVoiceStatuses({});
     setIsAutoplay(false);
-    setDisplayedImageUrl('');
+    setDisplayedImageUrl('media/anytale-background.png');
     setPlayData(null);
     loadPlayData()
       .then(data => setPlayData(data))
@@ -1365,14 +1389,26 @@ export function AnyTalePlayPage() {
   }, [updateSession]);
 
   const goToNext = useCallback(() => {
-    setSession(prev => {
-      // Allow advancing up to visiblePageIndices.length (the virtual decision page)
-      if (prev.pageIndex >= visiblePageIndicesRef.current.length) return prev;
-      const next = { ...prev, pageIndex: prev.pageIndex + 1 };
-      saveSession(next);
-      return next;
-    });
-  }, []);
+    const indices = visiblePageIndicesRef.current;
+    const sess = sessionRef.current;
+    if (sess.pageIndex < indices.length) {
+      // Within-chapter advance (includes advancing to the decision page)
+      setSession(prev => {
+        if (prev.pageIndex >= indices.length) return prev;
+        const next = { ...prev, pageIndex: prev.pageIndex + 1 };
+        saveSession(next);
+        return next;
+      });
+      return;
+    }
+    // At decision page of a completed chapter: advance to the next completed chapter
+    const nextTlIdx = (sess.timelineIndex ?? 0) + 1;
+    const nextEntry = (sess.timeline || [])[nextTlIdx];
+    if (!nextEntry) return;
+    setCurrentPlot(null);
+    setVisiblePageIndices([]);
+    updateSession({ currentPlotUid: nextEntry.plotUid, timelineIndex: nextTlIdx, pageIndex: 0 });
+  }, [updateSession]);
 
   const startAutoplay = useCallback(() => setIsAutoplay(true), []);
   const stopAutoplay = useCallback(() => setIsAutoplay(false), []);
@@ -1492,7 +1528,7 @@ export function AnyTalePlayPage() {
     return html`
       <${PortraitPanel}
         mode="start"
-        backgroundUrl=${session.introImageUrl || ''}
+        backgroundUrl=${session.introImageUrl || 'media/anytale-background.png'}
         onStart=${handleStart}
       />
     `;
@@ -1573,6 +1609,9 @@ export function AnyTalePlayPage() {
     const isAtDecisionPage = session.pageIndex === visiblePageIndices.length;
     const isAtLastContentPage = session.pageIndex === visiblePageIndices.length - 1;
     const isEpilogue = (currentPlot.section || '').toLowerCase() === 'epilogue';
+    // A chapter is "completed" when a successor already exists in the timeline
+    const isChapterCompleted =
+      (session.timelineIndex ?? 0) + 1 < (session.timeline || []).length;
 
     // Use last content page's plot index when at decision page (for readiness + background image)
     const lastContentPlotPageIdx = visiblePageIndices[visiblePageIndices.length - 1];
@@ -1606,20 +1645,24 @@ export function AnyTalePlayPage() {
     const currentPercent = visiblePageIndices.length > 0
       ? ((pageForProgress + 1) / visiblePageIndices.length) * 100 : 0;
 
-    const chapterNum = (session.timelineIndex ?? 0) + 1;
+    const chapterName = currentPlot.name || `Chapter ${(session.timelineIndex ?? 0) + 1}`;
 
-    // Mode: decision at virtual page, loading if content page not ready, page otherwise
-    const pageMode = isAtDecisionPage ? 'decision'
+    // Mode: decision at virtual page (not locked), loading if content page not ready, page otherwise.
+    // Locked completed-chapter decision page falls through to 'page' mode (no decision buttons).
+    const pageMode = (isAtDecisionPage && !isChapterCompleted) ? 'decision'
       : !currentPageReady ? 'loading'
       : 'page';
 
     // Navigation
     const canGoPrev = session.pageIndex > 0 || (session.timelineIndex ?? 0) > 0;
-    // Allow forward navigation to decision page from last content page (except epilogue, which auto-transitions)
-    const canGoNext = !isAtDecisionPage && (!isAtLastContentPage || (currentPageReady && !isEpilogue));
+    // Forward: allow to decision page (from last content page, when ready and not epilogue),
+    // or through a completed chapter's locked decision page to the next chapter.
+    const canGoNext = isChapterCompleted
+      ? isAtDecisionPage               // locked decision page → next chapter
+      : !isAtDecisionPage && (!isAtLastContentPage || (currentPageReady && !isEpilogue));
 
-    // Back button only visible at decision page (returns to last content page)
-    const onBack = isAtDecisionPage ? goToPrev : undefined;
+    // Back button: only at the open (not locked) decision page (returns to last content page)
+    const onBack = (isAtDecisionPage && !isChapterCompleted) ? goToPrev : undefined;
 
     // Play button: only on content pages that aren't the last (autoplay pauses before decision page)
     const onPlay = (currentPageReady && !isAtLastContentPage && !isAtDecisionPage) ? startAutoplay : undefined;
@@ -1629,14 +1672,14 @@ export function AnyTalePlayPage() {
       ? (pageImageUrls[lastContentPlotPageIdx] || displayedImageUrl)
       : displayedImageUrl;
     const bubbleText = isAtDecisionPage
-      ? "What's your next move?"
+      ? (isChapterCompleted ? '' : "What's your next move?")
       : (currentPageReady ? currentDialogText : '');
 
-    // Chapter decisions: computed only at the decision page
-    const chapterDecisions = isAtDecisionPage ? computeChapterDecisions() : [];
+    // Chapter decisions: computed only at the open (not locked) decision page
+    const chapterDecisions = (isAtDecisionPage && !isChapterCompleted) ? computeChapterDecisions() : [];
 
-    // Error: at decision page with no options available
-    const hasNoOptions = isAtDecisionPage && chapterDecisions.length === 0;
+    // Error: open decision page but no options available
+    const hasNoOptions = isAtDecisionPage && !isChapterCompleted && chapterDecisions.length === 0;
 
     if (hasNoOptions) {
       return html`
@@ -1661,7 +1704,7 @@ export function AnyTalePlayPage() {
         bubbleType="caption"
         muted=${session.muted}
         musicEnabled=${session.musicOn}
-        chapter=${chapterNum}
+        chapter=${chapterName}
         page=${session.pageIndex + 1}
         loadedPercent=${loadedPercent}
         currentPercent=${currentPercent}
@@ -1717,6 +1760,14 @@ export function AnyTalePlayPage() {
         onClick: () => pickCharacter(char),
       })),
       { text: 'Maybe someone else?', onClick: rerollChars },
+      {
+        text: "I'm feeling lucky!",
+        onClick: () => {
+          const allChars = (playData.characters || []).filter(c => c.parts?.length > 0);
+          const char = randomPickN(allChars, 1)[0];
+          if (char) pickCharacter(char);
+        },
+      },
     ];
 
   } else if (phase === 'outfit-pick') {
@@ -1730,29 +1781,57 @@ export function AnyTalePlayPage() {
         onClick: () => pickOutfit(outfit),
       })),
       { text: 'Nevermind', onClick: () => updateSession({ phase: 'intro-mood' }) },
+      {
+        text: "I'm feeling lucky!",
+        onClick: () => {
+          const outfit = randomPickN(playData.outfits || [], 1)[0];
+          if (outfit) pickOutfit(outfit);
+        },
+      },
     ];
 
   } else if (phase === 'location-pick') {
     bubbleText = 'Where would you like to go?';
     onBack = () => updateSession({ phase: 'intro-mood' });
-    decisions = locationDraft.map(loc => ({
-      text: loc.name,
-      onClick: () => pickLocation(loc),
-    }));
+    const allLocParts = (playData.parts || []).filter(
+      p => Array.isArray(p.type) && p.type.some(t => t.toLowerCase() === 'location')
+    );
+    decisions = [
+      ...locationDraft.map(loc => ({
+        text: loc.name,
+        onClick: () => pickLocation(loc),
+      })),
+      {
+        text: "I'm feeling lucky!",
+        onClick: () => {
+          const loc = randomPickN(allLocParts, 1)[0];
+          if (loc) pickLocation(loc);
+        },
+      },
+    ];
 
   } else if (phase === 'music-pick') {
     bubbleText = 'What kind of music sets the mood?';
     onBack = () => updateSession({ phase: 'intro-mood' });
-    decisions = genreDraft.map(genre => ({
-      text: genre.name,
-      onClick: () => pickGenre(genre),
-    }));
+    decisions = [
+      ...genreDraft.map(genre => ({
+        text: genre.name,
+        onClick: () => pickGenre(genre),
+      })),
+      {
+        text: "I'm feeling lucky!",
+        onClick: () => {
+          const genre = randomPickN(playData.genres || [], 1)[0];
+          if (genre) pickGenre(genre);
+        },
+      },
+    ];
   }
 
   return html`
     <${PortraitPanel}
       mode=${panelMode}
-      backgroundUrl=${session.introImageUrl || ''}
+      backgroundUrl=${session.introImageUrl || 'media/anytale-background.png'}
       bubbleText=${bubbleText}
       bubbleType=${bubbleType}
       muted=${session.muted}

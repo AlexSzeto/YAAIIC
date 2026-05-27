@@ -1343,7 +1343,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "masterpiece, best quality,score_9, score_8, score_7, source anime, {{prompt}}",
+          "template": "anime coloring, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],
@@ -1460,7 +1460,7 @@
         {
           "from": "seed",
           "to": [
-            "19",
+            "66",
             "inputs",
             "seed"
           ]
