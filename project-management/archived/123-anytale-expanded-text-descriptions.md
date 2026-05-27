@@ -53,7 +53,7 @@ Expand the user-facing textual data throughout AnyTale by: (1) separating techni
   - Insert a new `HorizontalEdgesLayout` row between the "Page Tags" input and the navigation controls row: "View Image" icon-text button (icon: `image-alt`) on the left; Reject and Extend buttons on the right edge.
   - Remove the old standalone Reject/Extend `HorizontalLayout` row.
 - [x] **Wire callback in parent:** In `public/js/app-ui/anytale/anytale.mjs`, define `handleViewPageImage({ plotUid, pageIndex })` that searches `history` for the first item where `item.plot?.uid === plotUid && item.plot?.page === pageIndex`, calls `nav.selectByIndex` with that index, or toasts `'Page image not found'` if none matches. Pass as `onViewPageImage` to `AnyTaleForm`; thread through `AnyTaleForm` down to `PlotSection`.
-- [ ] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
+- [x] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`
 
 ### Phase 6 — LLM text generation buttons
 

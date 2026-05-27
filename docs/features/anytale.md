@@ -24,25 +24,25 @@ Parts Library → Character Builder → Generate Portrait / Voice
 app-ui/anytale/
   anytale.mjs                  — page root; mounts all three sections
   anytale-form.mjs             — top-level form layout (tabs/panels)
-  anytale-viewer.mjs           — read-only character viewer panel
-  character-section.mjs        — character CRUD + part assignment UI
+  anytale-viewer.mjs           — left-column image viewer; shows plot name/page overlay on images with plot metadata
+  character-section.mjs        — character CRUD + part assignment UI; selfProfile/voiceProfile fields + AI generation buttons
   character-part-item.mjs      — single part row within character editor
-  outfit-section.mjs           — outfit CRUD + part-override editor
-  part-item.mjs                — single part row in the parts library editor
+  outfit-section.mjs           — outfit CRUD + part-override editor; description field + AI generation button
+  part-item.mjs                — single part row in the parts library editor; "Name" (display) + "Reference Tag" (prompt token) fields
   library-part-picker.mjs      — modal to pick a part from the library
   category-input.mjs           — tag-type input for part categories
-  plot-section.mjs             — plot block list + page editor
+  plot-section.mjs             — plot block list + page editor; dialog preview per page; bulk dialog on Queue Plot
   plot-page-pills.mjs          — two-section pill UI: slots (transitions + requirements) and parts (hidden toggle + requirements)
   plot-requirements-editor.mjs — plot-level entry requirements editor (slot types + auto-populated library parts; no Add Part button)
   plot-api.mjs                 — client-side API calls for plot CRUD
   character-api.mjs            — client-side API calls for character CRUD
   outfit-api.mjs               — client-side API calls for outfit CRUD
   anytale-state.mjs            — localStorage persistence for active character/plot/outfit
-  prompt-assembler.mjs         — builds final prompt string from parts + plot
+  prompt-assembler.mjs         — builds final prompt string from parts + plot; expandPageTags (image); expandDialogPrompt (dialog)
   prompt-import.mjs            — imports prompt tags back into part attribute values
   slot-resolver.mjs            — resolves which parts fill which body slots
   image-preview.mjs            — part preview image (hash-based idempotent caching)
-  music-section.mjs            — Music tab: genre CRUD, track sub-lists, BGM player bar, playlist modal
+  music-section.mjs            — Music tab: genre CRUD (with disabled toggle), track sub-lists, BGM player bar, playlist modal
 ```
 
 ### State architecture
@@ -96,10 +96,21 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | `partPreviewWorkflow` | Workflow name for part preview images |
 | `musicWorkflow` | Workflow name for AceStep music generation (default: `'AceStep Music Generation'`) |
 | `defaultMusicLength` | Default generated track length in seconds (default: `120`) |
+| `dialog` | Dialog generation config: `{ model, systemMessage, parameters, mode, format, stream }` |
+| `dialogPreview` | Preview character for the plot editor's "Preview Dialog" button: `{ name, personality, outfit }`. If absent or any field empty, the button is disabled. |
+| `generateText` | LLM text generation config: `{ model, templates: { selfProfile, voiceProfile, outfitDescriptions } }`. Drives the AI-generate buttons next to selfProfile, voiceProfile, and outfit description fields. |
 
 ## Key Data Shapes
 
 See `@typedef` declarations in `server/features/anytale/repository.mjs` for authoritative types: `PartConfig`, `PartAttribute`, `PlotBlock`, `PlotPage`, `Character`, `CharacterPart`, `Outfit`.
+
+### PartConfig name vs. referenceTag
+
+Parts carry two separate name fields:
+- **`referenceTag`** — the prompt token injected into image generation (e.g. `"white_shirt"`). Used by `expandPageTags`, `assemblePrompt`, and `assemblePartPreviewPrompt`.
+- **`name`** — the human display name shown in the UI and in dialog prompt expansion (e.g. `"White Shirt"`). Used by `expandDialogPrompt`.
+
+Prior to anytale-data v5, there was a single `name` field used for both purposes. The v4→v5 migration renamed the old `name` to `referenceTag` and seeded an empty `name` for the display label.
 
 ### PlotBlock shape (selected fields)
 
@@ -142,15 +153,59 @@ The pipeline runs in `anytale-form.mjs` (editor) and play mode for every generat
 
 Steps 1–4 always run against the *full* enabled parts list — `hiddenParts` only takes effect in step 5.
 
+The **Queue Plot** button applies this same requirements check before queuing each page. Pages where requirements are not met are skipped (not queued and not locked); only passing pages are locked and sent to `onGenerate`. After queuing, `bulkDialogGenerate` is invoked automatically with the list of queued page indices (see Dialog Preview below).
+
+### Dialog prompt template expansion
+
+`dialogPrompt` strings support `{{slot type}}` tokens that are expanded before the prompt is sent to the LLM. The expansion uses `expandDialogPrompt(promptText, enabledParts)` from `prompt-assembler.mjs`:
+
+- Matches tokens against `part.config.type` (case-insensitive).
+- Substitutes the token with all matching parts' **display names** (`config.name`, not `config.referenceTag`) joined by `" and "`.
+- If no parts match, substitutes an empty string.
+
+This applies in both the plot editor's "Preview Dialog" button and in play mode's `queuePageDialog`.
+
+Example: `"You're wearing a {{outer upper body}}"` → `"You're wearing a Shirt and Jacket"` (if the enabled parts with type `outer upper body` have display names "Shirt" and "Jacket").
+
+### Dialog preview system
+
+The plot editor's **Preview Dialog** button (`plot-section.mjs`) generates dialog for the current page in context:
+
+- Generates dialog sequentially from page 0 through the current page, skipping pages with empty `dialogPrompt`.
+- Accumulates `{ role, content }` history so each page gets correct prior-turn context.
+- Results stored in `dialogPreviews` state (keyed by page index); displayed below the button.
+- Button is disabled if `dialogPrompt` is empty, `dialogConfig` is absent, or `dialogPreview` config fields are incomplete.
+- Dialog previews are cleared when a new plot is loaded or the plot is cleared.
+
+**Queue Plot bulk dialog**: after queuing, `bulkDialogGenerate(queuedIndices)` runs the same sequential generation for every queued page index, replacing any existing previews.
+
 ### Outfit shape
 
 ```js
 {
   uid: string,
   name: string,
+  description: string,             // human-readable summary shown in play mode outfit picker subtitle
   parts: CharacterPart[],          // same part-override format as character parts
   preferredLocations: string[],    // UIDs of preferred location-typed parts; used by play mode bootstrap
   renderUrl: string,               // URL of the generated render image (server-set via render-outfit)
+}
+```
+
+### Character shape (selected fields)
+
+```js
+{
+  uid: string,
+  name: string,
+  personality: string,       // used for voice generation and dialog generation
+  selfProfile: string,       // player-facing one-liner shown in play mode character pick subtitle
+  voiceProfile: string,      // vocal characteristics description forwarded to the voice workflow
+  audioUrl: string,          // URL of the generated voice sample (character intro)
+  introTranscript: string,   // text spoken in the voice intro sample
+  portraitUrl: string,
+  parts: CharacterPart[],
+  preferredOutfits: string[],
 }
 ```
 
@@ -160,6 +215,7 @@ Steps 1–4 always run against the *full* enabled parts list — `hiddenParts` o
 {
   uid: string,
   name: string,
+  disabled: boolean,        // if true, excluded from play mode genre picks (unless all genres are disabled)
   musicPrompt: string,      // template; use {{variation}} as insertion point
   variations: string[],     // one picked randomly at track generation
   adjectives: string[],     // one picked randomly for track name

@@ -879,7 +879,7 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 ### Get AnyTale Config
 - **Endpoint**: `GET /anytale/config`
 - **Use Case**: Returns the server-side AnyTale configuration (portrait workflow, part matchers, etc.) and the contents of `anytale-rules.txt` as `slotRules`.
-- **Output**: Config object merged with `{ slotRules: string }`.
+- **Output**: Config object merged with `{ slotRules: string }`. Relevant client-consumed keys include `dialog`, `dialogPreview`, `generateText`, `recommendedCharacterPartTypes`, and all standard workflow/prompt config fields (see `docs/features/anytale.md` → Config keys).
 
 ### Parts
 
@@ -918,9 +918,9 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 ### Generate Voice
 - **Endpoint**: `POST /anytale/characters/:uid/generate-voice`
 - **Use Case**: Enqueues a voice audio generation for a character using the configured voice workflow.
-- **Payload**: JSON body `{ personality: string, name: string }`.
+- **Payload**: JSON body `{ voiceProfile: string, name: string }`. `voiceProfile` is the vocal characteristics description forwarded to the workflow (formerly `personality`).
 - **Query**: `queueOnly=true` to add to queue without auto-starting.
-- **Output**: `202 {}` — result arrives via queue SSE.
+- **Output**: `202 {}` — result arrives via queue SSE. On completion the SSE payload includes `{ audioUrl, summary, description }` where `description` is the workflow-generated voice profile text written back to `character.voiceProfile`.
 
 ### Outfits
 
