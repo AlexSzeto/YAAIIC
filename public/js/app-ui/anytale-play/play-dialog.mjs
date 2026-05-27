@@ -6,25 +6,30 @@
  */
 
 /**
- * Render `{{profile}}` and `{{location}}` placeholders in the system message template.
+ * Render `{{name}}`, `{{profile}}`, `{{location}}`, and `{{outfit}}` placeholders
+ * in the system message template.
  * @param {string} template
- * @param {string} profile - character personality string
+ * @param {string} name - character name
+ * @param {string} profile - character personality/profile string
  * @param {string} location - location attribute value
+ * @param {string} outfit - assembled outfit tags for visible non-character parts
  * @returns {string}
  */
-function renderSystemMessage(template, name, profile, location) {
+function renderSystemMessage(template, name, profile, location, outfit) {
   return template
     .replace('{{name}}', name || '')
     .replace('{{profile}}', profile || '')
-    .replace('{{location}}', location || '');
+    .replace('{{location}}', location || '')
+    .replace('{{outfit}}', outfit || '');
 }
 
 /**
  * Generate dialog text for a page using the Ollama chat endpoint.
  *
  * @param {Object} p
- * @param {Object} p.character - Session character ({ personality })
- * @param {string} p.locationAttributeValue - The primary location attribute value (for template)
+ * @param {Object} p.character - Session character; may use `.profile` (preview) or `.personality` (play session) for the profile slot
+ * @param {string} p.locationAttributeValue - The primary location attribute value (for `{{location}}` template slot)
+ * @param {string} [p.outfitText] - Assembled outfit tags for visible non-character parts (for `{{outfit}}` template slot)
  * @param {Object} p.page - Plot page object ({ dialogPrompt })
  * @param {Object} p.dialogConfig - From anytale config: { model, systemMessage, parameters, mode, format, stream }
  * @param {Array<{role: string, content: string}>} [p.history=[]] - Prior turns for context (injected after system, before current user message)
@@ -32,7 +37,7 @@ function renderSystemMessage(template, name, profile, location) {
  * @param {Function} [p.onChunk] - Called with accumulated text on each streaming chunk (streaming mode only)
  * @returns {Promise<string>} Resolved with final dialog text, or rejects on error
  */
-export async function generateDialog({ character, locationAttributeValue, page, dialogConfig, history = [], signal, onChunk }) {
+export async function generateDialog({ character, locationAttributeValue, outfitText, page, dialogConfig, history = [], signal, onChunk }) {
   const {
     model,
     systemMessage: systemTemplate = '',
@@ -45,8 +50,9 @@ export async function generateDialog({ character, locationAttributeValue, page, 
   const systemMessage = renderSystemMessage(
     systemTemplate,
     character.name || '',
-    character.personality || '',
-    locationAttributeValue || ''
+    character.profile || character.personality || '',
+    locationAttributeValue || '',
+    outfitText || ''
   );
 
   const messages = [

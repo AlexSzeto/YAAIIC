@@ -296,7 +296,11 @@ export function AnyTalePlayPage() {
     ].filter(Boolean);
     const expandedPrompt = expandDialogPrompt(rawDialogPrompt, dialogEnabledParts);
 
-    console.log('[Dialog] page', plotPageIdx, { expandedPrompt, personality, locationAttrValue, dialogConfig: !!dialogConfig });
+    // Assemble outfit text from the outfit's parts for the {{outfit}} template slot
+    const outfitPartsForPrompt = outfitParts.map(p => buildPartForPrompt(p.partUid, p.attributeValues, partsMap)).filter(Boolean);
+    const outfitText = assemblePrompt(outfitPartsForPrompt, null, null);
+
+    console.log('[Dialog] page', plotPageIdx, { expandedPrompt, personality, locationAttrValue, outfitText, dialogConfig: !!dialogConfig });
 
     if (!expandedPrompt || !personality || !locationAttrValue || !dialogConfig) {
       console.log('[Dialog] skipping page', plotPageIdx, { missingPrompt: !expandedPrompt, missingPersonality: !personality, missingLocation: !locationAttrValue, missingConfig: !dialogConfig });
@@ -314,6 +318,7 @@ export function AnyTalePlayPage() {
       const text = await generateDialog({
         character: sess.character,
         locationAttributeValue: locationAttrValue,
+        outfitText,
         page: { ...page, dialogPrompt: expandedPrompt },
         dialogConfig,
         history,

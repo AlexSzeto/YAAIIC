@@ -23,7 +23,7 @@ import { TagInput } from '../tags/tag-input.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { H2, Label, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlot, savePlotState, createBlankPlot, getPartsCoverage } from './anytale-state.mjs';
-import { expandDialogPrompt } from './prompt-assembler.mjs';
+import { assemblePrompt, expandDialogPrompt } from './prompt-assembler.mjs';
 import { formButtonStates } from '../forms.mjs';
 import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
@@ -101,6 +101,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [loadModalOpen, setLoadModalOpen] = useState(false);
   // libraryParts is received as a prop from anytale-form.mjs (always up-to-date)
   const [characterSlotTypes, setCharacterSlotTypes] = useState([]);
+  const [outfitSlotTypes, setOutfitSlotTypes] = useState([]);
   const [dialogConfig, setDialogConfig] = useState(null);
   const [dialogPreview, setDialogPreview] = useState(null);
   const [dialogPreviews, setDialogPreviews] = useState({});
@@ -137,6 +138,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       .then(data => {
         if (Array.isArray(data.recommendedCharacterPartTypes)) {
           setCharacterSlotTypes(data.recommendedCharacterPartTypes.map(t => t.toLowerCase()));
+        }
+        if (Array.isArray(data.recommendedOutfitPartTypes)) {
+          setOutfitSlotTypes(data.recommendedOutfitPartTypes.map(t => t.toLowerCase()));
         }
         if (data.dialog) setDialogConfig(data.dialog);
         if (data.dialogPreview) setDialogPreview(data.dialogPreview);
@@ -338,6 +342,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     const types = Array.isArray(p.config?.type) ? p.config.type.map(t => t.trim().toLowerCase()) : [];
     return types.length === 0 || !types.every(t => characterSlotTypes.includes(t));
   }), [enabledParts, characterSlotTypes]);
+
+  // Parts with at least one recommended outfit type — used to assemble the {{outfit}} dialog slot.
+  const outfitPartsForDialog = useMemo(() => enabledParts.filter(p => {
+    const types = Array.isArray(p.config?.type) ? p.config.type.map(t => t.trim().toLowerCase()) : [];
+    return types.some(t => outfitSlotTypes.includes(t));
+  }), [enabledParts, outfitSlotTypes]);
   const priorSlotStatuses = useMemo(() => {
     const coverage = getPartsCoverage();
     const partsWithCoverage = enabledParts.map(p => ({
@@ -439,9 +449,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     try {
       const character = {
         name: dialogPreview.name || '',
-        personality: dialogPreview.personality || '',
+        profile: dialogPreview.profile || '',
       };
-      const locationAttributeValue = dialogPreview.outfit || '';
+      const locationAttributeValue = dialogPreview.location || '';
+      const outfitText = assemblePrompt(outfitPartsForDialog, null, null);
       const pages = plot.pages.slice(0, currentPageIndex + 1);
       const history = [];
       for (let i = 0; i < pages.length; i++) {
@@ -452,6 +463,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         const result = await generateDialog({
           character,
           locationAttributeValue,
+          outfitText,
           page: expandedPage,
           dialogConfig,
           history,
@@ -468,7 +480,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   }, [dialogConfig, dialogPreview, isPreviewingDialog, plot.pages, currentPageIndex, enabledParts, toast]);
 
   const previewDialogDisabled = !currentPage.dialogPrompt?.trim() || !dialogConfig || !dialogPreview
-    || !(dialogPreview.name?.trim() && dialogPreview.personality?.trim());
+    || !(dialogPreview.name?.trim() && dialogPreview.profile?.trim());
 
   // ── Bulk dialog generation (triggered by Queue Plot) ─────────────────────
   const bulkDialogGenerate = useCallback(async (queuedPageIndices) => {
@@ -481,9 +493,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     try {
       const character = {
         name: dialogPreview.name || '',
-        personality: dialogPreview.personality || '',
+        profile: dialogPreview.profile || '',
       };
-      const locationAttributeValue = dialogPreview.outfit || '';
+      const locationAttributeValue = dialogPreview.location || '';
+      const outfitText = assemblePrompt(outfitPartsForDialog, null, null);
       const history = [];
       for (let i = 0; i < plot.pages.length; i++) {
         if (!queuedSet.has(i)) continue;
@@ -493,6 +506,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         const result = await generateDialog({
           character,
           locationAttributeValue,
+          outfitText,
           page: expandedPage,
           dialogConfig,
           history,

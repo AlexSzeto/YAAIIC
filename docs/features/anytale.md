@@ -97,7 +97,7 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | `musicWorkflow` | Workflow name for AceStep music generation (default: `'AceStep Music Generation'`) |
 | `defaultMusicLength` | Default generated track length in seconds (default: `120`) |
 | `dialog` | Dialog generation config: `{ model, systemMessage, parameters, mode, format, stream }` |
-| `dialogPreview` | Preview character for the plot editor's "Preview Dialog" button: `{ name, personality, outfit }`. If absent or any field empty, the button is disabled. |
+| `dialogPreview` | Preview character for the plot editor's "Preview Dialog" button: `{ name, profile, location }`. `name` → `{{name}}` slot; `profile` → `{{profile}}` slot; `location` → `{{location}}` slot. Outfit is assembled dynamically from enabled non-character parts. If absent or `name`/`profile` are empty, the button is disabled. |
 | `generateText` | LLM text generation config: `{ model, templates: { selfProfile, voiceProfile, outfitDescriptions } }`. Drives the AI-generate buttons next to selfProfile, voiceProfile, and outfit description fields. |
 
 ## Key Data Shapes
@@ -167,6 +167,17 @@ This applies in both the plot editor's "Preview Dialog" button and in play mode'
 
 Example: `"You're wearing a {{outer upper body}}"` → `"You're wearing a Shirt and Jacket"` (if the enabled parts with type `outer upper body` have display names "Shirt" and "Jacket").
 
+### Dialog system message template slots
+
+The `dialog.systemMessage` config string supports four substitution tokens filled by `renderSystemMessage` in `play-dialog.mjs`:
+
+| Token | Source (editor preview) | Source (play mode) |
+|---|---|---|
+| `{{name}}` | `dialogPreview.name` | `session.character.name` |
+| `{{profile}}` | `dialogPreview.profile` | `session.character.personality` |
+| `{{location}}` | `dialogPreview.location` | First non-empty value in `session.location.attributeMap` (first attribute on the assigned location part) |
+| `{{outfit}}` | `assemblePrompt` of enabled parts with at least one type in `recommendedOutfitPartTypes` | `assemblePrompt` of the session outfit's parts (all parts in `outfit.parts`, regardless of slot visibility) |
+
 ### Dialog preview system
 
 The plot editor's **Preview Dialog** button (`plot-section.mjs`) generates dialog for the current page in context:
@@ -174,7 +185,7 @@ The plot editor's **Preview Dialog** button (`plot-section.mjs`) generates dialo
 - Generates dialog sequentially from page 0 through the current page, skipping pages with empty `dialogPrompt`.
 - Accumulates `{ role, content }` history so each page gets correct prior-turn context.
 - Results stored in `dialogPreviews` state (keyed by page index); displayed below the button.
-- Button is disabled if `dialogPrompt` is empty, `dialogConfig` is absent, or `dialogPreview` config fields are incomplete.
+- Button is disabled if `dialogPrompt` is empty, `dialogConfig` is absent, or `dialogPreview.name`/`dialogPreview.profile` are empty.
 - Dialog previews are cleared when a new plot is loaded or the plot is cleared.
 
 **Queue Plot bulk dialog**: after queuing, `bulkDialogGenerate(queuedIndices)` runs the same sequential generation for every queued page index, replacing any existing previews.
