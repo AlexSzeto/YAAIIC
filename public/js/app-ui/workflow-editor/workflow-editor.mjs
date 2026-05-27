@@ -524,7 +524,9 @@ export function WorkflowEditor() {
       const baseName = fetchedWorkflow.name.replace(/ \(copy(?: \d+)?\)$/, '');
       const copyName = `${baseName} (copy)`;
 
-      setWorkflow({ ...fetchedWorkflow, name: copyName });
+      // Strip uid so the server treats this as a new entry rather than an update.
+      const { uid: _discarded, ...workflowWithoutUid } = fetchedWorkflow;
+      setWorkflow({ ...workflowWithoutUid, name: copyName });
       setSavedWorkflow(null);
 
       // Load raw ComfyUI JSON for the copied workflow's base file

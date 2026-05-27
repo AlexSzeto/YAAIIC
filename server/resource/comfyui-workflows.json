@@ -89,943 +89,6 @@
       "base": "album-text-to-image.json"
     },
     {
-      "uid": "649f5584-e538-4f3b-9c34-7a7389171c56",
-      "name": "Text to Image (Illustrious Portrait)",
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
-          "to": "enhancedPrompt"
-        },
-        {
-          "template": "1024",
-          "to": "dimension"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        }
-      ],
-      "base": "illustrious-text-to-image.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "10",
-            "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "width"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "height"
-          ]
-        }
-      ],
-      "hidden": true
-    },
-    {
-      "uid": "da4e4ff9-4ef8-49d4-a680-df14b47f8c93",
-      "name": "Text to Image (Illustrious Part Preview)",
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
-          "to": "enhancedPrompt"
-        },
-        {
-          "template": "512",
-          "to": "dimension"
-        },
-        {
-          "template": "10",
-          "to": "steps"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        }
-      ],
-      "base": "illustrious-text-to-image.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "10",
-            "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "width"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "height"
-          ]
-        },
-        {
-          "from": "steps",
-          "to": [
-            "3",
-            "inputs",
-            "steps"
-          ]
-        }
-      ],
-      "hidden": true
-    },
-    {
-      "uid": "2c06e0f5-253f-4d4b-998b-14521b5e337c",
-      "name": "Personality to Voice Design (Qwen3-TTS)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 0,
-        "nameRequired": true,
-        "optionalPrompt": false,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          },
-          {
-            "id": "dialog",
-            "type": "textarea",
-            "label": "Dialog"
-          },
-          {
-            "id": "voiceProfile",
-            "type": "text",
-            "label": "Vocal Profile",
-            "default": "",
-            "options": []
-          }
-        ]
-      },
-      "base": "qwen3tts-text-to-voice-design.json",
-      "preGenerationTasks": [
-        {
-          "model": "ssfdre38/gemma4-nano:latest",
-          "imagePath": "",
-          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA female voice, clear and natural, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nALWAYS start the output with either \"A female voice\" or \"A male voice\". Output the vocal characteristics as prose ONLY.",
-          "to": "voiceProfile",
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "voiceProfile"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          }
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "dialog"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "model": "ssfdre38/gemma4-nano:latest",
-          "prompt": "Role: You are a scriptwriter writing dialogue for an audio script.\n\nCharacter Context:\nName: {{name}}\nPersonality Profile: {{prompt}}\n\nTask:\nWrite exactly two consecutive sentences of spoken dialogue spoken by {{name}} at the very start of a date. This dialogue serves as her self-introduction.\n\nStrict Constraints:\n1. Output ONLY the raw spoken text. \n2. Do NOT use quotation marks around the output.\n3. Do NOT include dialogue tags (e.g., \"she said\", \"she purred\").\n4. Do NOT include actions, physical movements, descriptions, or parentheticals.\n5. Do NOT reference a specific time of day (such as evening, night, or day).\n6. Tone: Highly seductive, silky, and confident.\n7. Max length: Under 30 words total.\n\nDesired Output Structure Example:\nIt is a pleasure to finally meet you. I do hope our time together lives up to the high expectations you have built up.",
-          "to": "dialog"
-        },
-        {
-          "from": "dialog",
-          "to": "summary"
-        },
-        {
-          "from": "voiceProfile",
-          "to": "description"
-        }
-      ],
-      "replace": [
-        {
-          "from": "voiceProfile",
-          "to": [
-            "20",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "dialog",
-          "to": [
-            "16",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "4",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "36",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [],
-      "hidden": true
-    },
-    {
-      "uid": "13fe4803-5779-4d17-a6e0-468804b31cdc",
-      "name": "Text to Background Track (ACE-Step 1.5 XL)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 0,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "length",
-            "type": "number",
-            "label": "Length (seconds)",
-            "default": 60
-          },
-          {
-            "id": "bpm",
-            "type": "number",
-            "label": "BPM",
-            "default": 120
-          },
-          {
-            "id": "timesignature",
-            "type": "select",
-            "label": "Time Signature",
-            "options": [
-              {
-                "label": "4/4",
-                "value": "4"
-              },
-              {
-                "label": "3/4",
-                "value": "3"
-              },
-              {
-                "label": "2/4",
-                "value": "2"
-              },
-              {
-                "label": "6/8",
-                "value": "6"
-              }
-            ],
-            "default": "4"
-          },
-          {
-            "id": "keyscale",
-            "type": "select",
-            "label": "Key",
-            "options": [
-              {
-                "label": "C Major",
-                "value": "C major"
-              },
-              {
-                "label": "C# Major",
-                "value": "C# major"
-              },
-              {
-                "label": "Db Major",
-                "value": "Db major"
-              },
-              {
-                "label": "D Major",
-                "value": "D major"
-              },
-              {
-                "label": "D# Major",
-                "value": "D# major"
-              },
-              {
-                "label": "Eb Major",
-                "value": "Eb major"
-              },
-              {
-                "label": "E Major",
-                "value": "E major"
-              },
-              {
-                "label": "F Major",
-                "value": "F major"
-              },
-              {
-                "label": "F# Major",
-                "value": "F# major"
-              },
-              {
-                "label": "Gb Major",
-                "value": "Gb major"
-              },
-              {
-                "label": "G Major",
-                "value": "G major"
-              },
-              {
-                "label": "G# Major",
-                "value": "G# major"
-              },
-              {
-                "label": "A Major",
-                "value": "A major"
-              },
-              {
-                "label": "A# Major",
-                "value": "A# major"
-              },
-              {
-                "label": "Bb Major",
-                "value": "Bb major"
-              },
-              {
-                "label": "B Major",
-                "value": "B major"
-              },
-              {
-                "label": "C Minor",
-                "value": "C minor"
-              },
-              {
-                "label": "C# Minor",
-                "value": "C# minor"
-              },
-              {
-                "label": "Db Minor",
-                "value": "Db minor"
-              },
-              {
-                "label": "D Minor",
-                "value": "D minor"
-              },
-              {
-                "label": "D# Minor",
-                "value": "D# minor"
-              },
-              {
-                "label": "Eb Minor",
-                "value": "Eb minor"
-              },
-              {
-                "label": "E Minor",
-                "value": "E minor"
-              },
-              {
-                "label": "F Minor",
-                "value": "F minor"
-              },
-              {
-                "label": "F# Minor",
-                "value": "F# minor"
-              },
-              {
-                "label": "Gb Minor",
-                "value": "Gb minor"
-              },
-              {
-                "label": "G Minor",
-                "value": "G minor"
-              },
-              {
-                "label": "G# Minor",
-                "value": "G# minor"
-              },
-              {
-                "label": "A Minor",
-                "value": "A minor"
-              },
-              {
-                "label": "A# Minor",
-                "value": "A# minor"
-              },
-              {
-                "label": "Bb Minor",
-                "value": "Bb minor"
-              },
-              {
-                "label": "B Minor",
-                "value": "B minor"
-              }
-            ],
-            "default": "E minor"
-          },
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          }
-        ]
-      },
-      "base": "acestep15-xl-text-to-music.json",
-      "preGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "lyrics"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "template": "[instrumental]",
-          "to": "lyrics"
-        },
-        {
-          "from": "prompt",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "110",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "lyrics",
-          "to": [
-            "109",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "94",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "length",
-          "to": [
-            "98",
-            "inputs",
-            "seconds"
-          ]
-        },
-        {
-          "from": "length",
-          "to": [
-            "94",
-            "inputs",
-            "duration"
-          ]
-        },
-        {
-          "from": "bpm",
-          "to": [
-            "94",
-            "inputs",
-            "bpm"
-          ]
-        },
-        {
-          "from": "timesignature",
-          "to": [
-            "94",
-            "inputs",
-            "timesignature"
-          ]
-        },
-        {
-          "from": "keyscale",
-          "to": [
-            "94",
-            "inputs",
-            "keyscale"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "111",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "from": "enhancedPrompt",
-          "to": "description"
-        },
-        {
-          "from": "lyrics",
-          "to": "summary"
-        }
-      ],
-      "hidden": true
-    },
-    {
-      "uid": "d2f011fb-30a9-4ce1-bbe0-0a6556ac1d05",
-      "name": "Text to Background Track (Stable Audio 3 Medium)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 0,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "length",
-            "type": "number",
-            "label": "Length (seconds)",
-            "default": 60
-          },
-          {
-            "id": "bpm",
-            "type": "number",
-            "label": "BPM",
-            "default": 120
-          },
-          {
-            "id": "timesignature",
-            "type": "select",
-            "label": "Time Signature",
-            "options": [
-              {
-                "label": "4/4",
-                "value": "4/4"
-              },
-              {
-                "label": "3/4",
-                "value": "3/4"
-              },
-              {
-                "label": "2/4",
-                "value": "2/4"
-              },
-              {
-                "label": "6/8",
-                "value": "6/8"
-              }
-            ],
-            "default": "4/4"
-          },
-          {
-            "id": "keyscale",
-            "type": "select",
-            "label": "Key",
-            "options": [
-              {
-                "label": "C Major",
-                "value": "C major"
-              },
-              {
-                "label": "C# Major",
-                "value": "C# major"
-              },
-              {
-                "label": "Db Major",
-                "value": "Db major"
-              },
-              {
-                "label": "D Major",
-                "value": "D major"
-              },
-              {
-                "label": "D# Major",
-                "value": "D# major"
-              },
-              {
-                "label": "Eb Major",
-                "value": "Eb major"
-              },
-              {
-                "label": "E Major",
-                "value": "E major"
-              },
-              {
-                "label": "F Major",
-                "value": "F major"
-              },
-              {
-                "label": "F# Major",
-                "value": "F# major"
-              },
-              {
-                "label": "Gb Major",
-                "value": "Gb major"
-              },
-              {
-                "label": "G Major",
-                "value": "G major"
-              },
-              {
-                "label": "G# Major",
-                "value": "G# major"
-              },
-              {
-                "label": "A Major",
-                "value": "A major"
-              },
-              {
-                "label": "A# Major",
-                "value": "A# major"
-              },
-              {
-                "label": "Bb Major",
-                "value": "Bb major"
-              },
-              {
-                "label": "B Major",
-                "value": "B major"
-              },
-              {
-                "label": "C Minor",
-                "value": "C minor"
-              },
-              {
-                "label": "C# Minor",
-                "value": "C# minor"
-              },
-              {
-                "label": "Db Minor",
-                "value": "Db minor"
-              },
-              {
-                "label": "D Minor",
-                "value": "D minor"
-              },
-              {
-                "label": "D# Minor",
-                "value": "D# minor"
-              },
-              {
-                "label": "Eb Minor",
-                "value": "Eb minor"
-              },
-              {
-                "label": "E Minor",
-                "value": "E minor"
-              },
-              {
-                "label": "F Minor",
-                "value": "F minor"
-              },
-              {
-                "label": "F# Minor",
-                "value": "F# minor"
-              },
-              {
-                "label": "Gb Minor",
-                "value": "Gb minor"
-              },
-              {
-                "label": "G Minor",
-                "value": "G minor"
-              },
-              {
-                "label": "G# Minor",
-                "value": "G# minor"
-              },
-              {
-                "label": "A Minor",
-                "value": "A minor"
-              },
-              {
-                "label": "A# Minor",
-                "value": "A# minor"
-              },
-              {
-                "label": "Bb Minor",
-                "value": "Bb minor"
-              },
-              {
-                "label": "B Minor",
-                "value": "B minor"
-              }
-            ],
-            "default": "E minor"
-          },
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          }
-        ]
-      },
-      "base": "stableaudio3-text-to-music.json",
-      "preGenerationTasks": [
-        {
-          "template": "{{prompt}}, {{bpm}} BPM, time signature {{timesignature}}, {{keyscale}} key",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "68",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "60",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "length",
-          "to": [
-            "74",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "78",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "from": "enhancedPrompt",
-          "to": "description"
-        }
-      ],
-      "hidden": true
-    },
-    {
       "uid": "e615a571-1bd8-4b2a-b783-d460d0e39b72",
       "name": "Text to Image (Illustrious Characters)",
       "options": {
@@ -1819,6 +882,86 @@
           "from": "saveImagePath",
           "to": [
             "43",
+            "inputs",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "uid": "69602ca1-2231-4467-bd72-f4bc378ed845",
+      "name": "Text to Image (Lustify XL Characters)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "lustifyxl-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
             "inputs",
             "path"
           ]
@@ -4760,89 +3903,6 @@
       ]
     },
     {
-      "uid": "700189be-395e-4f3f-ba65-908c6a652f4e",
-      "name": "Dialog to Speech (Chatterbox)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 1,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
-          "from": "prompt",
-          "to": "summary"
-        }
-      ],
-      "base": "chatterbox-text-to-speech.json",
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "3",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "audio_0_filename",
-          "to": [
-            "5",
-            "inputs",
-            "audio"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "20",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": []
-    },
-    {
       "uid": "ff03fec8-e345-4aac-95c9-bc593ad226aa",
       "name": "Text to Speech (Qwen3-TTS)",
       "options": {
@@ -4946,286 +4006,6 @@
               }
             ]
           }
-        }
-      ]
-    },
-    {
-      "uid": "94a76e78-e707-4d94-aaf0-a360634d545b",
-      "name": "Illustrious Image Analysis (For Archival)",
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "model",
-            "type": "select",
-            "label": "Version",
-            "default": "waiNSFWIllustrious_v140.safetensors",
-            "options": [
-              {
-                "label": "v14.0",
-                "value": "waiNSFWIllustrious_v140.safetensors"
-              },
-              {
-                "label": "v15.0",
-                "value": "waiIllustriousSDXL_v150.safetensors"
-              }
-            ]
-          },
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          },
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          },
-          {
-            "id": "removeBackground",
-            "type": "checkbox",
-            "label": "Remove Background",
-            "default": false
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Removing background",
-          "condition": {
-            "where": {
-              "data": "removeBackground"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "parameters": {
-            "workflow": "Remove Background (RMBG)",
-            "inputMapping": [
-              {
-                "image": "generated",
-                "toMediaInput": 0
-              }
-            ],
-            "outputMapping": []
-          }
-        }
-      ],
-      "base": "illustrious-text-to-image.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "model",
-          "to": [
-            "4",
-            "inputs",
-            "ckpt_name"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "10",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "hidden": true
-    },
-    {
-      "uid": "69602ca1-2231-4467-bd72-f4bc378ed845",
-      "name": "Text to Image (Lustify XL Characters)",
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
-          "to": "enhancedPrompt"
-        },
-        {
-          "template": "Unnamed",
-          "to": "name",
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          }
-        }
-      ],
-      "postGenerationTasks": [],
-      "base": "lustifyxl-text-to-image.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "10",
-            "inputs",
-            "path"
-          ]
         }
       ]
     },
@@ -5692,157 +4472,108 @@
       ]
     },
     {
-      "uid": "e1e04497-689d-478c-94f6-2a061c9330f2",
-      "name": "TEST",
+      "uid": "2c06e0f5-253f-4d4b-998b-14521b5e337c",
+      "name": "AnyTale: Voice Design (Qwen3-TTS)",
       "options": {
-        "type": "video",
-        "autocomplete": false,
-        "inputImages": 1,
-        "optionalPrompt": true,
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
         "nameRequired": true,
-        "orientation": "detect",
+        "optionalPrompt": false,
         "extraInputs": [
           {
-            "id": "frames",
-            "type": "number",
-            "label": "Length (frames)",
-            "default": "41"
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
           },
           {
-            "id": "framerate",
-            "type": "number",
-            "label": "Frame Rate",
-            "default": "24"
+            "id": "dialog",
+            "type": "textarea",
+            "label": "Dialog"
+          },
+          {
+            "id": "voiceProfile",
+            "type": "text",
+            "label": "Vocal Profile",
+            "default": "",
+            "options": []
           }
         ]
       },
+      "base": "qwen3tts-text-to-voice-design.json",
       "preGenerationTasks": [
         {
-          "template": "webp",
-          "to": "imageFormat"
-        },
-        {
-          "from": "frames",
-          "to": "generate_frames",
-          "math": [
-            {
-              "offset": 0,
-              "scale": 0.5,
-              "bias": 10,
-              "round": "none"
-            }
-          ]
-        },
-        {
-          "from": "generate_frames",
-          "to": "generate_frames",
-          "math": [
-            {
-              "offset": -1,
-              "scale": 0.25,
-              "bias": 0,
-              "round": "ceil"
-            },
-            {
-              "offset": 0,
-              "scale": 4,
-              "bias": 1,
-              "round": "none"
-            }
-          ]
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA female voice, clear and natural, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nALWAYS start the output with either \"A female voice\" or \"A male voice\". Output the vocal characteristics as prose ONLY.",
+          "to": "voiceProfile",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "voiceProfile"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
         },
         {
           "condition": {
             "where": {
-              "data": "prompt"
+              "data": "dialog"
             },
             "equals": {
               "value": ""
             }
           },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
-          "to": "prompt"
+          "model": "ssfdre38/gemma4-nano:latest",
+          "prompt": "Role: You are a scriptwriter writing dialogue for an audio script.\n\nCharacter Context:\nName: {{name}}\nPersonality Profile: {{prompt}}\n\nTask:\nWrite exactly two consecutive sentences of spoken dialogue spoken by {{name}} at the very start of a date. This dialogue serves as her self-introduction.\n\nStrict Constraints:\n1. Output ONLY the raw spoken text. \n2. Do NOT use quotation marks around the output.\n3. Do NOT include dialogue tags (e.g., \"she said\", \"she purred\").\n4. Do NOT include actions, physical movements, descriptions, or parentheticals.\n5. Do NOT reference a specific time of day (such as evening, night, or day).\n6. Tone: Highly seductive, silky, and confident.\n7. Max length: Under 30 words total.\n\nDesired Output Structure Example:\nIt is a pleasure to finally meet you. I do hope our time together lives up to the high expectations you have built up.",
+          "to": "dialog"
         },
         {
-          "condition": {
-            "where": {
-              "data": "image_0_description"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "template": "{{image_0_description}}",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "image_0_summary"
-            },
-            "isNot": {
-              "value": ""
-            }
-          },
-          "template": "{{image_0_summary}}",
+          "from": "dialog",
           "to": "summary"
         },
         {
-          "template": "640",
-          "to": "width"
-        },
-        {
-          "template": "832",
-          "to": "height"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "template": "832",
-          "to": "width"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "orientation"
-            },
-            "equals": {
-              "value": "landscape"
-            }
-          },
-          "template": "480",
-          "to": "height"
+          "from": "voiceProfile",
+          "to": "description"
         }
       ],
-      "base": "desiwa22-q3-image-to-video-loop.json",
       "replace": [
         {
-          "from": "width",
+          "from": "voiceProfile",
           "to": [
-            "104",
+            "20",
             "inputs",
             "value"
           ]
         },
         {
-          "from": "height",
+          "from": "dialog",
           "to": [
-            "105",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "prompt",
-          "to": [
-            "102",
+            "16",
             "inputs",
             "value"
           ]
@@ -5850,72 +4581,1501 @@
         {
           "from": "seed",
           "to": [
-            "103",
+            "4",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "13fe4803-5779-4d17-a6e0-468804b31cdc",
+      "name": "AnyTale: Background Music (ACE-Step 1.5 XL)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
+            "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4"
+              },
+              {
+                "label": "3/4",
+                "value": "3"
+              },
+              {
+                "label": "2/4",
+                "value": "2"
+              },
+              {
+                "label": "6/8",
+                "value": "6"
+              }
+            ],
+            "default": "4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "base": "acestep15-xl-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "condition": {
+            "where": {
+              "data": "lyrics"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "template": "[instrumental]",
+          "to": "lyrics"
+        },
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "110",
             "inputs",
             "value"
           ]
         },
         {
-          "from": "saveImageFilename",
+          "from": "lyrics",
           "to": [
-            "115",
+            "109",
             "inputs",
-            "filename_prefix"
+            "value"
           ]
         },
         {
-          "from": "storagePath",
+          "from": "seed",
           "to": [
-            "117",
+            "3",
             "inputs",
-            "output_file_path"
+            "seed"
           ]
         },
         {
-          "from": "image_0_filename",
+          "from": "seed",
           "to": [
-            "52",
+            "94",
             "inputs",
-            "image"
+            "seed"
           ]
         },
         {
-          "from": "generate_frames",
+          "from": "length",
           "to": [
-            "101",
+            "98",
             "inputs",
-            "length"
+            "seconds"
           ]
         },
         {
-          "from": "generate_frames",
+          "from": "length",
           "to": [
-            "77",
+            "94",
             "inputs",
-            "length"
+            "duration"
           ]
         },
         {
-          "from": "framerate",
+          "from": "bpm",
           "to": [
-            "115",
+            "94",
             "inputs",
-            "frame_rate"
+            "bpm"
+          ]
+        },
+        {
+          "from": "timesignature",
+          "to": [
+            "94",
+            "inputs",
+            "timesignature"
+          ]
+        },
+        {
+          "from": "keyscale",
+          "to": [
+            "94",
+            "inputs",
+            "keyscale"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "111",
+            "inputs",
+            "path"
           ]
         }
       ],
       "postGenerationTasks": [
         {
-          "process": "extractOutputMediaFromTextFile",
-          "parameters": {
-            "filename": "video-filename.txt"
-          }
+          "from": "enhancedPrompt",
+          "to": "description"
         },
         {
-          "process": "crossfadeVideoFrames",
-          "parameters": {
-            "blendFrames": 10
+          "from": "lyrics",
+          "to": "summary"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "d2f011fb-30a9-4ce1-bbe0-0a6556ac1d05",
+      "name": "AnyTale: Background Music (Stable Audio 3 Medium)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
+            "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4/4"
+              },
+              {
+                "label": "3/4",
+                "value": "3/4"
+              },
+              {
+                "label": "2/4",
+                "value": "2/4"
+              },
+              {
+                "label": "6/8",
+                "value": "6/8"
+              }
+            ],
+            "default": "4/4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
           }
+        ]
+      },
+      "base": "stableaudio3-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "template": "{{prompt}}, {{bpm}} BPM, time signature {{timesignature}}, {{keyscale}} key",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "68",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "60",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "74",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "78",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "700189be-395e-4f3f-ba65-908c6a652f4e",
+      "name": "AnyTale: Dialog (Chatterbox)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        },
+        {
+          "from": "prompt",
+          "to": "summary"
+        }
+      ],
+      "base": "chatterbox-text-to-speech.json",
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "3",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "audio_0_filename",
+          "to": [
+            "5",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "20",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "b38ea4f0-4163-4a01-aa0e-15f224bd38a3",
+      "name": "AnyTale: Dialog (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-audio.json",
+      "preGenerationTasks": [
+        {
+          "from": "prompt",
+          "to": "summary"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "8",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "5",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "audio_0_filename",
+          "to": [
+            "10",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "16",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "3896c18e-82a8-4b60-92be-d2ded86034c9",
+      "name": "AnyTale: Portrait (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime coloring, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "1024",
+          "to": "dimension"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            ""
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "height"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "649f5584-e538-4f3b-9c34-7a7389171c56",
+      "name": "AnyTale: Portrait (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "1024",
+          "to": "dimension"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "4445bc62-d55d-42ea-a3e2-f8e6aef699f0",
+      "name": "AnyTale: Part Preview (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime colors, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "512",
+          "to": "dimension"
+        },
+        {
+          "template": "10",
+          "to": "steps"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "steps",
+          "to": [
+            "3",
+            "inputs",
+            "steps"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "da4e4ff9-4ef8-49d4-a680-df14b47f8c93",
+      "name": "AnyTale: Part Preview (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "512",
+          "to": "dimension"
+        },
+        {
+          "template": "10",
+          "to": "steps"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "steps",
+          "to": [
+            "3",
+            "inputs",
+            "steps"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "69e503c5-2f84-43ca-8902-c64913e4d378",
+      "name": "AnyTale: Image (LustifyXL)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "lustifyxl-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "91ea9e31-5c17-4ad5-9110-167a38742c06",
+      "name": "AnyTale: Image (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime coloring, {{prompt}}",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "5f1cf6b3-3da2-4ee8-b45c-6022b0346f27",
+      "name": "AnyTale: Image (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "model",
+            "type": "select",
+            "label": "Version",
+            "default": "waiNSFWIllustrious_v140.safetensors",
+            "options": [
+              {
+                "label": "v14.0",
+                "value": "waiNSFWIllustrious_v140.safetensors"
+              },
+              {
+                "label": "v15.0",
+                "value": "waiIllustriousSDXL_v150.safetensors"
+              }
+            ]
+          },
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "model",
+          "to": [
+            "4",
+            "inputs",
+            "ckpt_name"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
         }
       ],
       "hidden": true
