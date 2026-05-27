@@ -22,9 +22,9 @@ const PortraitFrame = styled('div')`
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(896px, 100vw, calc(100vh * 896 / 1152));
-  aspect-ratio: 896 / 1152;
-  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
+  width: 100vw;
+  height: 100dvh;
+  background: #000;
   overflow: hidden;
 `;
 PortraitFrame.className = 'portrait-panel';
@@ -34,7 +34,7 @@ const BackgroundImage = styled('img')`
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   z-index: 0;
 `;
 BackgroundImage.className = 'portrait-background';
