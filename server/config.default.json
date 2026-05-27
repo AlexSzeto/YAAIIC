@@ -14,6 +14,7 @@
     "defaultMusicLength": 120,
     "portraitBasePrompt": "1girl, solo, portrait, facing forward, looking at viewer, outdoors",
     "outfitBasePrompt": "general, 1girl, solo, head out of frame, upper body, lower body, facing viewer, simple background, dressing room",
+    "endingBasePrompt": "no humans",
     "previewBasePromptByType": {
       "location": "no humans",
       "emotion": "1girl, solo, short hair, brown hair, brown eyes, straight hair, swept bangs, cropped head, facing viewer, simple background, grey background,",

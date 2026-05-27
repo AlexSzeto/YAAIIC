@@ -147,40 +147,37 @@ export function AnyTalePlayPage() {
 
   // --- End screen image generation ---
 
-  const generateEndScreenImage = useCallback((endPlot, sess, data) => {
+  /**
+   * Generate the end-screen image for the 'end' section plot.
+   *
+   * @param {Object} endPlot - full end-section plot object
+   * @param {Object} sess - current session snapshot
+   * @param {Object} data - play data
+   * @param {Map<string,string>|null} [initialSlotStatuses] - final evolved slot state from the last
+   *   chapter (post all pages' actions). When provided, slot actions on the end plot's page 0 are
+   *   layered on top so parts are correctly disabled/revealed in the end screen image.
+   */
+  const generateEndScreenImage = useCallback((endPlot, sess, data, initialSlotStatuses = null) => {
     if (!endPlot?.pages?.length) return;
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
     const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
+    const outfitParts = outfit ? outfit.parts : [];
+    const activeParts = buildActiveParts(sess, outfitParts, partsMap);
 
-    const activeParts = buildActiveParts(sess, outfit ? outfit.parts : [], partsMap);
-    const slotStatuses = resolveSlotStatuses(activeParts, [], 0);
-    const parsedRules = parseRules(data.config.slotRules || '');
-    const visibility = applyRules(slotStatuses, parsedRules);
+    // Run computeVisiblePages starting from the post-story slot state so that:
+    //  1. Parts disabled by earlier chapter actions remain hidden.
+    //  2. Any slot actions on the end plot's page 0 are applied before prompt assembly.
+    const { pageSlotStatuses: endSlotStatuses } = computeVisiblePages(
+      activeParts, endPlot, data.config.slotRules || '', initialSlotStatuses
+    );
 
-    const rawParts = [
-      ...(sess.character.parts || []).map(p =>
-        buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
-      ),
-      ...(outfit ? outfit.parts : []).map(p =>
-        buildPartForPrompt(p.partUid, p.attributeValues, partsMap)
-      ),
-    ].filter(Boolean);
+    // Page 0 slot statuses (post page-0 actions) used for part filtering and prompt assembly
+    const pageSlotStatus = endSlotStatuses[0];
+    if (!pageSlotStatus) return;
 
-    const enabledParts = rawParts.filter(p => {
-      const types = Array.isArray(p.config?.type) ? p.config.type : [];
-      if (types.length === 0) return true;
-      return types.some(t => visibility.get(t.trim().toLowerCase()) !== false);
-    });
-
-    if (sess.location.partUid) {
-      const locPartConfig = partsMap.get(sess.location.partUid);
-      if (locPartConfig) {
-        const locTypes = Array.isArray(locPartConfig.type) ? locPartConfig.type : [];
-        for (const t of locTypes) visibility.set(t.trim().toLowerCase(), true);
-      }
-      const locPart = buildPartForPrompt(sess.location.partUid, sess.location.attributeMap, partsMap);
-      if (locPart) enabledParts.push(locPart);
-    }
+    const { enabledParts, visibility } = buildEnabledPartsForPage(
+      sess, outfitParts, partsMap, pageSlotStatus, data.config.slotRules || ''
+    );
 
     const endPage = endPlot.pages[0];
     const prompt = assemblePrompt(enabledParts, endPage, visibility);
@@ -211,9 +208,11 @@ export function AnyTalePlayPage() {
   const playDataRef = useRef(playData);
   const sessionRef = useRef(session);
   const visiblePageIndicesRef = useRef(visiblePageIndices);
+  const pageSlotStatusesRef = useRef(pageSlotStatuses);
   useEffect(() => { playDataRef.current = playData; }, [playData]);
   useEffect(() => { sessionRef.current = session; }, [session]);
   useEffect(() => { visiblePageIndicesRef.current = visiblePageIndices; }, [visiblePageIndices]);
+  useEffect(() => { pageSlotStatusesRef.current = pageSlotStatuses; }, [pageSlotStatuses]);
 
   // Maps queue item UUID → { plotPageIdx, cacheKey, type: 'image'|'voice' }
   const taskToPageRef = useRef(new Map());
@@ -658,8 +657,20 @@ export function AnyTalePlayPage() {
     );
     if (!endPlot) return;
 
+    // Derive the final evolved slot state from the last chapter (epilogue).
+    // pageSlotStatusesRef holds per-plot-page slot Maps set by initChapter.
+    // The entry at the last actual page index is post-all-pages-actions — that is
+    // the correct starting state for the end plot's page 0 slot evaluation.
+    let finalSlotStatuses = null;
+    const lastPlot = currentPlotRef.current;
+    const slotStatusMaps = pageSlotStatusesRef.current;
+    if (lastPlot?.pages?.length > 0 && slotStatusMaps?.length > 0) {
+      const lastPageIdx = lastPlot.pages.length - 1;
+      finalSlotStatuses = slotStatusMaps[lastPageIdx] ?? null;
+    }
+
     fetchJson(`/anytale/plot/${endPlot.uid}`)
-      .then(fullEndPlot => generateEndScreenImage(fullEndPlot, session, playData))
+      .then(fullEndPlot => generateEndScreenImage(fullEndPlot, session, playData, finalSlotStatuses))
       .catch(err => console.error('[AnyTalePlayPage] Failed to load end plot:', err));
   }, [session.phase, session.endImageUrl, playData]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -949,7 +960,9 @@ export function AnyTalePlayPage() {
 
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
-    const plotIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
+    // Decision page (virtual index = length) has no image/voice of its own — skip transition
+    if (session.pageIndex >= visiblePageIndices.length) return;
+    const plotIdx = visiblePageIndices[session.pageIndex];
     if (plotIdx == null) return;
 
     const imgUrl = pageImageUrls[plotIdx];
@@ -1081,9 +1094,8 @@ export function AnyTalePlayPage() {
     if (!isAutoplay || !currentPlot) return;
 
     const nextVisIdx = session.pageIndex + 1;
-    // Autoplay stops at the last page of the chapter (decision page handles progression)
+    // Autoplay pauses at the last content page — flag stays true so it resumes in the next chapter
     if (nextVisIdx >= visiblePageIndices.length) {
-      setIsAutoplay(false);
       return;
     }
 
@@ -1354,7 +1366,8 @@ export function AnyTalePlayPage() {
 
   const goToNext = useCallback(() => {
     setSession(prev => {
-      if (prev.pageIndex >= visiblePageIndicesRef.current.length - 1) return prev;
+      // Allow advancing up to visiblePageIndices.length (the virtual decision page)
+      if (prev.pageIndex >= visiblePageIndicesRef.current.length) return prev;
       const next = { ...prev, pageIndex: prev.pageIndex + 1 };
       saveSession(next);
       return next;
@@ -1434,8 +1447,7 @@ export function AnyTalePlayPage() {
     }
 
     const decisions = candidates.map(plot => ({
-      text: plot.name,
-      subtitle: plot.description || undefined,
+      text: plot.description || plot.name,
       onClick: () => handleChapterChoice(plot),
     }));
 
@@ -1557,8 +1569,17 @@ export function AnyTalePlayPage() {
       `;
     }
 
-    const currentPlotPageIdx = visiblePageIndices[session.pageIndex] ?? visiblePageIndices[0];
-    const currentDialogText = pageDialogTexts[currentPlotPageIdx] || '';
+    // Virtual decision page sits at index === visiblePageIndices.length (one past last content page)
+    const isAtDecisionPage = session.pageIndex === visiblePageIndices.length;
+    const isAtLastContentPage = session.pageIndex === visiblePageIndices.length - 1;
+    const isEpilogue = (currentPlot.section || '').toLowerCase() === 'epilogue';
+
+    // Use last content page's plot index when at decision page (for readiness + background image)
+    const lastContentPlotPageIdx = visiblePageIndices[visiblePageIndices.length - 1];
+    const currentPlotPageIdx = isAtDecisionPage
+      ? lastContentPlotPageIdx
+      : visiblePageIndices[session.pageIndex];
+    const currentDialogText = isAtDecisionPage ? '' : (pageDialogTexts[currentPlotPageIdx] || '');
 
     const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
 
@@ -1580,36 +1601,48 @@ export function AnyTalePlayPage() {
     }).length;
     const loadedPercent = visiblePageIndices.length > 0
       ? (loadedCount / visiblePageIndices.length) * 100 : 0;
+    // Cap progress at 100% when at the virtual decision page
+    const pageForProgress = Math.min(session.pageIndex, visiblePageIndices.length - 1);
     const currentPercent = visiblePageIndices.length > 0
-      ? ((session.pageIndex + 1) / visiblePageIndices.length) * 100 : 0;
+      ? ((pageForProgress + 1) / visiblePageIndices.length) * 100 : 0;
 
     const chapterNum = (session.timelineIndex ?? 0) + 1;
 
-    const isAtLastPage = session.pageIndex === visiblePageIndices.length - 1;
-
-    // Mode: loading if page not ready, decision at last page, normal page otherwise
-    const pageMode = !currentPageReady ? 'loading'
-      : isAtLastPage ? 'decision'
+    // Mode: decision at virtual page, loading if content page not ready, page otherwise
+    const pageMode = isAtDecisionPage ? 'decision'
+      : !currentPageReady ? 'loading'
       : 'page';
 
-    // Navigation: allowed on any page; blocked only at the absolute boundary
+    // Navigation
     const canGoPrev = session.pageIndex > 0 || (session.timelineIndex ?? 0) > 0;
-    // onNext only applies in page mode (decision mode uses decision options, loading has no controls)
-    const canGoNext = !isAtLastPage && session.pageIndex < visiblePageIndices.length - 1;
+    // Allow forward navigation to decision page from last content page (except epilogue, which auto-transitions)
+    const canGoNext = !isAtDecisionPage && (!isAtLastContentPage || (currentPageReady && !isEpilogue));
 
-    // Chapter decision options (only computed when at last page)
-    const chapterDecisions = (currentPageReady && isAtLastPage)
-      ? computeChapterDecisions()
-      : [];
+    // Back button only visible at decision page (returns to last content page)
+    const onBack = isAtDecisionPage ? goToPrev : undefined;
 
-    // If at last page, no chapter options AND no epilogue fallback: show error
-    const hasNoOptions = currentPageReady && isAtLastPage && chapterDecisions.length === 0;
+    // Play button: only on content pages that aren't the last (autoplay pauses before decision page)
+    const onPlay = (currentPageReady && !isAtLastContentPage && !isAtDecisionPage) ? startAutoplay : undefined;
+
+    // Decision page background = last content page's image; caption is hardcoded
+    const backgroundUrl = isAtDecisionPage
+      ? (pageImageUrls[lastContentPlotPageIdx] || displayedImageUrl)
+      : displayedImageUrl;
+    const bubbleText = isAtDecisionPage
+      ? "What's your next move?"
+      : (currentPageReady ? currentDialogText : '');
+
+    // Chapter decisions: computed only at the decision page
+    const chapterDecisions = isAtDecisionPage ? computeChapterDecisions() : [];
+
+    // Error: at decision page with no options available
+    const hasNoOptions = isAtDecisionPage && chapterDecisions.length === 0;
 
     if (hasNoOptions) {
       return html`
         <${PortraitPanel}
           mode="page"
-          backgroundUrl=${displayedImageUrl}
+          backgroundUrl=${backgroundUrl}
           bubbleText="No story options found. Please check your plot configuration."
           muted=${session.muted}
           musicEnabled=${session.musicOn}
@@ -1623,8 +1656,8 @@ export function AnyTalePlayPage() {
     return html`
       <${PortraitPanel}
         mode=${pageMode}
-        backgroundUrl=${displayedImageUrl}
-        bubbleText=${currentPageReady ? currentDialogText : ''}
+        backgroundUrl=${backgroundUrl}
+        bubbleText=${bubbleText}
         bubbleType="caption"
         muted=${session.muted}
         musicEnabled=${session.musicOn}
@@ -1634,10 +1667,10 @@ export function AnyTalePlayPage() {
         currentPercent=${currentPercent}
         isAutoplay=${isAutoplay}
         onPrev=${canGoPrev ? goToPrev : undefined}
-        onPlay=${(currentPageReady && !isAtLastPage) ? startAutoplay : undefined}
+        onPlay=${onPlay}
         onStop=${stopAutoplay}
         onNext=${canGoNext ? goToNext : undefined}
-        onBack=${(isAtLastPage && currentPageReady) ? goToPrev : undefined}
+        onBack=${onBack}
         decisions=${chapterDecisions}
         onReset=${handleReset}
         onToggleMute=${handleToggleMute}

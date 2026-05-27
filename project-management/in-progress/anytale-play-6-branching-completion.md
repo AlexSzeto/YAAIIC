@@ -28,6 +28,34 @@ Complete the full play loop by implementing end-of-chapter branching, chapter tr
 
 - [ ] **Polish and regression:** Confirm editor `localStorage` keys (`anytale-state`, `anytale-plot`, `anytale-character`) are unchanged after play mode usage. Test mobile viewport layout for all UI states (intro, chapter navigation, decision points, loading, end screen). Fix any broken global navigation. Run full scripted walk: cold start → intro → character change → mood changes → begin tale → chapter navigation → autoplay → end-of-chapter branch → new chapter → epilogue → end screen → reset → verify clean restart. **Manual test:** complete the full scripted walk without errors on both desktop and mobile viewports.
 
+#### Fixes and Changes
+
+- [x] **Separate last content page from decision page:** The last content page shows dialog/image/TTS as normal. A virtual decision page (`pageIndex === visiblePageIndices.length`) follows it; its background is the last content page's image URL (not `displayedImageUrl`), its caption is the hardcoded string `"What's your next move?"`, and its options use `plot.description || plot.name` (not name). `goToNext` allows advancing to `visiblePageIndices.length`; canGoNext gates on last content page readiness and blocks epilogue chapters from advancing past last content page (epilogue auto-transitions to end). Guard voice/image advance effect against the decision page index.
+
+- [x] **Autoplay persists across chapters:** Remove `setIsAutoplay(false)` from the autoplay effect's terminal branch (when `nextVisIdx >= visiblePageIndices.length`). Just `return` to pause; the flag remains true so autoplay resumes when the next chapter loads.
+
+- [x] **End screen uses evolved slot state:** `generateEndScreenImage` currently calls `resolveSlotStatuses(activeParts, [], 0)` which resets to the initial slot state, ignoring all story slot actions. Fix by: (1) adding `pageSlotStatusesRef` to mirror the `pageSlotStatuses` state as a stable ref; (2) rewriting `generateEndScreenImage(endPlot, sess, data, initialSlotStatuses = null)` to call `computeVisiblePages(activeParts, endPlot, slotRules, initialSlotStatuses)` and `buildEnabledPartsForPage` with the resulting per-page slot statuses; (3) in the `phase: 'end'` useEffect, read the final evolved state from `pageSlotStatusesRef.current[currentPlotRef.current.pages.length - 1]` and pass it as `initialSlotStatuses`.
+
+- [ ] **Autoplay advances to decision page:** When `isAutoplay` is true and the player reaches the final content page, autoplay should continue: after the page has displayed for its full duration (same timer/voice logic as normal page advance), advance `pageIndex` to `visiblePageIndices.length` to show the decision page.
+
+- [ ] **Completed chapter decisions are locked:** Once the user has picked a next chapter (i.e., a timeline entry exists beyond the current chapter), navigating back to that chapter's decision page must not show decision buttons. Instead show the decision page UI in a non-interactive state (no decision buttons, no `onBack` that would let them branch again). The chapter progression is finalised for this session.
+
+- [ ] **Autoplay transitions between completed chapters:** When autopaying through a chapter that already has a successor in the timeline (i.e., `timelineIndex + 1 < timeline.length`), on reaching the last content page autoplay should automatically advance to the first page of the next chapter in the timeline (same cross-chapter navigation logic as `goToNext` / `goToPrev`), rather than pausing at the decision page.
+
+- [ ] **Show chapter name in header instead of "Chapter X":** Replace the chapter number label (e.g., "Chapter 3") with the current chapter's plot name (e.g., `currentPlot.name`). The page label format becomes `"[chapter name], Page Y"`.
+
+- [ ] **Chapter decision options show plot description:** `computeChapterDecisions` uses `plot.description || plot.name`, but `playData.plots` are summary objects that may not include the `description` field. Verify whether `description` is returned in the plots list from the server; if not, either (a) include it in the server response for the plots list, or (b) fetch full plot objects before building the decisions array. Options should display the plot's description text, not its name.
+
+- [ ] **Reorder bottom action buttons and show/hide UI:** New bottom bar order (left to right): Hide UI, Autoplay, Prev, Next. The "Show UI" button (the one that re-appears the UI when hidden) moves to the left edge so it aligns with the Hide UI position. During autoplay, replace Autoplay with Stop, and show Hide UI to the left of Stop so Stop aligns with the Autoplay position.
+
+- [ ] **Persistent back-to-home button:** Add a persistent icon button (e.g., ✕ or a home icon) fixed to the top-right corner of the play page that navigates back to the root page (`/` or the app's home route). Always visible in all phases.
+
+- [ ] **Hide play button on intro home screen:** The play/autoplay button is non-functional on the first screen of the introduction phase (`phase: 'intro-main'`). Do not render it there.
+
+- [ ] **"I'm feeling lucky!" option in all intro change screens:** The character-pick, outfit-pick, location-pick, and music-pick phases each have a randomised selection option. Add a fourth option labelled "I'm feeling lucky!" that picks a completely random item from the **full library** (all characters / outfits / location parts / genres, not just the current draft of 3). This is in addition to the existing "Maybe someone else?" / "Nevermind" options, not a replacement.
+
+- [ ] **Placeholder background during reset and initial load:** (a) When a reset is confirmed and the session is being cleared, immediately replace the background image with `media/anytale-background.png` so there is no blank/black frame between the old story image and the new intro loading state. (b) On initial page load, before the user has clicked through the audio-unlock screen, use `media/anytale-background.png` as the background if no `introImageUrl` is stored in the session yet.
+
 ## Implementation Details
 
 ### Media library exclusion (mandatory)
