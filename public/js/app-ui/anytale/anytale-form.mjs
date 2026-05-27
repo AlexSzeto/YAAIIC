@@ -20,7 +20,7 @@ import { PartItem } from './part-item.mjs';
 import { loadState, saveState, clearState, createDefaultPart, loadPlot, loadCharacter, loadOutfit, saveCharacterState, saveOutfitState, getPartsCoverage } from './anytale-state.mjs';
 import { extractImagePrompt, parsePromptTags, processPromptImport, extractRemainingPageTags } from './prompt-import.mjs';
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
-import { resolveSlotStatuses, parseRules, applyRules } from './slot-resolver.mjs';
+import { resolveSlotStatuses, checkPageRequirements, parseRules, applyRules } from './slot-resolver.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { AutocompleteInput } from '../autocomplete-input.mjs';
@@ -159,8 +159,10 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   // Plot import handler ref (kept for plot section delegation)
   const plotImportFnRef = useRef(null);
   const plotPageTagsFnRef = useRef(null);
+  const plotBulkDialogFnRef = useRef(null);
   const handlePlotImportReady = useCallback((fn) => { plotImportFnRef.current = fn; }, []);
   const handlePlotPageTagsReady = useCallback((fn) => { plotPageTagsFnRef.current = fn; }, []);
+  const handlePlotBulkDialogReady = useCallback((fn) => { plotBulkDialogFnRef.current = fn; }, []);
 
   // ── Config for import routing ────────────────────────────────────────────
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
@@ -463,8 +465,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     const plotPageCount = currentPlot.pages.length;
     if (plotPageCount === 0) return;
 
-    setPageLocked(currentPlot.pages.map(() => true));
-
     const partsData = {};
     for (const p of parts) {
       if (p.config?.name?.trim()) {
@@ -479,7 +479,20 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     const enabledPartsWithCoverage = parts
       .filter(p => p.data?.enabled !== false)
       .map(p => ({ ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false } }));
+
+    // Determine which pages pass requirements before locking or queuing any
+    const pageWillQueue = currentPlot.pages.map((activePage, i) => {
+      const priorSlotStatuses = resolveSlotStatuses(enabledPartsWithCoverage, currentPlot.pages, i - 1);
+      return checkPageRequirements(activePage, priorSlotStatuses, enabledPartsWithCoverage);
+    });
+
+    // Only lock pages that will actually be queued
+    setPageLocked(pageWillQueue.map(willQueue => willQueue));
+
+    const queuedIndices = [];
     for (let i = 0; i < plotPageCount; i++) {
+      if (!pageWillQueue[i]) continue; // skip pages whose requirements aren't met
+      queuedIndices.push(i);
       const activePage = currentPlot.pages[i];
       const slotVisibility = computeSlotVisibility(enabledPartsWithCoverage, currentPlot.pages, i);
       const prompt = assemblePrompt(parts, activePage, slotVisibility);
@@ -488,6 +501,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         : null;
       onGenerate(prompt, previewImageName, partsData, plotData);
     }
+
+    // Trigger bulk dialog regeneration for queued pages
+    plotBulkDialogFnRef.current?.(queuedIndices);
   }, [parts, previewImageName, onGenerate, computeSlotVisibility]);
 
   //�"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
@@ -996,6 +1012,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             onPlotReset=${() => setPageLocked([])}
             onImportHandlerReady=${handlePlotImportReady}
             onPageTagsUpdateReady=${handlePlotPageTagsReady}
+            onBulkDialogReady=${handlePlotBulkDialogReady}
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
             onReject=${onReject}

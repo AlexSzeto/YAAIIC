@@ -64,6 +64,18 @@ const StyledImage = styled('img')`
 `;
 StyledImage.className = 'styled-image';
 
+const PlotOverlay = styled('div')`
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: ${() => currentTheme.value.typography.fontSize.small};
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.primary};
+  pointer-events: none;
+  z-index: 2;
+`;
+PlotOverlay.className = 'plot-overlay';
+
 const EmptyState = styled('div')`
   padding: 60px 20px;
   text-align: center;
@@ -197,6 +209,13 @@ export function AnyTaleViewer({
             onMouseEnter=${(e) => { if (item?.prompt) tooltip.show(item.prompt, e.clientX, e.clientY); }}
             onMouseLeave=${() => tooltip.hide()}
           />
+          ${item?.plot?.name ? html`
+            <${PlotOverlay}>
+              <${Panel} variant="glass" padding="small">
+                ${item.plot.name}, Page ${item.plot.page + 1}
+              </${Panel}>
+            </${PlotOverlay}>
+          ` : null}
         </${ImageWrapper}>
         <${NavRow}>
           <${LeftNavGroup}>

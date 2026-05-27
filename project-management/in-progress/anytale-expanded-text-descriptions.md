@@ -68,6 +68,16 @@ Expand the user-facing textual data throughout AnyTale by: (1) separating techni
 - [x] **Plot section dialog preview — expand prompt:** In `public/js/app-ui/anytale/plot-section.mjs`, import `expandDialogPrompt`. In `handlePreviewDialog`, before calling `generateDialog` for each page, compute the expanded prompt via `expandDialogPrompt(pages[i].dialogPrompt, enabledParts)`. Pass the expanded prompt as `dialogPrompt` in the page object given to `generateDialog`, and use it (not the raw prompt) in the `history.push` call.
 - [x] **Play mode dialog generation — expand prompt:** In `public/js/app-ui/anytale-play/anytale-play.mjs`, import `expandDialogPrompt` from `../anytale/prompt-assembler.mjs`. In `queuePageDialog`, build `dialogEnabledParts` from character parts + outfit parts using `buildPartForPrompt` and a `partsMap`, then expand `rawDialogPrompt` with `expandDialogPrompt` before the skip-check and before passing to `generateDialog`. Change the return value to `{ text, expandedPrompt }` (returning `null` unchanged on skip/error). Update the call site in `initChapter` to destructure `{ text, expandedPrompt }` and use `expandedPrompt` instead of `prompt` for `dialogHistoryRef.current` updates.
 
+### Phase 8 — Queue Plot requirements filtering and viewer plot overlay
+
+- [x] **Queue Plot skips pages failing requirements:** In `public/js/app-ui/anytale/anytale-form.mjs`, import `checkPageRequirements` and `resolveSlotStatuses` from `./slot-resolver.mjs`. In `handleFullPlotTest`, before queuing each page, compute `priorSlotStatuses = resolveSlotStatuses(enabledPartsWithCoverage, currentPlot.pages, i - 1)`. Call `checkPageRequirements(activePage, priorSlotStatuses, enabledPartsWithCoverage)` and skip the page (don't call `onGenerate`) if requirements are not met. Update `setPageLocked` to only lock pages that will actually be queued (pass requirements).
+- [x] **Viewer plot overlay:** In `public/js/app-ui/anytale/anytale-viewer.mjs`, add a `PlotOverlay` styled div matching the `TimeOverlay` pattern from `generated-result.mjs` (absolute, top/left 8px, pointer-events none). Inside `ImageWrapper`, when `item?.plot?.name` is truthy, render `PlotOverlay` containing a `Panel` with `variant="glass"` and `padding="small"` displaying `"${item.plot.name}, Page ${item.plot.page + 1}"`.
+
+#### Fixes and Changes
+
+- [x] **Queue Plot triggers bulk dialog regeneration:** In `plot-section.mjs`, add a `bulkDialogGenerate(queuedPageIndices)` async function: clear `dialogPreviews`, then for each index in `queuedPageIndices` (in order) that has a non-empty `dialogPrompt`, expand it with `expandDialogPrompt` and call `generateDialog`, accumulating history. Expose it via a new `onBulkDialogReady` prop (same pattern as `onImportHandlerReady`). In `anytale-form.mjs`, store the ref via `handlePlotBulkDialogReady`, pass it to `PlotSection` as `onBulkDialogReady`, and at the end of `handleFullPlotTest` call it with the array of queued page indices.
+- [x] **Clear dialog previews on plot clear/load:** In `plot-section.mjs`, call `setDialogPreviews({})` inside `handleClear` (after the user confirms) and inside `handleLoadPlot` (after the new plot is applied to state).
+
 ## Implementation Details
 
 ### Data migration (anytale-data v4 → v5)

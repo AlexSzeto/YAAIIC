@@ -77,8 +77,9 @@ NavRow.className = 'plot-nav-row';
  * @param {number}   [props.refreshKey=0]            – Increment to force reload from localStorage
  * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
  * @param {Function} [props.onReject]                  – Called with ({ plotUid, pageIndex }) after page is unlocked
+ * @param {Function} [props.onBulkDialogReady]         – Called with (fn) when bulkDialogGenerate is ready; null on unmount
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -196,6 +197,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       const fullPlot = await response.json();
       setPlot(fullPlot);
       setSavedPlot(fullPlot);
+      setDialogPreviews({});
       onPageChange && onPageChange(0);
       onPlotReset && onPlotReset();
       toast.success(`Loaded plot '${fullPlot.name || match.uid}'`);
@@ -263,6 +265,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     const blank = createBlankPlot();
     setPlot(blank);
     setSavedPlot(null);
+    setDialogPreviews({});
     onPageChange && onPageChange(0);
     onPlotReset && onPlotReset();
   }, [onPageChange, onPlotReset]);
@@ -470,6 +473,49 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   const previewDialogDisabled = !currentPage.dialogPrompt?.trim() || !dialogConfig || !dialogPreview
     || !(dialogPreview.name?.trim() && dialogPreview.personality?.trim());
+
+  // ── Bulk dialog generation (triggered by Queue Plot) ─────────────────────
+  const bulkDialogGenerate = useCallback(async (queuedPageIndices) => {
+    if (!dialogConfig || !dialogPreview) return;
+    if (isPreviewingDialog) return;
+    const queuedSet = new Set(queuedPageIndices);
+    // Clear all existing dialog previews before regenerating
+    setDialogPreviews({});
+    setIsPreviewingDialog(true);
+    try {
+      const character = {
+        name: dialogPreview.name || '',
+        personality: dialogPreview.personality || '',
+      };
+      const locationAttributeValue = dialogPreview.outfit || '';
+      const history = [];
+      for (let i = 0; i < plot.pages.length; i++) {
+        if (!queuedSet.has(i)) continue;
+        if (!plot.pages[i].dialogPrompt?.trim()) continue;
+        const expandedPrompt = expandDialogPrompt(plot.pages[i].dialogPrompt, enabledParts);
+        const expandedPage = { ...plot.pages[i], dialogPrompt: expandedPrompt };
+        const result = await generateDialog({
+          character,
+          locationAttributeValue,
+          page: expandedPage,
+          dialogConfig,
+          history,
+        });
+        history.push({ role: 'user', content: expandedPrompt });
+        history.push({ role: 'assistant', content: result });
+        setDialogPreviews(prev => ({ ...prev, [i]: result }));
+      }
+    } catch (err) {
+      toast.error(`Bulk dialog generation failed: ${err.message}`);
+    } finally {
+      setIsPreviewingDialog(false);
+    }
+  }, [dialogConfig, dialogPreview, isPreviewingDialog, plot.pages, enabledParts, toast]);
+
+  useEffect(() => {
+    if (onBulkDialogReady) onBulkDialogReady(bulkDialogGenerate);
+    return () => { if (onBulkDialogReady) onBulkDialogReady(null); };
+  }, [bulkDialogGenerate, onBulkDialogReady]);
 
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);
