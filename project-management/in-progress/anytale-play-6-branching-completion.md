@@ -66,6 +66,12 @@ Complete the full play loop by implementing end-of-chapter branching, chapter tr
 
 - [x] **Full-screen play area with letterboxed image:** Expand the `PortraitFrame` to fill the full viewport (`width: 100vw; height: 100dvh`), dropping the `aspect-ratio` and `min()` width constraint. The background image switches from `object-fit: cover` to `object-fit: contain` so it renders at its natural 896:1152 ratio, centered, with black letterbox bars filling any excess space. UI elements (`ContentLayer`, controls, bubbles) span the full viewport and may therefore be drawn outside the image's visible region. Add `background: #000` to `PortraitFrame` to colour the letterbox zones. Remove `border-radius` on the frame since it now fills the screen edge-to-edge.
 
+#### Bug fixes round 5
+
+- [x] **Mobile media query guard for full-screen layout:** The `100vw × 100dvh` full-screen styles in `PortraitFrame` should only apply on mobile (≤768px). On desktop, revert to the `min()` width + `aspect-ratio` approach: `width: min(896px, 100vw, calc(100vh * 896 / 1152))`, `aspect-ratio: 896 / 1152`, `border-radius` from the theme, no forced black background. `BackgroundImage` uses `object-fit: cover` on desktop and `object-fit: contain` on mobile. Use a `@media (max-width: 768px)` block inside the styled template literals.
+
+- [x] **`noPadding` prop on `Page` component:** Currently, `Page` applies `padding: 20px; max-width: 1600px; margin: 0 auto` to `body` via goober's `glob`. Move those styles to a `PageWrapper` styled div rendered inside `Page`. When `noPadding=true`, the wrapper omits padding and max-width constraints. Update `public/js/anytale-play.mjs` to pass `noPadding` to `<${Page}>` so the play area fills the full viewport on mobile.
+
 #### Fixes and Changes
 
 - [x] **Separate last content page from decision page:** The last content page shows dialog/image/TTS as normal. A virtual decision page (`pageIndex === visiblePageIndices.length`) follows it; its background is the last content page's image URL (not `displayedImageUrl`), its caption is the hardcoded string `"What's your next move?"`, and its options use `plot.description || plot.name` (not name). `goToNext` allows advancing to `visiblePageIndices.length`; canGoNext gates on last content page readiness and blocks epilogue chapters from advancing past last content page (epilogue auto-transitions to end). Guard voice/image advance effect against the decision page index.

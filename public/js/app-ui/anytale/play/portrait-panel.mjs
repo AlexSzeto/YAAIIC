@@ -8,11 +8,11 @@ import { CaptionBubble } from './caption-bubble.mjs';
 import { DecisionOptions } from './decision-options.mjs';
 import { PlayProgressBar } from './play-progress-bar.mjs';
 import { PlayLoadingState } from './loading-state.mjs';
-import { HorizontalLayout, HorizontalEdgesLayout } from '../../../custom-ui/themed-base.mjs';
 
 // 896 × 1152 is the canonical play-mode render resolution.
 const PortraitFrameWrapper = styled('div')`
   width: 100%;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,10 +22,17 @@ const PortraitFrame = styled('div')`
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 100vw;
-  height: 100dvh;
-  background: #000;
+  width: min(896px, 100vw, calc(100vh * 896 / 1152));
+  aspect-ratio: 896 / 1152;
+  border-radius: ${() => currentTheme.value.spacing.medium.borderRadius};
   overflow: hidden;
+  @media (max-width: 768px) {
+    width: 100vw;
+    height: 100dvh;
+    aspect-ratio: unset;
+    background: #000;
+    border-radius: 0;
+  }
 `;
 PortraitFrame.className = 'portrait-panel';
 
@@ -34,7 +41,7 @@ const BackgroundImage = styled('img')`
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   z-index: 0;
 `;
 BackgroundImage.className = 'portrait-background';
@@ -91,9 +98,13 @@ const StartOverlay = styled('div')`
 `;
 StartOverlay.className = 'portrait-start-overlay';
 
-// Single-row bottom bar: chapter pill (flex: 1) + nav buttons.
+// Single-row bottom bar: nav buttons + chapter pill (flex: 1).
 const BottomRow = styled('div')`
   width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: ${() => currentTheme.value.spacing.small.gap};
 `;
 BottomRow.className = 'portrait-bottom-row';
 
@@ -113,6 +124,9 @@ const ChapterPill = styled('div')`
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   overflow: hidden;
+  @media (max-width: 768px) {
+    max-width: none;
+  }
 `;
 ChapterPill.className = 'chapter-pill';
 
@@ -121,6 +135,8 @@ const ChapterLabel = styled('span')`
   color: ${() => currentTheme.value.colors.text.secondary};
   white-space: nowrap;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 ChapterLabel.className = 'chapter-label';
 
@@ -315,23 +331,19 @@ export function PortraitPanel({
 
           ${mode === 'page' ? html`
             <${BottomRow}>
-              <${HorizontalEdgesLayout}>
-                <${HorizontalLayout}>
-                  ${isAutoplay ? html`
-                    <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
-                    <${PlayButton} icon="stop" onClick=${onStop} />
-                  ` : html`
-                    <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
-                    <${PlayButton} icon="play" onClick=${onPlay} disabled=${!onPlay} />
-                    <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
-                    <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
-                  `}
-                </${HorizontalLayout}>
-                <${ChapterPill}>
-                  <${ChapterLabel}>${chapter}, Page ${page}</${ChapterLabel}>
-                  <${PlayProgressBar} loadedPercent=${loadedPercent} currentPercent=${currentPercent} />
-                </${ChapterPill}>
-              </${HorizontalEdgesLayout}>
+              ${isAutoplay ? html`
+                <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                <${PlayButton} icon="stop" onClick=${onStop} />
+              ` : html`
+                <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
+                <${PlayButton} icon="play" onClick=${onPlay} disabled=${!onPlay} />
+                <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
+                <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
+              `}
+              <${ChapterPill}>
+                <${ChapterLabel}>${chapter}, Page ${page}</${ChapterLabel}>
+                <${PlayProgressBar} loadedPercent=${loadedPercent} currentPercent=${currentPercent} />
+              </${ChapterPill}>
             </${BottomRow}>
           ` : mode === 'decision' ? html`
             <${PlayButton} icon="arrow-left-stroke" onClick=${onBack} />

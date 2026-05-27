@@ -1753,7 +1753,6 @@ export function AnyTalePlayPage() {
         image: char.portraitUrl || undefined,
         onClick: () => pickCharacter(char),
       })),
-      { text: 'Maybe someone else?', onClick: rerollChars },
       {
         text: "I'm feeling lucky!",
         onClick: () => {
@@ -1774,7 +1773,6 @@ export function AnyTalePlayPage() {
         image: outfit.renderUrl || undefined,
         onClick: () => pickOutfit(outfit),
       })),
-      { text: 'Nevermind', onClick: () => updateSession({ phase: 'intro-mood' }) },
       {
         text: "I'm feeling lucky!",
         onClick: () => {

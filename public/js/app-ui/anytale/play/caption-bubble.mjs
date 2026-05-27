@@ -5,7 +5,7 @@ import { currentTheme } from '../../../custom-ui/theme.mjs';
 const CaptionBubbleSpacer = styled('div')`
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 `;
 CaptionBubbleSpacer.className = 'caption-bubble-spacer';

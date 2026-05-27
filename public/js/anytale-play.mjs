@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (root) {
     render(html`
       <${TooltipProvider}>
-        <${Page}>
+        <${Page} noPadding>
           <${ToastProvider}>
             <${ProgressProvider}>
               <${AnyTalePlayPage} />
