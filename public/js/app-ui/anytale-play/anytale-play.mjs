@@ -1374,7 +1374,19 @@ export function AnyTalePlayPage() {
         updateSession({ phase: 'end' });
         return;
       }
-      // Within-chapter advance (includes advancing to the decision page for non-epilogue)
+      // Last content page of a completed chapter: skip the phantom decision page and
+      // advance directly to the next chapter in the timeline.
+      if (sess.pageIndex === indices.length - 1) {
+        const nextTlIdx = (sess.timelineIndex ?? 0) + 1;
+        const nextEntry = (sess.timeline || [])[nextTlIdx];
+        if (nextEntry) {
+          setCurrentPlot(null);
+          setVisiblePageIndices([]);
+          updateSession({ currentPlotUid: nextEntry.plotUid, timelineIndex: nextTlIdx, pageIndex: 0 });
+          return;
+        }
+      }
+      // Within-chapter advance (includes advancing to the decision page for non-completed chapters)
       setSession(prev => {
         if (prev.pageIndex >= indices.length) return prev;
         const next = { ...prev, pageIndex: prev.pageIndex + 1 };
@@ -1383,7 +1395,7 @@ export function AnyTalePlayPage() {
       });
       return;
     }
-    // At decision page of a completed chapter: advance to the next completed chapter
+    // Fallback: already at decision page of a completed chapter (e.g. restored session).
     const nextTlIdx = (sess.timelineIndex ?? 0) + 1;
     const nextEntry = (sess.timeline || [])[nextTlIdx];
     if (!nextEntry) return;

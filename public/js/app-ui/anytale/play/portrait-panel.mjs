@@ -265,12 +265,12 @@ export function PortraitPanel({
     <${PortraitFrame} ...${rest}>
       ${shownUrl ? html`<${BackgroundImage}
         src=${shownUrl}
-        style=${{ opacity: crossfading ? 0 : 1, transition: crossfading ? `opacity ${CROSSFADE_MS}ms ease` : 'none' }}
+        style=${{ opacity: 1 }}
         alt=""
       />` : null}
       ${pendingUrl ? html`<${BackgroundImage}
         src=${pendingUrl}
-        style=${{ opacity: crossfading ? 1 : 0, transition: crossfading ? `opacity ${CROSSFADE_MS}ms ease` : 'none', zIndex: 0 }}
+        style=${{ opacity: crossfading ? 1 : 0, transition: `opacity ${CROSSFADE_MS}ms ease` }}
         onLoad=${handlePendingLoad}
         alt=""
       />` : null}

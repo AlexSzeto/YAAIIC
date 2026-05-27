@@ -4,6 +4,16 @@
 import { resolveSlotStatuses, checkPageRequirements, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 
 /**
+ * Controls how multi-slot parts are removed from the prompt based on slot status.
+ *
+ * true  (default): a part is excluded if ANY of its occupied slots has status 'removed'.
+ * false (legacy):  a part is excluded only if ALL of its occupied slots have status 'removed'.
+ *
+ * Future: this may need to be applied on a per-part basis via part config.
+ */
+const PART_REMOVED_ON_ANY_SLOT = true;
+
+/**
  * Pick up to n random unique items from arr (Fisher-Yates partial shuffle).
  * @template T
  * @param {T[]} arr
@@ -196,6 +206,13 @@ export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotSta
   const enabledParts = rawParts.filter(p => {
     const types = Array.isArray(p.config?.type) ? p.config.type : [];
     if (types.length === 0) return true;
+    // Slot-status removal check (direct, before visibility rules).
+    if (PART_REMOVED_ON_ANY_SLOT) {
+      if (types.some(t => slotStatuses.get(t.trim().toLowerCase()) === 'removed')) return false;
+    } else {
+      if (types.every(t => (slotStatuses.get(t.trim().toLowerCase()) ?? 'removed') === 'removed')) return false;
+    }
+    // Visibility-rules check (show/hide from applyRules).
     return types.some(t => visibility.get(t.trim().toLowerCase()) !== false);
   });
 
