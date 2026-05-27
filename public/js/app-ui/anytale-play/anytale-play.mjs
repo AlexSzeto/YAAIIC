@@ -8,7 +8,7 @@ import {
   clear as clearSession,
 } from '../anytale/play/play-session.mjs';
 import { PortraitPanel } from '../anytale/play/portrait-panel.mjs';
-import { assemblePrompt, expandDialogPrompt } from '../anytale/prompt-assembler.mjs';
+import { assemblePrompt, expandDialogPrompt, assemblePartPreviewPrompt } from '../anytale/prompt-assembler.mjs';
 import { fetchJson } from '../../custom-ui/util.mjs';
 import { getClientId } from '../client-id.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
@@ -148,39 +148,23 @@ export function AnyTalePlayPage() {
   // --- End screen image generation ---
 
   /**
-   * Generate the end-screen image for the 'end' section plot.
+   * Generate the end-screen image using ONLY the active background (location part).
+   * The prompt includes previewBaseline + baseline + attribute values for that part —
+   * no character, outfit, or other slot-driven parts are included.
    *
-   * @param {Object} endPlot - full end-section plot object
    * @param {Object} sess - current session snapshot
    * @param {Object} data - play data
-   * @param {Map<string,string>|null} [initialSlotStatuses] - final evolved slot state from the last
-   *   chapter (post all pages' actions). When provided, slot actions on the end plot's page 0 are
-   *   layered on top so parts are correctly disabled/revealed in the end screen image.
    */
-  const generateEndScreenImage = useCallback((endPlot, sess, data, initialSlotStatuses = null) => {
-    if (!endPlot?.pages?.length) return;
+  const generateEndScreenImage = useCallback((sess, data) => {
+    if (!sess.location?.partUid) return;
     const partsMap = new Map((data.parts || []).map(p => [p.uid, p]));
-    const outfit = (data.outfits || []).find(o => o.uid === sess.outfitUid);
-    const outfitParts = outfit ? outfit.parts : [];
-    const activeParts = buildActiveParts(sess, outfitParts, partsMap);
+    const locPart = buildPartForPrompt(sess.location.partUid, sess.location.attributeMap, partsMap);
+    if (!locPart) return;
 
-    // Run computeVisiblePages starting from the post-story slot state so that:
-    //  1. Parts disabled by earlier chapter actions remain hidden.
-    //  2. Any slot actions on the end plot's page 0 are applied before prompt assembly.
-    const { pageSlotStatuses: endSlotStatuses } = computeVisiblePages(
-      activeParts, endPlot, data.config.slotRules || '', initialSlotStatuses
-    );
+    // Background-only prompt: previewBaseline + baseline + attribute values
+    const prompt = assemblePartPreviewPrompt(locPart);
+    if (!prompt) return;
 
-    // Page 0 slot statuses (post page-0 actions) used for part filtering and prompt assembly
-    const pageSlotStatus = endSlotStatuses[0];
-    if (!pageSlotStatus) return;
-
-    const { enabledParts, visibility } = buildEnabledPartsForPage(
-      sess, outfitParts, partsMap, pageSlotStatus, data.config.slotRules || ''
-    );
-
-    const endPage = endPlot.pages[0];
-    const prompt = assemblePrompt(enabledParts, endPage, visibility);
     const workflow = data.config.generationWorkflow || 'Text to Image (Illustrious Characters)';
 
     fetchJson('/anytale/play/generate-page', {
@@ -655,6 +639,14 @@ export function AnyTalePlayPage() {
     if (!playData) return;
     if (currentPlot?.uid === session.currentPlotUid) return;
 
+    // On reload (displayedImageUrl is '') seed it with the intro image so the
+    // background isn't blank while the first chapter page is generating.
+    setDisplayedImageUrl(prev =>
+      (prev === '' || prev === 'media/anytale-background.png')
+        ? (session.introImageUrl || 'media/anytale-background.png')
+        : prev
+    );
+
     // Read slotStateAtEntry from the current timeline entry for cross-chapter continuity
     const timelineEntry = (session.timeline || [])[session.timelineIndex ?? 0];
     const storedSlotState = timelineEntry?.slotStateAtEntry;
@@ -671,70 +663,18 @@ export function AnyTalePlayPage() {
       });
   }, [session.phase, session.currentPlotUid, playData, currentPlot?.uid, initChapter, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-generate end screen image when entering 'end' phase
+  // Auto-generate end screen image when entering 'end' phase.
+  // Uses background-only prompt — no end plot fetch required.
   useEffect(() => {
     if (session.phase !== 'end') return;
     if (session.endImageUrl) return; // already have it
     if (!playData) return;
-
-    const endPlot = (playData.plots || []).find(
-      p => (p.section || '').toLowerCase() === 'end'
-    );
-    if (!endPlot) return;
-
-    // Derive the final evolved slot state from the last chapter (epilogue).
-    // pageSlotStatusesRef holds per-plot-page slot Maps set by initChapter.
-    // The entry at the last actual page index is post-all-pages-actions — that is
-    // the correct starting state for the end plot's page 0 slot evaluation.
-    let finalSlotStatuses = null;
-    const lastPlot = currentPlotRef.current;
-    const slotStatusMaps = pageSlotStatusesRef.current;
-    if (lastPlot?.pages?.length > 0 && slotStatusMaps?.length > 0) {
-      const lastPageIdx = lastPlot.pages.length - 1;
-      finalSlotStatuses = slotStatusMaps[lastPageIdx] ?? null;
-    }
-
-    fetchJson(`/anytale/plot/${endPlot.uid}`)
-      .then(fullEndPlot => generateEndScreenImage(fullEndPlot, session, playData, finalSlotStatuses))
-      .catch(err => console.error('[AnyTalePlayPage] Failed to load end plot:', err));
+    generateEndScreenImage(session, playData);
   }, [session.phase, session.endImageUrl, playData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-transition to 'end' phase when at the last page of an epilogue chapter
-  useEffect(() => {
-    if (session.phase !== 'plot' || !currentPlot) return;
-    const isEpilogue = (currentPlot.section || '').toLowerCase() === 'epilogue';
-    if (!isEpilogue) return;
-
-    const isAtLastPage =
-      visiblePageIndices.length > 0 &&
-      session.pageIndex === visiblePageIndices.length - 1;
-    if (!isAtLastPage) return;
-
-    const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
-    if (currentPlotPageIdx == null) return;
-
-    const voiceApplicable = !session.muted && !!session.character.voiceSampleUrl;
-    const isVoiceSettled = (() => {
-      const vs = pageVoiceStatuses[currentPlotPageIdx];
-      if (vs === 'complete' || vs === 'skipped' || vs === 'error') return true;
-      if (pageDialogTexts[currentPlotPageIdx] === null) return true;
-      return false;
-    })();
-    const currentPageReady =
-      pageStatuses[currentPlotPageIdx] === 'complete' &&
-      (!voiceApplicable || isVoiceSettled);
-
-    if (!currentPageReady) return;
-
-    const timer = setTimeout(() => {
-      updateSession({ phase: 'end' });
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps
-    session.phase, session.pageIndex, session.muted, session.character.voiceSampleUrl,
-    currentPlot, visiblePageIndices, pageStatuses, pageVoiceStatuses, pageDialogTexts,
-    updateSession,
-  ]);
+  // (Epilogue end-transition is handled by goToNext and the autoplay effect —
+  //  both detect currentPlot.section === 'epilogue' and call updateSession({ phase: 'end' })
+  //  when the user or autoplay advances past the last content page.)
 
   // --- SSE subscriptions ---
 
@@ -1135,6 +1075,11 @@ export function AnyTalePlayPage() {
     const doAdvance = () => {
       const sess = sessionRef.current;
       if (isAdvancingToDecisionPage) {
+        // Epilogue: go to end phase instead of a decision page
+        if (currentPlot && (currentPlot.section || '').toLowerCase() === 'epilogue') {
+          updateSession({ phase: 'end' });
+          return;
+        }
         const nextTlIdx = (sess.timelineIndex ?? 0) + 1;
         const nextTlEntry = (sess.timeline || [])[nextTlIdx];
         if (nextTlEntry) {
@@ -1302,6 +1247,9 @@ export function AnyTalePlayPage() {
   // "Begin the tale" — enter the chapter
   const beginTale = useCallback(() => {
     if (!playData || !session.preludePlotUid) return;
+    // Seed displayedImageUrl with the intro image so the PortraitPanel crossfade
+    // transitions from the intro scene into the first chapter rather than from blank.
+    if (session.introImageUrl) setDisplayedImageUrl(session.introImageUrl);
     // Initialise timeline with the first chapter; pageCount and slotStateAtEntry are filled in by initChapter.
     updateSession({
       phase: 'plot',
@@ -1310,7 +1258,7 @@ export function AnyTalePlayPage() {
       timelineIndex: 0,
       timeline: [{ plotUid: session.preludePlotUid, pageCount: 0, slotStateAtEntry: {} }],
     });
-  }, [playData, session.preludePlotUid, updateSession]);
+  }, [playData, session.preludePlotUid, session.introImageUrl, updateSession]);
 
   const enterOutfitPick = useCallback(() => {
     if (!playData) return;
@@ -1416,8 +1364,17 @@ export function AnyTalePlayPage() {
   const goToNext = useCallback(() => {
     const indices = visiblePageIndicesRef.current;
     const sess = sessionRef.current;
+    const plot = currentPlotRef.current;
     if (sess.pageIndex < indices.length) {
-      // Within-chapter advance (includes advancing to the decision page)
+      // Epilogue last content page: transition to end phase instead of showing a decision page.
+      const isEpilogueLast =
+        plot && (plot.section || '').toLowerCase() === 'epilogue' &&
+        sess.pageIndex === indices.length - 1;
+      if (isEpilogueLast) {
+        updateSession({ phase: 'end' });
+        return;
+      }
+      // Within-chapter advance (includes advancing to the decision page for non-epilogue)
       setSession(prev => {
         if (prev.pageIndex >= indices.length) return prev;
         const next = { ...prev, pageIndex: prev.pageIndex + 1 };
@@ -1553,7 +1510,7 @@ export function AnyTalePlayPage() {
     return html`
       <${PortraitPanel}
         mode="start"
-        backgroundUrl=${session.introImageUrl || 'media/anytale-background.png'}
+        backgroundUrl=${'media/anytale-background.png'}
         onStart=${handleStart}
       />
     `;
@@ -1680,11 +1637,14 @@ export function AnyTalePlayPage() {
 
     // Navigation
     const canGoPrev = session.pageIndex > 0 || (session.timelineIndex ?? 0) > 0;
-    // Forward: allow to decision page (from last content page, when ready and not epilogue),
-    // or through a completed chapter's locked decision page to the next chapter.
-    const canGoNext = isChapterCompleted
-      ? isAtDecisionPage               // locked decision page → next chapter
-      : !isAtDecisionPage && (!isAtLastContentPage || (currentPageReady && !isEpilogue));
+    // Forward navigation rules:
+    //   - Non-completed chapter: advance through content pages and to the decision page (when ready).
+    //     Epilogue last page advances to 'end' instead of a decision page.
+    //   - Completed chapter: same content-page rules PLUS the locked decision page can advance to
+    //     the next chapter. (Previously `canGoNext` was only true at the decision page for completed
+    //     chapters, leaving all content pages stuck — navigable only via autoplay.)
+    const contentPageCanAdvance = !isAtDecisionPage && (!isAtLastContentPage || currentPageReady);
+    const canGoNext = (isChapterCompleted && isAtDecisionPage) || contentPageCanAdvance;
 
     // Back button: only at the open (not locked) decision page (returns to last content page)
     const onBack = (isAtDecisionPage && !isChapterCompleted) ? goToPrev : undefined;

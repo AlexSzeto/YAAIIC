@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../../custom-ui/theme.mjs';
 import { PlayButton } from './glass-button.mjs';
@@ -146,6 +146,18 @@ const CROSSFADE_MS = 600;
 /**
  * PortraitPanel - Full play mode layout with background image and glass overlay controls.
  *
+ * Crossfade contract:
+ *   - shownUrl   : the currently visible (fully-opaque) background image.
+ *   - pendingUrl : a new image loading in the background at opacity 0.
+ *   - crossfading: true while the CSS opacity transition is running.
+ *   - crossfadeTimerRef: holds the active setTimeout id; non-null iff a fade is running.
+ *
+ * When a third (or later) URL arrives while a crossfade between images 1→2 is still
+ * running, the old timer is cancelled, image 2 is committed instantly as shownUrl, and
+ * a fresh crossfade to image 3 starts when image 3 finishes loading.  This prevents the
+ * bug where the old timer fires and restores image 2 (overwriting image 3) and leaves
+ * the fade machinery in a broken state.
+ *
  * Maintains a fixed 896:1152 aspect ratio with no border.
  * Background image transitions use a crossfade: the old image stays visible until
  * the new one finishes loading, then both images' opacities animate simultaneously.
@@ -200,10 +212,15 @@ export function PortraitPanel({
   const [uiVisible, setUiVisible] = useState(true);
   const toggleUI = () => setUiVisible(v => !v);
 
-  // Crossfade state: shownUrl is the currently visible image, pendingUrl is loading in the background.
+  // Crossfade state
   const [shownUrl, setShownUrl] = useState(backgroundUrl || null);
   const [pendingUrl, setPendingUrl] = useState(null);
   const [crossfading, setCrossfading] = useState(false);
+
+  // Stable refs used by effects and callbacks to avoid stale-closure issues.
+  const crossfadeTimerRef = useRef(null);
+  const pendingUrlRef = useRef(null);
+  useEffect(() => { pendingUrlRef.current = pendingUrl; }, [pendingUrl]);
 
   useEffect(() => {
     if (!backgroundUrl || backgroundUrl === shownUrl) return;
@@ -212,19 +229,35 @@ export function PortraitPanel({
       setShownUrl(backgroundUrl);
       return;
     }
+    // If a crossfade timer is running, a transition from A→B is in progress and a
+    // third URL (C) has now arrived.  Abort the A→B fade: cancel the timer and
+    // immediately commit B as the new shown image, then begin loading C.
+    if (crossfadeTimerRef.current !== null) {
+      clearTimeout(crossfadeTimerRef.current);
+      crossfadeTimerRef.current = null;
+      const old = pendingUrlRef.current;
+      if (old) setShownUrl(old);
+      setCrossfading(false);
+    }
     // Queue the incoming image; crossfade starts when it finishes loading (onLoad).
     setPendingUrl(backgroundUrl);
-    setCrossfading(false);
   }, [backgroundUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePendingLoad = useCallback(() => {
     if (!pendingUrl) return;
     setCrossfading(true);
-    setTimeout(() => {
-      setShownUrl(pendingUrl);
-      setPendingUrl(null);
+    // Store the timer id so an arriving third URL can cancel it.
+    const id = setTimeout(() => {
+      crossfadeTimerRef.current = null;
+      // Read the latest pendingUrl via ref — avoids using a stale closure value.
+      const url = pendingUrlRef.current;
+      if (url) {
+        setShownUrl(url);
+        setPendingUrl(null);
+      }
       setCrossfading(false);
     }, CROSSFADE_MS);
+    crossfadeTimerRef.current = id;
   }, [pendingUrl]);
 
   return html`
@@ -289,7 +322,7 @@ export function PortraitPanel({
                     <${PlayButton} icon="stop" onClick=${onStop} />
                   ` : html`
                     <${PlayButton} icon="eye-slash" onClick=${toggleUI} />
-                    ${onPlay ? html`<${PlayButton} icon="play" onClick=${onPlay} />` : null}
+                    <${PlayButton} icon="play" onClick=${onPlay} disabled=${!onPlay} />
                     <${PlayButton} icon="skip-previous" onClick=${onPrev} disabled=${!onPrev} />
                     <${PlayButton} icon="skip-next" onClick=${onNext} disabled=${!onNext} />
                   `}
