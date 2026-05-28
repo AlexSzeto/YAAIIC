@@ -5,14 +5,14 @@ import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
-import { 
-  BaseOverlay, 
-  BaseContainer, 
-  BaseHeader, 
-  BaseTitle, 
-  BaseContent, 
+import {
+  OverlayDismiss,
+  BaseContainer,
+  BaseHeader,
+  BaseTitle,
+  BaseContent,
   BaseFooter,
-  CloseButton 
+  CloseButton
 } from './modal-base.mjs';
 
 /**
@@ -83,13 +83,6 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
-    // Check if click was directly on the overlay element (not bubbled from children)
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   // Size-based max widths
   const getSizeMaxWidth = () => {
     // Use exact width if provided
@@ -114,9 +107,9 @@ export function Modal({
   };
 
   const modalContent = html`
-    <${BaseOverlay}
+    <${OverlayDismiss}
       bgColor=${theme.colors.overlay.background}
-      onClick=${handleOverlayClick}
+      onClose=${onClose}
       ref=${overlayRef}
     >
       <${BaseContainer}
@@ -175,7 +168,7 @@ export function Modal({
           </${BaseFooter}>
         `}
       </${BaseContainer}>
-    </${BaseOverlay}>
+    </${OverlayDismiss}>
   `;
 
   return createPortal(modalContent, document.body);
@@ -261,13 +254,6 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
   const ImperativeImageModal = () => {
     const theme = currentTheme.value;
 
-    const handleOverlayClick = (e) => {
-      // Check if click was directly on the overlay element (not bubbled from children)
-      if (e.target === e.currentTarget) {
-        close();
-      }
-    };
-    
     // Handle Escape
     useEffect(() => {
         const handleEscape = (e) => { if (e.key === 'Escape') close(); };
@@ -276,9 +262,9 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
     }, []);
 
     return html`
-      <${BaseOverlay}
+      <${OverlayDismiss}
         bgColor=${theme.colors.overlay.backgroundStrong}
-        onClick=${handleOverlayClick}
+        onClose=${close}
       >
         <${BaseContainer}
           bgColor=${theme.colors.background.secondary}
@@ -320,7 +306,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
             `}
           </${ImageModalWrapper}>
         </${BaseContainer}>
-      </${BaseOverlay}>
+      </${OverlayDismiss}>
     `;
   };
 

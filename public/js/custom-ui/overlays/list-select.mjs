@@ -9,7 +9,7 @@ import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Icon } from '../layout/icon.mjs';
-import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle } from './modal-base.mjs';
+import { OverlayDismiss, BaseContainer, BaseHeader, BaseTitle } from './modal-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -249,13 +249,6 @@ class ListSelectModal extends Component {
     }
   }
 
-  handleOverlayClick = (e) => {
-    // Check if click was directly on the overlay element (not bubbled from children)
-    if (e.target === e.currentTarget) {
-      this.handleClose();
-    }
-  }
-
   handleClose = () => {
     if (this.props.onClose) {
       this.props.onClose();
@@ -298,9 +291,9 @@ class ListSelectModal extends Component {
     const emptyMessage = this.props.emptyMessage || 'No items available';
 
     return html`
-      <${BaseOverlay}
+      <${OverlayDismiss}
         bgColor=${theme.colors.overlay.background}
-        onClick=${this.handleOverlayClick}
+        onClose=${this.handleClose}
       >
         <${BaseContainer}
           bgColor=${theme.colors.background.card}
@@ -374,7 +367,7 @@ class ListSelectModal extends Component {
             </${Footer}>
           </${ModalWrapper}>
         </${BaseContainer}>
-      </${BaseOverlay}>
+      </${OverlayDismiss}>
     `;
   }
 }

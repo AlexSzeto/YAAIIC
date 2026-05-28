@@ -35,7 +35,7 @@ import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Checkbox } from '../io/checkbox.mjs';
-import { BaseOverlay, BaseContainer, BaseHeader, BaseTitle, BaseFooter } from './modal-base.mjs';
+import { OverlayDismiss, BaseContainer, BaseHeader, BaseTitle, BaseFooter } from './modal-base.mjs';
 import { Icon } from '../layout/icon.mjs';
 import { H2, HorizontalLayout } from '../themed-base.mjs';
 
@@ -279,9 +279,6 @@ export function SearchSelectModal({
     .slice(0, displayLimit);
 
   // ── Handlers ────────────────────────────────────────────────────────────
-  const handleOverlayClick = useCallback((e) => {
-    if (e.target === e.currentTarget) onClose?.();
-  }, [onClose]);
 
   const handleSingleSelect = useCallback((value) => {
     onSelect?.(value);
@@ -303,9 +300,9 @@ export function SearchSelectModal({
   const isEmpty = filtered.length === 0;
 
   const modalContent = html`
-    <${BaseOverlay}
+    <${OverlayDismiss}
       bgColor=${theme.colors.overlay.background}
-      onClick=${handleOverlayClick}
+      onClose=${onClose}
     >
       <${BaseContainer}
         bgColor=${theme.colors.background.card}
@@ -423,7 +420,7 @@ export function SearchSelectModal({
           </${BaseFooter}>
         </${ModalWrapper}>
       </${BaseContainer}>
-    </${BaseOverlay}>
+    </${OverlayDismiss}>
   `;
 
   return createPortal(modalContent, document.body);

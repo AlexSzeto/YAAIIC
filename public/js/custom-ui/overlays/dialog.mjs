@@ -5,13 +5,13 @@ import { createPortal } from 'preact/compat'
 import { currentTheme } from '../theme.mjs'
 import { Button } from '../io/button.mjs'
 import { Input } from '../io/input.mjs'
-import { 
-  BaseOverlay, 
-  BaseContainer, 
+import {
+  OverlayDismiss,
+  BaseContainer,
   BaseHeader,
-  BaseTitle, 
-  BaseContent, 
-  BaseFooter 
+  BaseTitle,
+  BaseContent,
+  BaseFooter
 } from './modal-base.mjs'
 
 
@@ -42,12 +42,6 @@ class Dialog extends Component {
     } else if (e.key === 'Enter' && this.props.options && this.props.options.length > 0) {
       // Enter key selects the first option if options are available
       this.handleOptionClick(this.props.options[0]);
-    }
-  }
-
-  handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      this.handleClose();
     }
   }
 
@@ -109,9 +103,9 @@ class Dialog extends Component {
 
     return createPortal(
       html`
-        <${BaseOverlay}
+        <${OverlayDismiss}
           bgColor=${theme.colors.overlay.background}
-          onClick=${this.handleOverlayClick}
+          onClose=${this.handleClose}
           class="dialog-overlay"
         >
           <${BaseContainer}
@@ -147,7 +141,7 @@ class Dialog extends Component {
               ${this.renderButtons()}
             </${BaseFooter}>
           </${BaseContainer}>
-        </${BaseOverlay}>
+        </${OverlayDismiss}>
       `,
       document.body
     );
@@ -195,12 +189,6 @@ class TextPromptDialog extends Component {
     }
   }
 
-  handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      this.handleCancel();
-    }
-  }
-
   handleInputChange = (e) => {
     this.setState({ inputValue: e.target.value });
   }
@@ -224,9 +212,9 @@ class TextPromptDialog extends Component {
 
     return createPortal(
       html`
-        <${BaseOverlay}
+        <${OverlayDismiss}
           bgColor=${theme.colors.overlay.background}
-          onClick=${this.handleOverlayClick}
+          onClose=${this.handleCancel}
         >
           <${BaseContainer}
             bgColor=${theme.colors.background.card}
@@ -284,7 +272,7 @@ class TextPromptDialog extends Component {
               </${Button}>
             </${BaseFooter}>
           </${BaseContainer}>
-        </${BaseOverlay}>
+        </${OverlayDismiss}>
       `,
       document.body
     );
