@@ -54,6 +54,18 @@ export function HamburgerMenu() {
       active: currentPath === '/brew-editor.html',
     },
     {
+      label: 'AnyTale',
+      href:  '/anytale.html',
+      icon:  'book',
+      active: currentPath === '/anytale.html',
+    },
+    {
+      label: 'AnyTale Editor',
+      href:  '/anytale-editor.html',
+      icon:  'edit',
+      active: currentPath === '/anytale-editor.html',
+    },
+    {
       label: 'Change Theme',
       // icon reflects the theme that WILL be applied after clicking
       icon:  themeName === 'dark' ? 'sun' : 'moon',
@@ -74,7 +86,7 @@ export function HamburgerMenu() {
         variant="large-icon"
         icon=${open ? 'x' : 'menu'}
         onClick=${() => setOpen(o => !o)}
-        title="Navigation menu"
+        tooltip="Navigation menu"
         aria-label="Navigation menu"
         aria-expanded=${open}
         aria-haspopup="true"

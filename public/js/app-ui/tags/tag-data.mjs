@@ -138,6 +138,15 @@ export function getAllTagNames() {
 }
 
 /**
+ * Check if a tag exists in definitions. Case-insensitive and treats spaces/underscores as equivalent.
+ */
+export function tagDefinitionExists(tagName) {
+  if (!tagName) return false;
+  const normalized = tagName.trim().toLowerCase().replace(/\s+/g, '_');
+  return Object.keys(definitions).some(def => def.toLowerCase() === normalized);
+}
+
+/**
  * Get merged and normalized tag and category names for autocomplete
  * 
  * Merges tags from definitions and categories from categoryTree, applying transformations:
@@ -162,9 +171,9 @@ export function getMergedAutocompleteData() {
     let displayName = tagName.replace(/^tag_group:/, '').replace(/_/g, ' ');
     
     // Check if it's a subcategory (contains '/')
-    if (displayName.includes('/')) {
+    if (displayName.includes('/') && displayName.indexOf('/') !== displayName.length - 1) {
       // Convert slashes to colons: "about us/user contributions" -> "category: user contributions"
-      displayName = 'category: ' + displayName.substring(displayName.indexOf('/') + 1);
+      displayName = 'category: ' + displayName.replace('/', ' - ');
     } else if (tagName.startsWith('tag_group:')) {
       // Tag group (not a subcategory): prepend "category: "
       displayName = 'category: ' + displayName;

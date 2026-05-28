@@ -120,10 +120,13 @@ FooterSection.className = 'tag-selector-panel-footer-section';
  * 
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether the modal is open
- * @param {Function} props.onSelect - Callback when a tag is selected: (tagName) => void
+ * @param {Function} props.onSelect - Callback when a tag is selected: (tagName, internalName) => void
  * @param {Function} props.onClose - Callback when modal should close: () => void
  * @param {string} [props.initialSearchTerm] - Optional initial search term to navigate to when opening
- * @param {Function} [props.onReplace] - Optional callback when a tag replaces the initial search term: (tagName) => void
+ * @param {Function} [props.onReplace] - Optional callback when a tag replaces the initial search term: (tagName, internalName) => void
+ * @param {boolean} [props.showInsert=true] - Whether to show the Insert button
+ * @param {boolean} [props.showReplace=true] - Whether to show the Replace button
+ * @param {boolean} [props.replaceRequiresDefinition=true] - When false, Replace is enabled for any node (not just leaf tags with definitions)
  * @returns {preact.VNode}
  * 
  * @example
@@ -539,30 +542,28 @@ export class TagSelectorPanel extends Component {
     const searchTermWithSpaces = initialSearchTerm.replace(/_/g, ' ').trim();
     const searchTermWithUnderscores = initialSearchTerm.replace(/\s+/g, '_').trim();
     
-    // Check if the term has a definition (getTagDefinition handles both spaces and underscores)
-    const definition = getTagDefinition(searchTermWithSpaces) || getTagDefinition(searchTermWithUnderscores);
+    const autocompleteData = getMergedAutocompleteData();
 
-    if (definition) {
-      // Navigate to the tag
-      // First, look up the tag in autocomplete data to get the internal name
-      const autocompleteData = getMergedAutocompleteData();
-      
-      // Try to find matching item - autocomplete display names use spaces
-      let matchingItem = autocompleteData.find(item => 
+    // Attempt 1: match internal name exactly as a top-level tag group (category: dress)
+    let matchingItem = autocompleteData.find(item =>
+      item.internal.toLowerCase() === `tag_group:${searchTermWithUnderscores.toLowerCase()}`
+    );
+
+    // Attempt 2: raw match against display or internal name
+    if (!matchingItem) {
+      matchingItem = autocompleteData.find(item =>
         item.display.toLowerCase() === searchTermWithSpaces.toLowerCase()
       );
-      
-      // If not found with spaces, try with underscores in the internal name
-      if (!matchingItem) {
-        matchingItem = autocompleteData.find(item => 
-          item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
-        );
-      }
-      
-      if (matchingItem) {
-        // Navigate and set the search value in one call
-        this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
-      }
+    }
+
+    if (!matchingItem) {
+      matchingItem = autocompleteData.find(item =>
+        item.internal.toLowerCase() === searchTermWithUnderscores.toLowerCase()
+      );
+    }
+
+    if (matchingItem) {
+      this.navigateToTag(matchingItem.internal, matchingItem.isCategory, matchingItem.display);
     }
     
     // Mark as processed
@@ -656,7 +657,7 @@ export class TagSelectorPanel extends Component {
     const { onSelect } = this.props;
     
     if (onSelect) {
-      onSelect(this.getCurrentTagName());
+      onSelect(this.getCurrentTagName(), this.state.currentNode);
     }
     
     // Don't close the modal - user can continue selecting tags
@@ -669,7 +670,7 @@ export class TagSelectorPanel extends Component {
     const { onReplace, onClose } = this.props;
     
     if (onReplace) {
-      onReplace(this.getCurrentTagName());
+      onReplace(this.getCurrentTagName(), this.state.currentNode);
     }
     
     if (onClose) {
@@ -845,9 +846,12 @@ export class TagSelectorPanel extends Component {
 
   renderFooter() {
     const { theme, currentNode } = this.state;
-    const { initialSearchTerm } = this.props;
+    const { initialSearchTerm, showInsert = true, showReplace = true, replaceRequiresDefinition = true } = this.props;
     const currentDefinition = getTagDefinition(currentNode);
     const hasInitialTerm = !!(initialSearchTerm && initialSearchTerm.trim());
+    const replaceDisabled = replaceRequiresDefinition
+      ? (!currentDefinition || !hasInitialTerm)
+      : currentNode === 'tag_groups';
     
     return html`
       <${FooterSection}
@@ -855,22 +859,26 @@ export class TagSelectorPanel extends Component {
         paddingTop=${theme.spacing.small.padding}
         borderColor=${theme.colors.border.subtle}
       >
-        <${Button}
-          variant="medium-text"
-          color="primary"
-          disabled=${!currentDefinition}
-          onClick=${this.handleInsert}
-        >
-          Insert
-        </${Button}>
-        <${Button}
-          variant="medium-text"
-          color="primary"
-          disabled=${!currentDefinition || !hasInitialTerm}
-          onClick=${this.handleReplace}
-        >
-          Replace
-        </${Button}>
+        ${showInsert && html`
+          <${Button}
+            variant="medium-text"
+            color="primary"
+            disabled=${!currentDefinition}
+            onClick=${this.handleInsert}
+          >
+            Insert
+          </${Button}>
+        `}
+        ${showReplace && html`
+          <${Button}
+            variant="medium-text"
+            color="primary"
+            disabled=${replaceDisabled}
+            onClick=${this.handleReplace}
+          >
+            Replace
+          </${Button}>
+        `}
       </${FooterSection}>
     `;
   }

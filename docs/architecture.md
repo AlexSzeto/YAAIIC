@@ -12,7 +12,7 @@ This document describes the overall architecture and design patterns used in YAA
 - [Configuration](#configuration)
 - [Directory Structure](#directory-structure)
 - [Data Persistence](#data-persistence)
-- [Migration Scripts](#migration-scripts)
+- [Data Versioning](#data-versioning)
 
 ## Overview
 
@@ -75,6 +75,8 @@ Pages are independent HTML files (not a SPA router):
 | Main App | `/` | Generation, gallery, media management |
 | Workflow Editor | `/workflow-editor.html` | Configure ComfyUI workflows |
 | Brew Editor | `/brew-editor.html` | Create ambient sound mixes |
+| AnyTale | `/anytale.html` | Play mode for AnyTale stories |
+| AnyTale Editor | `/anytale-editor.html` | Character creation and scene generation |
 | Inpaint | `/inpaint.html` | Draw masks for image inpainting |
 | Loading | `/loading.html` | Service readiness checkpoint |
 
@@ -94,20 +96,25 @@ server/
 ├── core/                   # Shared infrastructure
 │   ├── config.mjs          # Configuration loader
 │   ├── database.mjs        # Media data repository
+│   ├── data-versions.mjs   # Domain registry: tracked files and expected versions
+│   ├── migrator.mjs        # Startup migration runner
 │   ├── paths.mjs           # Centralized path constants
 │   ├── sse.mjs             # Server-Sent Events manager
 │   ├── service-manager.mjs # ComfyUI/Ollama health & launch
 │   ├── llm.mjs             # Ollama API wrapper
 │   └── index.mjs           # Barrel exports
 └── features/               # Feature domains
-    ├── media/              # Gallery & tag management
-    ├── generation/         # ComfyUI orchestration
-    ├── upload/             # File upload processing
-    ├── export/             # Media export to external targets
-    ├── workflows/          # Workflow CRUD & auto-detection
+    ├── anytale/            # Character, parts, plot, outfit data
     ├── brew/               # Brew recipe management
+    ├── chat/               # LLM chat endpoint
+    ├── export/             # Media export to external targets
+    ├── generation/         # ComfyUI orchestration
+    ├── llm/                # LLM model listing
+    ├── media/              # Gallery & tag management
+    ├── queue/              # Generation task queue
     ├── sound-sources/      # Audio source library
-    └── llm/                # LLM model listing
+    ├── upload/             # File upload processing
+    └── workflows/          # Workflow CRUD & auto-detection
 ```
 
 ### Domain Module Pattern
@@ -137,8 +144,11 @@ app.use(generationRouter);
 app.use(exportRouter);
 app.use(workflowsRouter);
 app.use(llmRouter);
+app.use(chatRouter);
 app.use(brewRouter);
 app.use(soundSourcesRouter);
+app.use(anytaleRouter);
+app.use(queueRouter);
 ```
 
 ### Middleware
@@ -254,10 +264,12 @@ All data is stored as JSON files in `server/database/`:
 | File | Contents |
 |------|----------|
 | `media-data.json` | Generated media history (images, videos, audio) with metadata, tags, folders |
+| `anytale-data.json` | AnyTale characters, parts library, plots, and outfits |
 | `brew-data.json` | Saved ambient brew recipes |
 | `sound-sources.json` | Global sound source definitions |
 
-Workflow configurations are stored separately in `server/resource/workflows/comfyui-workflows.json`.
+Workflow configurations are stored separately in `server/resource/comfyui-workflows.json`.
+Individual ComfyUI workflow JSON files live in `server/resource/workflows/`.
 
 ### Media Data Schema
 
@@ -269,7 +281,7 @@ Each media entry contains:
   "name": "Unnamed",
   "description": "AI-generated prose description...",
   "summary": "Objective visual inventory...",
-  "tags": ["portrait", "anime", "female"],
+  "tags": "portrait, anime, female",
   "prompt": "user prompt text...",
   "imageUrl": "/media/image_1.png",
   "audioUrl": "/media/audio_1.mp3",
@@ -279,20 +291,63 @@ Each media entry contains:
   "inpaint": false,
   "inpaintArea": null,
   "folder": "folder-123",
-  "timeTaken": 45000,
+  "timeTaken": 45,
   "timestamp": "2025-12-28T00:00:00.000Z"
 }
 ```
 
 ---
 
-## Migration Scripts
+## Data Versioning
 
-Located in `scripts/migrate/`, these handle legacy data format upgrades:
+Each managed data file carries a top-level `"version"` field. On startup, `migrateAll()` in `server/core/migrator.mjs` inspects every registered domain, runs any needed migration scripts, and refuses to start if a migration chain cannot be completed or if the data is newer than the server expects.
 
-| Script | Purpose |
-|--------|---------|
-| `1-add-workflow-types-to-db.mjs` | Migrates `imageData` → `mediaData` naming, adds `type` field |
-| `2-backfill-media-types.mjs` | Backfills missing `type` fields based on file extensions |
+### Domain Registry
 
-Run manually with `node scripts/migrate/<script>.mjs` when upgrading from older versions.
+Tracked domains are defined in `server/core/data-versions.mjs`. A missing `"version"` field in a data file is treated as version `0`.
+
+| Domain | File | Current Version |
+|--------|------|-----------------|
+| `config` | `server/config.json` | 0 |
+| `anytale-data` | `server/database/anytale-data.json` | 0 |
+| `media-data` | `server/database/media-data.json` | 0 |
+| `brew-data` | `server/database/brew-data.json` | 0 |
+| `sound-sources` | `server/database/sound-sources.json` | 0 |
+
+`queue-data` is excluded — it is transient and not schema-versioned.
+
+### Startup Behavior
+
+1. Read each domain file; treat a missing `"version"` field as version `0`.
+2. **Versions match** → no-op.
+3. **Data version > expected** → server refuses to start; user is asked to update the server.
+4. **Data version < expected** → write a timestamped backup to `scripts/migrate/backups/`, then run the migration chain. If the chain fails or has a gap, restore the backup and refuse to start.
+
+### Migration Script Interface
+
+Scripts live at `scripts/migrate/<domain>/<N>-to-<M>.mjs`:
+
+```js
+export const fromVersion = 0;
+export const toVersion = 1;
+
+export function migrate(data) {
+  // transform data from fromVersion shape to toVersion shape
+  return data;
+}
+```
+
+The migrator writes the `"version"` field after each step — scripts do not set it themselves.
+
+### Adding a Migration
+
+1. Create `scripts/migrate/<domain>/<N>-to-<M>.mjs` following the interface above.
+2. Bump `currentVersion` for that domain in `server/core/data-versions.mjs`.
+
+### Backup Naming
+
+```
+scripts/migrate/backups/<domain>-v<version>-<timestamp>.json
+```
+
+Example: `anytale-data-v0-20260521T143200.json`

@@ -1,16 +1,18 @@
 /**
  * modal-base.mjs - Shared styled components for Modal and Dialog
- * 
+ *
  * This module provides baseline styled components used by both Modal and Dialog
  * to ensure consistent styling and behavior.
  */
 
+import { html } from 'htm/preact';
+import { useRef } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { H2 } from '../themed-base.mjs';
 
 /**
- * BaseOverlay - Fixed overlay that covers the entire viewport
- * Used as the backdrop for modals and dialogs
+ * BaseOverlay - Fixed overlay that covers the entire viewport.
+ * Used as the backdrop for modals and dialogs.
  */
 export const BaseOverlay = styled('div')`
   position: fixed;
@@ -24,6 +26,40 @@ export const BaseOverlay = styled('div')`
   align-items: center;
   justify-content: center;
 `;
+
+/**
+ * OverlayDismiss - Drop-in replacement for BaseOverlay that guards against
+ * accidental dismissal caused by drag gestures starting inside the modal.
+ *
+ * The overlay closes only when BOTH the mousedown and the click (mouseup)
+ * occurred directly on the overlay backdrop — not when a drag started inside
+ * the modal content and the pointer was released over the backdrop.
+ *
+ * Usage: replace `<BaseOverlay onClick=${handleClose}>` with
+ *        `<OverlayDismiss onClose=${handleClose}>`.  All other props are
+ *        forwarded to the underlying BaseOverlay styled element.
+ *
+ * @param {Object}   props
+ * @param {Function} props.onClose  - Called when the user clicks on the backdrop
+ * @param {*}        props.children
+ */
+export function OverlayDismiss({ onClose, children, ...rest }) {
+  // Track whether the most-recent mousedown landed directly on the backdrop
+  // (not on a child element).  Only dismiss if both press and release are on it.
+  const pressedOnBackdrop = useRef(false);
+
+  return html`
+    <${BaseOverlay}
+      ...${rest}
+      onMouseDown=${(e) => { pressedOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick=${(e) => {
+        if (e.target === e.currentTarget && pressedOnBackdrop.current) onClose?.();
+      }}
+    >
+      ${children}
+    </${BaseOverlay}>
+  `;
+}
 
 /**
  * BaseContainer - Styled container box for modal/dialog content

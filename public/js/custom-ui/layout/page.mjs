@@ -1,6 +1,6 @@
 import { html } from 'htm/preact';
 import { Component } from 'preact';
-import { glob } from '../goober-setup.mjs';
+import { glob, styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 
 /**
@@ -28,9 +28,6 @@ function applyGlobalStyles(theme) {
       line-height: 1.5;
       background-color: ${theme.colors.background.page};
       color: ${theme.colors.text.primary};
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 20px;
     }
 
     /* Scrollbar styling */
@@ -122,26 +119,48 @@ currentTheme.subscribe((theme) => {
   applyGlobalStyles(theme);
 });
 
+// Standard wrapper: centred column with padding, matching previous body styles.
+const PageWrapper = styled('div')`
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px;
+`;
+PageWrapper.className = 'page-wrapper';
+
+// Full-width wrapper: no padding or max-width constraint (used with noPadding=true).
+const PageWrapperFull = styled('div')`
+  width: 100%;
+`;
+PageWrapperFull.className = 'page-wrapper-full';
+
 /**
- * Page - Root wrapper component providing global theme styles
- * 
- * This component ensures global styles are applied and provides a simple
- * pass-through wrapper for app content. The actual styling is applied to
- * the document body via goober's glob function.
- * 
+ * Page - Root wrapper component providing global theme styles.
+ *
+ * Wraps children in a centred, padded container by default. Pass `noPadding`
+ * to suppress the padding and max-width so the content can fill the viewport
+ * (e.g. full-screen play mode on mobile).
+ *
  * @param {Object} props
  * @param {preact.ComponentChildren} props.children - App content (required)
+ * @param {boolean} [props.noPadding=false] - When true, removes padding and max-width constraint
  * @returns {preact.VNode}
- * 
+ *
  * @example
+ * // Standard padded layout
  * <Page>
  *   <App />
+ * </Page>
+ *
+ * @example
+ * // Full-screen layout (e.g. play mode)
+ * <Page noPadding>
+ *   <PlayPage />
  * </Page>
  */
 export class Page extends Component {
   render() {
-    const { children } = this.props;
-    // Simply render children - global styles are applied to body via glob
-    return children;
+    const { children, noPadding } = this.props;
+    const Wrapper = noPadding ? PageWrapperFull : PageWrapper;
+    return html`<${Wrapper}>${children}</${Wrapper}>`;
   }
 }

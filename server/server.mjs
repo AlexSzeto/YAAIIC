@@ -1,16 +1,18 @@
 import express from 'express';
 import path from 'path';
+import os from 'os';
 import { initializeOrchestrator, setAddMediaDataEntry } from './features/generation/orchestrator.mjs';
 import { loadWorkflows } from './features/generation/workflow-validator.mjs';
 import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
-import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling } from './core/service-manager.mjs';
+import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling, setOnAllReady } from './core/service-manager.mjs';
 import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
 
 // Core infrastructure
 import { SERVER_DIR, PUBLIC_DIR, STORAGE_DIR } from './core/paths.mjs';
 import { loadConfig } from './core/config.mjs';
+import { migrateAll } from './core/migrator.mjs';
 import {
   loadMediaData, addMediaDataEntry, findMediaByUid
 } from './core/database.mjs';
@@ -23,8 +25,14 @@ import generationRouter from './features/generation/router.mjs';
 import exportRouter from './features/export/router.mjs';
 import workflowsRouter from './features/workflows/router.mjs';
 import llmRouter from './features/llm/router.mjs';
+import chatRouter from './features/chat/router.mjs';
 import brewRouter from './features/brew/router.mjs';
 import soundSourcesRouter from './features/sound-sources/router.mjs';
+import anytaleRouter from './features/anytale/router.mjs';
+import queueRouter from './features/queue/router.mjs';
+import adminRouter from './features/admin/router.mjs';
+import * as queueService from './features/queue/service.mjs';
+import { executeQueuedTask } from './features/generation/orchestrator.mjs';
 
 const app = express();
 
@@ -54,6 +62,9 @@ try {
 
   // Initialize ComfyUI WebSocket with API path from config
   initComfyUIWebSocket(config.comfyuiAPIPath);
+
+  // Initialize the queue service
+  queueService.initialize({ config, uploadFileToComfyUI, executeQueuedTask });
 } catch (error) {
   console.error('Failed to load configuration files:', error);
   process.exit(1);
@@ -94,8 +105,12 @@ app.use(generationRouter);
 app.use(exportRouter);
 app.use(workflowsRouter);
 app.use(llmRouter);
+app.use(chatRouter);
 app.use(brewRouter);
 app.use(soundSourcesRouter);
+app.use(anytaleRouter);
+app.use(queueRouter);
+app.use(adminRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)
@@ -144,15 +159,28 @@ app.get('/workflows', (req, res) => {
 // ---------------------------------------------------------------------------
 
 async function startServer() {
+  await migrateAll();
+  // Reload config after migrations so any newly-written fields are live in app.locals
+  app.locals.config = loadConfig();
+
   // Load image data on server initialization
   loadMediaData();
-  
+
+  const clearQueue = process.argv.includes('--clear-queue');
+
+  setOnAllReady(() => {
+    if (clearQueue) queueService.clear();
+    queueService.resume();
+  });
+
   await checkAndStartServices();
   startReadinessPolling();
 
   const port = config.serverPort || 3000;
   app.listen(port, () => {
-    console.log(`🌐 Server running at http://localhost:${port}`);
+    const nets = os.networkInterfaces();
+    const localIp = Object.values(nets).flat().find(n => n.family === 'IPv4' && !n.internal)?.address ?? 'localhost';
+    console.log(`🌐 Server running at http://${localIp}:${port}`);
   });
 }
 

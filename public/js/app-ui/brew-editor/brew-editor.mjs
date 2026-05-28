@@ -10,7 +10,8 @@
  *  - Action bar: Record / Preview / Stop / Export / Save / Delete
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
+import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -163,6 +164,8 @@ export function BrewEditor() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [brew, setBrew] = useState(null);
+  // Last version loaded from or saved to the server — used for dirty detection.
+  const [savedBrew, setSavedBrew] = useState(null);
   const [savedBrews, setSavedBrews] = useState([]);
   const [isListOpen, setIsListOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -174,6 +177,7 @@ export function BrewEditor() {
   // Global sound sources — separate from the brew's own sources array.
   // The Sound Sources panel edits these; the brew's sources array mirrors them.
   const [globalSources, setGlobalSources] = useState([]);
+  const [savedGlobalSources, setSavedGlobalSources] = useState(null);
   // Cached effective playback lengths keyed by source label (not persisted).
   const [sourceLengths, setSourceLengths] = useState({});
   // Runtime channel enable/disable state — never saved, resets on each preview start.
@@ -237,7 +241,9 @@ export function BrewEditor() {
         const sources = await res.json();
         // Assign UIDs to any existing source that predates the uid field.
         // These are held in memory and persisted the next time the user saves globals.
-        setGlobalSources(sources.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i }));
+        const mapped = sources.map((s, i) => s.uid ? s : { ...s, uid: Date.now() + i });
+        setGlobalSources(mapped);
+        setSavedGlobalSources(mapped);
       }
     } catch {
       // Non-fatal: sources will be empty
@@ -423,7 +429,9 @@ export function BrewEditor() {
       const { globals, mergedBrew } = await mergeGlobalSources(resolved);
       setGlobalSources(globals);
       // Prune brew sources to only those used by tracks
-      setBrew(pruneBrewSources(mergedBrew));
+      const loadedBrew = pruneBrewSources(mergedBrew);
+      setBrew(loadedBrew);
+      setSavedBrew(loadedBrew);
       setShowSources(false);
       setIsListOpen(false);
     } catch (e) {
@@ -450,6 +458,7 @@ export function BrewEditor() {
         body: JSON.stringify({ uid, name: brewWithUid.label, data: brewWithUid }),
       });
       if (!res.ok) throw new Error(await res.text());
+      setSavedBrew(brewWithUid);
       await loadBrewList();
       toast.success('Brew saved');
     } catch (e) {
@@ -457,6 +466,12 @@ export function BrewEditor() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleBrewRevert() {
+    const result = await showDialog('Discard all unsaved changes to this brew?', 'Revert Brew', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
+    setBrew(savedBrew);
   }
 
   async function handleDelete(item) {
@@ -806,6 +821,17 @@ export function BrewEditor() {
   // Used to show lock icons on the Sound Sources list.
   const usedSourceLabels = brew ? getUsedSourceLabels(brew) : new Set();
 
+  const brewRecorded = savedBrews.some(b => b.id === brew?.uid);
+  const brewDirty = useMemo(
+    () => !savedBrew || JSON.stringify(brew) !== JSON.stringify(savedBrew),
+    [brew, savedBrew]
+  );
+  const { saveLabel: brewSaveLabel, saveEnabled: brewSaveEnabled, revertEnabled: brewRevertEnabled } = formButtonStates(brewRecorded, brewDirty);
+  const globalSourcesDirty = useMemo(
+    () => !savedGlobalSources || JSON.stringify(globalSources) !== JSON.stringify(savedGlobalSources),
+    [globalSources, savedGlobalSources]
+  );
+
   // Disable the brew-level preview when any channel has no tracks or any track lacks a source
   function trackHasSource(track) {
     if (track.type === 'loop') return Boolean(track.source);
@@ -886,7 +912,7 @@ export function BrewEditor() {
           },
         ]}
         onSelectItem=${handleOpenBrew}
-        onAction=${() => { setBrew(createDefaultBrew()); setShowSources(false); setIsListOpen(false); }}
+        onAction=${() => { setBrew(createDefaultBrew()); setSavedBrew(null); setShowSources(false); setIsListOpen(false); }}
         onClose=${() => setIsListOpen(false)}
         emptyMessage="No saved brews yet"
       />
@@ -907,8 +933,10 @@ export function BrewEditor() {
             `}
             getTitle=${(item) => {
               const label = item.label || 'Source';
+              const savedVersion = savedGlobalSources?.find(s => s.uid === item.uid);
+              const sourceDirty = !savedVersion || JSON.stringify(item) !== JSON.stringify(savedVersion);
               const len = sourceLengths[item.label];
-              const text = len != null ? `${label} (${len}s)` : label;
+              const text = `${len != null ? `${label} (${len}s)` : label}${sourceDirty ? ' *' : ''}`;
               // lock = used by a channel in the current brew, lock-open = not used or no brew
               const iconName = (brew && usedSourceLabels.has(item.label)) ? 'lock' : 'lock-open-alt';
               return html`
@@ -938,8 +966,22 @@ export function BrewEditor() {
           </${Button}>
           <${Button}
             variant="medium-icon-text"
-            icon="save"
+            icon="undo"
             color="secondary"
+            disabled=${!globalSourcesDirty}
+            onClick=${async () => {
+              const result = await showDialog('Discard all unsaved changes to global sources?', 'Revert Global Sources', ['Revert', 'Cancel']);
+              if (result !== 'Revert') return;
+              setGlobalSources([...savedGlobalSources]);
+            }}
+          >
+            Revert Global
+          </${Button}>
+          <${Button}
+            variant="medium-icon-text"
+            icon="save"
+            color="primary"
+            disabled=${!globalSourcesDirty}
             onClick=${async () => {
               try {
                 for (const src of globalSources) {
@@ -949,6 +991,7 @@ export function BrewEditor() {
                     body: JSON.stringify(src),
                   });
                 }
+                setSavedGlobalSources([...globalSources]);
                 toast.success('Global sources saved');
               } catch (e) {
                 toast.error(`Save failed: ${e.message}`);
@@ -1031,7 +1074,7 @@ export function BrewEditor() {
             <${Button}
               variant="medium-icon-text"
               icon=${isPlaying ? 'stop' : 'play'}
-              color=${isPlaying ? 'secondary' : 'primary'}
+              color=${isPlaying ? 'secondary' : 'secondary'}
               disabled=${!isPlaying && brewPreviewDisabled}
               onClick=${isPlaying ? stopPlayback : () => startPreview()}
             >
@@ -1041,16 +1084,25 @@ export function BrewEditor() {
               ${String(Math.floor(playbackSeconds / 60)).padStart(2, '0')}:${String(playbackSeconds % 60).padStart(2, '0')}
             </${TimerPanel}>
 
-            <!-- Right edge: Save -->
+            <!-- Right edge: Revert / Save -->
             <div style="flex:1" />
+            <${Button}
+              variant="medium-icon-text"
+              icon="undo"
+              color="secondary"
+              disabled=${!brewRevertEnabled}
+              onClick=${handleBrewRevert}
+            >
+              Revert
+            </${Button}>
             <${Button}
               variant="medium-icon-text"
               icon="save"
               color="primary"
-              disabled=${isSaving}
+              disabled=${isSaving || !brewSaveEnabled}
               onClick=${handleSave}
             >
-              ${isSaving ? 'Saving…' : 'Save Brew'}
+              ${isSaving ? 'Saving…' : brewSaveLabel}
             </${Button}>
           </${HorizontalLayout}>
         </${Panel}>

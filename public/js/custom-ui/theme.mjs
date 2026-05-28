@@ -200,6 +200,16 @@ const lightColors = {
     border: '#9fdfb0',
     text: '#ffffff'
   },
+  // Warning Color Theme
+  warning: {
+    background: '#ffc107',
+    hover: '#e0a800',
+    active: '#c69500',
+    focus: 'rgba(255, 193, 7, 0.5)',
+    backgroundLight: '#fff3cd',
+    border: '#ffeeba',
+    text: '#212529'
+  },
   // Danger Color Theme
   danger: {
     background: '#dc3545',
@@ -217,6 +227,7 @@ const lightColors = {
     primary: '#ffffff',
     secondary: '#f8f9fa',
     tertiary: '#e9ecef',
+    elevated: '#b0b8c0',
     card: '#f8f9fa',
     hover: '#f1f1f1',
     disabled: '#e9ecef'
@@ -290,6 +301,16 @@ const darkColors = {
     border: '#2d7a3f',
     text: '#ffffff'
   },
+  // Warning Color Theme
+  warning: {
+    background: '#e0a800',
+    hover: '#c69500',
+    active: '#a07800',
+    focus: 'rgba(255, 193, 7, 0.5)',
+    backgroundLight: '#4a3800',
+    border: '#7a5f00',
+    text: '#ffffff'
+  },
   // Danger Color Theme
   danger: {
     background: '#dc3545',
@@ -304,11 +325,12 @@ const darkColors = {
   // Background Colors
   background: {
     primary: '#121212',
-    page: '#121212',  
+    page: '#121212',
     secondary: '#1e1e1e',
     tertiary: '#2a2a2a',
+    elevated: '#5a5a5a',
     card: '#1e1e1e',
-    hover: '#404040',
+    hover: '#333333',
     disabled: '#2a2a2a'
   },
   // Border Colors

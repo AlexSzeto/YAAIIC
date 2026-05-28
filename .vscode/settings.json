@@ -1,2 +1,24 @@
 {
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "file": ".agents/rules/windows-cmd.md"
+    },
+    {
+      "file": ".agents/rules/goober-styled-ref.md"
+    },
+    {
+      "file": ".agents/rules/project.md"
+    },
+    {
+      "file": ".agents/rules/client.md",
+      "applyTo": "public/**"
+    },
+    {
+      "file": ".agents/rules/server.md",
+      "applyTo": "server/**"
+    },
+    {
+      "file": ".agents/rules/planning.md"
+    }
+  ]
 }

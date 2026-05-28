@@ -179,15 +179,56 @@ Linear slider with label and value display.
 
 ### Range Slider (`io/range-slider.mjs`)
 
-Dual-handle range selector for selecting a value range.
+Dual-handle range selector for selecting a value range. **Class component** (uncontrolled after mount — does not re-sync to `min`/`max` prop changes; use a `key` prop to force remount when a saved value needs to reload).
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `min` | number | — | Minimum bound |
-| `max` | number | — | Maximum bound |
-| `start` | number | — | Left handle value |
-| `end` | number | — | Right handle value |
-| `onChange` | function | — | `({ start, end }) => void` |
+| `minAllowed` | number | `0` | Lower bound of the slider track |
+| `maxAllowed` | number | `100` | Upper bound of the slider track |
+| `min` | number | — | Initial left-handle value (defaults to `minAllowed`) |
+| `max` | number | — | Initial right-handle value (defaults to `maxAllowed`) |
+| `snap` | number | `1` | Step increment |
+| `widthScale` | string | `'normal'` | `'normal'`, `'compact'`, `'full'` |
+| `onChange` | function | — | `({ min, max }) => void` |
+
+### MultiSelect (`io/multi-select.mjs`)
+
+Button that opens a portal-rendered popover checklist below (or above, if near viewport bottom). Selection is tracked as an array of string values. Closes on outside click or Escape.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `options` | string[] | `[]` | Available option values (stored in `value`) |
+| `optionLabels` | string[] | — | Display labels for each option; if omitted, `options` are used as labels |
+| `value` | string[] | `[]` | Currently selected values |
+| `onChange` | function | — | `(values: string[]) => void` |
+| `label` | string | — | Label displayed above the button |
+| `placeholder` | string | `'Select…'` | Shown when nothing is selected |
+| `widthScale` | string | — | `'full'` → flex:1 + 100% width; omit for inline |
+
+```javascript
+// Basic usage — options are both values and display text
+html`
+  <${MultiSelect}
+    label="Keys"
+    options=${MUSICAL_KEYS}
+    value=${genre.keys}
+    onChange=${(keys) => setField('keys', keys)}
+    widthScale="full"
+  />
+`
+
+// With optionLabels — values and display text differ
+html`
+  <${MultiSelect}
+    label="Time Signatures"
+    options=${['2', '3', '4', '6']}
+    optionLabels=${['2/4', '3/4', '4/4', '6/8']}
+    value=${genre.timeSignatures}
+    onChange=${(sigs) => setField('timeSignatures', sigs)}
+    widthScale="full"
+  />
+`
+```
 
 ### Discrete Slider (`io/discrete-slider.mjs`)
 
@@ -314,6 +355,34 @@ Popup list overlay for selecting from many options. Useful for file pickers and 
 
 Low-level imperative dialog API (`show()` / `dismiss()`).
 
+### Tooltip (`overlays/tooltip.mjs`)
+
+Cursor-anchored tooltip with a 600ms hover delay. Uses the context/provider pattern.
+
+```javascript
+// Wrap app in provider
+html`<${TooltipProvider}><${App} /><//>`
+
+// Use in any child component
+const tooltip = useTooltip();
+// onMouseEnter=${(e) => tooltip.show('Help text', e.clientX, e.clientY)}
+// onMouseLeave=${() => tooltip.hide()}
+```
+
+### Search Select (`overlays/search-select.mjs`)
+
+Full-screen modal for selecting from large datasets with real-time search filtering. Supports single and multi-select modes. Items can be strings or `{ label, value }` objects.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `isOpen` | boolean | — | Controls visibility |
+| `title` | string | — | Modal title |
+| `items` | array | — | `string[]` or `{ label, value }[]` |
+| `mode` | string | `'single'` | `'single'` or `'multi'` |
+| `initialSelected` | array | `[]` | Pre-selected values (multi mode) |
+| `onSelect` | function | — | `(value) => void` or `(value[]) => void` |
+| `onClose` | function | — | Close handler |
+
 ---
 
 ## Message & Feedback Components
@@ -412,6 +481,19 @@ const StyledDiv = styled('div')`
   padding: ${props => props.theme.spacing.medium.padding};
 `;
 StyledDiv.className = 'styled-div';
+```
+
+**File**: `global-audio-player.mjs`
+
+Singleton audio state manager (`GlobalAudioPlayer`) that wraps a single shared `<audio>` element. Ensures only one audio clip plays at a time across the entire app. Supports region playback (start/end times) and notifies subscribed listeners on play/pause/end events.
+
+```javascript
+import { globalAudioPlayer } from '/js/custom-ui/global-audio-player.mjs';
+
+globalAudioPlayer.play(url, instanceId);
+globalAudioPlayer.stop();
+globalAudioPlayer.subscribe(callback);   // called on any state change
+globalAudioPlayer.unsubscribe(callback);
 ```
 
 ---

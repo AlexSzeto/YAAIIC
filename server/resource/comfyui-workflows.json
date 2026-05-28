@@ -36,6 +36,7 @@
   "defaultAudioGenerationWorkflow": "Text to Image (Album)",
   "workflows": [
     {
+      "uid": "45929bf4-c161-433e-aaab-878d8766c112",
       "name": "Text to Image (Album)",
       "hidden": true,
       "options": {
@@ -88,6 +89,7 @@
       "base": "album-text-to-image.json"
     },
     {
+      "uid": "e615a571-1bd8-4b2a-b783-d460d0e39b72",
       "name": "Text to Image (Illustrious Characters)",
       "options": {
         "type": "image",
@@ -97,6 +99,22 @@
         "nameRequired": false,
         "orientation": "portrait",
         "extraInputs": [
+          {
+            "id": "model",
+            "type": "select",
+            "label": "Version",
+            "default": "waiNSFWIllustrious_v140.safetensors",
+            "options": [
+              {
+                "label": "v14.0",
+                "value": "waiNSFWIllustrious_v140.safetensors"
+              },
+              {
+                "label": "v15.0",
+                "value": "waiIllustriousSDXL_v150.safetensors"
+              }
+            ]
+          },
           {
             "id": "imageFormat",
             "type": "select",
@@ -112,127 +130,32 @@
                 "value": "jpg"
               }
             ]
-          },
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          },
-          {
-            "id": "removeBackground",
-            "type": "checkbox",
-            "label": "Remove Background",
-            "default": false
           }
         ]
       },
       "preGenerationTasks": [
         {
-          "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
           "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
         },
         {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
           "template": "Unnamed",
-          "to": "name"
-        },
-        {
+          "to": "name",
           "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Removing background",
-          "condition": {
-            "where": {
-              "data": "removeBackground"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "parameters": {
-            "workflow": "Remove Background (RMBG)",
-            "inputMapping": [
+            "and": [
               {
-                "image": "generated",
-                "toMediaInput": 0
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
               }
-            ],
-            "outputMapping": []
+            ]
           }
         }
       ],
+      "postGenerationTasks": [],
       "base": "illustrious-text-to-image.json",
       "replace": [
         {
@@ -241,6 +164,14 @@
             "6",
             "inputs",
             "text"
+          ]
+        },
+        {
+          "from": "model",
+          "to": [
+            "4",
+            "inputs",
+            "ckpt_name"
           ]
         },
         {
@@ -262,141 +193,7 @@
       ]
     },
     {
-      "name": "Text to Image (Illustrious Characters, Background Removed)",
-      "hidden": true,
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "png",
-          "to": "imageFormat"
-        },
-        {
-          "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        }
-      ],
-      "base": "illustrious-text-to-image-no-background.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "14",
-            "inputs",
-            "path"
-          ]
-        }
-      ]
-    },
-    {
+      "uid": "7e0aae95-d520-4bbf-8c63-df03eee61109",
       "name": "Text to Image (Illustrious Background)",
       "options": {
         "type": "image",
@@ -567,7 +364,8 @@
       ]
     },
     {
-      "name": "Text to Image (Illustrious Portrait)",
+      "uid": "caf5d8c2-c02b-46bc-8180-588c08dd43e4",
+      "name": "Text to Image (CottonAnima Characters)",
       "options": {
         "type": "image",
         "autocomplete": true,
@@ -608,12 +406,8 @@
       },
       "preGenerationTasks": [
         {
-          "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
+          "template": "anime coloring, {{prompt}}",
           "to": "enhancedPrompt"
-        },
-        {
-          "template": "512",
-          "to": "dimension"
         }
       ],
       "postGenerationTasks": [
@@ -716,352 +510,20 @@
           }
         }
       ],
-      "base": "illustrious-text-to-image.json",
+      "base": "cottonanima-text-to-image.json",
       "replace": [
         {
           "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "10",
-            "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "width"
-          ]
-        },
-        {
-          "from": "dimension",
-          "to": [
-            "5",
-            "inputs",
-            "height"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Image Style Transfer (Illustrious)",
-      "hidden": true,
-      "options": {
-        "type": "image",
-        "autocomplete": true,
-        "inputImages": 1,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "detect",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "png",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          },
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "score_9, score_8_up, score_7_up, source_anime, high res image, masterpiece, best quality, very aesthetic, absurdres, {{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        }
-      ],
-      "base": "illustrious-image-style.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
           "to": [
             "11",
             "inputs",
-            "path"
-          ]
-        },
-        {
-          "from": "image_0_filename",
-          "to": [
-            "13",
-            "inputs",
-            "image"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Text to Image (Flux Fantasy Landscape)",
-      "hidden": true,
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "landscape",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "jpg",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          },
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "The image is a painting from Carl Spitzweg inbetween \nIn the style of chargen_concept_art image of\n\nmagnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy, impressionist painting, highly detailed, sharp focus, cinematic light, modern fine detail, intricate, elegant, dynamic, vibrant colors, perfect, aesthetic, very inspirational, innocent, novel, glowing, deep background, professional, winning\n\nFantasy illustration of\n\n{{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "imagePath": "saveImagePath",
-          "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "imagePath": "saveImagePath",
-          "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        }
-      ],
-      "base": "flux-fantasy-text-to-landscape.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
             "text"
           ]
         },
         {
           "from": "seed",
           "to": [
-            "31",
+            "66",
             "inputs",
             "seed"
           ]
@@ -1069,7 +531,7 @@
         {
           "from": "saveImagePath",
           "to": [
-            "9",
+            "62",
             "inputs",
             "path"
           ]
@@ -1077,195 +539,7 @@
       ]
     },
     {
-      "name": "Text to Image (Flux Fantasy Portrait)",
-      "hidden": true,
-      "options": {
-        "type": "image",
-        "autocomplete": false,
-        "inputImages": 0,
-        "optionalPrompt": false,
-        "nameRequired": false,
-        "orientation": "portrait",
-        "extraInputs": [
-          {
-            "id": "imageFormat",
-            "type": "select",
-            "label": "Image Format",
-            "default": "jpg",
-            "options": [
-              {
-                "label": "PNG",
-                "value": "png"
-              },
-              {
-                "label": "JPG",
-                "value": "jpg"
-              }
-            ]
-          },
-          {
-            "id": "usePostPrompts",
-            "type": "checkbox",
-            "label": "Generate Descriptions",
-            "default": false
-          },
-          {
-            "id": "removeBackground",
-            "type": "checkbox",
-            "label": "Remove Background",
-            "default": false
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "In the style of chargen_concept_art image of\n\na highly detailed, fantasy painting with vivid colors, dynamic lighting, and dynamic composition in a painterly digital style of\n\n{{prompt}}",
-          "to": "enhancedPrompt"
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "imagePath": "saveImagePath",
-          "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
-          "to": "description"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "imagePath": "saveImagePath",
-          "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
-          "to": "summary"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": true
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "model": "gemma3:4b",
-          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "and": [
-              {
-                "where": {
-                  "data": "usePostPrompts"
-                },
-                "equals": {
-                  "value": false
-                }
-              },
-              {
-                "where": {
-                  "data": "name"
-                },
-                "equals": {
-                  "value": ""
-                }
-              }
-            ]
-          },
-          "template": "Unnamed",
-          "to": "name"
-        },
-        {
-          "condition": {
-            "where": {
-              "data": "usePostPrompts"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "model": "gemma3:4b",
-          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
-          "to": "tags"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Removing background",
-          "condition": {
-            "where": {
-              "data": "removeBackground"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "parameters": {
-            "workflow": "Remove Background (RMBG)",
-            "inputMapping": [
-              {
-                "image": "generated",
-                "toMediaInput": 0
-              }
-            ],
-            "outputMapping": []
-          }
-        }
-      ],
-      "base": "flux-fantasy-text-to-portrait.json",
-      "replace": [
-        {
-          "from": "enhancedPrompt",
-          "to": [
-            "6",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "31",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "saveImagePath",
-          "to": [
-            "44",
-            "inputs",
-            "path"
-          ]
-        }
-      ]
-    },
-    {
+      "uid": "5487f83c-5795-44bc-a9c1-09d724cb7580",
       "name": "Text to Image (ZImage Fantasy Landscape)",
       "options": {
         "type": "image",
@@ -1426,6 +700,7 @@
       ]
     },
     {
+      "uid": "f7039a31-f0d2-4976-ae16-780ae5a6294f",
       "name": "Text to Image (ZImage Fantasy Portrait)",
       "options": {
         "type": "image",
@@ -1614,26 +889,58 @@
       ]
     },
     {
-      "name": "Inpaint (Realistic Vision Fantasy)",
+      "uid": "69602ca1-2231-4467-bd72-f4bc378ed845",
+      "name": "Text to Image (Lustify XL Characters)",
       "options": {
-        "type": "inpaint",
-        "autocomplete": false,
+        "type": "image",
+        "autocomplete": true,
         "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect"
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
       },
       "preGenerationTasks": [
         {
-          "from": "image_0_imageFormat",
-          "to": "imageFormat"
+          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
+          "to": "enhancedPrompt"
         },
         {
-          "template": "a painterly digital art style illustration\n\n{{prompt}}",
-          "to": "enhancedPrompt"
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
         }
       ],
-      "base": "realvis-fantasy-inpaint.json",
+      "postGenerationTasks": [],
+      "base": "lustifyxl-text-to-image.json",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -1654,30 +961,15 @@
         {
           "from": "saveImagePath",
           "to": [
-            "9",
+            "10",
             "inputs",
             "path"
-          ]
-        },
-        {
-          "from": "image_0_filename",
-          "to": [
-            "20",
-            "inputs",
-            "image"
-          ]
-        },
-        {
-          "from": "mask_filename",
-          "to": [
-            "36",
-            "inputs",
-            "image"
           ]
         }
       ]
     },
     {
+      "uid": "0b88e020-312f-4e50-82e6-2b9625f361d8",
       "name": "Inpaint (Waifu Anime)",
       "options": {
         "type": "inpaint",
@@ -1742,20 +1034,86 @@
       ]
     },
     {
-      "name": "Image Edit (Qwen)",
+      "uid": "eaed1d1a-c5ed-4cda-af4d-6e44b9aee429",
+      "name": "Inpaint (Realistic Vision Fantasy)",
+      "options": {
+        "type": "inpaint",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "detect"
+      },
+      "preGenerationTasks": [
+        {
+          "from": "image_0_imageFormat",
+          "to": "imageFormat"
+        },
+        {
+          "template": "a painterly digital art style illustration\n\n{{prompt}}",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "base": "realvis-fantasy-inpaint.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "9",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "20",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "mask_filename",
+          "to": [
+            "36",
+            "inputs",
+            "image"
+          ]
+        }
+      ]
+    },
+    {
+      "uid": "a8e6ab3f-db00-4849-b306-20d344067916",
+      "name": "Text to Image (Flux Klein Fantasy Landscape)",
       "options": {
         "type": "image",
         "autocomplete": false,
-        "inputImages": 1,
+        "inputImages": 0,
         "optionalPrompt": false,
         "nameRequired": false,
-        "orientation": "detect",
+        "orientation": "landscape",
         "extraInputs": [
           {
             "id": "imageFormat",
             "type": "select",
             "label": "Image Format",
-            "default": "png",
+            "default": "jpg",
             "options": [
               {
                 "label": "PNG",
@@ -1772,15 +1130,15 @@
             "type": "checkbox",
             "label": "Generate Descriptions",
             "default": false
-          },
-          {
-            "id": "removeBackground",
-            "type": "checkbox",
-            "label": "Remove Background",
-            "default": false
           }
         ]
       },
+      "preGenerationTasks": [
+        {
+          "template": "Naturalistic, impressionist, excessively detailed, cinematic light, dynamic perspective, perfect, aesthetic, fantasy painting with fine, watery brushstrokes in a painterly digital style of\n\n{{prompt}}",
+          "to": "enhancedPrompt"
+        }
+      ],
       "postGenerationTasks": [
         {
           "condition": {
@@ -1791,7 +1149,7 @@
               "value": true
             }
           },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "model": "gemma3:4b",
           "imagePath": "saveImagePath",
           "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
           "to": "description"
@@ -1805,9 +1163,9 @@
               "value": true
             }
           },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "model": "gemma3:4b",
           "imagePath": "saveImagePath",
-          "prompt": "Write an objective inventory, as flowing prose only, of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
+          "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
           "to": "summary"
         },
         {
@@ -1831,7 +1189,7 @@
               }
             ]
           },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "model": "gemma3:4b",
           "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
           "to": "name"
         },
@@ -1868,70 +1226,202 @@
               "value": true
             }
           },
-          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "model": "gemma3:4b",
           "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
           "to": "tags"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Removing background",
-          "condition": {
-            "where": {
-              "data": "removeBackground"
-            },
-            "equals": {
-              "value": true
-            }
-          },
-          "parameters": {
-            "workflow": "Remove Background (RMBG)",
-            "inputMapping": [
-              {
-                "image": "generated",
-                "toMediaInput": 0
-              }
-            ],
-            "outputMapping": []
-          }
         }
       ],
-      "base": "qwen-image-to-image.json",
+      "base": "flux-klein-text-to-landscape.json",
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
-            "232",
+            "118",
             "inputs",
-            "prompt"
+            "value"
           ]
         },
         {
           "from": "seed",
           "to": [
-            "228",
+            "77:90",
             "inputs",
-            "seed"
+            "noise_seed"
           ]
         },
         {
           "from": "saveImagePath",
           "to": [
-            "229",
+            "114",
             "inputs",
             "path"
-          ]
-        },
-        {
-          "from": "image_0_filename",
-          "to": [
-            "377",
-            "inputs",
-            "image"
           ]
         }
       ]
     },
     {
+      "uid": "6dc37002-f603-48cd-90f0-8d41c5a7e483",
+      "name": "Text to Image (Flux Klein Fantasy Portrait)",
+      "options": {
+        "type": "image",
+        "autocomplete": false,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "jpg",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          },
+          {
+            "id": "usePostPrompts",
+            "type": "checkbox",
+            "label": "Generate Descriptions",
+            "default": false
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "Excessively detailed, vivid, impressionist fantasy painting with thick heavily textured brushstrokes in a painterly digital style, with dramatic lighting, character dynamically posed\n\n{{prompt}}",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
+          },
+          "model": "gemma3:4b",
+          "imagePath": "saveImagePath",
+          "prompt": "Write a paragraph of prose describing the image. Engage the reader with atmosphere, lighting, color, mood, and any other imagined details relevant to the scene such as sound and smell that can be extrapolated from the visuals. If the image is mostly scenary, use flowery words to expand on the landscape so the reader can imagine themselves as if they are there. If the image is focused on a single character, pick and choose from the following list of possible character traits and include only the ones that would allow someone to picture the character vividly in their imagination. Suggested details might be species, race, gender, age, facial features, hair, what they are wearing on their body, what the character appears to be doing, and their current emotional state. Write the paragraph as if it is setting up a scene in a longer novel. Be concise. Only include the description, do not include any other text. The description is:",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
+          },
+          "model": "gemma3:4b",
+          "imagePath": "saveImagePath",
+          "prompt": "Write a paragraph of prose of the visual details in the image. Reconstruct the visual details by describing each object in the image with color, size, and positioning info, so a visually impaired person can reconstruct the scene without being affected by subjective info. If the main subject of the image is focused on a single character, include all of the following items for that character: species (if non-human), race, gender, approximate age, hair style and color, facial features, what they are wearing on their body, what explicit body parts are being exposed, what the character appears to be expressing emotionally, and how the character is posed. Ignore qualities such as personality, scents, and other non-visual traits. Be concise. Do not include any text other than the summary itself. The summary is:",
+          "to": "summary"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": true
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "model": "gemma3:4b",
+          "prompt": "Write only one short name that would be a highly descriptive but concise summary for the image. If the image is focusing on a single character, imagine a name that fits the character's appearance instead. The name must be three words or less, and must not include any special characters or punctuation. The name must be in title case. The image description is: {{description}}",
+          "to": "name"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "usePostPrompts"
+            },
+            "equals": {
+              "value": true
+            }
+          },
+          "model": "gemma3:4b",
+          "prompt": "Write a single line, lower case only, comma seperated list of one or two word tags that encapsulates specific elements of an image's visual summary so other users can find the image based on one or a combination of tags. If the image appears to be pure scenery, include the tag 'landscape'; otherwise, if the main subject seems to be a single character, include the tag 'portrait'. If the image appears to use an anime or cartoon style, include the tag 'anime'. If it is painterly or illustrative, include the tag 'illustration'. If the image is photorealistic, include the tag 'realistic'. Landscapes can be tagged by their defining subject ('mountain', 'river', 'town') along with other generalized details ('trees', 'road', 'people'). An image focused on a main character can be tagged by their strongest characteristics such as fantasy race ('elf', 'dwarf'), occupation ('warrior', 'nurse'), interesting articles of clothing ('kimono', 'sundress'), facial and body expressions ('happy', 'aroused'). If the image contains lewd or exposed intimate body parts, it must contain the tag 'nswf'.\n\nThe summary is:{{summary}}.\n\nThe list of tags are:",
+          "to": "tags"
+        }
+      ],
+      "base": "flux-klein-text-to-portrait.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "76",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "77:90",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "114",
+            "inputs",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "uid": "ca84bee5-2b82-4364-874a-fa099df16ef8",
       "name": "Image Edit (Flux Klein)",
       "options": {
         "type": "image",
@@ -1954,6 +1444,22 @@
               {
                 "label": "JPG",
                 "value": "jpg"
+              }
+            ]
+          },
+          {
+            "id": "baseModel",
+            "type": "select",
+            "label": "Base Model",
+            "default": "flux-2-klein-4b-fp8.safetensors",
+            "options": [
+              {
+                "label": "Klein-4b",
+                "value": "flux-2-klein-4b-fp8.safetensors"
+              },
+              {
+                "label": "Klein-9b",
+                "value": "flux-2-klein-9b-fp8.safetensors"
               }
             ]
           },
@@ -2118,10 +1624,61 @@
             "inputs",
             "image"
           ]
+        },
+        {
+          "from": "baseModel",
+          "to": [
+            "75:70",
+            "inputs",
+            "unet_name"
+          ]
+        },
+        {
+          "from": "clipModel",
+          "to": [
+            "75:71",
+            "inputs",
+            "clip_name"
+          ]
+        }
+      ],
+      "preGenerationTasks": [
+        {
+          "template": "qwen_3_8b_fp8mixed.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-9b-fp8.safetensors"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "template": "qwen_3_4b.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-4b-fp8.safetensors"
+                }
+              }
+            ]
+          }
         }
       ]
     },
     {
+      "uid": "eba62cf0-af1a-44f3-880f-86097e46ea0a",
       "name": "Multi Source Image Edit (Flux Klein)",
       "options": {
         "type": "image",
@@ -2144,6 +1701,22 @@
               {
                 "label": "JPG",
                 "value": "jpg"
+              }
+            ]
+          },
+          {
+            "id": "baseModel",
+            "type": "select",
+            "label": "Base Model",
+            "default": "flux-2-klein-4b-fp8.safetensors",
+            "options": [
+              {
+                "label": "Klein-4b",
+                "value": "flux-2-klein-4b-fp8.safetensors"
+              },
+              {
+                "label": "Klein-9b",
+                "value": "flux-2-klein-9b-fp8.safetensors"
               }
             ]
           },
@@ -2316,10 +1889,61 @@
             "inputs",
             "image"
           ]
+        },
+        {
+          "from": "baseModel",
+          "to": [
+            "92:70",
+            "inputs",
+            "unet_name"
+          ]
+        },
+        {
+          "from": "clipModel",
+          "to": [
+            "92:71",
+            "inputs",
+            "clip_name"
+          ]
+        }
+      ],
+      "preGenerationTasks": [
+        {
+          "template": "qwen_3_8b_fp8mixed.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-9b-fp8.safetensors"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "template": "qwen_3_4b.safetensors",
+          "to": "clipModel",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "baseModel"
+                },
+                "equals": {
+                  "value": "flux-2-klein-4b-fp8.safetensors"
+                }
+              }
+            ]
+          }
         }
       ]
     },
     {
+      "uid": "70218583-c744-403d-aae2-d3cd12597658",
       "name": "Remove Background (RMBG)",
       "options": {
         "type": "image",
@@ -2392,6 +2016,7 @@
       ]
     },
     {
+      "uid": "ea9cf29f-d595-4ad4-8769-af176437459f",
       "name": "Image to Video (WAN5b)",
       "options": {
         "type": "video",
@@ -2405,13 +2030,13 @@
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
-            "default": 25
+            "default": 41
           },
           {
             "id": "framerate",
             "type": "number",
             "label": "Frame Rate",
-            "default": 20
+            "default": 24
           }
         ]
       },
@@ -2629,6 +2254,7 @@
       ]
     },
     {
+      "uid": "ab5032e4-e5ae-41f8-b1e3-329220293d5b",
       "name": "Image to Video Loop (WAN5b)",
       "options": {
         "type": "video",
@@ -2642,13 +2268,13 @@
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
-            "default": 25
+            "default": 41
           },
           {
             "id": "framerate",
             "type": "number",
             "label": "Frame Rate",
-            "default": 20
+            "default": 24
           }
         ]
       },
@@ -2856,6 +2482,7 @@
       ]
     },
     {
+      "uid": "c7e5c475-3d9d-4b51-a2ed-bc8cc50c60e2",
       "name": "Image to Video (WAN22)",
       "options": {
         "type": "video",
@@ -2869,13 +2496,13 @@
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
-            "default": 25
+            "default": 41
           },
           {
             "id": "framerate",
             "type": "number",
             "label": "Frame Rate",
-            "default": 20
+            "default": 24
           }
         ]
       },
@@ -3105,6 +2732,7 @@
       ]
     },
     {
+      "uid": "13b13ba5-edc2-453e-a07f-d673fbb03a5d",
       "name": "Image to Video Loop (WAN22)",
       "options": {
         "type": "video",
@@ -3118,13 +2746,13 @@
             "id": "frames",
             "type": "number",
             "label": "Length (frames)",
-            "default": 25
+            "default": 41
           },
           {
             "id": "framerate",
             "type": "number",
             "label": "Frame Rate",
-            "default": 20
+            "default": 24
           }
         ]
       },
@@ -3332,25 +2960,186 @@
       ]
     },
     {
-      "name": "Text to Music (ACE-Step 1.3)",
-      "hidden": false,
+      "uid": "ca6bdc2b-c2ac-4a9a-8d41-7ed80f76d43e",
+      "name": "Text to Music (StableAudio 3 Medium)",
       "options": {
         "type": "audio",
         "inputImages": 0,
-        "inputAudio": 0,
+        "inputAudios": 0,
         "optionalPrompt": false,
         "nameRequired": true,
         "extraInputs": [
           {
-            "id": "lyrics",
-            "type": "textarea",
-            "label": "Lyrics"
-          },
-          {
             "id": "length",
             "type": "number",
             "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
             "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4/4"
+              },
+              {
+                "label": "3/4",
+                "value": "3/4"
+              },
+              {
+                "label": "2/4",
+                "value": "2/4"
+              },
+              {
+                "label": "6/8",
+                "value": "6/8"
+              }
+            ],
+            "default": "4/4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
           },
           {
             "id": "audioFormat",
@@ -3375,44 +3164,21 @@
                 "value": "ogg"
               }
             ]
-          },
-          {
-            "id": "test",
-            "type": "text",
-            "label": "Test",
-            "default": "",
-            "options": []
           }
         ]
       },
-      "base": "acestep-text-to-music.json",
+      "base": "stableaudio3-text-to-music.json",
       "preGenerationTasks": [
         {
-          "condition": {
-            "where": {
-              "data": "lyrics"
-            },
-            "equals": {
-              "value": ""
-            }
-          },
-          "template": "[inst]",
-          "to": "lyrics"
+          "template": "{{prompt}}, {{bpm}} BPM, time signature {{timesignature}}, {{keyscale}} key",
+          "to": "enhancedPrompt"
         }
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
-            "75",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "lyrics",
-          "to": [
-            "87",
+            "68",
             "inputs",
             "value"
           ]
@@ -3420,7 +3186,7 @@
         {
           "from": "seed",
           "to": [
-            "52",
+            "60",
             "inputs",
             "seed"
           ]
@@ -3428,15 +3194,15 @@
         {
           "from": "length",
           "to": [
-            "17",
+            "74",
             "inputs",
-            "seconds"
+            "value"
           ]
         },
         {
           "from": "saveAudioPath",
           "to": [
-            "88",
+            "78",
             "inputs",
             "path"
           ]
@@ -3444,8 +3210,8 @@
       ],
       "postGenerationTasks": [
         {
-          "from": "lyrics",
-          "to": "summary"
+          "from": "enhancedPrompt",
+          "to": "description"
         },
         {
           "process": "executeWorkflow",
@@ -3466,10 +3232,6 @@
               {
                 "from": "imageUrl",
                 "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
               }
             ]
           }
@@ -3477,7 +3239,8 @@
       ]
     },
     {
-      "name": "Text to Music (ACE-Step 1.5)",
+      "uid": "b26a2ee6-6371-49ef-bec0-60f2099d1bff",
+      "name": "Text to Music (ACE-Step 1.5 XL)",
       "options": {
         "type": "audio",
         "inputImages": 0,
@@ -3685,10 +3448,17 @@
                 "value": "ogg"
               }
             ]
+          },
+          {
+            "id": "enhancePrompt",
+            "type": "checkbox",
+            "label": "Enhance Prompt",
+            "default": "",
+            "options": []
           }
         ]
       },
-      "base": "acestep15-text-to-music.json",
+      "base": "acestep15-xl-text-to-music.json",
       "preGenerationTasks": [
         {
           "condition": {
@@ -3701,13 +3471,35 @@
           },
           "template": "[instrumental]",
           "to": "lyrics"
+        },
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        },
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Expand on the following music generation request: \"{{prompt}}\"\n\nby expanding the prompt in the following dimensions:\nStyle/Genre: ex. pop, rock, jazz, electronic, hip-hop, R&B, folk, classical, lo-fi, synthwave\nEmotion/Atmosphere: ex. melancholic, uplifting, energetic, dreamy, dark, nostalgic, euphoric, intimate\nInstruments: ex. acoustic guitar, piano, synth pads, 808 drums, strings, brass, electric bass\nTimbre Texture: ex. warm, bright, crisp, muddy, airy, punchy, lush, raw, polished\nEra Reference: ex. 80s synth-pop, 90s grunge, 2010s EDM, vintage soul, modern trap\nProduction Style: ex. lo-fi, high-fidelity, live recording, studio-polished, bedroom pop\nVocal Characteristics: ex. female vocal, male vocal, breathy, powerful, falsetto, raspy, choir\nSpeed/Rhythm: ex. slow tempo, mid-tempo, fast-paced, groovy, driving, laid-back\nStructure Hints: ex. building intro, catchy chorus, dramatic bridge, fade-out ending\n\nOnly output the answer as a single paragraph of prose. For example:\n\n\"A mid-tempo Smooth Jazz that is both highly sophisticated and effortlessly laid-back. It is intensely warm and enveloping, feeling both gently nostalgic and luxuriously present. The music is high-fidelity, lush, and deeply polished. Instrumentation should rely on big-sound section capability, utilizing rich brass, soaring synthesized strings, and rich, responsive piano. The rhythmic core needs to be impeccably groovy, always mid-tempo, and possessing a laid-back, swaying quality that encourages a slow, swaying head-nods. Structurally, while the core groove is infectious, the piece should employ a defined, yet relaxed, structure, building from a seamless, swelling intro that gradually reveals its character, before allowing the music to gently ride into a seamless, satisfied fade-out.\"\n\nDo not use visual metaphors in the description. Do not include introductory text, explanations, or concluding remarks.",
+          "to": "enhancedPrompt",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "enhancePrompt"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
+            ]
+          }
         }
       ],
       "replace": [
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
-            "116",
+            "110",
             "inputs",
             "value"
           ]
@@ -3715,7 +3507,7 @@
         {
           "from": "lyrics",
           "to": [
-            "115",
+            "109",
             "inputs",
             "value"
           ]
@@ -3779,13 +3571,17 @@
         {
           "from": "saveAudioPath",
           "to": [
-            "108",
+            "111",
             "inputs",
             "path"
           ]
         }
       ],
       "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        },
         {
           "from": "lyrics",
           "to": "summary"
@@ -3816,135 +3612,7 @@
       ]
     },
     {
-      "name": "Text to Music (HeartMuLa)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudio": 0,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "lyrics",
-            "type": "textarea",
-            "label": "Lyrics"
-          },
-          {
-            "id": "length",
-            "type": "number",
-            "label": "Length (seconds)",
-            "default": 120
-          },
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          }
-        ]
-      },
-      "base": "heartmula-text-to-music.json",
-      "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        }
-      ],
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "16",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "lyrics",
-          "to": [
-            "15",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "7",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "length",
-          "to": [
-            "7",
-            "inputs",
-            "max_audio_length_seconds"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "23",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "from": "lyrics",
-          "to": "summary"
-        },
-        {
-          "process": "executeWorkflow",
-          "name": "Generating Album Cover",
-          "parameters": {
-            "workflow": "Text to Image (Album)",
-            "inputMapping": [
-              {
-                "from": "name",
-                "to": "name"
-              },
-              {
-                "from": "seed",
-                "to": "seed"
-              }
-            ],
-            "outputMapping": [
-              {
-                "from": "imageUrl",
-                "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
+      "uid": "05475d70-3560-48dc-a02d-fd4af88f39c5",
       "name": "Text to Sound (StableAudio)",
       "options": {
         "type": "audio",
@@ -4110,6 +3778,7 @@
       ]
     },
     {
+      "uid": "fc0dee95-9a12-487e-b7f8-102e63004780",
       "name": "Text to Voice Design (Qwen3-TTS)",
       "options": {
         "type": "audio",
@@ -4234,116 +3903,7 @@
       ]
     },
     {
-      "name": "Text to Speech (Chatterbox)",
-      "options": {
-        "type": "audio",
-        "inputImages": 0,
-        "inputAudios": 1,
-        "optionalPrompt": false,
-        "nameRequired": true,
-        "extraInputs": [
-          {
-            "id": "audioFormat",
-            "type": "select",
-            "label": "Audio Format",
-            "default": "mp3",
-            "options": [
-              {
-                "label": "MP3",
-                "value": "mp3"
-              },
-              {
-                "label": "WAV",
-                "value": "wav"
-              },
-              {
-                "label": "FLAC",
-                "value": "flac"
-              },
-              {
-                "label": "OGG",
-                "value": "ogg"
-              }
-            ]
-          }
-        ]
-      },
-      "preGenerationTasks": [
-        {
-          "template": "jpg",
-          "to": "imageFormat"
-        },
-        {
-          "from": "prompt",
-          "to": "summary"
-        }
-      ],
-      "base": "chatterbox-text-to-speech.json",
-      "replace": [
-        {
-          "from": "prompt",
-          "to": [
-            "3",
-            "inputs",
-            "text"
-          ]
-        },
-        {
-          "from": "seed",
-          "to": [
-            "3",
-            "inputs",
-            "seed"
-          ]
-        },
-        {
-          "from": "audio_0_filename",
-          "to": [
-            "5",
-            "inputs",
-            "audio"
-          ]
-        },
-        {
-          "from": "saveAudioPath",
-          "to": [
-            "20",
-            "inputs",
-            "path"
-          ]
-        }
-      ],
-      "postGenerationTasks": [
-        {
-          "process": "executeWorkflow",
-          "name": "Generating Album Cover",
-          "parameters": {
-            "workflow": "Text to Image (Album)",
-            "inputMapping": [
-              {
-                "from": "name",
-                "to": "name"
-              },
-              {
-                "from": "seed",
-                "to": "seed"
-              }
-            ],
-            "outputMapping": [
-              {
-                "from": "imageUrl",
-                "to": "imageUrl"
-              },
-              {
-                "from": "imageFormat",
-                "to": "imageFormat"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
+      "uid": "ff03fec8-e345-4aac-95c9-bc593ad226aa",
       "name": "Text to Speech (Qwen3-TTS)",
       "options": {
         "type": "audio",
@@ -4448,6 +4008,2078 @@
           }
         }
       ]
+    },
+    {
+      "uid": "aa6a4b68-6ba9-463b-a57d-7dcb9cafabeb",
+      "name": "Image to Video (Desiwa Q3)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 2,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": 41
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": 24
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "from": "frames",
+          "to": "frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "First frame summary: {{image_0_summary}}\n\nLast frame summary: {{image_1_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally to transition the image from the first frame to the last frame. If two similar subjects are present at the start and end, assume they are the same subject for the purpose of motion description, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "image_0_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              },
+              {
+                "where": {
+                  "data": "image_1_description"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "In the beginning:\n{{image_0_description}}\n\nIn the end:\n{{image_1_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "image_0_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              },
+              {
+                "where": {
+                  "data": "image_1_summary"
+                },
+                "isNot": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "First frame summary:\n{{image_0_summary}}\n\nLast frame summary:\n{{image_1_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "desiwa22-q3-image-to-video.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "102",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "75",
+            "inputs",
+            "noise_seed"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "115",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "117",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "image_1_filename",
+          "to": [
+            "118",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "frames",
+          "to": [
+            "77",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "115",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        }
+      ]
+    },
+    {
+      "uid": "681ac9d8-1525-44c4-a6b9-335e9484faeb",
+      "name": "Image to Video Loop (Desiwa Q3)",
+      "options": {
+        "type": "video",
+        "autocomplete": false,
+        "inputImages": 1,
+        "optionalPrompt": true,
+        "nameRequired": true,
+        "orientation": "detect",
+        "extraInputs": [
+          {
+            "id": "frames",
+            "type": "number",
+            "label": "Length (frames)",
+            "default": "41"
+          },
+          {
+            "id": "framerate",
+            "type": "number",
+            "label": "Frame Rate",
+            "default": "24"
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "webp",
+          "to": "imageFormat"
+        },
+        {
+          "from": "frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": 0,
+              "scale": 0.5,
+              "bias": 10,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": "generate_frames",
+          "math": [
+            {
+              "offset": -1,
+              "scale": 0.25,
+              "bias": 0,
+              "round": "ceil"
+            },
+            {
+              "offset": 0,
+              "scale": 4,
+              "bias": 1,
+              "round": "none"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "prompt"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "huihui_ai/qwen3-vl-abliterated:8b-instruct",
+          "prompt": "Given the summary of the first frame of a video: {{image_0_summary}}\n\nWrite a single paragraph instruction to describe any motion that would be happening naturally for the objects in the image. For example, hair would flutter, breasts would bounce, fingers would twitch, leaves would rustle, river flows, fire flickers, etc. Include as much of these motion descriptions as possible, but do not invent motions for objects that are not already in the original description. Only include the description, do not include any other text. The instructions are:",
+          "to": "prompt"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_description"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_description}}",
+          "to": "description"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "image_0_summary"
+            },
+            "isNot": {
+              "value": ""
+            }
+          },
+          "template": "{{image_0_summary}}",
+          "to": "summary"
+        },
+        {
+          "template": "640",
+          "to": "width"
+        },
+        {
+          "template": "832",
+          "to": "height"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "832",
+          "to": "width"
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "orientation"
+            },
+            "equals": {
+              "value": "landscape"
+            }
+          },
+          "template": "480",
+          "to": "height"
+        }
+      ],
+      "base": "desiwa22-q3-image-to-video-loop.json",
+      "replace": [
+        {
+          "from": "width",
+          "to": [
+            "104",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "height",
+          "to": [
+            "105",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "102",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "103",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveImageFilename",
+          "to": [
+            "115",
+            "inputs",
+            "filename_prefix"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "117",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "image_0_filename",
+          "to": [
+            "52",
+            "inputs",
+            "image"
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": [
+            "101",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "generate_frames",
+          "to": [
+            "77",
+            "inputs",
+            "length"
+          ]
+        },
+        {
+          "from": "framerate",
+          "to": [
+            "115",
+            "inputs",
+            "frame_rate"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputMediaFromTextFile",
+          "parameters": {
+            "filename": "video-filename.txt"
+          }
+        },
+        {
+          "process": "crossfadeVideoFrames",
+          "parameters": {
+            "blendFrames": 10
+          }
+        }
+      ]
+    },
+    {
+      "uid": "2c06e0f5-253f-4d4b-998b-14521b5e337c",
+      "name": "AnyTale: Voice Design (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "dialog",
+            "type": "textarea",
+            "label": "Dialog"
+          },
+          {
+            "id": "voiceProfile",
+            "type": "text",
+            "label": "Vocal Profile",
+            "default": "",
+            "options": []
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-voice-design.json",
+      "preGenerationTasks": [
+        {
+          "model": "ssfdre38/gemma4-nano:latest",
+          "imagePath": "",
+          "prompt": "Write two lines of text as a description of the vocal characteristics of a character with the following personality profile: {{prompt}}. \n\nUse the following example as a template:\nA female voice, clear and natural, moderate speed, stable tone, suitable for news broadcasting or daily conversation.\n\nALWAYS start the output with either \"A female voice\" or \"A male voice\". Output the vocal characteristics as prose ONLY.",
+          "to": "voiceProfile",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "voiceProfile"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        },
+        {
+          "condition": {
+            "where": {
+              "data": "dialog"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "model": "ssfdre38/gemma4-nano:latest",
+          "prompt": "Role: You are a scriptwriter writing dialogue for an audio script.\n\nCharacter Context:\nName: {{name}}\nPersonality Profile: {{prompt}}\n\nTask:\nWrite exactly two consecutive sentences of spoken dialogue spoken by {{name}} at the very start of a date. This dialogue serves as her self-introduction.\n\nStrict Constraints:\n1. Output ONLY the raw spoken text. \n2. Do NOT use quotation marks around the output.\n3. Do NOT include dialogue tags (e.g., \"she said\", \"she purred\").\n4. Do NOT include actions, physical movements, descriptions, or parentheticals.\n5. Do NOT reference a specific time of day (such as evening, night, or day).\n6. Tone: Highly seductive, silky, and confident.\n7. Max length: Under 30 words total.\n\nDesired Output Structure Example:\nIt is a pleasure to finally meet you. I do hope our time together lives up to the high expectations you have built up.",
+          "to": "dialog"
+        },
+        {
+          "from": "dialog",
+          "to": "summary"
+        },
+        {
+          "from": "voiceProfile",
+          "to": "description"
+        }
+      ],
+      "replace": [
+        {
+          "from": "voiceProfile",
+          "to": [
+            "20",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "dialog",
+          "to": [
+            "16",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "4",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "36",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "13fe4803-5779-4d17-a6e0-468804b31cdc",
+      "name": "AnyTale: Background Music (ACE-Step 1.5 XL)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
+            "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4"
+              },
+              {
+                "label": "3/4",
+                "value": "3"
+              },
+              {
+                "label": "2/4",
+                "value": "2"
+              },
+              {
+                "label": "6/8",
+                "value": "6"
+              }
+            ],
+            "default": "4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "base": "acestep15-xl-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "condition": {
+            "where": {
+              "data": "lyrics"
+            },
+            "equals": {
+              "value": ""
+            }
+          },
+          "template": "[instrumental]",
+          "to": "lyrics"
+        },
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "110",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "lyrics",
+          "to": [
+            "109",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "94",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "98",
+            "inputs",
+            "seconds"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "94",
+            "inputs",
+            "duration"
+          ]
+        },
+        {
+          "from": "bpm",
+          "to": [
+            "94",
+            "inputs",
+            "bpm"
+          ]
+        },
+        {
+          "from": "timesignature",
+          "to": [
+            "94",
+            "inputs",
+            "timesignature"
+          ]
+        },
+        {
+          "from": "keyscale",
+          "to": [
+            "94",
+            "inputs",
+            "keyscale"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "111",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        },
+        {
+          "from": "lyrics",
+          "to": "summary"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "d2f011fb-30a9-4ce1-bbe0-0a6556ac1d05",
+      "name": "AnyTale: Background Music (Stable Audio 3 Medium)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 60
+          },
+          {
+            "id": "bpm",
+            "type": "number",
+            "label": "BPM",
+            "default": 120
+          },
+          {
+            "id": "timesignature",
+            "type": "select",
+            "label": "Time Signature",
+            "options": [
+              {
+                "label": "4/4",
+                "value": "4/4"
+              },
+              {
+                "label": "3/4",
+                "value": "3/4"
+              },
+              {
+                "label": "2/4",
+                "value": "2/4"
+              },
+              {
+                "label": "6/8",
+                "value": "6/8"
+              }
+            ],
+            "default": "4/4"
+          },
+          {
+            "id": "keyscale",
+            "type": "select",
+            "label": "Key",
+            "options": [
+              {
+                "label": "C Major",
+                "value": "C major"
+              },
+              {
+                "label": "C# Major",
+                "value": "C# major"
+              },
+              {
+                "label": "Db Major",
+                "value": "Db major"
+              },
+              {
+                "label": "D Major",
+                "value": "D major"
+              },
+              {
+                "label": "D# Major",
+                "value": "D# major"
+              },
+              {
+                "label": "Eb Major",
+                "value": "Eb major"
+              },
+              {
+                "label": "E Major",
+                "value": "E major"
+              },
+              {
+                "label": "F Major",
+                "value": "F major"
+              },
+              {
+                "label": "F# Major",
+                "value": "F# major"
+              },
+              {
+                "label": "Gb Major",
+                "value": "Gb major"
+              },
+              {
+                "label": "G Major",
+                "value": "G major"
+              },
+              {
+                "label": "G# Major",
+                "value": "G# major"
+              },
+              {
+                "label": "A Major",
+                "value": "A major"
+              },
+              {
+                "label": "A# Major",
+                "value": "A# major"
+              },
+              {
+                "label": "Bb Major",
+                "value": "Bb major"
+              },
+              {
+                "label": "B Major",
+                "value": "B major"
+              },
+              {
+                "label": "C Minor",
+                "value": "C minor"
+              },
+              {
+                "label": "C# Minor",
+                "value": "C# minor"
+              },
+              {
+                "label": "Db Minor",
+                "value": "Db minor"
+              },
+              {
+                "label": "D Minor",
+                "value": "D minor"
+              },
+              {
+                "label": "D# Minor",
+                "value": "D# minor"
+              },
+              {
+                "label": "Eb Minor",
+                "value": "Eb minor"
+              },
+              {
+                "label": "E Minor",
+                "value": "E minor"
+              },
+              {
+                "label": "F Minor",
+                "value": "F minor"
+              },
+              {
+                "label": "F# Minor",
+                "value": "F# minor"
+              },
+              {
+                "label": "Gb Minor",
+                "value": "Gb minor"
+              },
+              {
+                "label": "G Minor",
+                "value": "G minor"
+              },
+              {
+                "label": "G# Minor",
+                "value": "G# minor"
+              },
+              {
+                "label": "A Minor",
+                "value": "A minor"
+              },
+              {
+                "label": "A# Minor",
+                "value": "A# minor"
+              },
+              {
+                "label": "Bb Minor",
+                "value": "Bb minor"
+              },
+              {
+                "label": "B Minor",
+                "value": "B minor"
+              }
+            ],
+            "default": "E minor"
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "base": "stableaudio3-text-to-music.json",
+      "preGenerationTasks": [
+        {
+          "template": "{{prompt}}, {{bpm}} BPM, time signature {{timesignature}}, {{keyscale}} key",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "68",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "60",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "74",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "78",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "from": "enhancedPrompt",
+          "to": "description"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "700189be-395e-4f3f-ba65-908c6a652f4e",
+      "name": "AnyTale: Dialog (Chatterbox)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "jpg",
+          "to": "imageFormat"
+        },
+        {
+          "from": "prompt",
+          "to": "summary"
+        }
+      ],
+      "base": "chatterbox-text-to-speech.json",
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "3",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "audio_0_filename",
+          "to": [
+            "5",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "20",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "b38ea4f0-4163-4a01-aa0e-15f224bd38a3",
+      "name": "AnyTale: Dialog (Qwen3-TTS)",
+      "options": {
+        "type": "audio",
+        "inputImages": 0,
+        "inputAudios": 1,
+        "nameRequired": true,
+        "optionalPrompt": false,
+        "extraInputs": [
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "base": "qwen3tts-text-to-audio.json",
+      "preGenerationTasks": [
+        {
+          "from": "prompt",
+          "to": "summary"
+        }
+      ],
+      "replace": [
+        {
+          "from": "prompt",
+          "to": [
+            "8",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "5",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "audio_0_filename",
+          "to": [
+            "10",
+            "inputs",
+            "audio"
+          ]
+        },
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "16",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "postGenerationTasks": [],
+      "hidden": true
+    },
+    {
+      "uid": "3896c18e-82a8-4b60-92be-d2ded86034c9",
+      "name": "AnyTale: Portrait (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime coloring, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "1024",
+          "to": "dimension"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "height"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "649f5584-e538-4f3b-9c34-7a7389171c56",
+      "name": "AnyTale: Portrait (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "1024",
+          "to": "dimension"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "4445bc62-d55d-42ea-a3e2-f8e6aef699f0",
+      "name": "AnyTale: Part Preview (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime colors, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "512",
+          "to": "dimension"
+        },
+        {
+          "template": "4",
+          "to": "steps"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "28",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "steps",
+          "to": [
+            "66",
+            "inputs",
+            "steps"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "da4e4ff9-4ef8-49d4-a680-df14b47f8c93",
+      "name": "AnyTale: Part Preview (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "512",
+          "to": "dimension"
+        },
+        {
+          "template": "10",
+          "to": "steps"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "steps",
+          "to": [
+            "3",
+            "inputs",
+            "steps"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "69e503c5-2f84-43ca-8902-c64913e4d378",
+      "name": "AnyTale: Image (LustifyXL)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "lustifyxl-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "91ea9e31-5c17-4ad5-9110-167a38742c06",
+      "name": "AnyTale: Image (CottonAnima)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "anime coloring, {{prompt}}",
+          "to": "enhancedPrompt"
+        }
+      ],
+      "postGenerationTasks": [
+        {
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "usePostPrompts"
+                },
+                "equals": {
+                  "value": false
+                }
+              },
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          },
+          "template": "Unnamed",
+          "to": "name"
+        }
+      ],
+      "base": "cottonanima-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "11",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "66",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "62",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "5f1cf6b3-3da2-4ee8-b45c-6022b0346f27",
+      "name": "AnyTale: Image (Illustrious)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "model",
+            "type": "select",
+            "label": "Version",
+            "default": "waiNSFWIllustrious_v140.safetensors",
+            "options": [
+              {
+                "label": "v14.0",
+                "value": "waiNSFWIllustrious_v140.safetensors"
+              },
+              {
+                "label": "v15.0",
+                "value": "waiIllustriousSDXL_v150.safetensors"
+              }
+            ]
+          },
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "illustrious-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "6",
+            "inputs",
+            "text"
+          ]
+        },
+        {
+          "from": "model",
+          "to": [
+            "4",
+            "inputs",
+            "ckpt_name"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "10",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
     }
-  ]
+  ],
+  "version": 1
 }

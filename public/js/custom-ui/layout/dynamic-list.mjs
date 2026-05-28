@@ -16,7 +16,10 @@ import { useState, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
+import { Checkbox } from '../io/checkbox.mjs';
+import { Select } from '../io/select.mjs';
 import { Icon } from '../layout/icon.mjs';
+import { HorizontalLayout } from '../themed-base.mjs';
 
 // ============================================================================
 // Styled Components
@@ -104,7 +107,7 @@ CondensedItemContent.className = 'dynamic-list-condensed-item-content';
 const DragGhost = styled('div')`
   position: fixed;
   pointer-events: none;
-  z-index: 20000;
+  z-index: 10000;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   width: ${props => props.width}px;
@@ -155,6 +158,17 @@ function DynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  upDisabled,
+  headerActions,
+  getEnabled,
+  onToggleEnabled,
+  getHeaderSelectOptions,
+  getHeaderSelectValue,
+  onHeaderSelectChange,
+  getHeaderSelectTooltip,
+  deleteIcon = 'trash',
+  deleteLabel,
+  hideDelete = false,
   theme,
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -167,6 +181,11 @@ function DynamicListItem({
     onDragStart(e, index, title);
   }, [onDragStart, index, title]);
 
+  const handleToggleEnabled = useCallback((e) => {
+    e.stopPropagation();
+    if (onToggleEnabled) onToggleEnabled(item, index);
+  }, [item, index, onToggleEnabled]);
+
   return html`
     <${ItemShell} theme=${theme} style=${isDragTarget ? { opacity: 0.3 } : {}}>
       <${ItemHeader} theme=${theme} onClick=${() => setCollapsed(c => !c)}>
@@ -175,14 +194,38 @@ function DynamicListItem({
           size="16px"
           color=${theme.colors.text.secondary}
         />
+        ${getEnabled != null && html`
+          <${Checkbox}
+            checked=${getEnabled(item, index)}
+            onClick=${handleToggleEnabled}
+            onChange=${() => {}}
+          />
+        `}
         <${ItemTitle} theme=${theme}>${title}</${ItemTitle}>
-        <div onClick=${stopProp} style="display:flex;gap:4px;">
+        <div onClick=${stopProp} style="display:flex;gap:8px;align-items:center;">
+          ${getHeaderSelectOptions && html`
+            <${Select}
+              options=${getHeaderSelectOptions(item, index)}
+              value=${getHeaderSelectValue ? getHeaderSelectValue(item, index) : ''}
+              onChange=${(e) => onHeaderSelectChange && onHeaderSelectChange(item, index, e.target.value)}
+              tooltip=${getHeaderSelectTooltip ? getHeaderSelectTooltip(item, index) : null}
+              heightScale="compact"
+            />
+          `}
+          ${headerActions && headerActions.map(action => html`
+            <${Button}
+              variant="small-icon"
+              icon=${action.icon}
+              onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
+              tooltip=${action.title}
+            />
+          `)}
           ${showDragButton && html`
             <${Button}
               variant="small-icon"
               icon="swap-vertical"
               onMouseDown=${handleDragMouseDown}
-              title="Drag to reorder"
+              tooltip="Reorder"
               style=${{ cursor: 'grab' }}
             />
           `}
@@ -190,25 +233,27 @@ function DynamicListItem({
             <${Button}
               variant="small-icon"
               icon="up-arrow"
-              disabled=${index === 0}
+              disabled=${upDisabled ?? (index === 0)}
               onClick=${onMoveUp}
-              title="Move up"
+              tooltip="Move up"
             />
             <${Button}
               variant="small-icon"
               icon="down-arrow"
               disabled=${index === total - 1}
               onClick=${onMoveDown}
-              title="Move down"
+              tooltip="Move down"
             />
           `}
-          <${Button}
-            variant="small-icon"
-            icon="trash"
-            color="danger"
-            onClick=${onDelete}
-            title="Delete"
-          />
+          ${!hideDelete && html`
+            <${Button}
+              variant="small-icon"
+              icon=${deleteIcon}
+              color="danger"
+              onClick=${onDelete}
+              tooltip=${deleteLabel ?? 'Delete'}
+            />
+          `}
         </div>
       </${ItemHeader}>
       <${ItemBody} theme=${theme} collapsed=${collapsed}>
@@ -238,6 +283,13 @@ function CondensedDynamicListItem({
   isDragTarget,
   showDragButton,
   showMoveUpDownButtons,
+  upDisabled,
+  headerActions,
+  getEnabled,
+  onToggleEnabled,
+  deleteIcon = 'trash',
+  deleteLabel,
+  hideDelete = false,
   theme,
 }) {
   const handleDragMouseDown = useCallback((e) => {
@@ -249,16 +301,30 @@ function CondensedDynamicListItem({
 
   return html`
     <${CondensedItemRow} theme=${theme} style=${isDragTarget ? { opacity: 0.3 } : {}}>
+      ${getEnabled != null && html`
+        <${Checkbox}
+          checked=${getEnabled(item, index)}
+          onChange=${() => { if (onToggleEnabled) onToggleEnabled(item, index); }}
+        />
+      `}
       <${CondensedItemContent}>
         ${renderItem(item, index)}
       </${CondensedItemContent}>
-      <div style="display:flex;gap:4px;flex-shrink:0;">
+      <${HorizontalLayout} gap="small">
+        ${headerActions && headerActions.map(action => html`
+          <${Button}
+            variant="small-icon"
+            icon=${action.icon}
+            onClick=${(e) => { e.stopPropagation(); action.onClick(item, index); }}
+            tooltip=${action.title}
+          />
+        `)}
         ${showDragButton && html`
           <${Button}
             variant="small-icon"
             icon="swap-vertical"
             onMouseDown=${handleDragMouseDown}
-            title="Drag to reorder"
+            tooltip="Reorder"
             style=${{ cursor: 'grab' }}
           />
         `}
@@ -266,26 +332,28 @@ function CondensedDynamicListItem({
           <${Button}
             variant="small-icon"
             icon="up-arrow"
-            disabled=${index === 0}
+            disabled=${upDisabled ?? (index === 0)}
             onClick=${onMoveUp}
-            title="Move up"
+            tooltip="Move up"
           />
           <${Button}
             variant="small-icon"
             icon="down-arrow"
             disabled=${index === total - 1}
             onClick=${onMoveDown}
-            title="Move down"
+            tooltip="Move down"
           />
         `}
-        <${Button}
-          variant="small-icon"
-          icon="trash"
-          color="danger"
-          onClick=${onDelete}
-          title="Delete"
-        />
-      </div>
+        ${!hideDelete && html`
+          <${Button}
+            variant="small-icon"
+            icon=${deleteIcon}
+            color="danger"
+            onClick=${onDelete}
+            tooltip=${deleteLabel ?? 'Delete'}
+          />
+        `}
+      </${HorizontalLayout}>
     </${CondensedItemRow}>
   `;
 }
@@ -320,6 +388,17 @@ function CondensedDynamicListItem({
  * @param {boolean}  [props.condensed=false]     - Use condensed inline layout (no panel, no collapse).
  * @param {boolean}  [props.showDragButton=true] - Show the drag-to-reorder handle button.
  * @param {boolean}  [props.showMoveUpDownButtons=false] - Show the move-up / move-down buttons.
+ * @param {boolean}  [props.hideAddItem=false]   - Hide the add button entirely.
+ * @param {boolean}  [props.hideDelete=false]    - Hide the per-item delete button entirely.
+ * @param {Array}    [props.headerActions]       - Custom header action buttons: `[{ icon, title, onClick(item, index) }]`.
+ * @param {string}   [props.deleteIcon='trash']  - Icon name for the delete button.
+ * @param {string}   [props.deleteLabel]         - Text label for the delete button. When set, renders as `small-text` variant instead of icon-only.
+ * @param {Function} [props.getHeaderSelectOptions]  - `(item, index) => [{label, value}]` — when provided, renders a compact Select in each item header.
+ * @param {Function} [props.getHeaderSelectValue]    - `(item, index) => string` — current value for the header Select.
+ * @param {Function} [props.onHeaderSelectChange]    - `(item, index, value) => void` — called when the header Select changes.
+ * @param {Function} [props.getHeaderSelectTooltip]  - `(item, index) => string|null` — optional tooltip for the header Select.
+ * @param {Function} [props.onDelete]              - `(item, index) => void` — when provided, called instead of the built-in item removal. The caller is responsible for updating `items` via `onChange`.
+ * @param {Function} [props.canDrop]               - `(fromIndex, toIndex) => bool` — when provided, called before committing a drag-drop or move-up; returning `false` cancels the operation. Also disables the move-up button at index i when `canDrop(i, i-1)` returns `false`.
  * @returns {preact.VNode}
  *
  * @example
@@ -347,6 +426,19 @@ export function DynamicList({
   onAdd,                      // optional: () => void – replaces default handleAdd when provided
   showDragButton = true,      // show the swap-vertical drag handle
   showMoveUpDownButtons = false, // show the up/down arrow buttons
+  hideAddItem = false,         // hide the add button entirely
+  hideDelete = false,          // hide the per-item delete button entirely
+  headerActions,               // custom header action buttons
+  getEnabled,                  // optional: (item, index) => boolean – enables per-item toggle checkbox
+  onToggleEnabled,             // optional: (item, index) => void – called when enabled checkbox changes
+  deleteIcon = 'trash',        // icon name for the per-item delete button
+  deleteLabel,                 // optional text label; switches button to small-text variant
+  getHeaderSelectOptions,      // optional: (item, index) => [{label, value}] — renders a Select in the item header
+  getHeaderSelectValue,        // optional: (item, index) => string
+  onHeaderSelectChange,        // optional: (item, index, value) => void
+  getHeaderSelectTooltip,      // optional: (item, index) => string|null — tooltip for the header Select
+  onDelete,                    // optional: (item, index) => void — replaces built-in removal; caller updates items via onChange
+  canDrop,                     // optional: (fromIndex, toIndex) => bool — cancels drag/move-up when false
 }) {
   const theme = currentTheme.value;
 
@@ -393,10 +485,11 @@ export function DynamicList({
 
   const handleMoveUp = useCallback((index) => {
     if (index === 0) return;
+    if (canDrop && !canDrop(index, index - 1)) return;
     const next = [...items];
     [next[index - 1], next[index]] = [next[index], next[index - 1]];
     onChange(next);
-  }, [items, onChange]);
+  }, [items, onChange, canDrop]);
 
   const handleMoveDown = useCallback((index) => {
     if (index === items.length - 1) return;
@@ -521,7 +614,7 @@ export function DynamicList({
 
       setDragState(null);
 
-      if (from !== to) {
+      if (from !== to && (!canDrop || canDrop(from, to))) {
         // Use itemsRef.current so we never capture a stale items array.
         const next = [...itemsRef.current];
         const [moved] = next.splice(from, 1);
@@ -539,7 +632,7 @@ export function DynamicList({
 
   // ── Add button ────────────────────────────────────────────────────────────
 
-  const addButton = html`
+  const addButton = hideAddItem ? null : html`
     <${Button}
       variant="small-icon"
       icon="plus"
@@ -589,11 +682,18 @@ export function DynamicList({
                 renderItem=${renderItem}
                 onMoveUp=${() => handleMoveUp(index)}
                 onMoveDown=${() => handleMoveDown(index)}
-                onDelete=${() => handleDelete(index)}
+                onDelete=${onDelete ? () => onDelete(item, index) : () => handleDelete(index)}
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                upDisabled=${index === 0 || (canDrop ? !canDrop(index, index - 1) : false)}
+                headerActions=${headerActions}
+                getEnabled=${getEnabled}
+                onToggleEnabled=${onToggleEnabled}
+                deleteIcon=${deleteIcon}
+                deleteLabel=${deleteLabel}
+                hideDelete=${hideDelete}
                 theme=${theme}
               />
             `
@@ -606,12 +706,23 @@ export function DynamicList({
                 renderItem=${renderItem}
                 onMoveUp=${() => handleMoveUp(index)}
                 onMoveDown=${() => handleMoveDown(index)}
-                onDelete=${() => handleDelete(index)}
+                onDelete=${onDelete ? () => onDelete(item, index) : () => handleDelete(index)}
                 onDragStart=${handleDragStart}
                 isDragTarget=${false}
                 initialCollapsed=${!isNew}
                 showDragButton=${showDragButton}
                 showMoveUpDownButtons=${showMoveUpDownButtons}
+                upDisabled=${index === 0 || (canDrop ? !canDrop(index, index - 1) : false)}
+                headerActions=${headerActions}
+                getEnabled=${getEnabled}
+                onToggleEnabled=${onToggleEnabled}
+                getHeaderSelectOptions=${getHeaderSelectOptions}
+                getHeaderSelectValue=${getHeaderSelectValue}
+                onHeaderSelectChange=${onHeaderSelectChange}
+                getHeaderSelectTooltip=${getHeaderSelectTooltip}
+                deleteIcon=${deleteIcon}
+                deleteLabel=${deleteLabel}
+                hideDelete=${hideDelete}
                 theme=${theme}
               />
             `
@@ -660,6 +771,12 @@ export function DynamicList({
             isDragTarget=${false}
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
+            headerActions=${headerActions}
+            getEnabled=${getEnabled}
+            onToggleEnabled=${onToggleEnabled}
+            deleteIcon=${deleteIcon}
+            deleteLabel=${deleteLabel}
+            hideDelete=${hideDelete}
             theme=${theme}
           />
         `
@@ -678,6 +795,16 @@ export function DynamicList({
             initialCollapsed=${!isNew}
             showDragButton=${showDragButton}
             showMoveUpDownButtons=${showMoveUpDownButtons}
+            headerActions=${headerActions}
+            getEnabled=${getEnabled}
+            onToggleEnabled=${onToggleEnabled}
+            getHeaderSelectOptions=${getHeaderSelectOptions}
+            getHeaderSelectValue=${getHeaderSelectValue}
+            onHeaderSelectChange=${onHeaderSelectChange}
+            getHeaderSelectTooltip=${getHeaderSelectTooltip}
+            deleteIcon=${deleteIcon}
+            deleteLabel=${deleteLabel}
+            hideDelete=${hideDelete}
             theme=${theme}
           />
         `;

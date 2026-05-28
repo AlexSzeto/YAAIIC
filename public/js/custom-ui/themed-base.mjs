@@ -9,6 +9,17 @@ import { styled } from 'goober';
 import { currentTheme } from './theme.mjs';
 
 /**
+ * Label - A simple text label
+ * Usage: Form labels, section labels
+ */
+export const Label = styled('label')`
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  font-weight: ${() => currentTheme.value.typography.fontWeight.medium};
+  color: ${() => currentTheme.value.colors.text.secondary};
+`;
+Label.className = 'themed-label';
+
+/**
  * H1 - Large page heading
  * Size: 2rem (32px)
  * Weight: 600 (bold)
@@ -56,15 +67,30 @@ export const H3 = styled('h3')`
 H3.className = 'themed-h3';
 
 /**
+ * HorizontalEdgesLayout - A horizontal flex container that split two children to the left and right edges
+ * Usage: Commonly used for headers with a title on the left and actions on the right
+ * @param {Object} props
+ */
+export const HorizontalEdgesLayout = styled('div')`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+`;
+HorizontalEdgesLayout.className = 'horizontal-edges-layout';
+
+/**
  * HorizontalLayout - A horizontal flex container with themed gap
  * Usage: Layout elements in a row with consistent spacing
  * @param {Object} props
  * @param {'small'|'medium'|'large'} [props.gap='medium'] - Spacing size
+ * @param {'flex-start'|'center'|'flex-end'} [props.justifyContent='flex-start'] - Horizontal alignment of children
  */
 export const HorizontalLayout = styled('div')`
   display: flex;
   flex-direction: row;
   align-items: ${props => props.alignItems || 'flex-end'};
+  justify-content: ${props => props.justifyContent || 'flex-start'};
   gap: ${props => currentTheme.value.spacing[props.gap && ['small', 'medium', 'large'].includes(props.gap) ? props.gap : 'medium'].gap};
 `;
 HorizontalLayout.className = 'horizontal-layout';

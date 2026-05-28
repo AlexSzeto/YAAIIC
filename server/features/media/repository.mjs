@@ -27,6 +27,46 @@ import {
 } from '../../core/database.mjs';
 
 // ---------------------------------------------------------------------------
+// Type Definitions
+// ---------------------------------------------------------------------------
+
+/**
+ * A single entry in the media gallery (image, video, or audio).
+ * @typedef {Object} MediaEntry
+ * @property {number} uid - Auto-generated unique identifier
+ * @property {string} timestamp - ISO timestamp (auto-generated on creation)
+ * @property {string} folder - Folder UID; empty string means Unsorted
+ * @property {string} [name='']
+ * @property {string} [description='']
+ * @property {string} [summary='']
+ * @property {string} [tags='']
+ * @property {string} [prompt='']
+ * @property {string|null} [imageUrl] - Relative URL, e.g. '/media/image_42.png'
+ * @property {string|null} [audioUrl] - Relative URL, e.g. '/media/audio_3.mp3'
+ * @property {number|null} [seed]
+ * @property {string} [workflow=''] - Name of the workflow used to generate this entry
+ * @property {'image'|'video'|'audio'} [type='image']
+ * @property {'portrait'|'landscape'|'square'|null} [orientation]
+ * @property {boolean} [inpaint=false]
+ * @property {{ x: number, y: number, width: number, height: number }|null} [inpaintArea]
+ * @property {number} [timeTaken=0] - Wall-clock seconds from task start to completion
+ * @property {number|null} [length] - Duration in seconds (video/audio only)
+ * @property {number|null} [framerate] - Frames per second (video only)
+ * @property {string[]|null} [clips] - Clip filenames for multi-clip audio entries
+ * @property {string|null} [imageFormat] - File extension, e.g. 'png', 'webp', 'mp4'
+ * @property {string|null} [audioFormat] - File extension, e.g. 'mp3', 'wav', 'flac'
+ * @property {Object} [extraInputs={}] - Extra-input values keyed by ExtraInput.id
+ * @property {Object|null} [parts] - Anytale character parts snapshot (anytale-generated entries only)
+ * @property {Object|null} [plot] - Anytale plot snapshot (anytale-generated entries only)
+ */
+
+/**
+ * @typedef {Object} MediaFolder
+ * @property {string} uid
+ * @property {string} label
+ */
+
+// ---------------------------------------------------------------------------
 // Media entries
 // ---------------------------------------------------------------------------
 

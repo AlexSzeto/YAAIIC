@@ -310,7 +310,7 @@ export class GalleryPreview extends Component {
                   <${Button}
                     variant="small-icon"
                     icon=${isAudioPlaying ? 'stop' : 'play'}
-                    title=${isAudioPlaying ? 'Stop' : 'Play'}
+                    tooltip=${isAudioPlaying ? 'Stop' : 'Play'}
                   />
                 </${GalleryAudioButton}>
               `}
@@ -319,7 +319,7 @@ export class GalleryPreview extends Component {
                   <${Button}
                     variant="small-icon"
                     icon="arrow-out-up-right-square"
-                    title="View image"
+                    tooltip="View image"
                   />
                 </${GalleryViewButton}>
               `}

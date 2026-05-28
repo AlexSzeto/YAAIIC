@@ -1,13 +1,13 @@
 // Main application entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from 'goober';
 import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
 
 import { Button } from './custom-ui/io/button.mjs';
-import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
+import { ProgressProvider, useProgress } from './custom-ui/msg/progress-context.mjs';
 import { Panel } from './custom-ui/layout/panel.mjs';
 import { H1, H2, H3, HorizontalLayout, VerticalLayout } from './custom-ui/themed-base.mjs';
 import { AppHeader } from './app-ui/themed-base.mjs';
@@ -24,15 +24,18 @@ import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
 import { showDialog } from './custom-ui/overlays/dialog.mjs';
 import { openFolderSelect } from './app-ui/use-folder-select.mjs';
 
-import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, extractNameFromFilename } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
 import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { HoverPanelProvider, useHoverPanel } from './custom-ui/overlays/hover-panel.mjs';
+import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
 import { createGalleryPreview } from './app-ui/main/gallery-preview.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
 import { backfillMissingProperties } from './util.mjs';
+import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
+import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
+import { getClientId } from './app-ui/client-id.mjs';
 
 // =========================================================================
 // Styled Components
@@ -56,6 +59,7 @@ function generateRandomSeed() {
 function App() {
   const toast = useToast();
   const hoverPanel = useHoverPanel();
+  const { show: progressShow, activeTasks } = useProgress();
   
   // Theme state - triggers re-render on theme change so goober styled components update
   const [, setTheme] = useState(currentTheme.value);
@@ -74,7 +78,6 @@ function App() {
   
   const [generatedImage, setGeneratedImage] = useState(null);
   const [taskId, setTaskId] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [regenerateTaskId, setRegenerateTaskId] = useState(null);
   const [soundEditorItem, setSoundEditorItem] = useState(null);
 
@@ -378,8 +381,6 @@ function App() {
     }
 
     try {
-      setIsGenerating(true);
-      
       // Determine orientation - default to "detect" if undefined
       let orientation = workflow.orientation || 'detect';
       
@@ -417,6 +418,7 @@ function App() {
         formData.append('prompt', formState.description);
         formData.append('workflow', workflow.name);
         formData.append('seed', seedToUse);
+        formData.append('requestOrigin', 'yaaiic');
         
         if (formState.name.trim()) {
           formData.append('name', formState.name.trim());
@@ -443,8 +445,9 @@ function App() {
             formData.append(`image_${index}`, img.blob, `image_${index}.png`);
 
             imageTextFieldNames.forEach(fieldName => {
-              // Check top-level (legacy/upload) or nested in mediaData (selected)
-              const value = img.mediaData?.[fieldName] || img[fieldName];
+              // Check top-level (legacy/upload), nested extraInputs (post-schema-refactor), or img root
+              const extras = img.mediaData?.extraInputs || {};
+              const value = img.mediaData?.[fieldName] ?? extras[fieldName] ?? img[fieldName];
               if (value) {
                 formData.append(`image_${index}_${fieldName}`, value);
               }
@@ -471,7 +474,6 @@ function App() {
               } catch (fetchError) {
                 console.error(`Failed to fetch audio from ${audio.url}:`, fetchError);
                 toast.error(`Failed to load audio file ${index + 1}`);
-                setIsGenerating(false);
                 return;
               }
             }
@@ -492,7 +494,8 @@ function App() {
           }
         }
         
-        response = await fetchJson('/generate', {
+        formData.append('clientId', getClientId());
+        response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           body: formData
         });
@@ -504,7 +507,8 @@ function App() {
           description: formState.description,
           prompt: formState.description,
           seed: seedToUse,
-          orientation: orientation
+          orientation: orientation,
+          requestOrigin: 'yaaiic'
         };
         
         // Add all extra inputs from workflow configuration
@@ -517,39 +521,31 @@ function App() {
           });
         }
 
-        response = await fetchJson('/generate', {
+        response = await fetchJson('/generate?queueOnly=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({ ...requestBody, clientId: getClientId() })
         });
       }
       
-      if (response.taskId) {
-        setTaskId(response.taskId);
-        toast.show('Generation started...', 'info');
-      } else {
-        throw new Error('No taskId returned');
-      }
-      
+      toast.show('Generation queued...', 'info');
+
     } catch (err) {
       console.error('Generation failed:', err);
       toast.error(err.message || 'Failed to start generation');
-      setIsGenerating(false);
     }
   };
-  
+
   const handleGenerationComplete = async (data) => {
-    setIsGenerating(false);
-    setTaskId(null);
-    
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+
     if (data.result && data.result.uid) {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
         setGeneratedImage(media);
-        
-        // Add to history
         setHistory(prev => [media, ...prev]);
-        
+        historyNav.selectByIndex(0);
+
         toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
@@ -557,13 +553,26 @@ function App() {
       }
     }
   };
-  
+
   const handleGenerationError = (data) => {
-    setIsGenerating(false);
-    setTaskId(null);
-    toast.error(data.error?.message || 'Generation failed');
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+    toast.error(data?.error?.message || 'Generation failed');
   };
-  
+
+  // Reconnect-resume: restore in-progress yaaiic generation tasks on page load
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const task = activeTasks.find(t => t.requestOrigin === 'yaaiic');
+    if (task && !taskId) {
+      setTaskId(task.taskId);
+      progressShow(task.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+        onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+      });
+    }
+  }, [activeTasks]);
+
   // Handlers for Generated Result
   const handleUseSeed = (seed) => {
     setFormState(prev => ({ ...prev, seed: String(seed), seedLocked: true }));
@@ -644,8 +653,14 @@ function App() {
         ...newFormState
       }));
 
+      // Clear existing inputs before restoring, so stale inputs from a previous
+      // workflow don't persist if the restore fails or the source was deleted.
+      setInputImages([]);
+      setInputAudios([]);
+
       // Restore input images if they exist in the generation data
       const newInputImages = [];
+      let missingImages = 0;
       if (wf.inputImages && wf.inputImages > 0) {
         const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputImages; i++) {
@@ -666,6 +681,7 @@ function App() {
               }
             } catch (err) {
               console.error(`Failed to load input image ${i}:`, err);
+              missingImages++;
             }
           }
         }
@@ -676,6 +692,7 @@ function App() {
 
       // Restore input audio if they exist in the generation data
       const newInputAudios = [];
+      let missingAudios = 0;
       if (wf.inputAudios && wf.inputAudios > 0) {
         const extras = image.extraInputs || {};
         for (let i = 0; i < wf.inputAudios; i++) {
@@ -696,6 +713,7 @@ function App() {
               }
             } catch (err) {
               console.error(`Failed to load input audio ${i}:`, err);
+              missingAudios++;
             }
           }
         }
@@ -704,7 +722,14 @@ function App() {
         setInputAudios(newInputAudios);
       }
 
-      toast.success('All generation settings loaded from result');
+      if (missingImages > 0 || missingAudios > 0) {
+        const parts = [];
+        if (missingImages > 0) parts.push(`${missingImages} source image${missingImages > 1 ? 's' : ''}`);
+        if (missingAudios > 0) parts.push(`${missingAudios} source audio${missingAudios > 1 ? 's' : ''}`);
+        toast.info(`Settings loaded — ${parts.join(' and ')} could not be restored (may have been deleted). Please re-select.`);
+      } else {
+        toast.success('All generation settings loaded from result');
+      }
     } catch (error) {
       console.error('Failed to load generation settings:', error);
       toast.error('Failed to load generation settings');
@@ -772,7 +797,12 @@ function App() {
   const handleSoundEditSaveTask = useCallback((taskId) => {
     setSoundEditorItem(null);
     setTaskId(taskId);
-  }, []);
+    progressShow(taskId, {
+      onComplete: handleGenerationComplete,
+      onError: handleGenerationError,
+      onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+    });
+  }, [progressShow]);
 
   const handleEdit = async (uid, field, value) => {
     try {
@@ -809,18 +839,11 @@ function App() {
 
   const handleRegenerate = async (uid, field) => {
     try {
-      const response = await fetchJson('/regenerate', {
+      const response = await fetchJson('/regenerate?queueOnly=false', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, fields: [field] })
+        body: JSON.stringify({ uid, fields: [field], clientId: getClientId() })
       });
-
-      if (!response.taskId) {
-        throw new Error('No task ID returned from server');
-      }
-
-      // Set regeneration task ID to trigger progress banner
-      setRegenerateTaskId(response.taskId);
 
     } catch (err) {
       console.error('Regenerate failed:', err);
@@ -830,7 +853,7 @@ function App() {
 
   const handleRegenerateComplete = async (data) => {
     console.log('Regenerate complete:', data);
-    setRegenerateTaskId(null);
+    setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     
     if (data.mediaData) {
       // Update the generated image display with complete data
@@ -847,9 +870,44 @@ function App() {
 
   const handleRegenerateError = (data) => {
     console.error('Regenerate error:', data);
-    setRegenerateTaskId(null);
-    toast.error(data.error?.message || 'Regeneration failed');
+    setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
+    toast.error(data?.error?.message || 'Regeneration failed');
   };
+
+  // Refs to always call the latest callback versions from the persistent subscription
+  const handleGenerationCompleteRef = useRef(handleGenerationComplete);
+  handleGenerationCompleteRef.current = handleGenerationComplete;
+  const handleGenerationErrorRef = useRef(handleGenerationError);
+  handleGenerationErrorRef.current = handleGenerationError;
+  const handleRegenerateCompleteRef = useRef(handleRegenerateComplete);
+  handleRegenerateCompleteRef.current = handleRegenerateComplete;
+  const handleRegenerateErrorRef = useRef(handleRegenerateError);
+  handleRegenerateErrorRef.current = handleRegenerateError;
+
+  // Persistent subscription: bridge queue task-started events to progress tracking
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, endpointKey, clientId }) => {
+        if (source !== 'yaaiic') return;
+        if (clientId !== getClientId()) return;
+        if (endpointKey === 'regenerate') {
+          setRegenerateTaskId(taskId);
+          progressShow(taskId, {
+            onComplete: (data) => handleRegenerateCompleteRef.current(data),
+            onError: (data) => handleRegenerateErrorRef.current(data),
+            onCancelled: (data) => setRegenerateTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+          });
+        } else {
+          setTaskId(taskId);
+          progressShow(taskId, {
+            onComplete: (data) => handleGenerationCompleteRef.current(data),
+            onError: (data) => handleGenerationErrorRef.current(data),
+            onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+          });
+        }
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Folder handlers
   const handleOpenFolderSelect = () => {
@@ -1004,8 +1062,13 @@ function App() {
       });
       
       if (result.taskId) {
-         setTaskId(result.taskId);
-         toast.show('Uploading...', 'info');
+        setTaskId(result.taskId);
+        progressShow(result.taskId, {
+          onComplete: handleGenerationComplete,
+          onError: handleGenerationError,
+          onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        });
+        toast.show('Uploading...', 'info');
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -1046,7 +1109,6 @@ function App() {
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
-            disabled=${isGenerating}
             typeOptions=${[
               { label: 'Image', value: 'image' },
               { label: 'Video', value: 'video' },
@@ -1058,7 +1120,6 @@ function App() {
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${!!(taskId || regenerateTaskId)}
             onGenerate=${handleGenerate}
             onOpenGallery=${() => setIsGalleryOpen(true)}
             onUploadClick=${() => document.getElementById('upload-file-input')?.click()}
@@ -1132,26 +1193,6 @@ function App() {
       />
     ` : null}
 
-    ${taskId ? html`
-      <${ProgressBanner}
-        key=${taskId}
-        taskId=${taskId}
-        sseManager=${sseManager}
-        onComplete=${handleGenerationComplete}
-        onError=${handleGenerationError}
-      />
-    ` : null}
-    
-    ${regenerateTaskId ? html`
-      <${ProgressBanner} 
-        key=${regenerateTaskId}
-        taskId=${regenerateTaskId}
-        sseManager=${sseManager}
-        onComplete=${handleRegenerateComplete}
-        onError=${handleRegenerateError}
-      />
-    ` : null}
-
     <${Gallery} 
       isOpen=${isGalleryOpen}
       onClose=${() => {
@@ -1175,12 +1216,14 @@ function App() {
       onDelete=${handleGalleryDelete}
     />
     
-    <${HiddenFileInput} 
-      type="file" 
-      id="upload-file-input" 
+    <${HiddenFileInput}
+      type="file"
+      id="upload-file-input"
       accept="image/*,audio/*"
       onChange=${handleUploadFile}
     />
+
+    <${QueueStatusBanner} progressVisible=${!!(taskId || regenerateTaskId)} />
   `;
 }
 
@@ -1190,11 +1233,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (root) {
     render(html`
       <${HoverPanelProvider}>
-        <${Page}>
-          <${ToastProvider}>
-            <${App} />
-          </${ToastProvider}>
-        </${Page}>
+        <${TooltipProvider}>
+          <${Page}>
+            <${ToastProvider}>
+              <${ProgressProvider}>
+                <${App} />
+              </${ProgressProvider}>
+            </${ToastProvider}>
+          </${Page}>
+        </${TooltipProvider}>
       </${HoverPanelProvider}>
     `, root);
     console.log('App V3 mounted successfully');

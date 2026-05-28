@@ -19,6 +19,11 @@
     "timeTaken": { "type": "number", "default": 0 },
     "length": { "type": "number", "default": null },
     "framerate": { "type": "number", "default": null },
-    "extraInputs": { "type": "object", "default": {} }
+    "clips": { "type": "array", "default": null },
+    "imageFormat": { "type": "string", "default": null },
+    "audioFormat": { "type": "string", "default": null },
+    "extraInputs": { "type": "object", "default": {} },
+    "parts": { "type": "object", "default": null },
+    "plot": { "type": "object", "default": null }
   }
 }

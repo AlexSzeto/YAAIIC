@@ -128,7 +128,7 @@ function ConditionItem({ condition, index, onChange, onDelete }) {
         icon="trash"
         color="danger"
         onClick=${() => onDelete(index)}
-        title="Remove condition"
+        tooltip="Remove condition"
       />
     </${ConditionRow}>
   `;
@@ -204,7 +204,7 @@ export function ConditionBuilder({ value, onChange }) {
           icon="plus"
           color="secondary"
           onClick=${handleAdd}
-          title="Add condition"
+          tooltip="Add condition"
         />
       </${ToggleRow}>
 

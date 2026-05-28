@@ -1,0 +1,108 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 975472531268685,
+      "steps": 20,
+      "cfg": 3,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "exponential",
+      "denoise": 1,
+      "model": [
+        "4",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 896,
+      "height": 1152,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "masterpiece, best quality, amazing quality, hi res image, 1girl, solo, blush, looking down, holding own breasts, shirt partially removed, medium breasts, black hair, sidelocks, high ponytail, orange eyes, tsurime, red hakama, kosode, white shirt",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "bad quality, worst quality, worst detail, bad eyes, extra hands, extra fingers, extra arms, extra legs, black and white, watermark, trademarked, censor, motion blur, motion lines, smear frame",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "10": {
+    "inputs": {
+      "path": "F:\\YAAIIC\\server\\storage\\image_3902.png",
+      "overwrite": "true",
+      "image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "JWImageSaveToPath",
+    "_meta": {
+      "title": "Image Save To Path"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // Inpaint page entry point for V3
 import { render } from 'preact';
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from 'goober';
 
 import { Page } from './custom-ui/layout/page.mjs';
@@ -11,13 +11,13 @@ import { AppHeader } from './app-ui/themed-base.mjs';
 
 import { getThemeValue, currentTheme } from './custom-ui/theme.mjs';
 import { ToastProvider, useToast } from './custom-ui/msg/toast.mjs';
+import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
+import { ProgressProvider, useProgress } from './custom-ui/msg/progress-context.mjs';
 import { WorkflowSelector } from './app-ui/workflow-selector.mjs';
 import { InpaintCanvas } from './app-ui/inpaint/inpaint-canvas.mjs';
 import { InpaintForm } from './app-ui/inpaint/inpaint-form.mjs';
-import { ProgressBanner } from './custom-ui/msg/progress-banner.mjs';
 import { NavigatorControl } from './custom-ui/nav/navigator.mjs';
 import { useItemNavigation } from './custom-ui/nav/use-item-navigation.mjs';
-import { sseManager } from './app-ui/sse-manager.mjs';
 import { fetchJson, fetchWithRetry, getQueryParam } from './custom-ui/util.mjs';
 import { initAutoComplete } from './app-ui/autocomplete-setup.mjs';
 import { loadTags } from './app-ui/tags/tags.mjs';
@@ -25,6 +25,9 @@ import { loadTagDefinitions } from './app-ui/tags/tag-data.mjs';
 import { Button } from './custom-ui/io/button.mjs';
 import { showFolderSelect } from './app-ui/folder-select.mjs';
 import { HamburgerMenu } from './app-ui/hamburger-menu.mjs';
+import { queueSSEManager } from './app-ui/queue-sse-manager.mjs';
+import { QueueStatusBanner } from './app-ui/queue-status-banner.mjs';
+import { getClientId } from './app-ui/client-id.mjs';
 
 /**
  * Helper function to generate random seed
@@ -106,6 +109,7 @@ async function createOriginalImageCanvas(imageUrl) {
  */
 function InpaintApp() {
   const toast = useToast();
+  const { show: progressShow, activeTasks } = useProgress();
 
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
@@ -118,7 +122,6 @@ function InpaintApp() {
   const [inpaintArea, setInpaintArea] = useState(null);
   const [history, setHistory] = useState([]);
   const [taskId, setTaskId] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   
   // Folder state
   const [currentFolder, setCurrentFolder] = useState({ uid: '', label: 'Unsorted' });
@@ -270,7 +273,6 @@ function InpaintApp() {
     }
     
     try {
-      setIsGenerating(true);
       toast.show('Preparing inpaint request...');
       
       // Get the original image canvas
@@ -308,12 +310,16 @@ function InpaintApp() {
       formData.append('maskFilename', maskFilename);
       formData.append('image', imageBlob, 'image.png');
       formData.append('mask', maskBlob, 'mask.png');
+      formData.append('requestOrigin', 'inpaint');
       if (mediaData.uid) formData.append('origin', String(mediaData.uid));
       
       // Append image field names from the source mediaData
+      // After the media-data schema refactor, extra inputs (e.g. imageFormat) live under
+      // mediaData.extraInputs – fall back there if the flat field is absent.
       const imageTextFieldNames = ['description', 'prompt', 'summary', 'tags', 'name', 'imageFormat'];
+      const extraInputs = mediaData.extraInputs || {};
       imageTextFieldNames.forEach(fieldName => {
-        const value = mediaData[fieldName];
+        const value = mediaData[fieldName] ?? extraInputs[fieldName];
         if (value) {
           formData.append(`image_0_${fieldName}`, value);
         }
@@ -329,10 +335,11 @@ function InpaintApp() {
         });
       }
       
+      formData.append('clientId', getClientId());
       toast.show('Sending inpaint request...');
-      
+
       // Send request
-      const response = await fetchWithRetry('/generate/inpaint', {
+      const response = await fetchWithRetry('/generate/inpaint?queueOnly=false', {
         method: 'POST',
         body: formData
       }, {
@@ -342,26 +349,15 @@ function InpaintApp() {
         showUserFeedback: false
       });
       
-      const result = await response.json();
-      
-      if (!result.taskId) {
-        throw new Error('Server did not return a taskId');
-      }
-      
-      setTaskId(result.taskId);
-      console.log('Inpaint generation started with taskId:', result.taskId);
-      
     } catch (err) {
       console.error('Error during inpaint:', err);
       toast.error(`Inpaint failed: ${err.message}`);
-      setIsGenerating(false);
     }
   };
 
   // Handle generation complete
   const handleGenerationComplete = async (data) => {
-    setIsGenerating(false);
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     console.log('Inpaint complete:', data);
     
     if (data.result && data.result.uid) {
@@ -370,8 +366,9 @@ function InpaintApp() {
         const newImageData = await fetchJson(`/media-data/${data.result.uid}`);
         setMediaData(newImageData);
         
-        // Add to history
+        // Add to history and jump to the new entry
         setHistory(prev => [newImageData, ...prev]);
+        historyNav.selectByIndex(0);
         
         // Update URL with new UID
         const newUrl = new URL(window.location);
@@ -405,11 +402,46 @@ function InpaintApp() {
 
   // Handle generation error
   const handleGenerationError = (data) => {
-    setIsGenerating(false);
-    setTaskId(null);
+    setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev);
     console.error('Inpaint generation failed:', data);
     toast.error(data.error?.message || 'Inpaint generation failed');
   };
+
+  // Reconnect-resume: restore in-progress inpaint generation tasks on page load
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    const task = activeTasks.find(t => t.requestOrigin === 'inpaint');
+    if (task && !taskId) {
+      setTaskId(task.taskId);
+      progressShow(task.taskId, {
+        onComplete: handleGenerationComplete,
+        onError: handleGenerationError,
+        onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+      });
+    }
+  }, [activeTasks]);
+
+  // Refs to call the latest callback versions from the persistent subscription
+  const handleGenerationCompleteRef = useRef(handleGenerationComplete);
+  handleGenerationCompleteRef.current = handleGenerationComplete;
+  const handleGenerationErrorRef = useRef(handleGenerationError);
+  handleGenerationErrorRef.current = handleGenerationError;
+
+  // Persistent subscription: bridge queue task-started events to progress tracking
+  useEffect(() => {
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, clientId }) => {
+        if (source !== 'yaaiic-inpaint') return;
+        if (clientId !== getClientId()) return;
+        setTaskId(taskId);
+        progressShow(taskId, {
+          onComplete: (data) => handleGenerationCompleteRef.current(data),
+          onError: (data) => handleGenerationErrorRef.current(data),
+          onCancelled: (data) => setTaskId(prev => (!data || !data.taskId || prev === data.taskId) ? null : prev),
+        });
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle folder selection
   const handleOpenFolderSelect = () => {
@@ -518,17 +550,15 @@ function InpaintApp() {
           <${WorkflowSelector}
             value=${workflow}
             onChange=${handleWorkflowChange}
-            disabled=${isGenerating}
             typeOptions=${[
               { label: 'Inpaint', value: 'inpaint' }
             ]}
           />
-          
+
           <${InpaintForm}
             workflow=${workflow}
             formState=${formState}
             onFieldChange=${handleFieldChange}
-            isGenerating=${isGenerating}
             onGenerate=${handleGenerate}
             hasValidInpaintArea=${hasValidInpaintArea}
           />
@@ -552,17 +582,9 @@ function InpaintApp() {
         </${Panel}>
       `}
       
-      ${taskId ? html`
-        <${ProgressBanner} 
-          key=${taskId}
-          taskId=${taskId}
-          sseManager=${sseManager}
-          onComplete=${handleGenerationComplete}
-          onError=${handleGenerationError}
-        />
-      ` : null}
-
     </${VerticalLayout}>
+
+    <${QueueStatusBanner} progressVisible=${!!taskId} />
   `;
 }
 
@@ -571,11 +593,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('app');
   if (root) {
     render(html`
-      <${Page}>
-        <${ToastProvider}>
-          <${InpaintApp} />
-        </${ToastProvider}>
-      </${Page}>
+      <${TooltipProvider}>
+        <${Page}>
+          <${ToastProvider}>
+            <${ProgressProvider}>
+              <${InpaintApp} />
+            </${ProgressProvider}>
+          </${ToastProvider}>
+        </${Page}>
+      </${TooltipProvider}>
     `, root);
     console.log('Inpaint App V3 mounted successfully');
     

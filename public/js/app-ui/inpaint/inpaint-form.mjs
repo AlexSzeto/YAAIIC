@@ -11,6 +11,7 @@ import { insertTagAtCursorPos, extractWordAtCursor, replaceTagInPrompt } from '.
 import { TagSelectorPanel } from '../tags/tag-selector-panel.mjs';
 import { suppressContextMenu } from '../../custom-ui/util.mjs';
 import { isTagDefinitionsLoaded } from '../tags/tag-data.mjs';
+import { useQueueStatus } from '../use-queue-status.mjs';
 
 // Styled components
 const FormContainer = styled('div')`
@@ -37,7 +38,6 @@ FormRow.className = 'form-row';
  * @param {Object|null} props.workflow - Selected workflow object
  * @param {Object} props.formState - Form field values
  * @param {Function} props.onFieldChange - Callback for field changes
- * @param {boolean} props.isGenerating - Whether generation is in progress
  * @param {Function} props.onGenerate - Callback for inpaint action
  * @param {boolean} props.hasValidInpaintArea - Whether a valid inpaint area is selected
  */
@@ -45,10 +45,11 @@ export function InpaintForm({
   workflow,
   formState,
   onFieldChange,
-  isGenerating,
   onGenerate,
   hasValidInpaintArea
 }) {
+  const { items: queueItems } = useQueueStatus();
+  const queueCount = queueItems.filter(i => i.status !== 'failed').length;
 
   // State for tag selector panel
   const [showTagPanel, setShowTagPanel] = useState(false);
@@ -107,12 +108,19 @@ export function InpaintForm({
   };
 
   // Create renderExtraInputs function using the reusable renderer
-  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, isGenerating);
+  const renderExtraInputs = createExtraInputsRenderer(formState, onFieldChange, false);
 
   // Compute whether inpaint button should be disabled
+  const isQueuedDuplicate = !!(workflow && formState.seedLocked && queueItems.some(item =>
+    (item.status === 'queued' || item.status === 'running') &&
+    item.endpointKey === 'generate-inpaint' &&
+    item.taskData?.workflow === workflow.name &&
+    String(item.taskData?.prompt ?? '') === String(formState.description ?? '') &&
+    String(item.taskData?.seed ?? '') === String(formState.seed ?? '') &&
+    String(item.taskData?.name ?? '') === String(formState.name ?? '')
+  ));
+
   const isInpaintDisabled = (() => {
-    // Disabled while generating
-    if (isGenerating) return true;
     // Disabled if no workflow selected
     if (!workflow) return true;
     // Disabled if no inpaint area selected
@@ -121,6 +129,7 @@ export function InpaintForm({
     if (workflow.nameRequired && !formState.name?.trim()) return true;
     // Disabled if prompt is required but not provided
     if (!workflow.optionalPrompt && !formState.description?.trim()) return true;
+    if (isQueuedDuplicate) return true;
     return false;
   })();
 
@@ -135,7 +144,6 @@ export function InpaintForm({
           setSeed=${(newSeed) => onFieldChange('seed', newSeed)}
           locked=${formState.seedLocked || false}
           setLocked=${(locked) => onFieldChange('seedLocked', locked)}
-          disabled=${isGenerating}
         />
 
         <div>
@@ -146,7 +154,6 @@ export function InpaintForm({
             placeholder="Enter name"
             value=${formState.name || ''}
             onChange=${handleChange('name')}
-            disabled=${isGenerating}
           />
         </div>
 
@@ -164,7 +171,6 @@ export function InpaintForm({
         placeholder="Enter your text here..."
         value=${formState.description || ''}
         onChange=${handleChange('description')}
-        disabled=${isGenerating}
       />
 
       <!-- Extra Textarea Inputs (after description) -->
@@ -174,12 +180,13 @@ export function InpaintForm({
       <${FormRow} key="button-row" justifyContent="flex-start">
         <${Button}
           variant="primary"
+          color="primary"
           icon="play"
           onClick=${onGenerate}
-          loading=${isGenerating}
+          loading=${isQueuedDuplicate}
           disabled=${isInpaintDisabled}
         >
-          ${isGenerating ? 'Inpainting...' : 'Inpaint'}
+          ${isQueuedDuplicate ? 'Inpainting...' : queueCount > 0 ? 'Queue' : 'Inpaint'}
         </${Button}>
       </${FormRow}>
 

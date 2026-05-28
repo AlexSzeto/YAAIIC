@@ -50,6 +50,18 @@ export function getTags() {
 }
 
 /**
+ * Check if a tag exists in the autocomplete list (the same list TagInput uses).
+ * Case-insensitive; spaces and underscores are treated as equivalent.
+ * @param {string} tagName
+ * @returns {boolean}
+ */
+export function tagExists(tagName) {
+  if (!tagName) return false;
+  const normalized = tagName.trim().toLowerCase().replace(/\s+/g, '_');
+  return tags.some(t => t.toLowerCase().replace(/\s+/g, '_') === normalized);
+}
+
+/**
  * Check if tags are loaded
  * @returns {boolean} True if tags are loaded
  */

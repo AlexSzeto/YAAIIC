@@ -36,6 +36,7 @@ const StyledTextarea = styled('textarea')`
   font-size: ${props => props.fontSize};
   font-family: ${props => props.fontFamily};
   transition: ${props => props.transition};
+  field-sizing: content;
   
   &:focus {
     outline: none;

@@ -62,6 +62,15 @@ export function logProgressEvent(eventData, source, promptId = null, taskId = nu
   }
 }
 
+// Queue lifecycle callbacks — set by queue/service.mjs to react to task events
+let _onTaskCancelled = null;
+let _onTaskCompleted = null;
+let _onTaskError = null;
+
+export function setTaskCancelledCallback(fn) { _onTaskCancelled = fn; }
+export function setTaskCompletedCallback(fn) { _onTaskCompleted = fn; }
+export function setTaskErrorCallback(fn) { _onTaskError = fn; }
+
 // Task tracking system
 const activeTasks = new Map();
 // activeTasks.set(taskId, {
@@ -95,13 +104,18 @@ function createProgressResponse(taskId, progress, currentStep) {
   };
 }
 
-function createCompletionResponse(taskId, result) {
+function createCompletionResponse(taskId, result, task) {
   // Extract maxValue if present, otherwise default to 1
   const maxValue = result.maxValue || 1;
-  
+
   // Create a copy of result without maxValue for the result field
   const { maxValue: _, ...resultData } = result;
-  
+
+  // Merge characterUid from task registry into the result payload
+  if (task?.characterUid) {
+    resultData.uid = task.characterUid;
+  }
+
   return {
     taskId: taskId,
     status: 'completed',
@@ -351,17 +365,18 @@ export function emitTaskCompletion(promptIdOrTaskId, result) {
   
   const task = activeTasks.get(taskId);
   if (!task) return;
-  
+
   // Store the result on the task object itself for later access
   task.result = result;
-  
-  const message = createCompletionResponse(taskId, result);
+  task.status = 'completed';
+
+  const message = createCompletionResponse(taskId, result, task);
   
   // Log completion event
   logProgressEvent({ result: message.result }, 'emit-complete', task.promptId, taskId);
   
   emitSSEToTask(taskId, message);
-  
+  if (_onTaskCompleted) _onTaskCompleted(taskId, result);
   scheduleTaskCleanup(taskId);
 }
 
@@ -384,14 +399,16 @@ export function emitTaskError(promptIdOrTaskId, errorMessage, errorDetails) {
 export function emitTaskErrorByTaskId(taskId, errorMessage, errorDetails) {
   const task = activeTasks.get(taskId);
   if (!task) return;
-  
+
+  task.status = 'error';
+
   const message = createErrorResponse(taskId, errorMessage, errorDetails);
   
   // Log error event
   logProgressEvent({ error: message.error }, 'emit-error', task.promptId, taskId);
   
   emitSSEToTask(taskId, message);
-  
+  if (_onTaskError) _onTaskError(taskId, errorMessage);
   scheduleTaskCleanup(taskId);
 }
 
@@ -428,8 +445,6 @@ export function handleSSEConnection(req, res) {
         console.error(`Failed to replay buffered message for task ${taskId}:`, error);
       }
     });
-    // Clear the buffer after sending
-    task.messageBuffer = [];
   } else {
     // Send initial progress state if no buffered messages
     const initialMessage = createProgressResponse(
@@ -497,6 +512,55 @@ export function deleteTask(taskId) {
   activeTasks.delete(taskId);
 }
 
+/**
+ * Mark a task as cancelled so the orchestrator can detect and stop processing.
+ * @param {string} taskId
+ */
+export function cancelTask(taskId) {
+  const task = activeTasks.get(taskId);
+  if (task) {
+    task.cancelled = true;
+    task.status = 'cancelled';
+    console.log(`Task ${taskId} marked as cancelled`);
+  }
+}
+
+/**
+ * Broadcast a `cancelled` SSE event to all clients subscribed to this task.
+ * @param {string} taskId
+ */
+export function emitTaskCancelled(taskId) {
+  const task = activeTasks.get(taskId);
+  if (!task) return;
+
+  const message = {
+    taskId,
+    status: 'cancelled',
+    message: 'Generation cancelled',
+    timestamp: new Date().toISOString()
+  };
+
+  const data = JSON.stringify(message);
+
+  if (!task.sseClients || task.sseClients.size === 0) {
+    if (!task.messageBuffer) task.messageBuffer = [];
+    task.messageBuffer.push({ eventType: 'cancelled', data, message });
+    return;
+  }
+
+  const disconnectedClients = new Set();
+  task.sseClients.forEach(client => {
+    try {
+      client.write(`event: cancelled\ndata: ${data}\n\n`);
+    } catch (error) {
+      disconnectedClients.add(client);
+    }
+  });
+  disconnectedClients.forEach(client => task.sseClients.delete(client));
+  if (_onTaskCancelled) _onTaskCancelled(taskId);
+  scheduleTaskCleanup(taskId);
+}
+
 export function setTaskPromptId(taskId, promptId) {
   const task = activeTasks.get(taskId);
   if (task) {
@@ -508,4 +572,25 @@ export function setTaskPromptId(taskId, promptId) {
 export function getTaskByPromptId(promptId) {
   const taskId = promptIdToTaskId.get(promptId);
   return taskId ? activeTasks.get(taskId) : null;
+}
+
+/**
+ * Returns all tasks that are still in-progress (excludes completed, cancelled, and errored tasks).
+ * @returns {Array<{taskId, characterUid, entityType, progress}>}
+ */
+export function getActiveTasks() {
+  const result = [];
+  for (const [taskId, task] of activeTasks) {
+    const s = task.status;
+    if (s === 'completed' || s === 'cancelled' || s === 'error') continue;
+    result.push({
+      taskId,
+      requestOrigin: task.requestOrigin || null,
+      characterUid: task.characterUid || null,
+      outfitUid: task.outfitUid || null,
+      entityType: task.entityType || null,
+      progress: task.progress || { percentage: 0, currentStep: 'Starting...' },
+    });
+  }
+  return result;
 }

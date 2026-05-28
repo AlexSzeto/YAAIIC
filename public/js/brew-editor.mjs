@@ -5,6 +5,7 @@ import { html } from 'htm/preact';
 import { Page } from './custom-ui/layout/page.mjs';
 import { ToastProvider } from './custom-ui/msg/toast.mjs';
 import { HoverPanelProvider } from './custom-ui/overlays/hover-panel.mjs';
+import { TooltipProvider } from './custom-ui/overlays/tooltip.mjs';
 import { BrewEditor } from './app-ui/brew-editor/brew-editor.mjs';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,11 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (root) {
     render(html`
       <${HoverPanelProvider}>
-        <${Page}>
-          <${ToastProvider}>
-            <${BrewEditor} />
-          </${ToastProvider}>
-        </${Page}>
+        <${TooltipProvider}>
+          <${Page}>
+            <${ToastProvider}>
+              <${BrewEditor} />
+            </${ToastProvider}>
+          </${Page}>
+        </${TooltipProvider}>
       </${HoverPanelProvider}>
     `, root);
     console.log('Brew Editor mounted');

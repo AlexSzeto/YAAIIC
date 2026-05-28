@@ -297,14 +297,14 @@ export class ImageSelect extends Component {
                       color="secondary"
                       icon="image"
                       onClick=${this.handleReplaceClick}
-                      title="Replace image"
+                      tooltip="Replace image"
                     />
                     <${Button}
                       variant="small-icon"
                       color="danger"
                       icon="x"
                       onClick=${this.handleClearClick}
-                      title="Clear image"
+                      tooltip="Clear image"
                     />
                   </${OverlayContent}>
                 </${Panel}>

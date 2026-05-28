@@ -4,6 +4,8 @@ import { styled } from '../../custom-ui/goober-setup.mjs';
 import { H2 } from '../../custom-ui/themed-base.mjs';
 import { getThemeValue } from '../../custom-ui/theme.mjs';
 import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { Button } from '../../custom-ui/io/button.mjs';
+import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
 
 // Styled components
 const CanvasContainer = styled('div')`
@@ -21,6 +23,19 @@ const Canvas = styled('canvas')`
   border-radius: ${getThemeValue('spacing.small.borderRadius')};
 `;
 Canvas.className = 'canvas';
+
+const CanvasWrapper = styled('div')`
+  position: relative;
+  display: inline-flex;
+`;
+CanvasWrapper.className = 'canvas-wrapper';
+
+const ViewButtonOverlay = styled('div')`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+`;
+ViewButtonOverlay.className = 'view-button-overlay';
 
 const InfoContainer = styled('div')`
   display: flex;
@@ -283,12 +298,22 @@ export function InpaintCanvas({ imageUrl, inpaintArea, onChangeInpaintArea }) {
         </${Panel}>
       `}
       ${imageLoaded && html`
-        <${Canvas}
-          id="inpaint"
-          ref=${canvasRef}
-          onMouseDown=${handleMouseDown}
-          onContextMenu=${handleRightClick}
-        />
+        <${CanvasWrapper}>
+          <${Canvas}
+            id="inpaint"
+            ref=${canvasRef}
+            onMouseDown=${handleMouseDown}
+            onContextMenu=${handleRightClick}
+          />
+          <${ViewButtonOverlay}>
+            <${Button}
+              variant="small-icon"
+              icon="arrow-out-up-right-square"
+              onClick=${() => createImageModal(imageUrl, false)}
+              tooltip="View full size"
+            />
+          </${ViewButtonOverlay}>
+        </${CanvasWrapper}>
       `}
       ${imageLoaded && html`
         <${InfoContainer}>

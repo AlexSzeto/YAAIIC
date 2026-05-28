@@ -3,6 +3,7 @@ import { createContext } from 'preact';
 import { useContext, useState, useCallback, useEffect } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 import { ProgressBanner } from './progress-banner.mjs';
+import { sseManager } from '../../app-ui/sse-manager.mjs';
 
 // ============================================================================
 // Context
@@ -14,26 +15,20 @@ export const ProgressContext = createContext(null);
  * Progress Provider Component
  * Manages the state of progress banners and provides methods to show/hide them.
  * Supports multiple concurrent progress instances.
- * 
- * @param {Object} props
- * @param {Object} props.sseManager - SSE manager instance for subscribing to progress events (required).
- *   Must implement the following interface:
- *   - `subscribe(taskId, handlers)` - Subscribe to progress events for a task
- *     - `taskId` {string} - Unique task identifier
- *     - `handlers` {Object} - Event handler callbacks:
- *       - `onProgress(data)` - Called with progress updates. `data.progress` contains:
- *         - `percentage` {number} - Progress percentage (0-100)
- *         - `currentStep` {string} - Human-readable step name from server
- *         - `currentValue` {number} - Current progress value
- *         - `maxValue` {number} - Maximum progress value
- *       - `onComplete(data)` - Called when task completes successfully
- *       - `onError(data)` - Called on task failure. `data.error.message` contains error text
- *   - `unsubscribe(taskId)` - Unsubscribe from progress events for a task
+ * Fetches active server tasks on mount and exposes them via `activeTasks`.
+ *
  * @param {preact.ComponentChildren} props.children - App content wrapped by provider (required)
  * @returns {preact.VNode}
  */
-export function ProgressProvider({ sseManager, children }) {
+export function ProgressProvider({ children }) {
   const [progresses, setProgresses] = useState({});
+  const [activeTasks, setActiveTasks] = useState([]);
+
+  useEffect(() => {
+    sseManager.fetchActiveTasks()
+      .then(tasks => setActiveTasks(tasks))
+      .catch(err => console.error('[ProgressProvider] Failed to fetch active tasks:', err));
+  }, []);
 
   const show = useCallback((taskId, options = {}) => {
     if (!taskId) {
@@ -41,23 +36,56 @@ export function ProgressProvider({ sseManager, children }) {
       return;
     }
 
-    const newProgress = {
-      id: taskId,
-      taskId,
-      sseManager,
-      onComplete: options.onComplete,
-      onError: options.onError,
-      defaultTitle: options.defaultTitle,
-      visible: true
+    const removeFromActiveTasks = () => {
+      setActiveTasks(prev => prev.filter(t => t.taskId !== taskId));
     };
 
-    setProgresses(prev => ({
-      ...prev,
-      [taskId]: newProgress
-    }));
-  }, [sseManager]);
+    const wrappedComplete = (data) => {
+      removeFromActiveTasks();
+      options.onComplete?.(data);
+    };
+    const wrappedError = (data) => {
+      removeFromActiveTasks();
+      options.onError?.(data);
+    };
+    const wrappedCancelled = (data) => {
+      removeFromActiveTasks();
+      options.onCancelled?.(data);
+    };
+
+    // Add to activeTasks if not already present
+    setActiveTasks(prev => {
+      if (prev.find(t => t.taskId === taskId)) return prev;
+      return [...prev, {
+        taskId,
+        entityType: options.entityType ?? null,
+        characterUid: options.characterUid ?? null,
+        progress: null
+      }];
+    });
+
+    // Register banner if not already showing
+    setProgresses(prev => {
+      if (prev[taskId]) return prev;
+      return {
+        ...prev,
+        [taskId]: {
+          id: taskId,
+          taskId,
+          onComplete: wrappedComplete,
+          onError: wrappedError,
+          onCancelled: wrappedCancelled,
+          onCancel: options.onCancel,
+          defaultTitle: options.defaultTitle,
+          onDismiss: options.onDismiss,
+          visible: true
+        }
+      };
+    });
+  }, []);
 
   const hide = useCallback((taskId) => {
+    setActiveTasks(prev => prev.filter(t => t.taskId !== taskId));
     setProgresses(prev => {
       const { [taskId]: removed, ...rest } = prev;
       return rest;
@@ -65,10 +93,12 @@ export function ProgressProvider({ sseManager, children }) {
   }, []);
 
   const clear = useCallback(() => {
+    setActiveTasks([]);
     setProgresses({});
   }, []);
 
   const value = {
+    activeTasks,
     show,
     hide,
     clear
@@ -83,11 +113,16 @@ export function ProgressProvider({ sseManager, children }) {
             <${ProgressBanner}
               key=${progress.id}
               taskId=${progress.taskId}
-              sseManager=${progress.sseManager}
+              sseManager=${sseManager}
               onComplete=${progress.onComplete}
               onError=${progress.onError}
+              onCancelled=${progress.onCancelled}
+              onCancel=${progress.onCancel}
               defaultTitle=${progress.defaultTitle}
-              onDismiss=${() => hide(progress.taskId)}
+              onDismiss=${() => {
+                hide(progress.taskId);
+                progress.onDismiss?.();
+              }}
             />
           `)}
         </div>
@@ -98,28 +133,29 @@ export function ProgressProvider({ sseManager, children }) {
 
 /**
  * Hook to use Progress
- * Provides methods to show, hide, and clear progress banners.
- * 
- * @returns {Object} Progress methods
- * @returns {Function} return.show - Show progress banner: show(taskId, { onComplete?, onError?, defaultTitle? })
- * @returns {Function} return.hide - Hide specific progress banner: hide(taskId)
- * @returns {Function} return.clear - Clear all progress banners: clear()
- * 
+ * Provides methods to show, hide, and clear progress banners, plus the list of active tasks.
+ *
+ * @returns {Object} Progress context
+ * @returns {Array}    return.activeTasks  - Active task list: [{ taskId, entityType, characterUid, progress }]
+ * @returns {Function} return.show         - Show progress banner: show(taskId, { onComplete?, onError?, onCancelled?, onCancel?, onDismiss?, defaultTitle?, entityType?, characterUid? })
+ * @returns {Function} return.hide         - Hide specific progress banner: hide(taskId)
+ * @returns {Function} return.clear        - Clear all progress banners: clear()
+ *
  * @example
- * const progress = useProgress();
- * 
+ * const { show, hide, activeTasks } = useProgress();
+ *
  * // Show progress for a task
- * progress.show('task-123', {
+ * show('task-123', {
  *   onComplete: (data) => console.log('Done!', data),
  *   onError: (data) => console.error('Failed!', data),
  *   defaultTitle: 'My App'
  * });
- * 
+ *
  * // Hide specific progress
- * progress.hide('task-123');
- * 
- * // Clear all progress
- * progress.clear();
+ * hide('task-123');
+ *
+ * // Check active tasks
+ * const portrait = activeTasks.find(t => t.entityType === 'anytale-render-portrait');
  */
 export function useProgress() {
   const context = useContext(ProgressContext);

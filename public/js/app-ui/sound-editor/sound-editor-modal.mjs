@@ -451,13 +451,13 @@ export function SoundEditorModal({ item, onClose, onSaved, onSaveTask }) {
           variant="small-icon"
           icon="repeat"
           onClick=${handleLoop}
-          title="Toggle loop mode"
+          tooltip="Toggle loop mode"
         ></${Button}>
         <${Button}
           variant="small-icon"
           icon=${isPlaying ? 'stop' : 'play'}
           onClick=${handlePlayPause}
-          title=${isPlaying ? 'Pause playback' : 'Play active region or full audio'}
+          tooltip=${isPlaying ? 'Pause playback' : 'Play active region or full audio'}
         ></${Button}>
       </${HorizontalLayout}>
       <div style="flex: 1;">
@@ -468,28 +468,28 @@ export function SoundEditorModal({ item, onClose, onSaved, onSaveTask }) {
           icon="cut"
           onClick=${handleTrim}
           disabled=${!hasSelection}
-          title="Remove selected region from audio"
+          tooltip="Remove selected region from audio"
         >Trim</${Button}>
         <${Button}
           variant="small-icon-text"
           icon="crop"
           onClick=${handleCrop}
           disabled=${!hasSelection}
-          title="Keep only the selected region"
+          tooltip="Keep only the selected region"
         >Crop</${Button}>
         <${Button}
           variant="small-icon-text"
           icon="plus"
           onClick=${handleAddClip}
           disabled=${!hasSelection}
-          title="Save selected region as a named clip"
+          tooltip="Save selected region as a named clip"
         >Clip</${Button}>
         <${Button}
           variant="small-icon-text"
           icon="minus"
           onClick=${handleScrub}
           disabled=${!hasSelection}
-          title="Remove clip regions overlapping selection"
+          tooltip="Remove clip regions overlapping selection"
         >Scrub</${Button}>
         <${Button}
           variant="small-icon-text"

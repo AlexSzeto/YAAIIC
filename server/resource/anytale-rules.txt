@@ -1,0 +1,11 @@
+check each {slot} if {slot} is [removed] then hide {slot}
+if <outer upper body> is [covering] then hide <inner upper body>
+if <outer upper body> is [covering] then hide <nude upper body>
+if <inner upper body> is [covering] then hide <nude upper body>
+if <outer upper body> is [removed] and <inner upper body> is not [removed] then show <inner upper body>
+if <outer upper body> is [removed] and <inner upper body> is [removed] and <nude upper body> is not [removed] then show <nude upper body>
+if <outer lower body> is [covering] then hide <inner lower body>
+if <outer lower body> is [covering] then hide <nude lower body>
+if <inner lower body> is [covering] then hide <nude lower body>
+if <outer lower body> is [removed] and <inner lower body> is not [removed] then show <inner lower body>
+if <outer lower body> is [removed] and <inner lower body> is [removed] and <nude lower body> is not [removed] then show <nude lower body>

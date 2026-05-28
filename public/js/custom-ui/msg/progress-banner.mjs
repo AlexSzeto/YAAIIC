@@ -1,11 +1,12 @@
 import { h } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
 import { PageTitleManager } from '../util.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
+import { useToast } from '../msg/toast.mjs';
 
 // Animations
 const slideUp = keyframes`
@@ -24,7 +25,7 @@ const BannerWrapper = styled('div')`
   position: fixed;
   bottom: 1rem;
   right: 1rem;
-  z-index: 9999;
+  z-index: 5000;
   max-width: 400px;
   min-width: 320px;
   animation: ${slideUp} 0.3s ease-out;
@@ -115,7 +116,7 @@ const DismissButton = styled('button')`
               color ${() => currentTheme.value.transitions.fast};
   flex-shrink: 0;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${() => currentTheme.value.colors.background.hover};
     color: ${() => currentTheme.value.colors.text.primary};
   }
@@ -123,6 +124,11 @@ const DismissButton = styled('button')`
   &:focus {
     outline: none;
     box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.primary.focus};
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `;
 DismissButton.className = 'dismiss-button';
@@ -142,6 +148,8 @@ DismissButton.className = 'dismiss-button';
  * @param {Object} props.sseManager - SSE manager instance for subscribing to progress events (required)
  * @param {Function} [props.onComplete] - Callback when generation completes successfully
  * @param {Function} [props.onError] - Callback when generation fails
+ * @param {Function} [props.onCancelled] - Callback when generation is cancelled
+ * @param {Function} [props.onCancel] - Called when the user clicks the cancel (trash) button
  * @param {string} [props.defaultTitle] - Default page title to restore after completion
  * @param {Function} [props.onDismiss] - Callback when banner should be dismissed (required for provider pattern)
  * @returns {preact.VNode}
@@ -152,6 +160,7 @@ DismissButton.className = 'dismiss-button';
  * progress.show('task-123', {
  *   onComplete: (data) => console.log('Done!', data),
  *   onError: (data) => console.error('Failed!', data),
+ *   onCancel: async () => { await fetch('/generate/cancel', { method: 'POST', body: JSON.stringify({ taskId: 'task-123' }) }); },
  *   defaultTitle: 'Image Generator'
  * });
  */
@@ -160,54 +169,83 @@ export function ProgressBanner({
   sseManager, 
   onComplete, 
   onError,
+  onCancelled,
+  onCancel,
   defaultTitle,
   onDismiss
 }) {
+  const toast = useToast();
   const [state, setState] = useState({
-    status: 'starting', // starting, in-progress, completed, error
+    status: 'starting', // starting, in-progress, cancelling, completed, error
     percentage: 0,
     message: 'Starting generation...',
     currentValue: 0,
     maxValue: 0
   });
 
-  // Effect for SSE subscription
+  // Keep callback refs current so the effect never needs to re-subscribe when
+  // inline prop functions change reference on parent re-renders.
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  const onCancelledRef = useRef(onCancelled);
+  const onDismissRef = useRef(onDismiss);
+  onCompleteRef.current = onComplete;
+  onErrorRef.current = onError;
+  onCancelledRef.current = onCancelled;
+  onDismissRef.current = onDismiss;
+
+  // Tracks whether any progress event arrived for this subscription; used by the
+  // fast-complete bypass to skip the banner entirely for already-done tasks.
+  const hadProgressRef = useRef(false);
+
+  // Effect for SSE subscription — only re-runs when taskId or sseManager changes.
   useEffect(() => {
     if (!sseManager || !taskId) return;
 
-    // Capture the current document title before creating PageTitleManager
-    // This ensures we reset to the actual page title, not a potentially modified defaultTitle prop
+    hadProgressRef.current = false;
+
     const originalTitle = document.title;
     const pageTitleManager = new PageTitleManager(originalTitle);
+    let dismissTimer = null;
 
     const handleProgressUpdate = (data) => {
       if (!data.progress) return;
+      hadProgressRef.current = true;
 
-      // Use currentStep from server (server always provides this)
       const message = data.progress.currentStep || 'Processing...';
 
-      // Add percentage display to the message for page title
       let titleMessage = message;
       if (data.progress.percentage > 0) {
         titleMessage = `(${Math.round(data.progress.percentage)}%) ${message}`;
       }
 
-      // Update page title with percentage
       pageTitleManager.update(titleMessage);
 
-      setState(prev => ({
-        ...prev,
-        status: 'in-progress',
-        percentage: data.progress.percentage || 0,
-        message: message,
-        currentValue: data.progress.currentValue,
-        maxValue: data.progress.maxValue
-      }));
+      setState(prev => {
+        if (prev.status === 'cancelling') return prev;
+        return {
+          ...prev,
+          status: 'in-progress',
+          percentage: data.progress.percentage || 0,
+          message: message,
+          currentValue: data.progress.currentValue,
+          maxValue: data.progress.maxValue
+        };
+      });
     };
 
     const handleComplete = (data) => {
+      console.log(`[ProgressBanner] handleComplete fired for taskId=${taskId}`);
       pageTitleManager.reset();
-      
+
+      if (!hadProgressRef.current) {
+        // Task was already done when banner mounted (replay delivered only the terminal).
+        // Skip the banner display entirely and fire callbacks immediately.
+        if (onCompleteRef.current) onCompleteRef.current(data);
+        if (onDismissRef.current) onDismissRef.current();
+        return;
+      }
+
       setState(prev => ({
         ...prev,
         status: 'completed',
@@ -216,49 +254,68 @@ export function ProgressBanner({
         currentValue: data.progress?.maxValue || 0,
         maxValue: data.progress?.maxValue || 0
       }));
-
-      if (onComplete) onComplete(data);
-
-      // Auto-hide after 2 seconds
-      setTimeout(() => {
-        if (onDismiss) onDismiss();
-      }, 2000);
+      if (onCompleteRef.current) {
+        console.log(`[ProgressBanner] calling onComplete prop for taskId=${taskId}`);
+        onCompleteRef.current(data);
+      } else {
+        console.warn(`[ProgressBanner] onComplete prop is null/undefined for taskId=${taskId}`);
+      }
+      dismissTimer = setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 2000);
     };
 
     const handleError = (data) => {
       pageTitleManager.reset();
-      
       setState(prev => ({
         ...prev,
         status: 'error',
         percentage: 0,
         message: data.error?.message || 'Generation failed'
       }));
-
-      if (onError) onError(data);
-
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        if (onDismiss) onDismiss();
-      }, 5000);
+      if (onErrorRef.current) onErrorRef.current(data);
+      dismissTimer = setTimeout(() => { if (onDismissRef.current) onDismissRef.current(); }, 5000);
     };
 
-    // Subscribe
-    sseManager.subscribe(taskId, {
+    const handleCancelled = (data) => {
+      pageTitleManager.reset();
+      if (onCancelledRef.current) onCancelledRef.current(data);
+      if (onDismissRef.current) onDismissRef.current();
+      toast.info('Generation cancelled');
+    };
+
+    console.log(`[ProgressBanner] subscribing to taskId=${taskId}`);
+    const subscribed = sseManager.subscribe(taskId, {
       onProgress: handleProgressUpdate,
       onComplete: handleComplete,
-      onError: handleError
+      onError: handleError,
+      onCancelled: handleCancelled
     });
+    console.log(`[ProgressBanner] subscribe returned ${subscribed} for taskId=${taskId}`);
 
-    // Cleanup
     return () => {
-      sseManager.unsubscribe(taskId);
+      console.log(`[ProgressBanner] useEffect cleanup: unsubscribing taskId=${taskId}`);
+      sseManager.unsubscribe(taskId, 'banner-unmount');
       pageTitleManager.reset();
+      if (dismissTimer) clearTimeout(dismissTimer);
     };
-  }, [taskId, sseManager, onComplete, onError, defaultTitle, onDismiss]);
+  }, [taskId, sseManager]);
 
   const statusType = state.status === 'completed' ? 'success' : state.status;
   const panelColor = statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : 'secondary';
+
+  // During active generation, show a cancel (trash) button; otherwise show dismiss (x)
+  const isActive = state.status === 'starting' || state.status === 'in-progress';
+  const isCancelling = state.status === 'cancelling';
+  const showCancelButton = (isActive || isCancelling) && !!onCancel;
+
+  const handleCancelClick = useCallback(async () => {
+    if (isCancelling) return;
+    setState(prev => ({ ...prev, status: 'cancelling', message: 'Cancelling…' }));
+    try {
+      await onCancel();
+    } catch (err) {
+      console.error('[ProgressBanner] Cancel failed:', err);
+    }
+  }, [isCancelling, onCancel]);
 
   return html`
     <${BannerWrapper}>
@@ -278,12 +335,22 @@ export function ProgressBanner({
               </${BarContainer}>
             ` : null}
           </${Content}>
-          <${DismissButton}
-            onClick=${() => onDismiss && onDismiss()}
-            aria-label="Dismiss"
-          >
-            <${Icon} name='x' color='currentColor' />
-          </${DismissButton}>
+          ${showCancelButton ? html`
+            <${DismissButton}
+              onClick=${handleCancelClick}
+              disabled=${isCancelling}
+              aria-label="Cancel generation"
+            >
+              <${Icon} name='trash' color='currentColor' />
+            </${DismissButton}>
+          ` : html`
+            <${DismissButton}
+              onClick=${() => onDismiss && onDismiss()}
+              aria-label="Dismiss"
+            >
+              <${Icon} name='x' color='currentColor' />
+            </${DismissButton}>
+          `}
         </${BannerContent}>
       </${Panel}>
     </${BannerWrapper}>

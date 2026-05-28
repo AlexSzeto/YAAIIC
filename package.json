@@ -5,8 +5,16 @@
   "main": "index.js",
   "scripts": {
     "start": "node server/server.mjs",
+    "start:pm2": "pm2 start server/server.mjs --name yaaiic --attach",
+    "restart:pm2": "pm2 restart yaaiic",
+    "stop:pm2": "pm2 stop yaaiic",
+    "logs:pm2": "pm2 logs yaaiic",
     "pull": "node public/js/custom-ui/lib-sync.mjs pull",
-    "push": "node public/js/custom-ui/lib-sync.mjs push"
+    "push": "node public/js/custom-ui/lib-sync.mjs push",
+    "sync:codex-skills": "node scripts/sync-codex-skills.mjs",
+    "sync:antigravity-skills": "node scripts/sync-antigravity-skills.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "author": "",
   "license": "ISC",
@@ -22,5 +30,15 @@
     "sharp": "^0.34.5",
     "textarea-caret": "github:component/textarea-caret-position",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "pm2": "^5.4.3",
+    "@testing-library/preact": "^3.2.4",
+    "@vitest/coverage-v8": "^4.1.7",
+    "happy-dom": "^20.9.0",
+    "htm": "^3.1.1",
+    "preact": "^10.29.2",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.7"
   }
 }

@@ -306,21 +306,21 @@ export class AudioSelect extends Component {
                       color="secondary"
                       icon=${isPlaying ? 'stop' : 'play'}
                       onClick=${this.handlePlayPauseClick}
-                      title=${isPlaying ? 'Pause' : 'Play'}
+                      tooltip=${isPlaying ? 'Pause' : 'Play'}
                     />
                     <${Button}
                       variant="small-icon"
                       color="secondary"
                       icon="music"
                       onClick=${this.handleReplaceClick}
-                      title="Replace audio"
+                      tooltip="Replace audio"
                     />
                     <${Button}
                       variant="small-icon"
                       color="danger"
                       icon="x"
                       onClick=${this.handleClearClick}
-                      title="Clear audio"
+                      tooltip="Clear audio"
                     />
                   </${OverlayContent}>
                 </${Panel}>

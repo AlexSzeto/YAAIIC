@@ -31,10 +31,11 @@ const ICON_MAP = {
   'chevron-up': 'keyboard_arrow_up',
   'menu': 'menu',
   'swap-vertical': 'swap_vert',
+  'apps': 'apps',
   
   // Actions
   'trash-alt': 'delete',
-  'edit': 'edit',
+  'edit': 'edit_square',
   'edit-alt': 'edit_note',
   'copy': 'content_copy',
   'save': 'save',
@@ -47,6 +48,9 @@ const ICON_MAP = {
   'lock-open': 'lock_open',
   'eye': 'visibility',
   'eye-slash': 'visibility_off',
+  'undo': 'undo',
+  'redo': 'redo',
+  'send-alt': 'send',
   
   // Media
   'images': 'image',
@@ -54,14 +58,20 @@ const ICON_MAP = {
   'image-alt': 'image',
   'video': 'videocam',
   'music': 'music_note',
+  'ear': 'music_note',
+  'ear-slash': 'music_off',
   'volume': 'volume_up',
   'volume-mute': 'volume_off',
   'microphone': 'mic',
   'microphone-slash': 'mic_off',
   'disc': 'album',
   'headphone': 'headphones',
+  'book': 'book_2',
+  'file-detail': 'docs',
+  'message-detail': 'chat',
+  'captions': 'subtitles',
   
-  // Communication
+  // Communicationrc
   'search': 'search',
   'search-alt': 'search',
   'filter': 'filter_alt',
@@ -79,6 +89,8 @@ const ICON_MAP = {
   'x-circle': 'cancel',
   'warning': 'warning',
   'help-circle': 'help',
+  'radio-circle-marked': 'radio_button_checked',
+  'radio-circle': 'radio_button_unchecked',
   
   // Files and folders
   'folder-open': 'folder_open',
@@ -104,6 +116,9 @@ const ICON_MAP = {
   'user': 'person',
   'user-circle': 'account_circle',
   'group': 'group',
+  't-shirt': 'apparel',
+  'user': 'person',
+
   
   // Miscellaneous
   'home': 'home',
@@ -125,6 +140,8 @@ const ICON_MAP = {
   'flag': 'flag',
   'tag': 'label',
   'tags': 'local_offer',
+  'dice-5': 'casino',
+  'dice-3': 'ifl',
 
   /*
   Verified: These mappings have been manually checked and confirmed to be accurate
@@ -139,7 +156,9 @@ const ICON_MAP = {
   'pencil': 'edit',
   'up-arrow-circle': 'arrow_circle_up',
   'revision': 'refresh',
-  'show': 'visibility',
+  'volume-full': 'volume_up',
+  'skip-previous': 'skip_previous',
+  'skip-next': 'skip_next',
   'x': 'close',
   'chevron-left': 'chevron_left',
   'chevron-right': 'chevron_right',
@@ -159,6 +178,8 @@ const ICON_MAP = {
   'crop': 'crop',
   'repeat': 'repeat',
   'drag-handle': 'drag_indicator',
+  'expand-right': 'expand_content',
+  'collapse-right': 'collapse_content',
 
 };
 

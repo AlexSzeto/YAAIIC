@@ -2,7 +2,9 @@ import { html } from 'htm/preact';
 import { Component } from 'preact';
 import { styled, keyframes } from '../goober-setup.mjs';
 import { currentTheme } from '../theme.mjs';
+import { getWidthScaleStyle } from '../util.mjs';
 import { Icon } from '../layout/icon.mjs';
+import { TooltipContext } from '../overlays/tooltip.mjs';
 
 // =========================================================================
 // Styled Components
@@ -21,6 +23,7 @@ const StyledButton = styled('button')`
   min-width: ${props => props.minWidth};
   padding: ${props => props.padding};
   width: ${props => props.width || 'auto'};
+  flex: ${props => props.flex || 'none'};
   
   /* Typography */
   font-size: ${props => props.fontSize};
@@ -70,6 +73,23 @@ const TextSpan = styled('span')`
 `;
 TextSpan.className = 'text-span';
 
+const LabelWrapper = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: ${props => props.width || 'auto'};
+  flex: ${props => props.flex || 'none'};
+`;
+LabelWrapper.className = 'button-label-wrapper';
+
+const LabelText = styled('span')`
+  margin-bottom: 5px;
+  color: ${props => props.color};
+  font-size: ${props => props.fontSize};
+  font-weight: ${props => props.fontWeight};
+`;
+LabelText.className = 'button-label-text';
+
 /**
  * Button - Themed button with multiple variants and states
  * 
@@ -77,13 +97,14 @@ TextSpan.className = 'text-span';
  * icons, and loading states. All styling is handled via Goober.
  * 
  * @param {Object} props
- * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'large-icon'|'small-text'|'small-icon'} [props.variant='medium-text'] - Size/content variant
+ * @param {'medium-text'|'medium-icon'|'medium-icon-text'|'large-icon'|'small-text'|'small-icon'|'chip'} [props.variant='medium-text'] - Size/content variant
  *   - 'medium-text': Standard button with text only
  *   - 'medium-icon': Square button with icon only (32x32)
  *   - 'medium-icon-text': Button with icon and text
  *   - 'large-icon': Large square button with icon only (44x44)
  *   - 'small-text': Compact tag-style button with text
  *   - 'small-icon': Small square button with icon only (28x28)
+ *   - 'chip': Pill-shaped compact button (same size as small-text, fully rounded corners)
  * @param {'primary'|'secondary'|'success'|'danger'|'transparent'} [props.color='secondary'] - Color theme
  *   - 'transparent': No background, subtle hover effect, uses primary text color
  * @param {boolean} [props.loading=false] - Shows spinner, disables button
@@ -92,6 +113,7 @@ TextSpan.className = 'text-span';
  * @param {Function} [props.onClick] - Click handler
  * @param {string} [props.title] - Tooltip text
  * @param {string} [props.type='button'] - Button type attribute
+ * @param {'normal'|'compact'|'full'|'wide'} [props.widthScale='normal'] - Width override: auto | 100px | 100%+flex-grow | 400px
  * @param {preact.ComponentChildren} [props.children] - Button text (for text variants)
  * @returns {preact.VNode}
  * 
@@ -116,6 +138,8 @@ TextSpan.className = 'text-span';
  * <Button color="transparent">No Background</Button>
  */
 export class Button extends Component {
+  static contextType = TooltipContext;
+
   constructor(props) {
     super(props);
     this.state = {
@@ -141,14 +165,18 @@ export class Button extends Component {
       color = 'secondary',
       loading = false, 
       disabled = false, 
-      icon = null, 
+      icon = null,
+      label = null,
+      tooltip = null,
+      widthScale = 'auto',
       children, 
       ...rest 
     } = this.props;
     const { theme } = this.state;
+    const tooltipCtx = this.context;
 
     // Determine sizing based on variant
-    const isSmall = variant.startsWith('small');
+    const isSmall = variant.startsWith('small') || variant === 'chip';
     const isLarge = variant === 'large-icon';
     const isIconOnly = variant === 'medium-icon' || variant === 'small-icon' || variant === 'large-icon';
     const hasIcon = icon || loading;
@@ -156,8 +184,17 @@ export class Button extends Component {
 
     // Size configurations
     const sizes = {
+      chip: {
+        height: '24px',
+        minWidth: '24px',
+        padding: theme.spacing.small.buttonPadding,
+        fontSize: theme.typography.fontSize.small,
+        iconSize: '16px',
+        borderRadius: '9999px',
+        gap: '4px'
+      },      
       small: {
-        height: '28px',
+        height: isIconOnly ? '28px' : '34px',
         minWidth: isIconOnly ? '28px' : 'auto',
         padding: isIconOnly ? '0' : theme.spacing.small.buttonPadding,
         fontSize: theme.typography.fontSize.small,
@@ -185,7 +222,7 @@ export class Button extends Component {
       }
     };
 
-    const size = isSmall ? sizes.small : (isLarge ? sizes.large : sizes.medium);
+    const size = variant === 'chip' ? sizes.chip : (isSmall ? sizes.small : (isLarge ? sizes.large : sizes.medium));    
 
     // Color configurations
     const getColorStyles = (colorName) => {
@@ -228,6 +265,10 @@ export class Button extends Component {
       textColor = theme.colors.text.disabled;
     }
 
+    const { width: scaleWidth, flex: scaleFlex } = getWidthScaleStyle(widthScale);
+    const buttonWidth = widthScale !== 'auto' ? scaleWidth : (isIconOnly ? size.height : undefined);
+    const buttonFlex = widthScale !== 'auto' ? (scaleFlex || undefined) : undefined;
+
     const iconColor = disabled ? theme.colors.text.disabled : colorStyles.text;
     // Use theme spinner color for loading state for better visibility across themes
     const spinnerColor = theme.colors.spinner.color;
@@ -237,14 +278,57 @@ export class Button extends Component {
         ? html`<${Icon} name=${icon} size=${size.iconSize} color=${iconColor} />`
         : null;
 
-    return html`
+    const tooltipHandlers = tooltip && tooltipCtx ? {
+      onMouseEnter: (e) => tooltipCtx.show(tooltip, e.clientX, e.clientY),
+      onMouseLeave: () => tooltipCtx.hide(),
+    } : {};
+
+    return label ? html`
+      <${LabelWrapper} width=${buttonWidth} flex=${buttonFlex}>
+        <${LabelText}
+          color=${theme.colors.text.secondary}
+          fontSize=${theme.typography.fontSize.medium}
+          fontWeight=${theme.typography.fontWeight.medium}
+          fontFamily=${theme.typography.fontFamily}
+        >${label}</${LabelText}>
+        <${StyledButton} 
+          disabled=${disabled || loading}
+          gap=${size.gap}
+          height=${size.height}
+          minWidth=${size.minWidth}
+          padding=${size.padding}
+          width=${buttonWidth}
+          flex=${buttonFlex}
+          fontSize=${size.fontSize}
+          fontWeight=${theme.typography.fontWeight.medium}
+          fontFamily=${theme.typography.fontFamily}
+          textColor=${textColor}
+          borderWidth=${theme.border.width}
+          borderStyle=${theme.border.style}
+          borderColor=${borderColor}
+          borderRadius=${size.borderRadius}
+          bgColor=${bgColor}
+          hoverBg=${colorStyles.hover}
+          hoverBorder=${colorStyles.hoverBorder}
+          activeBg=${colorStyles.active}
+          activeBorder=${colorStyles.activeBorder}
+          transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+          ...${tooltipHandlers}
+          ...${rest}
+        >
+          ${iconElement}
+          ${hasText && html`<${TextSpan}>${children}</${TextSpan}>`}
+        </${StyledButton}>
+      </${LabelWrapper}>
+    ` : html`
       <${StyledButton} 
         disabled=${disabled || loading}
         gap=${size.gap}
         height=${size.height}
         minWidth=${size.minWidth}
         padding=${size.padding}
-        width=${isIconOnly ? size.height : undefined}
+        width=${buttonWidth}
+        flex=${buttonFlex}
         fontSize=${size.fontSize}
         fontWeight=${theme.typography.fontWeight.medium}
         fontFamily=${theme.typography.fontFamily}
@@ -259,6 +343,7 @@ export class Button extends Component {
         activeBg=${colorStyles.active}
         activeBorder=${colorStyles.activeBorder}
         transition=${`background-color ${theme.transitions.fast}, border-color ${theme.transitions.fast}, box-shadow ${theme.transitions.fast}`}
+        ...${tooltipHandlers}
         ...${rest}
       >
         ${iconElement}

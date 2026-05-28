@@ -5,14 +5,14 @@ import { currentTheme } from '../theme.mjs';
 import { Button } from '../io/button.mjs';
 import { Panel } from '../layout/panel.mjs';
 import { Icon } from '../layout/icon.mjs';
-import { 
-  BaseOverlay, 
-  BaseContainer, 
-  BaseHeader, 
-  BaseTitle, 
-  BaseContent, 
+import {
+  OverlayDismiss,
+  BaseContainer,
+  BaseHeader,
+  BaseTitle,
+  BaseContent,
   BaseFooter,
-  CloseButton 
+  CloseButton
 } from './modal-base.mjs';
 
 /**
@@ -45,15 +45,17 @@ import {
  *   <p>Are you sure you want to proceed?</p>
  * </Modal>
  */
-export function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
+export function Modal({
+  isOpen,
+  onClose,
+  title,
   showHeader = true,
-  size = 'medium', 
+  hideCloseButton = false,
+  size = 'medium',
   width,
+  minWidth,
   height,
-  children, 
+  children,
   footer,
   className = ''
 }) {
@@ -81,13 +83,6 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
-    // Check if click was directly on the overlay element (not bubbled from children)
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   // Size-based max widths
   const getSizeMaxWidth = () => {
     // Use exact width if provided
@@ -112,9 +107,9 @@ export function Modal({
   };
 
   const modalContent = html`
-    <${BaseOverlay}
+    <${OverlayDismiss}
       bgColor=${theme.colors.overlay.background}
-      onClick=${handleOverlayClick}
+      onClose=${onClose}
       ref=${overlayRef}
     >
       <${BaseContainer}
@@ -122,33 +117,36 @@ export function Modal({
         textColor=${theme.colors.text.primary}
         borderRadius=${theme.spacing.medium.borderRadius}
         width=${width}
+        minWidth=${minWidth}
         height=${height}
         maxWidth=${!width ? getSizeMaxWidth() : undefined}
         maxHeight=${!height ? getSizeMaxHeight() : undefined}
         shadowColor=${theme.shadow.colorStrong}
         class=${className}
-        role="dialog" 
-        aria-modal="true" 
+        role="dialog"
+        aria-modal="true"
         aria-labelledby=${showHeader ? "modal-title" : undefined}
       >
         ${showHeader && html`
           <${BaseHeader} marginBottom="16px">
-            <${BaseTitle} 
-              id="modal-title" 
+            <${BaseTitle}
+              id="modal-title"
               color=${theme.colors.text.primary}
               fontFamily=${theme.typography.fontFamily}
               fontWeight=${theme.typography.fontWeight.bold}
             >
               ${title}
             </${BaseTitle}>
-            <${CloseButton}
-              onClick=${onClose}
-              color=${theme.colors.text.secondary}
-              transition=${theme.transitions.fast}
-              aria-label="Close"
-            >
-              <${Icon} name='x' color=${theme.colors.text.secondary} />
-            </${CloseButton}>
+            ${!hideCloseButton && html`
+              <${CloseButton}
+                onClick=${onClose}
+                color=${theme.colors.text.secondary}
+                transition=${theme.transitions.fast}
+                aria-label="Close"
+              >
+                <${Icon} name='x' color=${theme.colors.text.secondary} />
+              </${CloseButton}>
+            `}
           </${BaseHeader}>
         `}
         
@@ -170,7 +168,7 @@ export function Modal({
           </${BaseFooter}>
         `}
       </${BaseContainer}>
-    </${BaseOverlay}>
+    </${OverlayDismiss}>
   `;
 
   return createPortal(modalContent, document.body);
@@ -256,13 +254,6 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
   const ImperativeImageModal = () => {
     const theme = currentTheme.value;
 
-    const handleOverlayClick = (e) => {
-      // Check if click was directly on the overlay element (not bubbled from children)
-      if (e.target === e.currentTarget) {
-        close();
-      }
-    };
-    
     // Handle Escape
     useEffect(() => {
         const handleEscape = (e) => { if (e.key === 'Escape') close(); };
@@ -271,9 +262,9 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
     }, []);
 
     return html`
-      <${BaseOverlay}
+      <${OverlayDismiss}
         bgColor=${theme.colors.overlay.backgroundStrong}
-        onClick=${handleOverlayClick}
+        onClose=${close}
       >
         <${BaseContainer}
           bgColor=${theme.colors.background.secondary}
@@ -315,7 +306,7 @@ export function createImageModal(imageUrl, allowSelect = false, title = null, on
             `}
           </${ImageModalWrapper}>
         </${BaseContainer}>
-      </${BaseOverlay}>
+      </${OverlayDismiss}>
     `;
   };
 

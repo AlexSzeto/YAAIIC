@@ -8,7 +8,8 @@
  *  - Toast notifications on save/error
  */
 import { html } from 'htm/preact';
-import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
+import { formButtonStates } from '../forms.mjs';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
@@ -144,7 +145,7 @@ function BasicInfoForm({ workflow, onChange, baseFiles, onBaseChange, theme }) {
     { label: 'Detect', value: 'detect' },
   ];
 
-  const baseFileOptions = (['', ...baseFiles] || []).map(f => ({ label: f || '— choose workflow —', value: f }));
+  const baseFileOptions = (['', ...baseFiles] || []).map(f => ({ label: f || '(choose workflow)', value: f }));
 
   return html`
     <${VerticalLayout} gap="medium">
@@ -425,6 +426,8 @@ export function WorkflowEditor() {
 
   // Currently loaded full workflow object
   const [workflow,        setWorkflow]        = useState(null);
+  // Last version loaded from or saved to the server — used for dirty detection.
+  const [savedWorkflow,   setSavedWorkflow]   = useState(null);
   const [workflowJson,    setWorkflowJson]    = useState({}); // raw ComfyUI JSON
   const [isSaving,        setIsSaving]        = useState(false);
   const [isDeleting,      setIsDeleting]      = useState(false);
@@ -469,6 +472,7 @@ export function WorkflowEditor() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
 
       // Load the raw ComfyUI JSON for the node selector
       if (data.workflow.base) {
@@ -520,7 +524,10 @@ export function WorkflowEditor() {
       const baseName = fetchedWorkflow.name.replace(/ \(copy(?: \d+)?\)$/, '');
       const copyName = `${baseName} (copy)`;
 
-      setWorkflow({ ...fetchedWorkflow, name: copyName });
+      // Strip uid so the server treats this as a new entry rather than an update.
+      const { uid: _discarded, ...workflowWithoutUid } = fetchedWorkflow;
+      setWorkflow({ ...workflowWithoutUid, name: copyName });
+      setSavedWorkflow(null);
 
       // Load raw ComfyUI JSON for the copied workflow's base file
       if (fetchedWorkflow.base) {
@@ -552,6 +559,7 @@ export function WorkflowEditor() {
       }
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
       // Upload response includes the workflowJson directly
       setWorkflowJson(data.workflowJson || {});
 
@@ -581,6 +589,7 @@ export function WorkflowEditor() {
       }
       const data = await res.json();
       setWorkflow(data.workflow);
+      setSavedWorkflow(data.workflow);
       await loadWorkflowList();
       toast.success('Workflow saved');
     } catch (e) {
@@ -603,6 +612,7 @@ export function WorkflowEditor() {
       if (!res.ok) throw new Error(await res.text());
       if (workflow?.name === name) {
         setWorkflow(null);
+        setSavedWorkflow(null);
         setWorkflowJson({});
       }
       await loadWorkflowList();
@@ -612,6 +622,12 @@ export function WorkflowEditor() {
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  async function handleRevertWorkflow() {
+    const result = await showDialog('Discard all unsaved changes to this workflow?', 'Revert Workflow', ['Revert', 'Cancel']);
+    if (result !== 'Revert') return;
+    setWorkflow(savedWorkflow);
   }
 
   async function handleBaseChange(filename) {
@@ -629,6 +645,12 @@ export function WorkflowEditor() {
 
   const validationErrors = validateWorkflowFrontend(workflow);
   const canSave = validationErrors.length === 0;
+  const workflowDirty = useMemo(
+    () => !savedWorkflow || JSON.stringify(workflow) !== JSON.stringify(savedWorkflow),
+    [workflow, savedWorkflow]
+  );
+  const workflowRecorded = savedWorkflow !== null;
+  const { saveLabel: workflowSaveLabel, saveEnabled: workflowSaveEnabled, revertEnabled: workflowRevertEnabled } = formButtonStates(workflowRecorded, workflowDirty);
 
   // ──────────────────────────────────────────────────────────────────────────
   // Dynamic-list helpers
@@ -816,11 +838,12 @@ export function WorkflowEditor() {
               <${Button}
                 variant="medium-text"
                 color="primary"
+                icon="save"
                 loading=${isSaving}
-                disabled=${!canSave || isSaving}
+                disabled=${!canSave || !workflowSaveEnabled || isSaving}
                 onClick=${handleSave}
               >
-                Save Workflow
+                ${workflowSaveLabel}
               </${Button}>
               ${!canSave && html`
                 <${SaveTooltip} theme=${theme} visible=${showTooltip}>
@@ -830,7 +853,17 @@ export function WorkflowEditor() {
             </${DisabledWrapper}>
             <${Button}
               variant="medium-text"
+              color="secondary"
+              icon="undo"
+              disabled=${!workflowRevertEnabled}
+              onClick=${handleRevertWorkflow}
+            >
+              Revert
+            </${Button}>
+            <${Button}
+              variant="medium-text"
               color="danger"
+              icon="trash"
               loading=${isDeleting}
               disabled=${isDeleting}
               onClick=${() => handleDelete(workflow.name)}

@@ -331,10 +331,37 @@ export class AudioPlayer extends Component {
   };
 
   render() {
-    const { audioUrl, widthScale = 'full', start, end } = this.props;
+    const { audioUrl, widthScale = 'full', start, end, disabled = false } = this.props;
     const { theme, isPlaying, duration } = this.state;
 
-    if (!audioUrl) return null;
+    const { width, flex } = getWidthScaleStyle(widthScale);
+    const compact = widthScale !== 'full';
+
+    if (disabled || !audioUrl) {
+      if (!disabled && !audioUrl) return null;
+      return html`
+        <${PlayerContainer} padding=${theme.spacing.small.padding} width=${width} flex=${flex || ''}>
+          <${Panel} variant="glass" padding="small">
+            <${Controls} gap=${theme.spacing.medium.gap}>
+              <${Button}
+                variant="medium-icon"
+                color="secondary"
+                icon="play"
+                disabled
+                title="No audio available"
+              />
+              <${AudioTimeline}
+                audioElement=${null}
+                duration=${0}
+                startOffset=${0}
+                compact=${compact}
+                isPlaying=${false}
+              />
+            </${Controls}>
+          </${Panel}>
+        </${PlayerContainer}>
+      `;
+    }
 
     // Only pass the shared audio element when this specific instance owns playback,
     // so AudioTimeline tracks the correct position and seeking works.
@@ -344,10 +371,6 @@ export class AudioPlayer extends Component {
       globalAudioPlayer.currentInstanceId === this._instanceId
         ? globalAudioPlayer.audioElement
         : null;
-
-    const { width, flex } = getWidthScaleStyle(widthScale);
-
-    const compact = widthScale !== 'full';
 
     // When region props are provided, display the region duration instead of the full file duration
     const hasRegion = start != null && end != null;

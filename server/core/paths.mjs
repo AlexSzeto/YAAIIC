@@ -41,6 +41,9 @@ export const MEDIA_DATA_PATH = path.join(DATABASE_DIR, 'media-data.json');
 /** Path to `server/database/brew-data.json` */
 export const BREW_DATA_PATH = path.join(DATABASE_DIR, 'brew-data.json');
 
+/** Path to `server/database/anytale-data.json` */
+export const ANYTALE_DATA_PATH = path.join(DATABASE_DIR, 'anytale-data.json');
+
 /** Path to `server/database/sound-sources.json` */
 export const SOUND_SOURCES_PATH = path.join(DATABASE_DIR, 'sound-sources.json');
 
@@ -49,3 +52,6 @@ export const COMFYUI_WORKFLOWS_DIR = path.join(RESOURCE_DIR, 'workflows');
 
 /** Path to `server/resource/comfyui-workflows.json` */
 export const WORKFLOWS_PATH = path.join(RESOURCE_DIR, 'comfyui-workflows.json');
+
+/** Path to `scripts/migrate/backups/` (migration backup files, gitignored) */
+export const BACKUP_DIR = path.join(PROJECT_ROOT, 'scripts', 'migrate', 'backups');
