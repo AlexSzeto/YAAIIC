@@ -234,6 +234,11 @@ export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotSta
 /**
  * Filter raw LLM dialog output before display and history storage.
  *
+ * Step 0 — Instruction-block removal:
+ *   If the model appended a `### Label: …` instruction block, remove it and
+ *   everything that follows.  Only the first occurrence is matched.
+ *   e.g. `Hello! ### Instruction: You look surprised.` → `Hello!`
+ *
  * Step 1 — Quoted-speech extraction:
  *   If any double-quote character is present (" U+0022, " U+201C, " U+201D),
  *   extract only the content between quoted pairs and join with a space,
@@ -255,6 +260,10 @@ export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotSta
  */
 export function filterDialogText(text) {
   if (!text) return text;
+
+  // Step 0: Strip any `### Label: …` instruction block appended by the model,
+  // along with any whitespace immediately preceding the `###`.
+  text = text.replace(/\s*###[^:]+:[\s\S]*/, '');
 
   // Step 1: Quote extraction — only when at least one quote character is present.
   if (/["“”]/.test(text)) {

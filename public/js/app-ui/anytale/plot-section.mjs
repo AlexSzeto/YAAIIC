@@ -182,7 +182,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const navigateTo = useCallback((index) => {
     const clamped = Math.min(Math.max(index, 0), plot.pages.length - 1);
     onPageChange && onPageChange(clamped);
-  }, [plot.pages.length, onPageChange]);
+    if (plot.uid && onViewPageImage) {
+      onViewPageImage({ plotUid: plot.uid, pageIndex: clamped });
+    }
+  }, [plot.pages.length, plot.uid, onPageChange, onViewPageImage]);
 
   // ── Load a plot by uid from the search-select modal ──────────────────────
   const handleLoadPlot = useCallback(async (uid) => {
@@ -363,19 +366,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     [currentPage, priorSlotStatuses, enabledParts]
   );
 
-  // ── Slot statuses for the pill list: character slot types are excluded ────────
-  // To re-include character slots (with their requirements lock disabled), remove
-  // this filter and pass `priorSlotStatuses` directly. Also pass
-  // `allSlots={[...slotOptions, ...characterSlotTypes]}` and add a
-  // `requirementsDisabledSlots={new Set(characterSlotTypes)}` prop to PlotPagePills
-  // (see the comment in plot-page-pills.mjs for how to wire up the per-slot lock).
-  const filteredSlotStatuses = useMemo(() => {
-    const filtered = new Map();
-    for (const [slot, status] of priorSlotStatuses.entries()) {
-      if (!characterSlotTypes.includes(slot)) filtered.set(slot, status);
-    }
-    return filtered;
-  }, [priorSlotStatuses, characterSlotTypes]);
 
   // ── Import handler: load a plot from a media entry's stored plot data ──
   const importLoadPlot = useCallback(async ({ uid, name, page }) => {
@@ -608,8 +598,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
         <!-- Slot and part pill editors -->
         <${PlotPagePills}
-          slotStatuses=${filteredSlotStatuses}
-          allSlots=${slotOptions}
+          slotStatuses=${priorSlotStatuses}
+          allSlots=${[...slotOptions, ...characterSlotTypes]}
           allLibraryParts=${parts}
           libraryParts=${libraryParts}
           page=${currentPage}

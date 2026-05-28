@@ -1065,12 +1065,21 @@ export function AnyTalePlayPage() {
     // Already at or past the decision page — nothing to advance to
     if (nextVisIdx > visiblePageIndices.length) return;
 
-    // Wait for the current page's image to be complete before starting the advance timer.
-    // This replaces the old "next page must be ready" guard: the timer now starts as soon as
-    // the current page is ready, even if the next page is still loading. This prevents autoplay
-    // from stalling on the first page of a loading chapter when dialog is disabled.
+    // Only start the advance timer when the current page is fully ready — same definition as
+    // currentPageReady in the render: image complete AND voice settled (or not applicable).
+    // Without the voice check, autoplay would fire as soon as the image arrives while voice is
+    // still generating, keeping the UI stuck on the loading screen and cascading through
+    // subsequent pages before they can display.
     const currentPlotPageIdx = visiblePageIndices[session.pageIndex];
     if (pageStatuses[currentPlotPageIdx] !== 'complete') return;
+
+    const autoplayVoiceApplicable = !session.muted && !!sessionRef.current.character.voiceSampleUrl;
+    if (autoplayVoiceApplicable) {
+      const vs = pageVoiceStatuses[currentPlotPageIdx];
+      const voiceSettled = vs === 'complete' || vs === 'skipped' || vs === 'error'
+        || pageDialogTexts[currentPlotPageIdx] === null;
+      if (!voiceSettled) return;
+    }
 
     // What happens when the timer fires: advance to decision page, or cross to next chapter.
     // Read session from ref inside the callback to avoid stale-closure issues.
@@ -1128,7 +1137,7 @@ export function AnyTalePlayPage() {
     const delay = 5000 + (currentDialogText ? 3000 : 0);
     const timer = setTimeout(doAdvance, delay);
     return () => clearTimeout(timer);
-  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Reset ---
 

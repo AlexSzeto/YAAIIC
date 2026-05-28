@@ -16,6 +16,7 @@ import { Gallery } from '../main/gallery.mjs';
 import { useItemNavigation } from '../../custom-ui/nav/use-item-navigation.mjs';
 import { fetchJson } from '../../custom-ui/util.mjs';
 import { backfillMissingProperties } from '../../util.mjs';
+import { loadPlot, loadCharacter } from './anytale-state.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
@@ -108,6 +109,33 @@ export function AnyTalePage() {
   // Image history / viewer
   const [history, setHistory] = useState([]);
   const nav = useItemNavigation(history);
+  // Set to true after appending a new image so the post-render effect can navigate to last
+  const navigateToLastRef = useRef(false);
+
+  useEffect(() => {
+    if (navigateToLastRef.current && history.length > 0) {
+      nav.selectLast();
+      navigateToLastRef.current = false;
+    }
+  }, [history]);
+
+  // Preload images on mount based on the active tab's current name
+  useEffect(() => {
+    const tab = localStorage.getItem('anytale-active-tab') || 'parts-plot';
+    const name = tab === 'character-outfits'
+      ? loadCharacter().name?.trim() || ''
+      : loadPlot().name?.trim() || '';
+    if (!name) return;
+    fetchJson(`/media-data?${new URLSearchParams({ query: name, sort: 'ascending', limit: '1000' })}`)
+      .then(items => {
+        const exact = items.filter(item => item.name === name);
+        if (exact.length > 0) {
+          setHistory(exact);
+          navigateToLastRef.current = true;
+        }
+      })
+      .catch(err => console.error('[AnyTalePage] Preload failed:', err));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Gallery
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -153,8 +181,8 @@ export function AnyTalePage() {
     if (data.result && data.result.uid) {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
-        setHistory(prev => [media, ...prev]);
-        nav.selectByIndex(0);
+        setHistory(prev => [...prev, media]);
+        navigateToLastRef.current = true;
         toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
@@ -376,8 +404,9 @@ export function AnyTalePage() {
         previewFactory=${createGalleryPreview}
         onLoad=${(items) => {
           if (items && items.length > 0) {
-            setHistory(items);
-            nav.selectByIndex(items.length - 1);
+            const ordered = items.slice().reverse();
+            setHistory(ordered);
+            nav.selectByIndex(ordered.length - 1);
           }
         }}
         onDelete=${handleGalleryDelete}

@@ -157,21 +157,21 @@ export function AnyTaleViewer({
     if (timerRef.current) clearInterval(timerRef.current);
     if (isPlaying) {
       timerRef.current = setInterval(() => {
-        onPrev && onPrev();
+        onNext && onNext();
       }, intervalSeconds * 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isPlaying, intervalSeconds, onPrev]);
+  }, [isPlaying, intervalSeconds, onNext]);
 
   // Stop slideshow when there are no images
   useEffect(() => {
     if (!items.length) setIsPlaying(false);
   }, [items.length]);
 
-  // Stop slideshow when the first image is reached
+  // Stop slideshow when the last image is reached
   useEffect(() => {
-    if (isPlaying && currentIndex === 0) setIsPlaying(false);
-  }, [currentIndex]);
+    if (isPlaying && currentIndex === items.length - 1) setIsPlaying(false);
+  }, [currentIndex, items.length]);
 
   useEffect(() => {
     if (!items.length) onImageWidthChange?.(null);
