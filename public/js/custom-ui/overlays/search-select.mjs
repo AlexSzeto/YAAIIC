@@ -124,25 +124,6 @@ const SingleItem = styled('button')`
 `;
 SingleItem.className = 'search-select-single-item';
 
-const ItemContentRow = styled('span')`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 28px;
-  gap: 12px;
-`;
-ItemContentRow.className = 'search-select-item-content-row';
-
-const ItemSubtitle = styled('span')`
-  color: ${props => props.color};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
-  max-width: 55%;
-`;
-ItemSubtitle.className = 'search-select-item-subtitle';
 
 // Multi-select item row
 const MultiItem = styled('div')`
@@ -403,18 +384,25 @@ export function SearchSelectModal({
               return html`
                 <${SingleItem}
                   key=${String(item.value)}
-                  color=${theme.colors.text.primary}
-                  fontSize=${theme.typography.fontSize.medium}
-                  fontFamily=${theme.typography.fontFamily}
                   hoverBg=${theme.colors.background.hover}
                   hoverBorderRadius=${theme.spacing.small.borderRadius}
                   transition=${theme.transitions.fast}
                   onClick=${() => handleSingleSelect(item.value)}
                 >
-                  <${ItemContentRow}>
-                    <span>${item.label}</span>
-                    ${item.subtitle ? html`<${ItemSubtitle} color=${theme.colors.text.secondary}>${item.subtitle}</${ItemSubtitle}>` : null}
-                  </${ItemContentRow}>
+                  <${MultiItemContent}>
+                    <${MultiItemLabel}
+                      fontFamily=${theme.typography.fontFamily}
+                      fontSize=${theme.typography.fontSize.medium}
+                      color=${theme.colors.text.primary}
+                    >${item.label}</${MultiItemLabel}>
+                    ${item.subtitle ? html`
+                      <${MultiItemSubtitle}
+                        fontFamily=${theme.typography.fontFamily}
+                        fontSize=${theme.typography.fontSize.small}
+                        color=${theme.colors.text.secondary}
+                      >${item.subtitle}</${MultiItemSubtitle}>
+                    ` : null}
+                  </${MultiItemContent}>
                 </${SingleItem}>
               `;
             })}
