@@ -6,6 +6,8 @@
 import fs from 'fs';
 import { CONFIG_PATH, DEFAULT_CONFIG_PATH } from './paths.mjs';
 
+const DEBOUNCE_MS = 300;
+
 let _config = null;
 
 /**
@@ -38,4 +40,31 @@ export function getConfig() {
     throw new Error('Config not loaded – call loadConfig() first');
   }
   return _config;
+}
+
+/**
+ * Watch config.json for changes and invoke onChange whenever the file is modified.
+ * Uses a 300 ms debounce to coalesce rapid editor saves into a single reload.
+ *
+ * @param {(newConfig: Object, oldConfig: Object) => void} onChange
+ * @returns {{ close: () => void }}
+ */
+export function startConfigWatcher(onChange) {
+  let debounceTimer = null;
+  const watcher = fs.watch(CONFIG_PATH, () => {
+    console.log('[config-watcher] Change detected — debouncing...');
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      console.log('[config-watcher] Reloading config from disk...');
+      const oldConfig = getConfig();
+      try {
+        const newConfig = loadConfig();
+        console.log('[config-watcher] Config reloaded successfully.');
+        onChange(newConfig, oldConfig);
+      } catch (err) {
+        console.error('[config-watcher] Failed to reload config:', err);
+      }
+    }, DEBOUNCE_MS);
+  });
+  return { close: () => { clearTimeout(debounceTimer); watcher.close(); } };
 }

@@ -2961,7 +2961,7 @@
     },
     {
       "uid": "ca6bdc2b-c2ac-4a9a-8d41-7ed80f76d43e",
-      "name": "Text to Music (StableAudio 3 Medium)",
+      "name": "Text to Music (StableAudio3 Medium)",
       "options": {
         "type": "audio",
         "inputImages": 0,
@@ -3612,6 +3612,129 @@
       ]
     },
     {
+      "uid": "69cfbef9-3854-4166-97ca-5266909e84f2",
+      "name": "Text to Sound (StableAudio 3)",
+      "hidden": false,
+      "options": {
+        "type": "audio",
+        "autocomplete": false,
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length (seconds)",
+            "default": 10,
+            "options": []
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          },
+          {
+            "id": "enhanceprompt",
+            "type": "checkbox",
+            "label": "Enhance Prompt",
+            "default": true,
+            "options": []
+          },
+          {
+            "id": "seamlessLoop",
+            "type": "checkbox",
+            "label": "Seamless Loop",
+            "default": "true",
+            "options": []
+          }
+        ]
+      },
+      "preGenerationTasks": [],
+      "postGenerationTasks": [
+        {
+          "process": "extractOutputTexts",
+          "parameters": {
+            "properties": [
+              "summary"
+            ]
+          }
+        }
+      ],
+      "replace": [
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "63",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "59",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "60",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "enhanceprompt",
+          "to": [
+            "61",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "52:3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "62",
+            "inputs",
+            "output_file_path"
+          ]
+        }
+      ],
+      "base": "stableaudio3-text-to-sound.json"
+    },
+    {
       "uid": "05475d70-3560-48dc-a02d-fd4af88f39c5",
       "name": "Text to Sound (StableAudio)",
       "options": {
@@ -3625,7 +3748,7 @@
             "id": "length",
             "type": "number",
             "label": "Length (seconds)",
-            "default": 30
+            "default": "10"
           },
           {
             "id": "audioFormat",
@@ -4921,7 +5044,7 @@
     },
     {
       "uid": "d2f011fb-30a9-4ce1-bbe0-0a6556ac1d05",
-      "name": "AnyTale: Background Music (Stable Audio 3 Medium)",
+      "name": "AnyTale: Background Music (StableAudio3 Medium)",
       "options": {
         "type": "audio",
         "inputImages": 0,

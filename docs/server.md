@@ -21,6 +21,7 @@ This document describes all API endpoints provided by the YAAIIC server.
 - [Chat API](#chat-api)
 - [SSE Progress Stream](#sse-progress-stream)
 - [Admin API](#admin-api)
+- [Config Hot Reload](#config-hot-reload)
 
 ## Base URL
 
@@ -1002,4 +1003,17 @@ The admin endpoints are intended for local / LAN use only. No authentication is 
 - **Notes**:
   - The server must be running under PM2 (`npm start`) for the restart to be automatic. If started with `node` directly, the process exits and does not come back.
   - The `/restart-server` Claude skill wraps this endpoint: it POSTs to `/admin/restart` then polls `/status` until the server is back up.
+
+## Config Hot Reload
+
+The server watches `config.json` for changes at runtime. After the file is saved, the server debounces the raw `fs.watch` event by 300 ms to tolerate rapid or multi-write editor saves (including writes that temporarily produce invalid JSON).
+
+On a valid reload:
+- `app.locals.config` is updated immediately, so all per-request reads use the new values.
+- Changed top-level keys are logged to the console.
+- **`comfyuiAPIPath`** — reinitializes the ComfyUI client and orchestrator, then force-reconnects the ComfyUI WebSocket.
+- **`ollamaAPIPath`** — calls `initializeServices` so the next health poll uses the new URL.
+- **`serverPort`** — logs a warning; the port cannot be rebound without a full restart.
+
+If the file contains invalid JSON at reload time, the error is logged and the server continues running on the previous config unchanged.
 

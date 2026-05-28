@@ -329,6 +329,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     if (typeof node !== 'object' || !node.class_type) continue;
     if (node.class_type !== 'easy saveText') continue;
     if (node.inputs?.file_name === 'video-filename' && node.inputs?.file_extension === 'txt') {
+      replace.push({ from: 'storagePath', to: [nodeId, 'inputs', 'output_file_path'] });
       postGenerationTasks.push({
         process: 'extractOutputMediaFromTextFile',
         parameters: { filename: 'video-filename.txt' },
@@ -346,6 +347,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
     if (node.class_type !== 'easy saveText') continue;
     const fileName = node.inputs?.file_name;
     if (knownDataProps.includes(fileName)) {
+      replace.push({ from: 'storagePath', to: [nodeId, 'inputs', 'output_file_path'] });
       extractedProps.push(fileName);
       mappedNodeIds.add(nodeId);
     }

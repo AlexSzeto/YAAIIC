@@ -7,11 +7,11 @@ import { handleMediaGeneration } from './features/generation/orchestrator.mjs';
 import { initialize as initComfyClient } from './features/generation/comfy-client.mjs';
 import { uploadFileToComfyUI, setUploadAddMediaDataEntry } from './features/upload/service.mjs';
 import { initializeServices, checkAndStartServices, getServiceStatus, startReadinessPolling, setOnAllReady } from './core/service-manager.mjs';
-import { setEmitFunctions, initComfyUIWebSocket } from './comfyui-websocket.mjs';
+import { setEmitFunctions, initComfyUIWebSocket, reconnectComfyUIWebSocket } from './comfyui-websocket.mjs';
 
 // Core infrastructure
 import { SERVER_DIR, PUBLIC_DIR, STORAGE_DIR } from './core/paths.mjs';
-import { loadConfig } from './core/config.mjs';
+import { loadConfig, startConfigWatcher } from './core/config.mjs';
 import { migrateAll } from './core/migrator.mjs';
 import {
   loadMediaData, addMediaDataEntry, findMediaByUid
@@ -158,6 +158,11 @@ app.get('/workflows', (req, res) => {
 // Server startup
 // ---------------------------------------------------------------------------
 
+function changedKeys(oldConfig, newConfig) {
+  const keys = new Set([...Object.keys(oldConfig), ...Object.keys(newConfig)]);
+  return [...keys].filter(k => oldConfig[k] !== newConfig[k]);
+}
+
 async function startServer() {
   await migrateAll();
   // Reload config after migrations so any newly-written fields are live in app.locals
@@ -181,6 +186,31 @@ async function startServer() {
     const nets = os.networkInterfaces();
     const localIp = Object.values(nets).flat().find(n => n.family === 'IPv4' && !n.internal)?.address ?? 'localhost';
     console.log(`🌐 Server running at http://${localIp}:${port}`);
+  });
+
+  startConfigWatcher((newConfig, oldConfig) => {
+    app.locals.config = newConfig;
+
+    const changed = changedKeys(oldConfig, newConfig);
+    if (changed.length > 0) {
+      console.log('[config-watcher] Config reloaded. Changed keys:', changed.join(', '));
+    }
+
+    if (changed.includes('comfyuiAPIPath')) {
+      initComfyClient(newConfig.comfyuiAPIPath);
+      initializeOrchestrator(newConfig.comfyuiAPIPath);
+      reconnectComfyUIWebSocket(newConfig.comfyuiAPIPath);
+      console.log('♻️ comfyuiAPIPath updated — reconnecting to ComfyUI');
+    }
+
+    if (changed.includes('ollamaAPIPath')) {
+      initializeServices(newConfig);
+      console.log('♻️ ollamaAPIPath updated — service health checks will use new URL');
+    }
+
+    if (changed.includes('serverPort')) {
+      console.log('⚠️ serverPort changed — restart the server to rebind the port');
+    }
   });
 }
 

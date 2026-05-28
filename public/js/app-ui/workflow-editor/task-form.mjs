@@ -43,6 +43,13 @@ const MathSpan = styled('span')`
 `;
 MathSpan.className = 'math-span';
 
+const HintText = styled('span')`
+  font-size: ${props => props.theme.typography.fontSize.small};
+  color: ${props => props.theme.colors.text.secondary};
+  line-height: 1.4;
+`;
+HintText.className = 'hint-text';
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -390,6 +397,9 @@ function AdditionalProcessingTaskForm({ task, onChange }) {
     `}
 
     ${process === 'extractOutputTexts' && html`
+      <${HintText} theme=${currentTheme.value}>
+        Reads each listed property as a <em>.txt</em> file from ComfyUI's output folder and assigns its contents to the matching field in generationData (e.g. "summary" reads <em>summary.txt</em>). Requires <em>storagePath</em> to be linked to the <em>output_file_path</em> of every related Save Text node in the ComfyUI workflow.
+      </${HintText}>
       <${DynamicList}
         title="Properties"
         condensed

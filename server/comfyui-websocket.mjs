@@ -308,6 +308,11 @@ function handleExecuted(data) {
   // This is informational, main tracking is done via 'executing' and 'progress'
 }
 
+export function reconnectComfyUIWebSocket(newApiPath) {
+  comfyUIAPIPath = newApiPath;
+  connectToComfyUI(true);
+}
+
 // Export functions and constants
 export {
   CLIENT_ID,
