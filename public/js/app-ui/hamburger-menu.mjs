@@ -56,7 +56,7 @@ export function HamburgerMenu() {
     {
       label: 'AnyTale',
       href:  '/anytale.html',
-      icon:  'play',
+      icon:  'book',
       active: currentPath === '/anytale.html',
     },
     {
