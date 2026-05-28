@@ -23,7 +23,7 @@ import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
-import { H2, H3, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { loadOutfit, saveOutfitState, createBlankOutfit } from './anytale-state.mjs';
@@ -117,6 +117,7 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
   const [libraryOutfit, setLibraryOutfit] = useState(null);
   // Load-outfit modal state
   const [loadOutfitModalOpen, setLoadOutfitModalOpen] = useState(false);
+  const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
   // ORDERING CONSTRAINT: Every hook referenced in a useEffect dependency array must be
   // declared BEFORE that useEffect in the function body. Hook dep arrays are evaluated
   // immediately on render, so any const/useCallback below the useEffect causes a TDZ
@@ -717,18 +718,14 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
 
             <!-- Parts -->
             <${VerticalLayout} gap="small">
-              <${H3}>Parts</${H3}>
+              <${HorizontalEdgesLayout}>
+                <${H2}>Parts</${H2}>
+                <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+              </${HorizontalEdgesLayout}>
 
               ${missingRecommendedTypes.length > 0
                 && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Outfit Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
               }
-
-              <${LibraryPartPicker}
-                libraryParts=${libraryParts}
-                currentPartUids=${outfit.parts.map(p => p.partUid)}
-                onSelectPart=${handleLibrarySelect}
-                onRemovePart=${handleLibraryRemove}
-              />
 
               <${DynamicList}
                 title="Outfit Parts"
@@ -807,6 +804,15 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
                 <//>
               </${HorizontalLayout}>
             </${HorizontalEdgesLayout}>
+
+            <${LibraryPartPicker}
+              isOpen=${loadPartModalOpen}
+              onClose=${() => setLoadPartModalOpen(false)}
+              libraryParts=${libraryParts}
+              currentPartUids=${outfit.parts.map(p => p.partUid)}
+              onSelectPart=${handleLibrarySelect}
+              onRemovePart=${handleLibraryRemove}
+            />
 
             <${SearchSelectModal}
               isOpen=${loadOutfitModalOpen}

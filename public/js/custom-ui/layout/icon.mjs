@@ -35,7 +35,7 @@ const ICON_MAP = {
   
   // Actions
   'trash-alt': 'delete',
-  'edit': 'edit',
+  'edit': 'edit_square',
   'edit-alt': 'edit_note',
   'copy': 'content_copy',
   'save': 'save',

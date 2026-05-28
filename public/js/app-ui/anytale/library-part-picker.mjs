@@ -1,14 +1,13 @@
 /**
- * library-part-picker.mjs - Shared "Add Parts from Library" picker.
+ * library-part-picker.mjs - Shared "Add Parts from Library" modal.
  *
- * Opens a searchable multi-select modal so the user can add or remove multiple
- * parts in one interaction.  Pre-checks parts that are already present in the
- * active list (via currentPartUids).  Parent components own add/remove because
- * each stores parts in a different shape.
+ * A purely controlled multi-select modal: the parent owns the open/close state
+ * and passes isOpen/onClose.  Pre-checks parts already present in the active
+ * list (via currentPartUids) so the user can add or remove multiple parts in
+ * one interaction.
  */
 import { html } from 'htm/preact';
-import { useState, useCallback } from 'preact/hooks';
-import { Button } from '../../custom-ui/io/button.mjs';
+import { useCallback } from 'preact/hooks';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 
 // ============================================================================
@@ -17,26 +16,24 @@ import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 
 /**
  * @param {Object}   props
+ * @param {boolean}  props.isOpen              - Whether the modal is visible
+ * @param {Function} props.onClose             - Called when the modal should close
  * @param {Array}    props.libraryParts        - All available library parts
  * @param {string[]} [props.currentPartUids=[]] - UIDs of parts already in the active list;
  *                                               used to pre-check items in the modal
  * @param {Function} props.onSelectPart        - (partConfig) => void — called for each newly added part
  * @param {Function} [props.onRemovePart]      - (uid) => void — called for each part removed
- * @param {boolean}  [props.disabled=false]
- * @param {string}   [props.label='Browse Library']
  * @param {string}   [props.modalTitle='Add Parts from Library']
  */
 export function LibraryPartPicker({
+  isOpen = false,
+  onClose,
   libraryParts = [],
   currentPartUids = [],
   onSelectPart,
   onRemovePart,
-  disabled = false,
-  label = 'Browse Library',
   modalTitle = 'Add Parts from Library',
 }) {
-  const [modalOpen, setModalOpen] = useState(false);
-
   // Called by SearchSelectModal on every toggle: array of all currently-selected UIDs.
   const handleModalSelect = useCallback((selectedUids) => {
     const selectedSet = new Set(selectedUids);
@@ -59,16 +56,8 @@ export function LibraryPartPicker({
   }, [libraryParts, currentPartUids, onSelectPart, onRemovePart]);
 
   return html`
-    <${Button}
-      variant="medium-text"
-      icon="search"
-      widthScale="full"
-      disabled=${disabled || libraryParts.length === 0}
-      onClick=${() => setModalOpen(true)}
-    >${label}<//>
-
     <${SearchSelectModal}
-      isOpen=${modalOpen}
+      isOpen=${isOpen}
       title=${modalTitle}
       items=${libraryParts.map(part => ({
         label: part.name || part.referenceTag || part.uid,
@@ -78,7 +67,7 @@ export function LibraryPartPicker({
       mode="multi"
       initialSelected=${currentPartUids}
       onSelect=${handleModalSelect}
-      onClose=${() => setModalOpen(false)}
+      onClose=${onClose}
     />
   `;
 }

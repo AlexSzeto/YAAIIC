@@ -396,10 +396,6 @@ export function CharacterSection({
     }));
   }, []);
 
-  const handlePartLoadSelect = useCallback((uid) => {
-    const match = libraryParts.find(p => p.uid === uid);
-    if (match) handleLibrarySelect(match);
-  }, [libraryParts, handleLibrarySelect]);
 
   const handlePartChange = useCallback((index, updatedPart) => {
     const currentPart = character.parts[index];
@@ -934,13 +930,6 @@ export function CharacterSection({
               && html`<div style=${{ padding: currentTheme.value.spacing.small.padding, fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Recommended Missing Character Parts:</strong> ${missingRecommendedTypes.join(', ')}</div>`
             }
 
-            <${LibraryPartPicker}
-              libraryParts=${libraryParts}
-              currentPartUids=${character.parts.map(p => p.partUid)}
-              onSelectPart=${handleLibrarySelect}
-              onRemovePart=${handleLibraryRemove}
-            />
-
             <${DynamicList}
               title="Character Parts"
               items=${character.parts}
@@ -1035,17 +1024,13 @@ export function CharacterSection({
             onClose=${() => setLoadCharModalOpen(false)}
           />
 
-          <${SearchSelectModal}
+          <${LibraryPartPicker}
             isOpen=${loadPartModalOpen}
-            title="Load Part"
-            items=${libraryParts.map(p => ({
-              label: p.name || p.referenceTag || p.uid,
-              value: p.uid,
-              subtitle: Array.isArray(p.type) ? p.type.join(', ') : '',
-            }))}
-            mode="single"
-            onSelect=${handlePartLoadSelect}
             onClose=${() => setLoadPartModalOpen(false)}
+            libraryParts=${libraryParts}
+            currentPartUids=${character.parts.map(p => p.partUid)}
+            onSelectPart=${handleLibrarySelect}
+            onRemovePart=${handleLibraryRemove}
           />
 
         </${VerticalLayout}>

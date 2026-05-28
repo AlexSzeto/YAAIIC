@@ -13,7 +13,6 @@ import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
-import { Input } from '../../custom-ui/io/input.mjs';
 import { DynamicList } from '../../custom-ui/layout/dynamic-list.mjs';
 import { TabPanels } from '../../custom-ui/nav/tab-panels.mjs';
 import { PartItem } from './part-item.mjs';
@@ -22,8 +21,6 @@ import { extractImagePrompt, parsePromptTags, processPromptImport, extractRemain
 import { assemblePrompt, assemblePartPreviewPrompt } from './prompt-assembler.mjs';
 import { resolveSlotStatuses, checkPageRequirements, parseRules, applyRules } from './slot-resolver.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
-import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
-import { AutocompleteInput } from '../autocomplete-input.mjs';
 import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
 import { PlotSection } from './plot-section.mjs';
 import { CharacterSection } from './character-section.mjs';
@@ -69,26 +66,6 @@ const PartsScrollArea = styled('div')`
 `;
 PartsScrollArea.className = 'parts-scroll-area';
 
-const PickerRow = styled('div')`
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  width: 100%;
-`;
-PickerRow.className = 'anytale-picker-row';
-
-const PickerInputFlex = styled('div')`
-  flex: 1;
-  min-width: 0;
-`;
-PickerInputFlex.className = 'anytale-picker-input-flex';
-
-const SearchButtonWrapper = styled('div')`
-  display: flex;
-  align-items: center;
-  height: 44px;
-`;
-SearchButtonWrapper.className = 'autocomplete-input-button-wrapper';
 
 const PromptPreview = styled('div')`
   padding: ${() => currentTheme.value.spacing.small.padding};
@@ -118,7 +95,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const { show: progressShow, activeTasks } = useProgress();
   const { items: queueItems } = useQueueStatus();
   const queueCount = queueItems.filter(i => i.status !== 'failed').length;
-  const [previewImageName, setPreviewImageName] = useState(() => loadState().name);
   const [parts, setParts] = useState(() => loadState().parts);
   // Always-current parts ref for use in persistent subscription closures
   const partsRef = useRef(parts);
@@ -130,7 +106,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const [activePlotPage, setActivePlotPage] = useState(() => loadState().activePlotPage);
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
-  const [previewPlotModalOpen, setPreviewPlotModalOpen] = useState(false);
   const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
   // Live plot state mirrored from PlotSection for immediate prompt preview updates
   const [livePlot, setLivePlot] = useState(() => loadPlot());
@@ -226,8 +201,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   }, [activeTasks]);
   // ── Plot list for Character & Outfits tab generate section ─────────────────
   const [charTabPlotList, setCharTabPlotList] = useState([]);
-  const [charTabPlotName, setCharTabPlotName] = useState('');
-  const [charTabPlotUid, setCharTabPlotUid] = useState('');
 
   // Ref so the persistent subscription always sees the latest selectedCharacterUid
   const selectedCharacterUidRef = useRef(selectedCharacterUid);
@@ -310,15 +283,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       .catch(err => console.error('[AnyTaleForm] Failed to fetch plot list:', err));
   }, []);
 
-  const handleCharTabPlotSelect = useCallback((inputValue) => {
-    const trimmed = (inputValue || '').trim();
-    if (!trimmed) { setCharTabPlotName(''); setCharTabPlotUid(''); return; }
-    const match = charTabPlotList.find(p =>
-      p.uid === trimmed || p.name?.toLowerCase() === trimmed.toLowerCase()
-    );
-    if (match) { setCharTabPlotName(match.name); setCharTabPlotUid(match.uid); }
-    else { setCharTabPlotName(trimmed); setCharTabPlotUid(''); }
-  }, [charTabPlotList]);
 
   // ── Shared outfit list (keeps CharacterSection in sync after OutfitSection saves) ─
   const [sharedOutfitList, setSharedOutfitList] = useState([]);
@@ -348,8 +312,8 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
   // Persist on every change
   useEffect(() => {
-    saveState({ name: previewImageName, activePlotPage, parts });
-  }, [previewImageName, activePlotPage, parts]);
+    saveState({ activePlotPage, parts });
+  }, [activePlotPage, parts]);
 
   // ── Library lookup: add part from library ────────────────────────────────
 
@@ -412,10 +376,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     setParts(prev => prev.filter(p => p.config?.uid !== uid));
   }, []);
 
-  const handlePartLoadSelect = useCallback((uid) => {
-    const match = libraryParts.find(p => p.uid === uid);
-    if (match) handleLibrarySelect(match);
-  }, [libraryParts, handleLibrarySelect]);
 
   const handleClear = useCallback(async () => {
     const result = await showDialog('This will erase all parts and the preview image name. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
@@ -463,8 +423,8 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
       : null;
 
-    onGenerate(prompt, previewImageName, partsData, plotData);
-  }, [parts, previewImageName, onGenerate, activePlotPage, computeSlotVisibility]);
+    onGenerate(prompt, currentPlot.name || '', partsData, plotData);
+  }, [parts, livePlot, onGenerate, activePlotPage, computeSlotVisibility]);
 
   const handleFullPlotTest = useCallback(() => {
     const currentPlot = loadPlot();
@@ -505,17 +465,21 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       const plotData = (currentPlot.uid || currentPlot.name)
         ? { uid: currentPlot.uid, name: currentPlot.name, page: i }
         : null;
-      onGenerate(prompt, previewImageName, partsData, plotData);
+      onGenerate(prompt, currentPlot.name || '', partsData, plotData);
     }
 
     // Trigger bulk dialog regeneration for queued pages
     plotBulkDialogFnRef.current?.(queuedIndices);
-  }, [parts, previewImageName, onGenerate, computeSlotVisibility]);
+  }, [parts, livePlot, onGenerate, computeSlotVisibility]);
 
-  //�"��"� Generate from Character & Outfits tab: uses charTabPlotUid (page 0) �"��"�
+  // Generate from Character & Outfits tab.
+  // Image name: character name, falling back to outfit name.
+  // Plot: first plot in the library with section "introduction" (auto-selected).
   const handleCharTabGenerate = useCallback(async () => {
     const currentCharacter = loadCharacter();
     const currentOutfit = loadOutfit();
+
+    const imageName = currentCharacter.name?.trim() || currentOutfit.name?.trim() || '';
 
     const mergedMap = {};
     for (const p of (currentCharacter.parts || [])) mergedMap[p.partUid] = p;
@@ -539,18 +503,24 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       };
     }).filter(Boolean);
 
+    // Auto-find the introduction plot from the library.
+    const introPlot = charTabPlotList.find(p => (p.section || '').toLowerCase() === 'introduction');
+    if (!introPlot) {
+      toast.info('No introduction plot found — generating without plot-based tags.');
+    }
+
     let activePage;
     let plotPages = [];
-    if (charTabPlotUid) {
+    if (introPlot) {
       try {
-        const res = await fetch(`/anytale/plot/${encodeURIComponent(charTabPlotUid)}`);
+        const res = await fetch(`/anytale/plot/${encodeURIComponent(introPlot.uid)}`);
         if (res.ok) {
           const plotBlock = await res.json();
           plotPages = Array.isArray(plotBlock.pages) ? plotBlock.pages : [];
           activePage = plotPages.length > 0 ? plotPages[0] : undefined;
         }
       } catch (err) {
-        console.error('[AnyTaleForm] Failed to fetch plot for generation:', err);
+        console.error('[AnyTaleForm] Failed to fetch intro plot for generation:', err);
       }
     }
 
@@ -567,9 +537,9 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       }
     }
 
-    const plotData = charTabPlotUid ? { uid: charTabPlotUid, name: charTabPlotName, page: 0 } : null;
-    onGenerate(prompt, previewImageName, partsData, plotData);
-  }, [libraryParts, previewImageName, onGenerate, charTabPlotUid, charTabPlotName, computeSlotVisibility]);
+    const plotData = introPlot ? { uid: introPlot.uid, name: introPlot.name, page: 0 } : null;
+    onGenerate(prompt, imageName, partsData, plotData);
+  }, [libraryParts, charTabPlotList, onGenerate, computeSlotVisibility, toast]);
 
   // Update a single part by index
   const handlePartChange = useCallback((index, updatedPart) => {
@@ -942,13 +912,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                 <${H2}>Parts</${H2}>
                 <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
               </${HorizontalEdgesLayout}>
-              <${LibraryPartPicker}
-                libraryParts=${libraryParts}
-                currentPartUids=${parts.map(p => p.config?.uid).filter(Boolean)}
-                onSelectPart=${handleLibrarySelect}
-                onRemovePart=${handleLibraryRemove}
-              />
-
             <${DynamicList}
               title="Parts List"
               items=${parts}
@@ -1033,13 +996,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       <${Panel} variant="outlined" style=${{ flex: 'none' }}>
         <${VerticalLayout} gap="medium">
           <${H2}>Generation</${H2}>
-          <${Input}
-            label="Preview Image Name"
-            value=${previewImageName}
-            onInput=${(e) => setPreviewImageName(e.target.value)}
-            placeholder="Name for generated preview images"
-            widthScale="full"
-          />
           ${previewPrompt ? html`
             <${PromptPreview}>
               <strong>Prompt preview:</strong> ${previewPrompt}
@@ -1066,17 +1022,13 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         </${VerticalLayout}>
       </${Panel}>
 
-      <${SearchSelectModal}
+      <${LibraryPartPicker}
         isOpen=${loadPartModalOpen}
-        title="Load Part"
-        items=${libraryParts.map(p => ({
-          label: p.name || p.referenceTag || p.uid,
-          value: p.uid,
-          subtitle: Array.isArray(p.type) ? p.type.join(', ') : '',
-        }))}
-        mode="single"
-        onSelect=${handlePartLoadSelect}
         onClose=${() => setLoadPartModalOpen(false)}
+        libraryParts=${libraryParts}
+        currentPartUids=${parts.map(p => p.config?.uid).filter(Boolean)}
+        onSelectPart=${handleLibrarySelect}
+        onRemovePart=${handleLibraryRemove}
       />
     </${EditLayout}>
   `;
@@ -1121,33 +1073,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
           <${Panel} variant="outlined" style=${{ flex: 'none' }}>
             <${VerticalLayout} gap="small">
               <${H2}>Generation</${H2}>
-              <${Input}
-                label="Preview Image Name"
-                value=${previewImageName}
-                onInput=${(e) => setPreviewImageName(e.target.value)}
-                placeholder="Name for generated preview images"
-                widthScale="full"
-              />
-              <${PickerRow}>
-                <${PickerInputFlex}>
-                  <${AutocompleteInput}
-                    label="Preview Plot"
-                    placeholder="Type to search saved plots..."
-                    suggestions=${charTabPlotList.map(p => p.name)}
-                    onSelect=${handleCharTabPlotSelect}
-                  />
-                </${PickerInputFlex}>
-                <${SearchButtonWrapper}>
-                  <${Button}
-                    variant="medium-icon"
-                    icon="search"
-                    title="Browse saved plots"
-                    disabled=${charTabPlotList.length === 0}
-                    onClick=${() => setPreviewPlotModalOpen(true)}
-                  />
-                </${SearchButtonWrapper}>
-              </${PickerRow}>
-              ${charTabPlotName ? html`<div style=${{ fontSize: currentTheme.value.typography.fontSize.small, color: currentTheme.value.colors.text.secondary }}><strong>Plot:</strong> ${charTabPlotName}</div>` : null}
               <${ButtonRow}>
                 <${Button}
                   variant="large-text"
@@ -1158,18 +1083,6 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
                   ${queueCount > 0 ? 'Queue' : 'Generate'}
                 <//>
               </${ButtonRow}>
-              <${SearchSelectModal}
-                isOpen=${previewPlotModalOpen}
-                title="Preview Plot"
-                items=${charTabPlotList.map(plot => ({
-                  label: plot.name || plot.uid,
-                  value: plot.uid,
-                  subtitle: plot.section?.trim() || '',
-                }))}
-                mode="single"
-                onSelect=${handleCharTabPlotSelect}
-                onClose=${() => setPreviewPlotModalOpen(false)}
-              />
             </${VerticalLayout}>
           </${Panel}>
         </div>
