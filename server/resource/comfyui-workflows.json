@@ -406,7 +406,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "anime coloring, {{prompt}}",
+          "template": "uncensored, anime coloring, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],
@@ -3613,7 +3613,7 @@
     },
     {
       "uid": "69cfbef9-3854-4166-97ca-5266909e84f2",
-      "name": "Text to Sound (StableAudio 3)",
+      "name": "Text to Sound (StableAudio3)",
       "hidden": false,
       "options": {
         "type": "audio",
@@ -3656,7 +3656,7 @@
             ]
           },
           {
-            "id": "enhanceprompt",
+            "id": "enhancePrompt",
             "type": "checkbox",
             "label": "Enhance Prompt",
             "default": true,
@@ -3666,6 +3666,13 @@
             "id": "seamlessLoop",
             "type": "checkbox",
             "label": "Seamless Loop",
+            "default": "true",
+            "options": []
+          },
+          {
+            "id": "createCover",
+            "type": "checkbox",
+            "label": "Album Cover",
             "default": "true",
             "options": []
           }
@@ -3704,6 +3711,18 @@
               {
                 "from": "imageFormat",
                 "to": "imageFormat"
+              }
+            ]
+          },
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "createCover"
+                },
+                "equals": {
+                  "value": true
+                }
               }
             ]
           }
@@ -3753,7 +3772,7 @@
           ]
         },
         {
-          "from": "enhanceprompt",
+          "from": "enhancePrompt",
           "to": [
             "61",
             "inputs",
@@ -5539,7 +5558,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "anime coloring, {{prompt}}",
+          "template": "uncensored, anime coloring, {{prompt}}",
           "to": "enhancedPrompt"
         },
         {
@@ -6084,7 +6103,7 @@
       },
       "preGenerationTasks": [
         {
-          "template": "anime coloring, {{prompt}}",
+          "template": "uncensored, anime coloring, {{prompt}}",
           "to": "enhancedPrompt"
         }
       ],

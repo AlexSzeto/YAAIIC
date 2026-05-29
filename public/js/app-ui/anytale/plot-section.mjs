@@ -717,7 +717,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${!revertEnabled}>
             Revert
           <//>
-          <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!deleteEnabled}>
+          <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${true}>
             Delete
           <//>
         </${HorizontalLayout}>
