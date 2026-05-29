@@ -1163,7 +1163,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     },
     {
       id: 'music',
-      label: 'Music',
+      label: 'SFX & Music',
       content: html`<${MusicSection} />`,
     },
   ];

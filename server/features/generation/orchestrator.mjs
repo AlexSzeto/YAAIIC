@@ -30,7 +30,7 @@ import { COMFYUI_WORKFLOWS_DIR, STORAGE_DIR, LOGS_DIR, SERVER_DIR } from '../../
 import { loadWorkflows } from './workflow-validator.mjs';
 import { findMediaByUid, getAllMediaData, saveMediaData } from '../../core/database.mjs';
 import { randomUUID } from 'crypto';
-import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField, addTrackToGenre, setPlayIntroImageUrl } from '../anytale/service.mjs';
+import { getAllCharacters, saveCharacter, updateCharacterField, updateOutfitField, addTrackToGenre, setPlayIntroImageUrl, setSfxAudioUrl } from '../anytale/service.mjs';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -855,7 +855,9 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
                  endpointKey === 'anytale-music' ||
                  endpointKey === 'anytale-play-intro' ||
                  endpointKey === 'anytale-play-chapter' ||
-                 endpointKey === 'anytale-play-speech';
+                 endpointKey === 'anytale-play-speech' ||
+                 endpointKey === 'anytale-sfx-preview' ||
+                 endpointKey === 'anytale-play-sfx';
 
   const { taskId } = initializeGenerationTask(taskData, workflowData, config);
 
@@ -884,6 +886,9 @@ export async function executeQueuedTask(queueItem, { config, uploadFileToComfyUI
       }
       if (endpointKey === 'anytale-play-intro' && result?.imageUrl) {
         try { setPlayIntroImageUrl(result.imageUrl); } catch { /* non-fatal */ }
+      }
+      if (endpointKey === 'anytale-sfx-preview' && taskData.sfxUid && result?.audioUrl) {
+        try { setSfxAudioUrl(taskData.sfxUid, result.audioUrl); } catch { /* SFX record may have been deleted */ }
       }
       if (endpointKey === 'anytale-music' && taskData.genreUid && result?.audioUrl) {
         const track = {

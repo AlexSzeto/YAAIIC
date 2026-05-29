@@ -71,14 +71,16 @@ const ICON_MAP = {
   'file-detail': 'docs',
   'message-detail': 'chat',
   'captions': 'subtitles',
+  'equalizer': 'graphic_eq',
   
-  // Communicationrc
+  // Communications
   'search': 'search',
   'search-alt': 'search',
   'filter': 'filter_alt',
   'message': 'message',
   'mail': 'mail',
   'notification': 'notifications',
+  'comic-bubble': 'comic_bubble',
   
   // Status and feedback
   'loader': 'progress_activity',

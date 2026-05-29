@@ -23,10 +23,13 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 - [x] Add `POST /anytale/play/generate-sfx` route — queues `sfxWorkflow` with `{ prompt, audioFormat: 'mp3', seed, tags: '', description: '', summary: '', entityType: 'anytale-play-sfx', requestOrigin: 'anytale-play' }`; returns `{ taskId }`. Does **not** write back to the SFX record (play-generated audio is ephemeral).
 - [x] Write co-located route tests for all five new endpoints in `server/features/anytale/router.test.mjs` (or a new `sfx.test.mjs` alongside the router).
 
+#### Fixes and Changes
+- [x] Add `sfxWorkflow` key to `server/config.default.json` (`anytale` block) and write `scripts/migrate/config/4-to-5.mjs` to seed it from the default for existing installs; bump `config` `currentVersion` to `5` in `server/core/data-versions.mjs`.
+
 ### Phase 2 — Editor SFX section
 
-- [ ] Rename the "Music" tab label to **"SFX & Music"** in the AnyTale tab list and expand `music-section.mjs` (or extract a new `sfx-section.mjs`) to include an SFX editing section rendered **above** the Music section; wrap each section in the same `Panel` outline component used by other tabs.
-- [ ] Implement the SFX section UI:
+- [x] Rename the "Music" tab label to **"SFX & Music"** in the AnyTale tab list and expand `music-section.mjs` (or extract a new `sfx-section.mjs`) to include an SFX editing section rendered **above** the Music section; wrap each section in the same `Panel` outline component used by other tabs.
+- [x] Implement the SFX section UI:
   - **Load button** opens a `SearchSelectModal` listing all SFX records; primary label = `name`, secondary label = `tags` joined with `, `; selecting a record sets it as the active SFX for editing.
   - **DynamicList** of SFX records with compact form fields per item:
     - `name` — `Input`
@@ -34,7 +37,14 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
     - `prompt` — `<textarea>` styled with goober
     - Below the prompt: a horizontal row with a small icon button (generate icon) on the left and an `AudioPlayer` (`public/js/custom-ui/media/audio-player.mjs`) on the right. The icon button queues `POST /anytale/sfx/:uid/generate-preview` and shows in-progress state while generating; on completion the SFX record's `audioUrl` is updated and the `AudioPlayer` reflects the new URL automatically. The `AudioPlayer` is disabled (or hidden) when `audioUrl` is empty.
   - CRUD: add (blank record → save → server assigns UID), delete (with confirm dialog).
-- [ ] Add a minimal render entry for the SFX section to `public/js/custom-ui/test.vitest.mjs` (only if extracted as a new reusable component; skip if kept app-specific).
+- [x] Add a minimal render entry for the SFX section
+
+#### Fixes and Changes
+- [x] Restore `BgmPlayerBar` to its original fixed position at the bottom of the tab (outside both panels); move the genre `DynamicList` into its own `Panel` inside the `ScrollArea`
+- [x] Move the SFX panel inside the shared `ScrollArea` alongside the Music panel
+- [x] Fix SfxCard and SfxSection to match AnyTale editor conventions
+- [x] Change SfxCard generate preview button icon from `"music"` to `"equalizer"`
+- [x] Add `anytale-sfx-preview` and `anytale-play-sfx` to the `silent` set in `orchestrator.mjs`; add `anytale-sfx-preview` completion handler that calls `setSfxAudioUrl`; fix `SfxCard` to subscribe via `queueSSEManager` for `queue:task-started` (matching `sfxUid`) and call `progressShow` with the SSE task ID instead of the queue item ID: Load button as `small-text/secondary/folder-open` in `HorizontalEdgesLayout` next to H2; remove standalone Add button (DynamicList provides it); fix `formButtonStates(recorded, dirty)` call; add Revert button (`small-text/secondary/undo`); wrap Save+Revert in `ButtonRow`; Name input `widthScale="full"`; generate preview as `Button variant="medium-icon"`; show disabled `AudioPlayer` when `audioUrl` is empty instead of placeholder text to `public/js/custom-ui/test.vitest.mjs` (only if extracted as a new reusable component; skip if kept app-specific).
 
 ### Phase 3 — SFX match indicator in the plot editor
 
@@ -67,10 +77,9 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 - [ ] Wire SFX playback into page-entry effects:
   - In the existing `useEffect` that fires on `session.pageIndex` changes (stops voice on page turn): add `globalAudioPlayer.stop(1)` to stop the SFX channel.
   - In the display-advance effect: when SFX is settled and `sfxOn`, call `globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1)`.
-- [ ] Add SFX toggle button to the play UI (in `PortraitPanel` top controls alongside mute and music buttons):
-  - Reads `session.sfxOn`; calls `patchPrefs({ sfxOn: next })` and `updateSession({ sfxOn: next })` on click.
-  - On **disable**: call `globalAudioPlayer.stop(1)`; mark all `'generating'` SFX statuses as `'skipped'`.
-  - On **enable**: re-queue SFX for any visible pages whose status is `'skipped'` (same logic as the mute-toggle voice resumption).
+- [ ] Create `public/js/app-ui/anytale/play/play-toggle-button.mjs` — a new `PlayToggleButton({ icon, enabled, onClick, title })` component used for the three audio-option toggles. When `enabled = false`, renders a `block` icon overlaid on top of the base icon to signal the option is disabled. Reuse the existing `PlayButton` / `GlassButton` styling patterns from the same directory.
+- [ ] Replace the existing mute/music buttons in `PortraitPanel` top controls with `PlayToggleButton` instances and add the SFX toggle. Final left-to-right button order: **restart**, **music** (`icon="music"`, tied to `session.musicOn`), **SFX** (`icon="equalizer"`, tied to `session.sfxOn`), **TTS** (`icon="microphone"`, tied to `!session.muted`). Each toggle calls the appropriate `patchPrefs` + `updateSession` handler on click.
+  - SFX toggle: on disable — `globalAudioPlayer.stop(1)`; mark all `'generating'` SFX statuses as `'skipped'`. On enable — re-queue SFX for any visible pages whose status is `'skipped'` (same logic as the mute-toggle voice resumption).
 - [ ] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()` (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
 
 ### Phase 5 — Docs

@@ -6347,6 +6347,98 @@
         }
       ],
       "hidden": true
+    },
+    {
+      "name": "AnyTale: SFX (StableAudio3)",
+      "hidden": false,
+      "options": {
+        "type": "audio",
+        "autocomplete": false,
+        "inputImages": 0,
+        "inputAudios": 0,
+        "optionalPrompt": false,
+        "nameRequired": true,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "length",
+            "type": "number",
+            "label": "Length",
+            "default": 10,
+            "options": []
+          },
+          {
+            "id": "audioFormat",
+            "type": "select",
+            "label": "Audio Format",
+            "default": "mp3",
+            "options": [
+              {
+                "label": "MP3",
+                "value": "mp3"
+              },
+              {
+                "label": "WAV",
+                "value": "wav"
+              },
+              {
+                "label": "FLAC",
+                "value": "flac"
+              },
+              {
+                "label": "OGG",
+                "value": "ogg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [],
+      "postGenerationTasks": [],
+      "replace": [
+        {
+          "from": "saveAudioPath",
+          "to": [
+            "63",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "prompt",
+          "to": [
+            "59",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "length",
+          "to": [
+            "60",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "storagePath",
+          "to": [
+            "62",
+            "inputs",
+            "output_file_path"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "52:3",
+            "inputs",
+            "seed"
+          ]
+        }
+      ],
+      "base": "stableaudio3-text-to-sound-no-reprompt.json",
+      "uid": "b869deaf-4b00-4852-8abe-6878d0e98ba3"
     }
   ],
   "version": 1

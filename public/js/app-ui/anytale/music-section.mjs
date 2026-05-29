@@ -1,8 +1,9 @@
 /**
- * MusicSection – Music tab for the AnyTale editor.
+ * MusicSection – SFX & Music tab for the AnyTale editor.
  *
- * Provides genre management (CRUD), per-genre track sub-lists with generation,
- * and a fixed BGM player bar backed by globalBgmPlayer.
+ * Renders two sections inside the same tab:
+ *   1. SFX – manage SFX records (name, tags, prompt, preview)
+ *   2. Music – genre management, per-genre track sub-lists, BGM player bar
  *
  * @module app-ui/anytale/music-section
  */
@@ -19,11 +20,366 @@ import { MultiSelect } from '../../custom-ui/io/multi-select.mjs';
 import { RangeSlider } from '../../custom-ui/io/range-slider.mjs';
 import { Modal } from '../../custom-ui/overlays/modal.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
-import { H2, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
+import { H2, Label, VerticalLayout, HorizontalLayout, HorizontalEdgesLayout } from '../../custom-ui/themed-base.mjs';
+import { Panel } from '../../custom-ui/layout/panel.mjs';
+import { AudioPlayer } from '../../custom-ui/media/audio-player.mjs';
+import { TagInput } from '../tags/tag-input.mjs';
 import { globalBgmPlayer } from '../../custom-ui/global-audio-player.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { getClientId } from '../client-id.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
+
+// ============================================================================
+// SFX API helpers
+// ============================================================================
+
+async function fetchSfxList() {
+  const res = await fetch('/anytale/sfx');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiCreateSfx(data) {
+  const res = await fetch('/anytale/sfx', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiSaveSfx(uid, data) {
+  const res = await fetch(`/anytale/sfx/${encodeURIComponent(uid)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiDeleteSfx(uid) {
+  const res = await fetch(`/anytale/sfx/${encodeURIComponent(uid)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+async function apiGenerateSfxPreview(uid) {
+  const res = await fetch(`/anytale/sfx/${encodeURIComponent(uid)}/generate-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId: getClientId() }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ============================================================================
+// SFX styled components
+// ============================================================================
+
+const SfxPromptTextarea = styled('textarea')`
+  width: 100%;
+  resize: vertical;
+  padding: ${() => currentTheme.value.spacing.small.padding};
+  border-radius: 6px;
+  border: 2px solid ${() => currentTheme.value.colors.border.primary};
+  background-color: ${() => currentTheme.value.colors.background.tertiary};
+  color: ${() => currentTheme.value.colors.text.primary};
+  font-size: ${() => currentTheme.value.typography.fontSize.medium};
+  font-family: ${() => currentTheme.value.typography.fontFamily};
+  transition: border-color 0.15s ease;
+  min-height: 60px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${() => currentTheme.value.colors.border.focus};
+    border-color: ${() => currentTheme.value.colors.border.focus};
+  }
+`;
+SfxPromptTextarea.className = 'sfx-prompt-textarea';
+
+const SfxPreviewRow = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: 0;
+`;
+SfxPreviewRow.className = 'sfx-preview-row';
+
+// ============================================================================
+// SfxCard — form for a single SFX record
+// ============================================================================
+
+/**
+ * @param {{ sfx: Object, onSaved: Function, onDirtyChange: Function }} props
+ */
+function SfxCard({ sfx, onSaved, onDirtyChange }) {
+  const { show: progressShow } = useProgress();
+  const id = sfx.uid || sfx._localId;
+
+  // SSE subscription for anytale-sfx-preview tasks owned by this tab and SFX uid
+  useEffect(() => {
+    if (!sfx.uid) return;
+    return queueSSEManager.subscribe({
+      'queue:task-started': ({ taskId, source, endpointKey, taskData, clientId }) => {
+        if (source !== 'anytale' || endpointKey !== 'anytale-sfx-preview') return;
+        if (clientId !== getClientId()) return;
+        if (taskData?.sfxUid !== sfx.uid) return;
+
+        progressShow(taskId, {
+          defaultTitle: 'Generating SFX preview…',
+          onComplete: async (data) => {
+            setGenerating(false);
+            // audioUrl is written server-side by orchestrator; re-fetch to sync UI
+            if (data?.result?.audioUrl) {
+              setAudioUrl(data.result.audioUrl);
+            } else {
+              try {
+                const list = await fetchSfxList();
+                const updated = list.find(s => s.uid === sfx.uid);
+                if (updated?.audioUrl) setAudioUrl(updated.audioUrl);
+              } catch { /* ignore */ }
+            }
+          },
+          onError: () => setGenerating(false),
+          onCancelled: () => setGenerating(false),
+          onDismiss: () => setGenerating(false),
+        });
+      },
+    });
+  }, [sfx.uid, progressShow]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [name, setName] = useState(sfx.name || '');
+  const [tagsStr, setTagsStr] = useState((sfx.tags || []).join(', '));
+  const [prompt, setPrompt] = useState(sfx.prompt || '');
+  const [audioUrl, setAudioUrl] = useState(sfx.audioUrl || '');
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // Baseline for dirty/revert tracking — updated after every successful save
+  const originalRef = useRef({ name: sfx.name || '', tagsStr: (sfx.tags || []).join(', '), prompt: sfx.prompt || '' });
+
+  const recorded = !!sfx.uid;
+  const dirty = name !== originalRef.current.name ||
+    tagsStr !== originalRef.current.tagsStr ||
+    prompt !== originalRef.current.prompt;
+
+  const { saveLabel, saveEnabled, revertEnabled } = formButtonStates(recorded, dirty);
+
+  useEffect(() => {
+    onDirtyChange?.(id, dirty);
+  }, [dirty, id, onDirtyChange]);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+      const payload = { name, tags, prompt, audioUrl };
+      let saved;
+      if (sfx.uid) {
+        saved = await apiSaveSfx(sfx.uid, payload);
+      } else {
+        saved = await apiCreateSfx(payload);
+      }
+      originalRef.current = { name: saved.name || '', tagsStr: (saved.tags || []).join(', '), prompt: saved.prompt || '' };
+      onSaved(saved, id);
+    } catch (err) {
+      console.error('[SfxCard] Save failed:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [sfx.uid, name, tagsStr, prompt, audioUrl, id, onSaved]);
+
+  const handleRevert = useCallback(() => {
+    setName(originalRef.current.name);
+    setTagsStr(originalRef.current.tagsStr);
+    setPrompt(originalRef.current.prompt);
+  }, []);
+
+  const handleGeneratePreview = useCallback(async () => {
+    if (!sfx.uid || generating) return;
+    setGenerating(true);
+    try {
+      await apiGenerateSfxPreview(sfx.uid);
+      // Progress is tracked via the queueSSEManager subscription above;
+      // generating state is cleared in the SSE completion/error/cancel handlers.
+    } catch (err) {
+      console.error('[SfxCard] Generate preview failed:', err);
+      setGenerating(false);
+    }
+  }, [sfx.uid, generating]);
+
+  return html`
+    <${VerticalLayout} gap="small">
+      <${Input}
+        label="Name"
+        value=${name}
+        onInput=${e => setName(e.target.value)}
+        widthScale="full"
+      />
+      <${TagInput}
+        label="Tags"
+        value=${tagsStr}
+        onInput=${v => setTagsStr(v)}
+        rows=${1}
+      />
+      <div>
+        <${Label}>Prompt</${Label}>
+        <${SfxPromptTextarea}
+          value=${prompt}
+          rows=${3}
+          onInput=${e => setPrompt(e.target.value)}
+        />
+      </div>
+      <${SfxPreviewRow}>
+        <${Button}
+          variant="medium-icon"
+          icon="equalizer"
+          loading=${generating}
+          disabled=${!sfx.uid || generating}
+          title=${sfx.uid ? (generating ? 'Generating…' : 'Generate preview') : 'Save first to generate preview'}
+          onClick=${handleGeneratePreview}
+        />
+        <${AudioPlayer} audioUrl=${audioUrl || ''} widthScale="full" flex="1" disabled=${!audioUrl} />
+      </${SfxPreviewRow}>
+      <${ButtonRow}>
+        <${Button}
+          variant="small-text"
+          color="primary"
+          icon="save"
+          loading=${saving}
+          disabled=${!saveEnabled || !name.trim() || saving}
+          onClick=${handleSave}
+        >${saveLabel}</${Button}>
+        <${Button}
+          variant="small-text"
+          color="secondary"
+          icon="undo"
+          disabled=${!revertEnabled}
+          onClick=${handleRevert}
+        >Revert</${Button}>
+      </${ButtonRow}>
+    </${VerticalLayout}>
+  `;
+}
+
+// ============================================================================
+// SfxSection component
+// ============================================================================
+
+function SfxSection() {
+  const [sfxList, setSfxList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadModalOpen, setLoadModalOpen] = useState(false);
+  const [dirtyUids, setDirtyUids] = useState(new Set());
+
+  useEffect(() => {
+    fetchSfxList()
+      .then(data => { if (Array.isArray(data)) setSfxList(data); })
+      .catch(err => console.error('[SfxSection] Load SFX failed:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    setSfxList(prev => [...prev, {
+      _localId: String(Date.now()),
+      name: 'New SFX',
+      tags: [],
+      prompt: '',
+      audioUrl: '',
+    }]);
+  }, []);
+
+  const handleSaved = useCallback((saved, idOrLocalId) => {
+    setSfxList(prev => prev.map(s =>
+      (s.uid === idOrLocalId || s._localId === idOrLocalId) ? saved : s
+    ));
+    setDirtyUids(prev => { const s = new Set(prev); s.delete(idOrLocalId); return s; });
+  }, []);
+
+  const handleDeleteFromHeader = useCallback(async (sfx) => {
+    const sfxId = sfx.uid || sfx._localId;
+    if (!sfx.uid) {
+      setSfxList(prev => prev.filter(s => (s.uid || s._localId) !== sfxId));
+      return;
+    }
+    const result = await showDialog(
+      `Delete "${sfx.name || 'this SFX'}"? This cannot be undone.`,
+      'Delete SFX',
+      ['Delete', 'Cancel']
+    );
+    if (result !== 'Delete') return;
+    try {
+      await apiDeleteSfx(sfx.uid);
+      setSfxList(prev => prev.filter(s => s.uid !== sfx.uid));
+      setDirtyUids(prev => { const s = new Set(prev); s.delete(sfxId); return s; });
+    } catch (err) {
+      console.error('[SfxSection] Delete SFX failed:', err);
+    }
+  }, []);
+
+  const handleDirtyChange = useCallback((id, isDirty) => {
+    setDirtyUids(prev => {
+      const s = new Set(prev);
+      isDirty ? s.add(id) : s.delete(id);
+      return s;
+    });
+  }, []);
+
+  const handleListChange = useCallback((newList) => setSfxList(newList), []);
+
+  const handleLoadSelect = useCallback((uid) => {
+    setLoadModalOpen(false);
+    // Selection just scrolls/focuses — the record is already in the list.
+    // If not in the list (external add), reload.
+    if (!sfxList.some(s => s.uid === uid)) {
+      fetchSfxList()
+        .then(data => { if (Array.isArray(data)) setSfxList(data); })
+        .catch(err => console.error('[SfxSection] Reload after select failed:', err));
+    }
+  }, [sfxList]);
+
+  return html`
+    <${VerticalLayout} gap="medium">
+      <${HorizontalEdgesLayout}>
+        <${H2}>SFX</${H2}>
+        <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadModalOpen(true)}>Load</${Button}>
+      </${HorizontalEdgesLayout}>
+      ${loading ? html`<div style=${{ color: currentTheme.value.colors.text.secondary }}>Loading SFX…</div>` : null}
+      <${DynamicList}
+        items=${sfxList}
+        getTitle=${(sfx) => `${sfx.name || 'Unnamed SFX'}${dirtyUids.has(sfx.uid || sfx._localId) ? ' *' : ''}`}
+        renderItem=${(sfx) => html`
+          <${SfxCard}
+            sfx=${sfx}
+            onSaved=${handleSaved}
+            onDirtyChange=${handleDirtyChange}
+          />
+        `}
+        createItem=${() => null}
+        onAdd=${handleAdd}
+        onChange=${handleListChange}
+        onDelete=${handleDeleteFromHeader}
+        addLabel="Add SFX"
+        showDragButton=${false}
+      />
+      <${SearchSelectModal}
+        isOpen=${loadModalOpen}
+        title="Load SFX"
+        items=${sfxList.filter(s => s.uid).map(s => ({
+          label: s.name || s.uid,
+          value: s.uid,
+          subtitle: (s.tags || []).join(', '),
+        }))}
+        mode="single"
+        onSelect=${handleLoadSelect}
+        onClose=${() => setLoadModalOpen(false)}
+      />
+    </${VerticalLayout}>
+  `;
+}
 
 // ============================================================================
 // Constants
@@ -973,32 +1329,41 @@ export function MusicSection() {
   return html`
     <div style=${{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', overflow: 'hidden', gap: currentTheme.value.spacing.medium.gap }}>
       <${ScrollArea}>
-        ${loading ? html`<div style=${{ color: currentTheme.value.colors.text.secondary }}>Loading genres…</div>` : null}
-        <${DynamicList}
-          title="Genres"
-          items=${genres}
-          getTitle=${(genre) => `${genre.name || 'Unnamed Genre'}${dirtyUids.has(genre.uid || genre._localId) ? ' *' : ''}`}
-          renderItem=${(genre) => html`
-            <${GenreCard}
-              genre=${genre}
-              onSaved=${handleGenreSaved}
-              onGenerateTrack=${handleGenerateTrack}
-              onTrackPlay=${handleTrackPlay}
-              onDirtyChange=${handleDirtyChange}
-            />
-          `}
-          createItem=${() => null}
-          onAdd=${handleGenreAdd}
-          onChange=${handleGenresChange}
-          onDelete=${handleGenreDeleteFromHeader}
-          addLabel="Add Genre"
-          showDragButton=${false}
-        />
+        <${Panel} variant="outlined">
+          <${SfxSection} />
+        </${Panel}>
+
+        <${Panel} variant="outlined">
+          <${H2}>Music</${H2}>
+          ${loading ? html`<div style=${{ color: currentTheme.value.colors.text.secondary }}>Loading genres…</div>` : null}
+          <${DynamicList}
+            title="Genres"
+            items=${genres}
+            getTitle=${(genre) => `${genre.name || 'Unnamed Genre'}${dirtyUids.has(genre.uid || genre._localId) ? ' *' : ''}`}
+            renderItem=${(genre) => html`
+              <${GenreCard}
+                genre=${genre}
+                onSaved=${handleGenreSaved}
+                onGenerateTrack=${handleGenerateTrack}
+                onTrackPlay=${handleTrackPlay}
+                onDirtyChange=${handleDirtyChange}
+              />
+            `}
+            createItem=${() => null}
+            onAdd=${handleGenreAdd}
+            onChange=${handleGenresChange}
+            onDelete=${handleGenreDeleteFromHeader}
+            addLabel="Add Genre"
+            showDragButton=${false}
+          />
+        </${Panel}>
       </${ScrollArea}>
+
       <${BgmPlayerBar}
         onPlaylistOpen=${() => setPlaylistOpen(true)}
         genres=${genres}
       />
+
       <${PlaylistModal}
         isOpen=${playlistOpen}
         onClose=${() => setPlaylistOpen(false)}

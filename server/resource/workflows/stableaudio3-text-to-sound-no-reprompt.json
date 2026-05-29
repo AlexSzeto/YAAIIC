@@ -1,0 +1,154 @@
+{
+  "59": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Prompt"
+    }
+  },
+  "60": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Length"
+    }
+  },
+  "62": {
+    "inputs": {
+      "output_file_path": "*replace before send*",
+      "file_name": "summary",
+      "file_extension": "txt",
+      "overwrite": true
+    },
+    "class_type": "easy saveText",
+    "_meta": {
+      "title": "Save Text"
+    }
+  },
+  "63": {
+    "inputs": {
+      "path": "*replace before send*",
+      "overwrite": true,
+      "audio": [
+        "52:12",
+        0
+      ]
+    },
+    "class_type": "JWAudioSaveToPath",
+    "_meta": {
+      "title": "Audio Save to Path"
+    }
+  },
+  "52:25": {
+    "inputs": {
+      "ckpt_name": "stable_audio_3_small_sfx.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "52:26": {
+    "inputs": {
+      "clip_name": "t5gemma_b_b_ul2.safetensors",
+      "type": "stable_audio",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "52:11": {
+    "inputs": {
+      "seconds": [
+        "60",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentAudio",
+    "_meta": {
+      "title": "Empty Latent Audio"
+    }
+  },
+  "52:7": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "52:26",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "52:6": {
+    "inputs": {
+      "text": [
+        "59",
+        0
+      ],
+      "clip": [
+        "52:26",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "52:3": {
+    "inputs": {
+      "seed": 684484942712321,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "52:25",
+        0
+      ],
+      "positive": [
+        "52:6",
+        0
+      ],
+      "negative": [
+        "52:7",
+        0
+      ],
+      "latent_image": [
+        "52:11",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "52:12": {
+    "inputs": {
+      "samples": [
+        "52:3",
+        0
+      ],
+      "vae": [
+        "52:25",
+        2
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  }
+}
