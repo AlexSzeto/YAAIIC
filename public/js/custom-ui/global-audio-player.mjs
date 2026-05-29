@@ -172,6 +172,18 @@ class GlobalAudioPlayer {
   }
 
   /**
+   * Return the current state of a channel for external consumers (e.g. AudioPlayer).
+   * Safe to call even if the channel has never been used — returns nulls in that case.
+   * @param {number} [channel=0]
+   * @returns {{ audioElement: HTMLAudioElement|null, currentAudioUrl: string|null, currentInstanceId: any }}
+   */
+  getChannelState(channel = 0) {
+    const ch = this._channels[channel];
+    if (!ch) return { audioElement: null, currentAudioUrl: null, currentInstanceId: null };
+    return { audioElement: ch.audioElement, currentAudioUrl: ch.currentAudioUrl, currentInstanceId: ch.currentInstanceId };
+  }
+
+  /**
    * Subscribe to player state changes (shared across all channels).
    * @param {Function} callback
    * @returns {Function} unsubscribe

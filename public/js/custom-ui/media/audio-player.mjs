@@ -126,6 +126,9 @@ class AudioTimeline extends Component {
       if (this.props.audioElement) {
         this.props.audioElement.addEventListener('timeupdate', this.handleTimeUpdate);
       }
+      // Reset playhead whenever the element reference changes so stale position
+      // is never shown for a new (or newly-stopped) audio source.
+      this.setState({ currentTime: 0 });
     }
   }
 
@@ -137,17 +140,22 @@ class AudioTimeline extends Component {
   };
 
   handleProgressClick = (e) => {
-    const { audioElement, duration, startOffset = 0 } = this.props;
-    if (!audioElement) return;
+    const { audioElement, duration, startOffset = 0, onSeekRequest } = this.props;
 
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
     const newTime = startOffset + percentage * duration;
 
-    audioElement.currentTime = newTime;
-    this.setState({ currentTime: newTime });
+    if (audioElement) {
+      // Already playing — seek directly on the live audio element.
+      audioElement.currentTime = newTime;
+      this.setState({ currentTime: newTime });
+    } else if (onSeekRequest) {
+      // Not playing — delegate to the parent to start playback from this position.
+      onSeekRequest(newTime);
+    }
   };
 
   formatTime = (seconds) => {
@@ -263,17 +271,18 @@ export class AudioPlayer extends Component {
     this._cancelMetadataLoad();
 
     // Stop audio if this specific instance is currently playing
-    const { audioUrl } = this.props;
-    if (audioUrl && globalAudioPlayer.isPlaying(audioUrl, this._instanceId)) {
-      globalAudioPlayer.stop();
+    const { audioUrl, channel = 0 } = this.props;
+    if (audioUrl && globalAudioPlayer.isPlaying(audioUrl, this._instanceId, channel)) {
+      globalAudioPlayer.stop(channel);
     }
   }
 
   componentDidUpdate(prevProps) {
     // When the audio source changes, stop if this instance owns playback, then reset
     if (prevProps.audioUrl !== this.props.audioUrl) {
-      if (prevProps.audioUrl && globalAudioPlayer.isPlaying(prevProps.audioUrl, this._instanceId)) {
-        globalAudioPlayer.stop();
+      const channel = this.props.channel ?? 0;
+      if (prevProps.audioUrl && globalAudioPlayer.isPlaying(prevProps.audioUrl, this._instanceId, channel)) {
+        globalAudioPlayer.stop(channel);
       }
       this.setState({ isPlaying: false, duration: 0 });
       this._cancelMetadataLoad();
@@ -294,6 +303,9 @@ export class AudioPlayer extends Component {
       }
     });
     audio.src = audioUrl;
+    // Explicitly trigger the metadata fetch — required by some browsers when
+    // the element is not attached to the DOM and preload alone is insufficient.
+    audio.load();
   }
 
   _cancelMetadataLoad() {
@@ -304,34 +316,37 @@ export class AudioPlayer extends Component {
   }
 
   handleAudioStateChange = () => {
-    const { audioUrl } = this.props;
-    const isPlaying = globalAudioPlayer.isPlaying(audioUrl, this._instanceId);
+    const { audioUrl, channel = 0 } = this.props;
+    const isPlaying = globalAudioPlayer.isPlaying(audioUrl, this._instanceId, channel);
     const updates = { isPlaying };
 
     // Update duration when this instance owns the active audio element
-    if (
-      globalAudioPlayer.currentAudioUrl === audioUrl &&
-      globalAudioPlayer.currentInstanceId === this._instanceId &&
-      globalAudioPlayer.audioElement
-    ) {
-      const d = globalAudioPlayer.audioElement.duration;
-      if (isFinite(d)) {
-        updates.duration = d;
-      }
+    const { audioElement, currentAudioUrl, currentInstanceId } = globalAudioPlayer.getChannelState(channel);
+    if (currentAudioUrl === audioUrl && currentInstanceId === this._instanceId && audioElement) {
+      const d = audioElement.duration;
+      if (isFinite(d)) updates.duration = d;
     }
 
     this.setState(updates);
   };
 
   togglePlayPause = () => {
-    const { audioUrl, start, end } = this.props;
+    const { audioUrl, start, end, channel = 0 } = this.props;
     if (!audioUrl) return;
     const region = (start != null && end != null) ? { start, end } : null;
-    globalAudioPlayer.toggle(audioUrl, region, this._instanceId);
+    globalAudioPlayer.toggle(audioUrl, region, this._instanceId, channel);
+  };
+
+  handleSeekRequest = (newTime) => {
+    const { audioUrl, end, channel = 0 } = this.props;
+    if (!audioUrl) return;
+    // Start playback from the clicked position. Preserve the region end if set.
+    const region = end != null ? { start: newTime, end } : { start: newTime };
+    globalAudioPlayer.play(audioUrl, region, this._instanceId, channel);
   };
 
   render() {
-    const { audioUrl, widthScale = 'full', start, end, disabled = false } = this.props;
+    const { audioUrl, widthScale = 'full', start, end, disabled = false, channel = 0 } = this.props;
     const { theme, isPlaying, duration } = this.state;
 
     const { width, flex } = getWidthScaleStyle(widthScale);
@@ -365,12 +380,10 @@ export class AudioPlayer extends Component {
 
     // Only pass the shared audio element when this specific instance owns playback,
     // so AudioTimeline tracks the correct position and seeking works.
-    const audioElement =
-      globalAudioPlayer.audioElement &&
-      globalAudioPlayer.currentAudioUrl === audioUrl &&
-      globalAudioPlayer.currentInstanceId === this._instanceId
-        ? globalAudioPlayer.audioElement
-        : null;
+    const { audioElement: chAudioElement, currentAudioUrl, currentInstanceId } = globalAudioPlayer.getChannelState(channel);
+    const audioElement = chAudioElement && currentAudioUrl === audioUrl && currentInstanceId === this._instanceId
+      ? chAudioElement
+      : null;
 
     // When region props are provided, display the region duration instead of the full file duration
     const hasRegion = start != null && end != null;
@@ -395,6 +408,7 @@ export class AudioPlayer extends Component {
               startOffset=${startOffset}
               compact=${compact}
               isPlaying=${isPlaying}
+              onSeekRequest=${this.handleSeekRequest}
             />
           </${Controls}>
         </${Panel}>

@@ -3678,16 +3678,35 @@
           }
         ]
       },
-      "preGenerationTasks": [],
-      "postGenerationTasks": [
+      "preGenerationTasks": [
         {
-          "process": "extractOutputTexts",
-          "parameters": {
-            "properties": [
-              "summary"
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        },
+        {
+          "model": "gemma4:e4b",
+          "imagePath": "",
+          "prompt": "You are a professional sound design expert. Convert the user's input into a precise, vivid sound effects description suitable for generative audio models.\n\nDescribe clearly:\n- Sound source\n- Physical character (texture, timbre, material: metal, wood, glass, concrete, etc.)\n- Spatial qualities (indoor/outdoor, cave/open field/underwater, dry/reverberant, close-up/distant, echoing/muffled)\n- Temporal evolution (attack, decay, movement, transitions over time)\n- Include motion or spatial movement if applicable (passing, approaching, stereo movement)\n\nAudio length rules:\n- Very short sounds (impacts, clicks, gunshots): 1–3 seconds\n- Medium actions (footsteps, object movement, transitions): 3–6 seconds\n- Ambience / environments: 6–15 seconds\n- Always append: Length: X seconds (integer only, no decimals).\n\nOutput constraints:\n- Length: 1–2 dense sentences maximum\n- Output ONLY the final rewritten prompt\n- No explanations, no formatting, no quotes\n- Use concise but dense technical language\n- Focus strictly on sound effects or ambience\n- Always append: Length: X seconds (integer only, no decimals).\n\nQuality guidelines:\n- Be specific and avoid vague terms\n- Prioritize clarity and realism\n- Combine elements into one coherent scene\n- Avoid redundancy\n\nExamples:\n- Heavy rain hitting a metal roof during a thunderstorm, distant thunder rumbles, stereo, realistic ambience. Length: 45 seconds\n- Quiet forest at dawn with birds chirping, soft wind through leaves, distant stream flowing. Length: 60 seconds\n- Wooden door creaking open slowly in an old house, echoing interior, eerie tone. Length: 3 seconds\n- Glass bottle shattering on concrete, sharp impact, scattered fragments. Length: 2 seconds\n- Footsteps on gravel, steady walking pace, close perspective. Length: 8 seconds\n- Punch impact with deep bass hit, cinematic trailer style. Length: 2 seconds\n- Car speeding past at high velocity, doppler effect, realistic whoosh. Length: 3 seconds\n- Sword swing whooshing through air, fast motion, clean metallic tone. Length: 2 seconds\n- Futuristic laser blast, clean energy pulse, high-tech sound design. Length: 1 seconds\n- Spaceship engine humming, low frequency rumble, interior perspective. Length: 90 seconds\n- Magical spell casting, shimmering particles, rising tonal energy. Length: 8 seconds\n- Teleportation effect, glitchy digital distortion with a soft whoosh. Length: 5 seconds\n- Dark eerie drone with distant whispers, creepy, slow build tension. Length: 120 seconds\n- Explosion with debris scattering, deep bass, cinematic realism. Length: 4 seconds\n- Fire crackling intensely, wood burning, close-up detail. Length: 80 seconds\n- Gunshot in a large empty warehouse, loud echo decay. Length: 2 seconds\n- Retro arcade coin insert sound, 8-bit style. Length: 1 second\n- Level up chime, bright, rewarding, fantasy RPG style. Length: 2 seconds\n- Tape stop sub drop, a massive sub-bass note that mimics a vinyl record or tape machine being turned off, the pitch and speed drop simultaneously, causing the high-end harmonics to smear and thicken as the sound grinds to a halt at a sub-sonic frequency. Length: 11 seconds\n- Drawer slam, a blunt, powerful thud made by slamming a wooden desk drawer shut, pronounced low-mid body, slightly distorted for aggressive character. Length: 3 seconds`;\n\nInput: {{prompt}}\nTarget audio length: {{length}} seconds.\nOutput:",
+          "to": "enhancedPrompt",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "enhancePrompt"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
             ]
           }
         },
+        {
+          "from": "enhancedPrompt",
+          "to": "summary"
+        }
+      ],
+      "postGenerationTasks": [
         {
           "process": "executeWorkflow",
           "name": "Generating Album Cover",
@@ -3756,7 +3775,7 @@
           ]
         },
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
             "59",
             "inputs",
@@ -3767,14 +3786,6 @@
           "from": "length",
           "to": [
             "60",
-            "inputs",
-            "value"
-          ]
-        },
-        {
-          "from": "enhancePrompt",
-          "to": [
-            "61",
             "inputs",
             "value"
           ]
@@ -3796,7 +3807,7 @@
           ]
         }
       ],
-      "base": "stableaudio3-text-to-sound.json"
+      "base": "stableaudio3-text-to-sound-no-reprompt.json"
     },
     {
       "uid": "05475d70-3560-48dc-a02d-fd4af88f39c5",
@@ -6350,7 +6361,7 @@
     },
     {
       "name": "AnyTale: SFX (StableAudio3)",
-      "hidden": false,
+      "hidden": true,
       "options": {
         "type": "audio",
         "autocomplete": false,
@@ -6390,10 +6401,44 @@
                 "value": "ogg"
               }
             ]
+          },
+          {
+            "id": "enhancePrompt",
+            "type": "checkbox",
+            "label": "Enhance Prompt",
+            "default": "false",
+            "options": []
           }
         ]
       },
-      "preGenerationTasks": [],
+      "preGenerationTasks": [
+        {
+          "from": "prompt",
+          "to": "enhancedPrompt"
+        },
+        {
+          "model": "gemma4:e4b",
+          "imagePath": "",
+          "prompt": "You are a professional sound design expert. Convert the user's input into a precise, vivid sound effects description suitable for generative audio models.\n\nDescribe clearly:\n- Sound source\n- Physical character (texture, timbre, material: metal, wood, glass, concrete, etc.)\n- Spatial qualities (indoor/outdoor, cave/open field/underwater, dry/reverberant, close-up/distant, echoing/muffled)\n- Temporal evolution (attack, decay, movement, transitions over time)\n- Include motion or spatial movement if applicable (passing, approaching, stereo movement)\n\nAudio length rules:\n- Very short sounds (impacts, clicks, gunshots): 1–3 seconds\n- Medium actions (footsteps, object movement, transitions): 3–6 seconds\n- Ambience / environments: 6–15 seconds\n- Always append: Length: X seconds (integer only, no decimals).\n\nOutput constraints:\n- Length: 1–2 dense sentences maximum\n- Output ONLY the final rewritten prompt\n- No explanations, no formatting, no quotes\n- Use concise but dense technical language\n- Focus strictly on sound effects or ambience\n- Always append: Length: X seconds (integer only, no decimals).\n\nQuality guidelines:\n- Be specific and avoid vague terms\n- Prioritize clarity and realism\n- Combine elements into one coherent scene\n- Avoid redundancy\n\nExamples:\n- Heavy rain hitting a metal roof during a thunderstorm, distant thunder rumbles, stereo, realistic ambience. Length: 45 seconds\n- Quiet forest at dawn with birds chirping, soft wind through leaves, distant stream flowing. Length: 60 seconds\n- Wooden door creaking open slowly in an old house, echoing interior, eerie tone. Length: 3 seconds\n- Glass bottle shattering on concrete, sharp impact, scattered fragments. Length: 2 seconds\n- Footsteps on gravel, steady walking pace, close perspective. Length: 8 seconds\n- Punch impact with deep bass hit, cinematic trailer style. Length: 2 seconds\n- Car speeding past at high velocity, doppler effect, realistic whoosh. Length: 3 seconds\n- Sword swing whooshing through air, fast motion, clean metallic tone. Length: 2 seconds\n- Futuristic laser blast, clean energy pulse, high-tech sound design. Length: 1 seconds\n- Spaceship engine humming, low frequency rumble, interior perspective. Length: 90 seconds\n- Magical spell casting, shimmering particles, rising tonal energy. Length: 8 seconds\n- Teleportation effect, glitchy digital distortion with a soft whoosh. Length: 5 seconds\n- Dark eerie drone with distant whispers, creepy, slow build tension. Length: 120 seconds\n- Explosion with debris scattering, deep bass, cinematic realism. Length: 4 seconds\n- Fire crackling intensely, wood burning, close-up detail. Length: 80 seconds\n- Gunshot in a large empty warehouse, loud echo decay. Length: 2 seconds\n- Retro arcade coin insert sound, 8-bit style. Length: 1 second\n- Level up chime, bright, rewarding, fantasy RPG style. Length: 2 seconds\n- Tape stop sub drop, a massive sub-bass note that mimics a vinyl record or tape machine being turned off, the pitch and speed drop simultaneously, causing the high-end harmonics to smear and thicken as the sound grinds to a halt at a sub-sonic frequency. Length: 11 seconds\n- Drawer slam, a blunt, powerful thud made by slamming a wooden desk drawer shut, pronounced low-mid body, slightly distorted for aggressive character. Length: 3 seconds`;\n\nInput: {{prompt}}\nTarget audio length: {{length}} seconds.\nOutput:",
+          "to": "enhancedPrompt",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "enhancePrompt"
+                },
+                "equals": {
+                  "value": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "from": "enhancedPrompt",
+          "to": "summary"
+        }
+      ],
       "postGenerationTasks": [],
       "replace": [
         {
@@ -6405,7 +6450,7 @@
           ]
         },
         {
-          "from": "prompt",
+          "from": "enhancedPrompt",
           "to": [
             "59",
             "inputs",
