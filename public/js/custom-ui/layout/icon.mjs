@@ -98,6 +98,7 @@ const ICON_MAP = {
   'file': 'description',
   'file-blank': 'insert_drive_file',
   'arrow-out-up-right-square': 'open_in_new',
+  'arrow-in-down-square-half': 'download',
   
   // Settings and configuration
   'cog': 'settings',

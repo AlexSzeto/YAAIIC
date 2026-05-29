@@ -8,74 +8,78 @@ Allow workflows to run without a ComfyUI component, enabling them to be used as 
 
 ### Data & Schema
 - [ ] Add `hasComfyUI` boolean field (default `true`) to the workflow schema in `comfyui-workflows.json`.
-- [ ] Add `returnGenerationData` boolean field (default `true`) to the workflow schema; backfill all existing workflow entries with `true`.
 - [ ] Add `videoUrl` and `videoFormat` as required fields to the media data schema in `media-data.json` (default `null`).
 
 ### Template System Migration
-- [ ] Update the template interpolation engine to use double-brace syntax `{{variable}}` instead of single-brace `{variable}` system-wide.
-- [ ] Update the interpolation engine to support dot-notation paths (`{{images[0].name}}`) that read from `generationData`; bracket notation (`[N]`) must explicitly create an array at that key if one does not exist.
+- [ ] Update the template interpolation engine to use double-brace syntax `{{variable}}` instead of single-brace `{variable}` system-wide; support dot-notation paths (`{{imageData.url}}`) for reading nested values from `generationData`.
 - [ ] Migrate all existing workflow config template strings from `{variable}` to `{{variable}}` syntax.
 
 ### New Processors
-- [ ] Implement `read-media` processor: accepts `uid` (text field referencing a media DB entry) and `param` (dot-notation path). Retrieves the media record, flattens it, places it into `generationData` at the specified path (creating arrays as needed), and preloads the associated file (from `imageUrl`, `audioUrl`, or `videoUrl`) as a `Buffer` into the `image`, `audio`, or `video` field at that path.
-- [ ] Implement `write-media` processor: accepts `uid` and `param`. Reads the data at `generationData[param]`, writes any in-memory `Buffer` fields back to disk at the path derived from their corresponding URL field, and updates the media database record.
+- [ ] Implement `read-media` processor: accepts `uid` (a media DB entry UID; may be a `{{template}}` expression) and `key` (a top-level key name). Retrieves the media record from the database and preloads its associated file (from `imageUrl`, `audioUrl`, or `videoUrl`) as a `Buffer`. Places the record fields and file buffer together into `generationData[key]`.
+- [ ] Implement `write-media` processor: accepts `uid` and `key`. Reads `generationData[key]`, writes any `Buffer` field to disk at the path derived from its paired URL field, and updates the media database record. This is the only mechanism for persisting file buffers — no implicit flush occurs anywhere in the pipeline.
 
 ### Orchestrator Refactor
-- [ ] Standardize blob handling: after ComfyUI execution (and any `extract-output-media` copy), read the output file into a `Buffer` and store it in `generationData` alongside its URL. Add a blob-flush step at the end of the pipeline (before `returnGenerationData` and before the DB entry) that writes all in-memory `Buffer` fields to disk using their paired URL fields as file path references.
-- [ ] When `hasComfyUI` is `false`: skip ComfyUI submission, skip post-generation tasks, skip file-exists validation, and skip `addMediaDataEntry`. Results go into `generationData.results`; no media record is created.
-- [ ] When `returnGenerationData` is `true` (ComfyUI workflows only): after post-generation tasks and the blob-flush step, copy all `generationData` properties except `results` into `generationData.results`.
+- [ ] After ComfyUI execution, read the output file into a `Buffer` and store it in `generationData` alongside its URL so downstream processors can access the file contents.
+- [ ] When `hasComfyUI` is `false`: skip ComfyUI submission, skip the workflow parameter replacement section, skip post-generation tasks, skip file-exists validation, and skip `addMediaDataEntry`. No media record is created; all persistence is handled explicitly via `write-media` processors in the task list.
 - [ ] Update progress step counting: for ComfyUI-optional workflows, total steps = pre-gen task count only (no ComfyUI node count, no post-gen count).
 
 ### `executeWorkflow` Processor Update
-- [ ] Replace the existing field-by-field input/output mapping with two parameters: `inputDataPath` (dot-notation path into parent `generationData` to pass as child input; empty string = full copy) and `outputDataPath` (dot-notation path in parent `generationData` where child's `results` are written).
-- [ ] Migrate all existing `executeWorkflow` usages in workflow configs to the new `inputDataPath`/`outputDataPath` parameters.
+- [ ] Replace the existing field-by-field input/output mapping with two parameters: `inputKey` (name of a key in the parent's `generationData` to pass as the child's starting data; omit to pass the full parent `generationData`) and `outputKey` (name of a key in the parent's `generationData` where the child's completed `generationData` is written back).
+- [ ] Migrate all existing `executeWorkflow` usages in workflow configs to the new `inputKey`/`outputKey` parameters.
 
 ### Brew Editor UI
-- [ ] Add a "Has ComfyUI" toggle (boolean) to the brew editor next to the workflow JSON file selector.
-- [ ] When "Has ComfyUI" is toggled off: hide the ComfyUI workflow JSON selector and the post-generation tasks section; rename the pre-generation section title to "Tasks".
-- [ ] Add a "Return Generation Data" checkbox below the post-generation task list (visible only when `hasComfyUI` is `true`); default to checked.
+- [ ] Add a "Has ComfyUI" toggle (boolean) to the brew editor.
+- [ ] When "Has ComfyUI" is toggled off: hide the ComfyUI workflow JSON selector, the workflow parameter replacement section, and the post-generation tasks section; rename the pre-generation section title to "Tasks".
 
 ## Implementation Details
 
-### Blob flush step (standardized for both workflow types)
-
-At the end of any workflow pipeline, before returning data, scan `generationData` for fields whose name matches a known blob key (`image`, `audio`, `video`). For each `Buffer` value found, derive the file path from the paired URL field (e.g. `imageUrl` → `STORAGE_DIR + path.basename(imageUrl)`), then write the buffer to disk. This gives ComfyUI-optional workflows (via `write-media`) and ComfyUI workflows identical blob lifecycle management.
-
-### `generationData.results` for ComfyUI-optional workflows
-
-Processors write their outputs anywhere in `generationData`. The workflow produces no standardized output record. The caller (e.g. `executeWorkflow` in a parent workflow) reads from `generationData.results` and maps it to the parent's `outputDataPath`.
-
-### `returnGenerationData` behaviour (ComfyUI workflows)
+### `read-media` / `write-media` processor contract
 
 ```js
-// Runs after post-gen tasks and blob flush, before addMediaDataEntry
-if (workflowConfig.returnGenerationData) {
-  generationData.results = Object.fromEntries(
-    Object.entries(generationData).filter(([k]) => k !== 'results')
-  );
+// read-media: places record fields and file buffer together at generationData[key]
+generationData[key] = {
+  ...mediaRecord,   // all DB fields: uid, imageUrl, audioUrl, videoUrl, tags, etc.
+  buffer: Buffer,   // file contents loaded from whichever URL field is populated
+};
+
+// write-media: reads from generationData[key], flushes buffer to disk, updates DB record
+const entry = generationData[key];
+if (entry.buffer) {
+  const filePath = resolveStoragePath(entry.imageUrl ?? entry.audioUrl ?? entry.videoUrl);
+  fs.writeFileSync(filePath, entry.buffer);
 }
+await mediaRepository.update(uid, omit(entry, ['buffer']));
 ```
 
-### `executeWorkflow` new parameter contract
+### `executeWorkflow` parameter contract
 
 ```js
-// Parent generationData passed to child (inputDataPath = '' means full copy)
-const childInput = inputDataPath
-  ? getObjectPathValue(parentGenerationData, inputDataPath)
+// Pass a named slice of parent data to the child (or a full copy if inputKey is omitted)
+const childInput = inputKey
+  ? { ...parentGenerationData[inputKey] }
   : { ...parentGenerationData };
 
-// After child completes, write child results back to parent
-setObjectPathValue(parentGenerationData, outputDataPath, childGenerationData.results);
+// Child runs its full task list, building up its own generationData
+const childGenerationData = await runWorkflow(childWorkflow, childInput);
+
+// Write child's completed generationData back into parent at outputKey
+parentGenerationData[outputKey] = childGenerationData;
 ```
 
-### Array bracket notation in template paths
+### ComfyUI-optional pipeline (`hasComfyUI: false`)
 
-`images[0].name` → the interpolation engine splits on `.` and `[N]`, creating arrays as needed:
-```js
-// Accessing generationData.images[0].name
-// If generationData.images is undefined, create []
-// If generationData.images[0] is undefined, create {}
-```
+1. Run the task list in order — each processor reads and writes `generationData`.
+2. Done. No ComfyUI submission, no post-gen tasks, no media record creation, no implicit file flush.
+3. If called as a sub-workflow via `executeWorkflow`, the child's completed `generationData` is returned as-is to the parent.
+
+### Template interpolation
+
+Processor config values use `{{variable}}` syntax. The interpolation engine reads from `generationData` using dot-notation:
+
+- `{{uid}}` → `generationData.uid`
+- `{{imageData.url}}` → `generationData.imageData.url`
+
+Undefined paths produce an empty string. No array creation occurs during interpolation — templates are read-only against `generationData`.
 
 ### Reminder (out of scope for this feature)
 - Purge `parts` and `plot` fields from `media-data.json` entries (no longer stored directly in media DB).
