@@ -2,7 +2,7 @@
  * AnyTale Service – Business logic for the parts library, plot data, and characters.
  */
 import { randomUUID } from 'crypto';
-import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit, listGenres, upsertGenre, deleteGenre, appendTrackToGenre, updatePlayState } from './repository.mjs';
+import { listParts, upsertPart, deletePart, listPlots, upsertPlot, deletePlot, listCharacters, upsertCharacter, deleteCharacter, listOutfits, upsertOutfit, deleteOutfit, listGenres, upsertGenre, deleteGenre, appendTrackToGenre, listSfx, upsertSfx, deleteSfx, updateSfxField, updatePlayState } from './repository.mjs';
 
 export function getAllParts() {
   return listParts();
@@ -163,4 +163,33 @@ export function addTrackToGenre(genreUid, track) {
 
 export function setPlayIntroImageUrl(imageUrl) {
   return updatePlayState({ introImageUrl: imageUrl });
+}
+
+// ── SFX ────────────────────────────────────────────────────────────────────
+
+export function getAllSfx() {
+  return listSfx();
+}
+
+export function createSfx(record) {
+  const uid = randomUUID();
+  return upsertSfx(uid, { ...record, uid });
+}
+
+export function saveSfx(uid, record) {
+  if (!uid || typeof uid !== 'string') {
+    const err = new Error('uid is required and must be a string');
+    err.code = 'EINVAL';
+    throw err;
+  }
+  return upsertSfx(uid, { ...record, uid });
+}
+
+export function removeSfxByUid(uid) {
+  // throws with code ENOENT if not found
+  deleteSfx(uid);
+}
+
+export function setSfxAudioUrl(uid, audioUrl) {
+  return updateSfxField(uid, 'audioUrl', audioUrl);
 }

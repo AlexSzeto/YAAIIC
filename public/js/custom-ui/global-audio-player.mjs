@@ -1,122 +1,136 @@
 /**
  * Global Audio Player State Manager
- * Manages a single audio element that can be controlled from anywhere in the app
+ *
+ * Manages multiple independent audio channels. Channel 0 is the legacy voice
+ * channel; channel 1 is reserved for SFX. Additional channels can be added
+ * without any code changes — they are created lazily on first use.
+ *
+ * All public methods accept an optional `channel` parameter (default 0) so
+ * existing call sites require no changes.
  */
 
 class GlobalAudioPlayer {
   constructor() {
-    this.audioElement = null;
-    this.currentAudioUrl = null;
-    // Tracks which specific AudioPlayer instance owns the current playback,
-    // so that multiple instances sharing the same URL don't all appear active.
-    this.currentInstanceId = null;
+    // Sparse array of channel slots; each slot is created lazily by _getChannel().
+    // Slot shape: { audioElement, currentAudioUrl, currentInstanceId, _regionEndHandler }
+    this._channels = [];
     this.listeners = new Set();
-    this._regionEndHandler = null;
   }
 
   /**
-   * Initialize the audio element
+   * Return the channel slot at `idx`, creating it lazily if needed.
+   * @param {number} idx
+   * @returns {{ audioElement: HTMLAudioElement, currentAudioUrl: string|null, currentInstanceId: any, _regionEndHandler: Function|null }}
    */
-  init() {
-    if (!this.audioElement) {
-      this.audioElement = document.createElement('audio');
-      this.audioElement.addEventListener('play', () => this.notifyListeners());
-      this.audioElement.addEventListener('pause', () => this.notifyListeners());
-      this.audioElement.addEventListener('ended', () => this.notifyListeners());
-      // Notify when metadata (duration) becomes available so UI can update
-      this.audioElement.addEventListener('loadedmetadata', () => this.notifyListeners());
+  _getChannel(idx) {
+    if (!this._channels[idx]) {
+      const audioElement = document.createElement('audio');
+      audioElement.addEventListener('play', () => this.notifyListeners());
+      audioElement.addEventListener('pause', () => this.notifyListeners());
+      audioElement.addEventListener('ended', () => this.notifyListeners());
+      audioElement.addEventListener('loadedmetadata', () => this.notifyListeners());
+      this._channels[idx] = {
+        audioElement,
+        currentAudioUrl: null,
+        currentInstanceId: null,
+        _regionEndHandler: null,
+      };
+    }
+    return this._channels[idx];
+  }
+
+  _clearRegionEnd(ch) {
+    if (ch._regionEndHandler) {
+      ch.audioElement.removeEventListener('timeupdate', ch._regionEndHandler);
+      ch._regionEndHandler = null;
     }
   }
 
-  _clearRegionEndListener() {
-    if (this._regionEndHandler) {
-      this.audioElement && this.audioElement.removeEventListener('timeupdate', this._regionEndHandler);
-      this._regionEndHandler = null;
-    }
-  }
-
-  _setupRegionEndListener(endTime) {
-    this._regionEndHandler = () => {
-      if (this.audioElement.currentTime >= endTime) {
-        this.audioElement.pause();
-        this._clearRegionEndListener();
+  _setupRegionEnd(ch, endTime) {
+    ch._regionEndHandler = () => {
+      if (ch.audioElement.currentTime >= endTime) {
+        ch.audioElement.pause();
+        this._clearRegionEnd(ch);
         this.notifyListeners();
       }
     };
-    this.audioElement.addEventListener('timeupdate', this._regionEndHandler);
+    ch.audioElement.addEventListener('timeupdate', ch._regionEndHandler);
   }
 
   /**
    * Play audio from a URL, optionally within a time region.
    * @param {string} audioUrl
    * @param {{ start?: number, end?: number }|null} [region]
-   * @param {number|null} [instanceId] - Unique ID of the calling AudioPlayer instance
+   * @param {any} [instanceId] - Unique ID of the calling AudioPlayer instance
+   * @param {number} [channel=0] - Audio channel index
    */
-  play(audioUrl, region = null, instanceId = null) {
-    this.init();
-    this._clearRegionEndListener();
+  play(audioUrl, region = null, instanceId = null, channel = 0) {
+    const ch = this._getChannel(channel);
+    this._clearRegionEnd(ch);
 
-    const sameUrl = this.currentAudioUrl === audioUrl;
+    const sameUrl = ch.currentAudioUrl === audioUrl;
 
     if (sameUrl && region) {
       // Re-play same URL from the region start point
       const startTime = region.start ?? 0;
-      this.currentInstanceId = instanceId;
-      if (this.audioElement.readyState >= 2) {
-        this.audioElement.currentTime = startTime;
-        if (this.audioElement.paused) this.audioElement.play();
+      ch.currentInstanceId = instanceId;
+      if (ch.audioElement.readyState >= 2) {
+        ch.audioElement.currentTime = startTime;
+        if (ch.audioElement.paused) ch.audioElement.play();
       } else {
-        this.audioElement.addEventListener('canplay', () => {
-          if (this.currentAudioUrl !== audioUrl) return; // guard against stale call
-          this.audioElement.currentTime = startTime;
-          this.audioElement.play();
+        ch.audioElement.addEventListener('canplay', () => {
+          if (ch.currentAudioUrl !== audioUrl) return; // guard against stale call
+          ch.audioElement.currentTime = startTime;
+          ch.audioElement.play();
         }, { once: true });
       }
     } else if (sameUrl) {
       // Resume plain playback of the same URL
-      this.currentInstanceId = instanceId;
-      if (this.audioElement.paused) {
-        this.audioElement.play();
+      ch.currentInstanceId = instanceId;
+      if (ch.audioElement.paused) {
+        ch.audioElement.play();
       }
     } else {
-      // New URL — stop current and load the new one
-      this.stop();
-      this.currentAudioUrl = audioUrl;
-      this.currentInstanceId = instanceId;
-      this.audioElement.src = audioUrl;
+      // New URL — stop current channel and load the new one
+      this.stop(channel);
+      ch.currentAudioUrl = audioUrl;
+      ch.currentInstanceId = instanceId;
+      ch.audioElement.src = audioUrl;
 
       if (region && region.start != null) {
         const startTime = region.start;
-        this.audioElement.addEventListener('canplay', () => {
-          if (this.currentAudioUrl !== audioUrl) return; // guard against stale call
-          this.audioElement.currentTime = startTime;
-          this.audioElement.play();
+        ch.audioElement.addEventListener('canplay', () => {
+          if (ch.currentAudioUrl !== audioUrl) return; // guard against stale call
+          ch.audioElement.currentTime = startTime;
+          ch.audioElement.play();
         }, { once: true });
       } else {
-        this.audioElement.play();
+        ch.audioElement.play();
       }
     }
 
     if (region && region.end != null) {
-      this._setupRegionEndListener(region.end);
+      this._setupRegionEnd(ch, region.end);
     }
 
     this.notifyListeners();
   }
 
   /**
-   * Stop the currently playing audio
+   * Stop the currently playing audio on the given channel.
+   * @param {number} [channel=0] - Audio channel index
    */
-  stop() {
-    this.init();
-    this._clearRegionEndListener();
+  stop(channel = 0) {
+    if (!this._channels[channel]) return; // channel was never used — nothing to stop
+    const ch = this._channels[channel];
+    this._clearRegionEnd(ch);
 
-    if (!this.audioElement.paused) {
-      this.audioElement.pause();
+    if (!ch.audioElement.paused) {
+      ch.audioElement.pause();
     }
-    this.audioElement.currentTime = 0;
-    this.currentAudioUrl = null;
-    this.currentInstanceId = null;
+    ch.audioElement.currentTime = 0;
+    ch.currentAudioUrl = null;
+    ch.currentInstanceId = null;
     this.notifyListeners();
   }
 
@@ -124,38 +138,43 @@ class GlobalAudioPlayer {
    * Toggle play/pause for a given audio URL, optionally within a time region.
    * @param {string} audioUrl
    * @param {{ start?: number, end?: number }|null} [region]
-   * @param {number|null} [instanceId] - Unique ID of the calling AudioPlayer instance
+   * @param {any} [instanceId] - Unique ID of the calling AudioPlayer instance
+   * @param {number} [channel=0] - Audio channel index
    */
-  toggle(audioUrl, region = null, instanceId = null) {
-    this.init();
+  toggle(audioUrl, region = null, instanceId = null, channel = 0) {
+    const ch = this._getChannel(channel);
 
     if (
-      this.currentInstanceId === instanceId &&
-      this.currentAudioUrl === audioUrl &&
-      !this.audioElement.paused
+      ch.currentInstanceId === instanceId &&
+      ch.currentAudioUrl === audioUrl &&
+      !ch.audioElement.paused
     ) {
       // This exact instance is already playing — stop it
-      this.stop();
+      this.stop(channel);
     } else {
       // A different instance (or stopped) — start playback for this instance
-      this.play(audioUrl, region, instanceId);
+      this.play(audioUrl, region, instanceId, channel);
     }
   }
 
   /**
    * Check if a specific AudioPlayer instance is currently playing.
    * @param {string} audioUrl
-   * @param {number|null} [instanceId]
+   * @param {any} [instanceId]
+   * @param {number} [channel=0] - Audio channel index
    */
-  isPlaying(audioUrl, instanceId = null) {
-    return this.currentAudioUrl === audioUrl &&
-           this.currentInstanceId === instanceId &&
-           this.audioElement &&
-           !this.audioElement.paused;
+  isPlaying(audioUrl, instanceId = null, channel = 0) {
+    if (!this._channels[channel]) return false;
+    const ch = this._channels[channel];
+    return ch.currentAudioUrl === audioUrl &&
+           ch.currentInstanceId === instanceId &&
+           !ch.audioElement.paused;
   }
 
   /**
-   * Subscribe to player state changes
+   * Subscribe to player state changes (shared across all channels).
+   * @param {Function} callback
+   * @returns {Function} unsubscribe
    */
   subscribe(callback) {
     this.listeners.add(callback);
@@ -163,7 +182,7 @@ class GlobalAudioPlayer {
   }
 
   /**
-   * Notify all listeners of state change
+   * Notify all listeners of state change.
    */
   notifyListeners() {
     this.listeners.forEach(callback => callback());

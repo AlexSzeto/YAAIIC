@@ -33,6 +33,11 @@ vi.mock('./service.mjs', () => ({
   saveGenre: vi.fn(),
   removeGenreByUid: vi.fn(),
   setPlayIntroImageUrl: vi.fn(),
+  getAllSfx: vi.fn(() => []),
+  createSfx: vi.fn(),
+  saveSfx: vi.fn(),
+  removeSfxByUid: vi.fn(),
+  setSfxAudioUrl: vi.fn(),
 }))
 
 vi.mock('../generation/workflow-validator.mjs', () => ({
@@ -53,7 +58,7 @@ vi.mock('./portrait-hash.mjs', () => ({
 
 const { default: router } = await import('./router.mjs')
 const { enqueue } = await import('../queue/service.mjs')
-const { getAllOutfits, getAllCharacters, getAllParts, getAllGenres, createGenre, saveGenre, removeGenreByUid } = await import('./service.mjs')
+const { getAllOutfits, getAllCharacters, getAllParts, getAllGenres, createGenre, saveGenre, removeGenreByUid, getAllSfx, createSfx, saveSfx, removeSfxByUid } = await import('./service.mjs')
 const { loadWorkflows } = await import('../generation/workflow-validator.mjs')
 
 const app = express()
@@ -67,6 +72,7 @@ app.locals.config = {
     partPreviewWorkflow: 'Text to Image (Illustrious Part Preview)',
     musicWorkflow: 'AceStep Music Generation',
     defaultMusicLength: 120,
+    sfxWorkflow: 'SFX Generation',
   },
 }
 app.use(router)
@@ -361,6 +367,171 @@ describe('AnyTale Router', () => {
       expect(callArgs.taskData.name).toBe('Urban Pulse')
       expect(callArgs.taskData.bpm).toBe(140)
       expect(callArgs.taskData.keyscale).toBe('A minor')
+    })
+  })
+
+  // ── SFX CRUD ──────────────────────────────────────────────────────────────
+
+  describe('GET /anytale/sfx', () => {
+    test('returns all SFX records', async () => {
+      getAllSfx.mockReturnValue([{ uid: 'sfx-1', name: 'Rain', tags: ['rain'], prompt: 'rain sounds', audioUrl: '' }])
+
+      const res = await request(app).get('/anytale/sfx')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual([{ uid: 'sfx-1', name: 'Rain', tags: ['rain'], prompt: 'rain sounds', audioUrl: '' }])
+    })
+  })
+
+  describe('POST /anytale/sfx', () => {
+    test('returns 201 and created SFX record', async () => {
+      const record = { uid: 'sfx-new', name: 'Thunder', tags: ['thunder'], prompt: 'thunder crash', audioUrl: '' }
+      createSfx.mockReturnValue(record)
+
+      const res = await request(app)
+        .post('/anytale/sfx')
+        .send({ name: 'Thunder', tags: ['thunder'], prompt: 'thunder crash' })
+
+      expect(res.status).toBe(201)
+      expect(res.body).toHaveProperty('uid')
+    })
+
+    test('returns 400 for non-object body', async () => {
+      const res = await request(app)
+        .post('/anytale/sfx')
+        .send('not-an-object')
+        .set('Content-Type', 'text/plain')
+
+      expect(res.status).toBe(400)
+    })
+  })
+
+  describe('PUT /anytale/sfx/:uid', () => {
+    test('returns 200 and updated SFX record', async () => {
+      const record = { uid: 'sfx-1', name: 'Updated Rain', tags: ['rain'], prompt: 'heavy rain', audioUrl: '' }
+      saveSfx.mockReturnValue(record)
+
+      const res = await request(app)
+        .put('/anytale/sfx/sfx-1')
+        .send({ name: 'Updated Rain', tags: ['rain'], prompt: 'heavy rain' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toHaveProperty('uid', 'sfx-1')
+    })
+  })
+
+  describe('DELETE /anytale/sfx/:uid', () => {
+    test('returns 200 with deleted: true', async () => {
+      const res = await request(app).delete('/anytale/sfx/sfx-1')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ deleted: true })
+    })
+
+    test('returns 404 when SFX record not found', async () => {
+      const err = new Error('SFX record not found: missing')
+      err.code = 'ENOENT'
+      removeSfxByUid.mockImplementation(() => { throw err })
+
+      const res = await request(app).delete('/anytale/sfx/missing')
+
+      expect(res.status).toBe(404)
+      expect(res.body).toHaveProperty('error')
+    })
+  })
+
+  // ── SFX generate-preview ──────────────────────────────────────────────────
+
+  describe('POST /anytale/sfx/:uid/generate-preview', () => {
+    test('returns 202 and enqueues SFX preview generation', async () => {
+      getAllSfx.mockReturnValue([{ uid: 'sfx-1', name: 'Rain', tags: ['rain'], prompt: 'rain sounds', audioUrl: '' }])
+      loadWorkflows.mockReturnValue({ workflows: [{ name: 'SFX Generation', options: {} }] })
+
+      const res = await request(app)
+        .post('/anytale/sfx/sfx-1/generate-preview')
+        .send({ clientId: 'test-client' })
+
+      expect(res.status).toBe(202)
+      expect(res.body).toHaveProperty('taskId')
+      expect(enqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ endpointKey: 'anytale-sfx-preview', type: 'audio' }),
+        expect.any(Object)
+      )
+    })
+
+    test('sends correct prompt and audioFormat in taskData', async () => {
+      getAllSfx.mockReturnValue([{ uid: 'sfx-1', name: 'Rain', tags: ['rain'], prompt: 'rain sounds', audioUrl: '' }])
+      loadWorkflows.mockReturnValue({ workflows: [{ name: 'SFX Generation', options: {} }] })
+
+      await request(app).post('/anytale/sfx/sfx-1/generate-preview').send({})
+
+      const callArgs = enqueue.mock.calls[0][0]
+      expect(callArgs.taskData.prompt).toBe('rain sounds')
+      expect(callArgs.taskData.audioFormat).toBe('mp3')
+      expect(callArgs.taskData.sfxUid).toBe('sfx-1')
+    })
+
+    test('returns 404 when SFX record not found', async () => {
+      getAllSfx.mockReturnValue([])
+      loadWorkflows.mockReturnValue({ workflows: [{ name: 'SFX Generation', options: {} }] })
+
+      const res = await request(app).post('/anytale/sfx/missing/generate-preview').send({})
+
+      expect(res.status).toBe(404)
+      expect(res.body).toHaveProperty('error')
+    })
+
+    test('returns 400 when sfxWorkflow is not found in workflows', async () => {
+      getAllSfx.mockReturnValue([{ uid: 'sfx-1', name: 'Rain', tags: ['rain'], prompt: 'rain', audioUrl: '' }])
+      loadWorkflows.mockReturnValue({ workflows: [] })
+
+      const res = await request(app).post('/anytale/sfx/sfx-1/generate-preview').send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body).toHaveProperty('error')
+    })
+  })
+
+  // ── Play mode generate-sfx ────────────────────────────────────────────────
+
+  describe('POST /anytale/play/generate-sfx', () => {
+    test('returns 202 and enqueues play SFX generation', async () => {
+      loadWorkflows.mockReturnValue({ workflows: [{ name: 'SFX Generation', options: {} }] })
+
+      const res = await request(app)
+        .post('/anytale/play/generate-sfx')
+        .send({ prompt: 'storm sounds', clientId: 'tab-1' })
+
+      expect(res.status).toBe(202)
+      expect(res.body).toHaveProperty('taskId')
+      expect(enqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ endpointKey: 'anytale-play-sfx', type: 'audio', source: 'anytale-play' }),
+        expect.any(Object)
+      )
+    })
+
+    test('sends correct prompt and audioFormat in taskData', async () => {
+      loadWorkflows.mockReturnValue({ workflows: [{ name: 'SFX Generation', options: {} }] })
+
+      await request(app)
+        .post('/anytale/play/generate-sfx')
+        .send({ prompt: 'wind howl' })
+
+      const callArgs = enqueue.mock.calls[0][0]
+      expect(callArgs.taskData.prompt).toBe('wind howl')
+      expect(callArgs.taskData.audioFormat).toBe('mp3')
+      expect(callArgs.taskData.entityType).toBe('anytale-play-sfx')
+    })
+
+    test('returns 400 when sfxWorkflow is not found in workflows', async () => {
+      loadWorkflows.mockReturnValue({ workflows: [] })
+
+      const res = await request(app)
+        .post('/anytale/play/generate-sfx')
+        .send({ prompt: 'wind' })
+
+      expect(res.status).toBe(400)
+      expect(res.body).toHaveProperty('error')
     })
   })
 })

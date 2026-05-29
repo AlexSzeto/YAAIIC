@@ -94,6 +94,16 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} [renderUrl=''] - URL of the generated render image
  */
 
+/**
+ * A sound effect record in the AnyTale SFX library.
+ * @typedef {Object} SfxRecord
+ * @property {string} uid - UUID assigned by server
+ * @property {string} name - Human-readable label shown in the editor
+ * @property {string[]} tags - Matched against plot page prompt tags; any exact match triggers SFX generation
+ * @property {string} prompt - Text prompt sent to the sfxWorkflow
+ * @property {string} [audioUrl=''] - URL of the most recently editor-generated preview (not used in play mode)
+ */
+
 function readData() {
   try {
     const raw = fs.readFileSync(ANYTALE_DATA_PATH, 'utf8');
@@ -105,10 +115,11 @@ function readData() {
       characters: Array.isArray(parsed.characters) ? parsed.characters : [],
       outfits: Array.isArray(parsed.outfits) ? parsed.outfits : [],
       genres: Array.isArray(parsed.genres) ? parsed.genres : [],
+      sfx: Array.isArray(parsed.sfx) ? parsed.sfx : [],
       playState: parsed.playState && typeof parsed.playState === 'object' ? parsed.playState : {},
     };
   } catch {
-    return { parts: [], plot: [], characters: [], outfits: [], genres: [], playState: {} };
+    return { parts: [], plot: [], characters: [], outfits: [], genres: [], sfx: [], playState: {} };
   }
 }
 
@@ -262,6 +273,49 @@ export function deleteGenre(uid) {
   }
   data.genres.splice(idx, 1);
   writeData(data);
+}
+
+// ── SFX CRUD ──────────────────────────────────────────────────────────────
+
+export function listSfx() {
+  return readData().sfx;
+}
+
+export function upsertSfx(uid, record) {
+  const data = readData();
+  const idx = data.sfx.findIndex(s => s.uid === uid);
+  if (idx >= 0) {
+    data.sfx[idx] = record;
+  } else {
+    data.sfx.push(record);
+  }
+  writeData(data);
+  return record;
+}
+
+export function deleteSfx(uid) {
+  const data = readData();
+  const idx = data.sfx.findIndex(s => s.uid === uid);
+  if (idx < 0) {
+    const err = new Error(`SFX record not found: ${uid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  data.sfx.splice(idx, 1);
+  writeData(data);
+}
+
+export function updateSfxField(uid, field, value) {
+  const data = readData();
+  const record = data.sfx.find(s => s.uid === uid);
+  if (!record) {
+    const err = new Error(`SFX record not found: ${uid}`);
+    err.code = 'ENOENT';
+    throw err;
+  }
+  record[field] = value;
+  writeData(data);
+  return record;
 }
 
 // ── Play state ─────────────────────────────────────────────────────────────

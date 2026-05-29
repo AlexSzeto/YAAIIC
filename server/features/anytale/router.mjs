@@ -30,14 +30,21 @@
  *   DELETE /anytale/genres/:uid                     – delete a genre and all nested tracks
  *   POST   /anytale/genres/:uid/generate-track      – queue AceStep generation for a genre
  *
+ *   GET    /anytale/sfx                        – returns array of all SFX records
+ *   POST   /anytale/sfx                        – create a new SFX record; server assigns UUID; returns saved record
+ *   PUT    /anytale/sfx/:uid                   – upsert SFX record by uid; returns saved record
+ *   DELETE /anytale/sfx/:uid                   – remove SFX record by uid
+ *   POST   /anytale/sfx/:uid/generate-preview  – queue sfxWorkflow for editor preview; updates audioUrl on completion
+ *
  *   POST   /anytale/play/generate-intro   – queue intro image generation for play mode (stored in anytale data, not media-data)
  *   POST   /anytale/play/generate-speech  – queue TTS generation for play mode dialog (NOT stored in media library)
+ *   POST   /anytale/play/generate-sfx     – queue sfxWorkflow for a play-mode page (ephemeral; NOT stored in SFX record)
  */
 import { Router } from 'express';
 import fs from 'node:fs';
 import { join } from 'path';
 import { STORAGE_DIR } from '../../core/paths.mjs';
-import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField, getAllGenres, createGenre, saveGenre, removeGenreByUid, setPlayIntroImageUrl } from './service.mjs';
+import { getAllParts, createPart, savePart, removePartByUid, getAllPlots, getPlotByUid, savePlot, removePlotByUid, getAllCharacters, createCharacter, saveCharacter, removeCharacterByUid, updateCharacterField, getAllOutfits, createOutfit, saveOutfit, removeOutfitByUid, updateOutfitField, getAllGenres, createGenre, saveGenre, removeGenreByUid, setPlayIntroImageUrl, getAllSfx, createSfx, saveSfx, removeSfxByUid, setSfxAudioUrl } from './service.mjs';
 import { loadWorkflows } from '../generation/workflow-validator.mjs';
 import * as queueService from '../queue/service.mjs';
 import { portraitPromptHash } from './portrait-hash.mjs';
@@ -890,6 +897,161 @@ router.post('/anytale/play/generate-speech', async (req, res) => {
   } catch (error) {
     console.error('Error starting play speech generation:', error);
     res.status(500).json({ error: 'Failed to start speech generation', details: error.message });
+  }
+});
+
+// ── SFX CRUD ─────────────────────────────────────────────────────────────────
+
+router.get('/anytale/sfx', (_req, res) => {
+  try {
+    res.json(getAllSfx());
+  } catch (error) {
+    console.error('Error listing SFX:', error);
+    res.status(500).json({ error: 'Failed to list SFX' });
+  }
+});
+
+router.post('/anytale/sfx', (req, res) => {
+  try {
+    const record = req.body;
+    if (!record || typeof record !== 'object') {
+      return res.status(400).json({ error: 'Request body must be an SFX record object' });
+    }
+    const saved = createSfx(record);
+    res.status(201).json(saved);
+  } catch (error) {
+    console.error('Error creating SFX record:', error);
+    res.status(500).json({ error: 'Failed to create SFX record' });
+  }
+});
+
+router.put('/anytale/sfx/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    const record = req.body;
+    if (!record || typeof record !== 'object') {
+      return res.status(400).json({ error: 'Request body must be an SFX record object' });
+    }
+    const saved = saveSfx(uid, { ...record, uid });
+    res.json(saved);
+  } catch (error) {
+    if (error.code === 'EINVAL') return res.status(400).json({ error: error.message });
+    console.error('Error saving SFX record:', error);
+    res.status(500).json({ error: 'Failed to save SFX record' });
+  }
+});
+
+router.delete('/anytale/sfx/:uid', (req, res) => {
+  try {
+    const { uid } = req.params;
+    removeSfxByUid(uid);
+    res.json({ deleted: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return res.status(404).json({ error: 'SFX record not found' });
+    console.error('Error deleting SFX record:', error);
+    res.status(500).json({ error: 'Failed to delete SFX record' });
+  }
+});
+
+// ── SFX preview generation ────────────────────────────────────────────────────
+
+router.post('/anytale/sfx/:uid/generate-preview', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { clientId } = req.body;
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const sfxWorkflow = anytaleConfig.sfxWorkflow;
+
+    if (!sfxWorkflow) {
+      return res.status(400).json({ error: 'sfxWorkflow is not configured in anytale config' });
+    }
+
+    const sfxList = getAllSfx();
+    const record = sfxList.find(s => s.uid === uid);
+    if (!record) {
+      return res.status(404).json({ error: 'SFX record not found' });
+    }
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === sfxWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `SFX workflow '${sfxWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: sfxWorkflow,
+      prompt: record.prompt || '',
+      audioFormat: 'mp3',
+      seed: Math.floor(Math.random() * 4294967295),
+      tags: '',
+      description: '',
+      summary: '',
+      sfxUid: uid,
+      entityType: 'anytale-sfx-preview',
+      requestOrigin: 'anytale',
+    };
+
+    const queueItem = queueService.enqueue({
+      type: 'audio',
+      source: 'anytale',
+      clientId: clientId || null,
+      name: `SFX Preview: ${record.name || uid}`,
+      subLabel: 'SFX Preview',
+      endpointKey: 'anytale-sfx-preview',
+      taskData: requestData,
+    }, { autoStart: true });
+
+    res.status(202).json({ taskId: queueItem.id });
+  } catch (error) {
+    console.error('Error starting SFX preview generation:', error);
+    res.status(500).json({ error: 'Failed to start SFX preview generation', details: error.message });
+  }
+});
+
+// ── Play mode SFX generation ──────────────────────────────────────────────────
+
+router.post('/anytale/play/generate-sfx', async (req, res) => {
+  try {
+    const { prompt, clientId } = req.body;
+    const anytaleConfig = req.app.locals.config?.anytale || {};
+    const sfxWorkflow = anytaleConfig.sfxWorkflow;
+
+    if (!sfxWorkflow) {
+      return res.status(400).json({ error: 'sfxWorkflow is not configured in anytale config' });
+    }
+
+    const comfyuiWorkflows = loadWorkflows();
+    const workflowData = comfyuiWorkflows.workflows.find(w => w.name === sfxWorkflow);
+    if (!workflowData) {
+      return res.status(400).json({ error: `SFX workflow '${sfxWorkflow}' not found` });
+    }
+
+    const requestData = {
+      workflow: sfxWorkflow,
+      prompt: prompt || '',
+      audioFormat: 'mp3',
+      seed: Math.floor(Math.random() * 4294967295),
+      tags: '',
+      description: '',
+      summary: '',
+      entityType: 'anytale-play-sfx',
+      requestOrigin: 'anytale-play',
+    };
+
+    const queueItem = queueService.enqueue({
+      type: 'audio',
+      source: 'anytale-play',
+      clientId: clientId || null,
+      name: 'Play SFX',
+      subLabel: 'SFX',
+      endpointKey: 'anytale-play-sfx',
+      taskData: requestData,
+    }, { autoStart: true });
+
+    res.status(202).json({ taskId: queueItem.id });
+  } catch (error) {
+    console.error('Error starting play SFX generation:', error);
+    res.status(500).json({ error: 'Failed to start play SFX generation', details: error.message });
   }
 });
 

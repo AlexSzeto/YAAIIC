@@ -685,9 +685,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             loading=${isPreviewingDialog}
           >${isPreviewingDialog ? 'Generating...' : 'Preview Dialog'}<//>
           </div>
-          ${dialogPreviews[currentPageIndex] ? html`
-            <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
-          ` : null}
+            ${dialogPreviews[currentPageIndex] ? html`
+            <${Panel} variant="outlined" padding="small">
+              <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
+            </${Panel}>
+            ` : null}
         </${VerticalLayout}>
 
         <!-- Page Tags -->

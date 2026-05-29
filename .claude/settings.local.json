@@ -11,7 +11,8 @@
       "Bash(node f:\\\\YAAIIC\\\\scripts\\\\archive-feature.mjs)",
       "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\\\\public\\\\js\\\\app-ui\" -MaxDepth 1 -Filter \"*.html\")",
       "Skill(stage-and-commit)",
-      "Skill(stage-and-commit:*)"
+      "Skill(stage-and-commit:*)",
+      "Bash(node scripts/archive-feature.mjs anytale-plot-editing-improvements.md)"
     ]
   }
 }
