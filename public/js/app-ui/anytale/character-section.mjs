@@ -661,10 +661,6 @@ export function CharacterSection({
     setCharacter(libraryCharacter);
   }, [libraryCharacter]);
 
-  const handleEditParts = useCallback(() => {
-    if (onEditParts) onEditParts(character.parts);
-  }, [character.parts, onEditParts]);
-
   const handleClear = useCallback(async () => {
     const result = await showDialog(
       'Clear all character data? This will reset the form.',
@@ -956,18 +952,9 @@ export function CharacterSection({
             />
           </${VerticalLayout}>
 
-          <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
+          <!-- Actions: New Character (left) | Save / Revert / Delete / Clear (right) -->
           <${HorizontalEdgesLayout}>
             <${HorizontalLayout} gap="small">
-              <${Button}
-                variant="small-text"
-                color="secondary"
-                icon="send-alt"
-                onClick=${handleEditParts}
-                disabled=${!character.parts.length || !onEditParts}
-              >
-                Edit Parts
-              <//>
               <${Button}
                 variant="small-text"
                 color="danger"

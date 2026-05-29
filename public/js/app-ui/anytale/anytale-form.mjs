@@ -28,6 +28,8 @@ import { OutfitSection } from './outfit-section.mjs';
 import { MusicSection } from './music-section.mjs';
 import { fetchPlotList } from './plot-api.mjs';
 import { fetchOutfitList } from './outfit-api.mjs';
+import { fetchCharacterList } from './character-api.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { LibraryPartPicker } from './library-part-picker.mjs';
 import { useProgress } from '../../custom-ui/msg/progress-context.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
@@ -296,6 +298,17 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       .catch(err => console.error('[AnyTaleForm] Failed to fetch outfit list:', err));
   }, []);
 
+  // ── Character list and load-character / load-outfit modal state ──────────────
+  const [characterList, setCharacterList] = useState([]);
+  const [loadCharModalOpen, setLoadCharModalOpen] = useState(false);
+  const [loadOutfitModalOpen, setLoadOutfitModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchCharacterList()
+      .then(list => { if (Array.isArray(list)) setCharacterList(list); })
+      .catch(err => console.error('[AnyTaleForm] Failed to fetch character list:', err));
+  }, []);
+
   // ── Library lookup state ─────────────────────────────────────────────────
   const [libraryParts, setLibraryParts] = useState([]);
 
@@ -381,9 +394,8 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
 
   const handleClear = useCallback(async () => {
-    const result = await showDialog('This will erase all parts and the preview image name. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
+    const result = await showDialog('This will erase all parts. Are you sure?', 'Clear Settings', ['Clear', 'Cancel']);
     if (result !== 'Clear') return;
-    setPreviewImageName('');
     setParts([]);
     clearState();
   }, []);
@@ -880,6 +892,24 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
     handleTabChange('parts-plot');
   }, [libraryParts, handleTabChange, requestPartPreviewCacheForFormPart]);
 
+  const handleLoadCharacterParts = useCallback((uid) => {
+    setLoadCharModalOpen(false);
+    const character = characterList.find(c => c.uid === uid);
+    if (!character) { toast.error('Character not found'); return; }
+    if (Array.isArray(character.parts) && character.parts.length > 0) {
+      handleEditParts(character.parts);
+    }
+  }, [characterList, handleEditParts, toast]);
+
+  const handleLoadOutfitParts = useCallback((uid) => {
+    setLoadOutfitModalOpen(false);
+    const outfit = sharedOutfitList.find(o => o.uid === uid);
+    if (!outfit) { toast.error('Outfit not found'); return; }
+    if (Array.isArray(outfit.parts) && outfit.parts.length > 0) {
+      handleEditParts(outfit.parts);
+    }
+  }, [sharedOutfitList, handleEditParts, toast]);
+
   // Compute all unique type strings from the library for autocomplete suggestions
   const allTypes = useMemo(() => {
     const seen = new Set();
@@ -917,7 +947,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             <${VerticalLayout} gap="medium">
               <${HorizontalEdgesLayout}>
                 <${H2}>Parts</${H2}>
-                <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+                <${HorizontalLayout} gap="small">
+                  <${Button} variant="small-text" color="secondary" icon="user" onClick=${() => setLoadCharModalOpen(true)}>Load Character<//>
+                  <${Button} variant="small-text" color="secondary" icon="t-shirt" onClick=${() => setLoadOutfitModalOpen(true)}>Load Outfit<//>
+                  <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
+                </${HorizontalLayout}>
               </${HorizontalEdgesLayout}>
             <${DynamicList}
               title="Parts List"
@@ -1038,6 +1072,36 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         currentPartUids=${parts.map(p => p.config?.uid).filter(Boolean)}
         onSelectPart=${handleLibrarySelect}
         onRemovePart=${handleLibraryRemove}
+      />
+
+      <${SearchSelectModal}
+        isOpen=${loadCharModalOpen}
+        title="Load Character"
+        items=${characterList.map(c => {
+          const selfProfile = (c.selfProfile || c.personality || '').trim();
+          const subtitle = selfProfile.length <= 60 ? selfProfile
+            : (selfProfile.lastIndexOf(' ', 60) > 0
+              ? selfProfile.slice(0, selfProfile.lastIndexOf(' ', 60))
+              : selfProfile.slice(0, 60)) + '…';
+          return { label: c.name || c.uid, value: c.uid, subtitle };
+        })}
+        mode="single"
+        onSelect=${handleLoadCharacterParts}
+        onClose=${() => setLoadCharModalOpen(false)}
+      />
+
+      <${SearchSelectModal}
+        isOpen=${loadOutfitModalOpen}
+        title="Load Outfit"
+        items=${sharedOutfitList.map(o => {
+          const partNames = (o.parts || [])
+            .map(op => libraryParts.find(p => p.uid === op.partUid)?.name)
+            .filter(Boolean);
+          return { label: o.name || o.uid, value: o.uid, subtitle: partNames.join(', ') };
+        })}
+        mode="single"
+        onSelect=${handleLoadOutfitParts}
+        onClose=${() => setLoadOutfitModalOpen(false)}
       />
     </${EditLayout}>
   `;

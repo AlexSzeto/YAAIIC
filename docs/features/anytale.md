@@ -189,6 +189,15 @@ The **Reject** and **Extend** buttons in the page editor are enabled whenever at
 - **Shift-click range selection**: in the gallery modal, holding Shift while clicking an item selects the entire range between the last directly-clicked item and the shift-clicked item (works across gallery pages using the full data array). Activates only when exactly one item is already selected.
 - **Auto-navigate suppression**: generating a new image while on the Parts & Plot tab does not auto-jump the viewer to the new image; the viewer stays on its current item so the user can track the current plot page.
 
+### Parts editor load shortcuts
+
+The Parts & Plot tab header includes two additional buttons alongside the existing **Load** (library parts) button:
+
+- **Load Character** (`user` icon) — opens a searchable list of saved characters; selecting one fetches the full character record and merges its parts into the active parts list via `handleEditParts` (deduplication: updates `attributeValues` in-place for already-present parts, appends new ones).
+- **Load Outfit** (`t-shirt` icon) — same flow for saved outfits.
+
+The "Edit Parts" button previously found in the Character and Outfit tab footers has been removed; the load shortcuts on the Parts tab are the canonical path for this action.
+
 Example: `"You're wearing a {{outer upper body}}"` → `"You're wearing a Shirt and Jacket"` (if the enabled parts with type `outer upper body` have display names "Shirt" and "Jacket").
 
 ### Dialog system message template slots

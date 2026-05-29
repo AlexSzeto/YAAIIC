@@ -660,7 +660,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           libraryParts=${libraryParts}
           page=${currentPage}
           onChange=${(updatedPage) => updatePage(currentPageIndex, updatedPage)}
-          disabled=${isCurrentPageLocked}
+
         />
 
         <!-- Action Description -->
@@ -670,7 +670,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
           placeholder="Describe the action for the dialog prompt"
           widthScale="full"
-          disabled=${isCurrentPageLocked}
+
         />
 
         <!-- Dialog Preview -->
@@ -697,7 +697,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           onInput=${(text) => updatePage(currentPageIndex, { ...currentPage, tags: text })}
           rows=${2}
           placeholder="Comma-separated tags for this page"
-          disabled=${isCurrentPageLocked}
+
         />
 
         <${HorizontalEdgesLayout}>
@@ -714,14 +714,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               icon="trash"
               disabled=${!hasMediaForCurrentPage}
               onClick=${handleReject}
-            >Reject<//>
+            >Reject Render<//>
             <${Button}
               variant="small-text"
               color="secondary"
               icon="plus"
               disabled=${!hasMediaForCurrentPage}
               onClick=${handleAddPage}
-            >Extend<//>
+            >Extend Page<//>
           </${HorizontalLayout}>
         </${HorizontalEdgesLayout}>
 

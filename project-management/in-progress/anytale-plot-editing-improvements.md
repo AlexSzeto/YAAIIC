@@ -12,6 +12,7 @@ Improve the AnyTale plot editor with two-stage delete/recover flows for both plo
 
 #### Fixes and Changes
 - [x] Restore the confirmation dialog to the plot-level `handleDelete`; no-confirmation applies only to the page delete button
+- [x] Remove `disabled=${isCurrentPageLocked}` from all plot page form fields in `plot-section.mjs` — pages must always remain editable now that the unlock button is gone
 - [x] Add `recoveryPage` state to `plot-section.mjs`; remove the confirmation dialog from `handleDeletePage`, store the removed page object and its original index before splicing, swap the Delete Page button to a recycle icon while `recoveryPage` is set; clicking the recycle icon inserts the stored page back at its original index and clears `recoveryPage`; clear `recoveryPage` when the current page index changes for any reason (navigation, add page, another delete), or when a plot-level revert or delete completes — save does not clear it
 - [x] Remove the Unlock Page button and `handleUnlock` from `plot-section.mjs`
 - [x] Pass `history` down from `anytale.mjs` → `anytale-form.mjs` → `plot-section.mjs` as a prop; compute `hasMediaForCurrentPage = history.some(item => item.plot?.uid === plot.uid && item.plot?.page === currentPageIndex)`; replace `!isCurrentPageLocked` as the disabled condition on both Reject and Extend with `!hasMediaForCurrentPage`
@@ -43,11 +44,17 @@ Improve the AnyTale plot editor with two-stage delete/recover flows for both plo
 
 ### Phase 5 — Parts editor load-character / load-outfit shortcuts
 
-- [ ] Remove the "Edit Parts" button (icon `send-alt`, label "Edit Parts") from both `character-section.mjs` and `outfit-section.mjs`
-- [ ] In `anytale-form.mjs`, import `fetchCharacterList` from `./character-api.mjs`; add `characterList` state and fetch it on mount alongside `sharedOutfitList`; add `loadCharModalOpen` and `loadOutfitModalOpen` boolean states
-- [ ] Replace the single "Load" button header in the parts editor with a row containing the existing Load button plus a "Load Character" button (`icon="user"`) and a "Load Outfit" button (`icon="t-shirt"`), both `variant="small-text"` and `color="secondary"`
-- [ ] Add two `SearchSelectModal` instances to the parts editor render: one for character (title "Load Character", items from `characterList`) and one for outfit (title "Load Outfit", items from `sharedOutfitList`); on selection fetch the full record by uid and call `handleEditParts` with its `.parts` array; close the modal after selection
-- [ ] Review and update affected living docs: `docs/features/anytale.md`
+- [x] Remove the "Edit Parts" button (icon `send-alt`, label "Edit Parts") from both `character-section.mjs` and `outfit-section.mjs`
+- [x] In `anytale-form.mjs`, import `fetchCharacterList` from `./character-api.mjs`; add `characterList` state and fetch it on mount alongside `sharedOutfitList`; add `loadCharModalOpen` and `loadOutfitModalOpen` boolean states
+- [x] Replace the single "Load" button header in the parts editor with a row containing the existing Load button plus a "Load Character" button (`icon="user"`) and a "Load Outfit" button (`icon="t-shirt"`), both `variant="small-text"` and `color="secondary"`
+- [x] Add two `SearchSelectModal` instances to the parts editor render: one for character (title "Load Character", items from `characterList`) and one for outfit (title "Load Outfit", items from `sharedOutfitList`); on selection fetch the full record by uid and call `handleEditParts` with its `.parts` array; close the modal after selection
+- [x] Review and update affected living docs: `docs/features/anytale.md`
+
+#### Fixes and Changes
+- [x] Reorder parts editor header buttons to: Load Character, Load Outfit, Load (single part)
+- [x] Add subtitles to the Load Character modal (selfProfile excerpt, same truncation as character-section) and Load Outfit modal (part names joined by `, `, same logic as outfit-section)
+- [x] Fix `handleLoadCharacterParts` and `handleLoadOutfitParts` to look up the record from the in-memory list rather than fetching by UID (no GET-by-uid endpoint exists)
+- [x] Remove stale `setPreviewImageName('')` call from `handleClear` in `anytale-form.mjs` — state no longer exists anywhere in the codebase
 
 ## Implementation Details
 

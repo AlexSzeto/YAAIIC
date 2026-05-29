@@ -612,10 +612,6 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
     setOutfit(libraryOutfit);
   }, [libraryOutfit]);
 
-  const handleEditParts = useCallback(() => {
-    if (onEditParts) onEditParts(outfit.parts);
-  }, [outfit.parts, onEditParts]);
-
   const handleClear = useCallback(async () => {
     const result = await showDialog(
       'Clear all outfit data? This will reset the form.',
@@ -753,18 +749,9 @@ export function OutfitSection({ libraryParts = [], onLibraryPartsChange, refresh
               />
             </${VerticalLayout}>
 
-            <!-- Actions: Edit Parts (left) | Save / Revert / Delete / Clear (right) -->
+            <!-- Actions: New Outfit (left) | Save / Revert / Delete / Clear (right) -->
             <${HorizontalEdgesLayout}>
               <${HorizontalLayout} gap="small">
-                <${Button}
-                  variant="small-text"
-                  color="secondary"
-                  icon="send-alt"
-                  onClick=${handleEditParts}
-                  disabled=${!outfit.parts.length || !onEditParts}
-                >
-                  Edit Parts
-                <//>
                 <${Button}
                   variant="small-text"
                   color="danger"
