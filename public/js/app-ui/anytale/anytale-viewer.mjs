@@ -14,6 +14,17 @@ import { Panel } from '../../custom-ui/layout/panel.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Select } from '../../custom-ui/io/select.mjs';
 import { createImageModal } from '../../custom-ui/overlays/modal.mjs';
+import { SpeechBubble } from './play/speech-bubble.mjs';
+
+const DialogOverlay = styled('div')`
+  position: absolute;
+  top: 64px;
+  left: ${() => currentTheme.value.spacing.medium.padding};
+  right: ${() => currentTheme.value.spacing.medium.padding};
+  z-index: 2;
+  pointer-events: none;
+`;
+DialogOverlay.className = 'dialog-overlay';
 
 const ViewerContainer = styled('div')`
   display: flex;
@@ -209,6 +220,11 @@ export function AnyTaleViewer({
             onMouseEnter=${(e) => { if (item?.prompt) tooltip.show(item.prompt, e.clientX, e.clientY); }}
             onMouseLeave=${() => tooltip.hide()}
           />
+          ${item?.dialog ? html`
+            <${DialogOverlay}>
+              <${SpeechBubble}>${item.dialog}</${SpeechBubble}>
+            </${DialogOverlay}>
+          ` : null}
           ${item?.plot?.name ? html`
             <${PlotOverlay}>
               <${Panel} variant="glass" padding="small">

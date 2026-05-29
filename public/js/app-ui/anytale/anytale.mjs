@@ -16,7 +16,7 @@ import { Gallery } from '../main/gallery.mjs';
 import { useItemNavigation } from '../../custom-ui/nav/use-item-navigation.mjs';
 import { fetchJson } from '../../custom-ui/util.mjs';
 import { backfillMissingProperties } from '../../util.mjs';
-import { loadPlot, loadCharacter } from './anytale-state.mjs';
+import { loadPlot, loadCharacter, loadState } from './anytale-state.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { openFolderSelect } from '../use-folder-select.mjs';
@@ -28,6 +28,28 @@ import { createGalleryPreview } from '../main/gallery-preview.mjs';
 import { queueSSEManager } from '../queue-sse-manager.mjs';
 import { QueueStatusBanner } from '../queue-status-banner.mjs';
 import { getClientId } from '../client-id.mjs';
+
+// ── Client-side plot sort ─────────────────────────────────────────────────────
+// Groups items by plot UID (oldest plot first), sorts within each group by page
+// index ascending, then appends non-anytale items by timestamp descending.
+// Applied to viewer history — never to the gallery modal's own display order.
+function sortItemsByPlot(items) {
+  const withPlot = items.filter(i => i.plot?.uid);
+  const withoutPlot = items.filter(i => !i.plot?.uid);
+
+  const groups = new Map();
+  for (const item of withPlot) {
+    const uid = item.plot.uid;
+    if (!groups.has(uid)) groups.set(uid, []);
+    groups.get(uid).push(item);
+  }
+  for (const group of groups.values()) {
+    group.sort((a, b) => (a.plot.page ?? 0) - (b.plot.page ?? 0));
+  }
+  const sortedGroups = [...groups.entries()].sort((a, b) => Number(a[0]) - Number(b[0]));
+  withoutPlot.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  return [...sortedGroups.flatMap(([, g]) => g), ...withoutPlot];
+}
 
 const TwoColumn = styled('div')`
   display: flex;
@@ -111,9 +133,19 @@ export function AnyTalePage() {
   const nav = useItemNavigation(history);
   // Set to true after appending a new image so the post-render effect can navigate to last
   const navigateToLastRef = useRef(false);
+  // Set to { plotUid, pageIndex } to jump to a specific plot page after history updates
+  const initialJumpRef = useRef(null);
 
   useEffect(() => {
-    if (navigateToLastRef.current && history.length > 0) {
+    if (history.length === 0) return;
+    if (initialJumpRef.current) {
+      const { plotUid, pageIndex } = initialJumpRef.current;
+      initialJumpRef.current = null;
+      const idx = history.findIndex(
+        item => item.plot?.uid === plotUid && item.plot?.page === pageIndex
+      );
+      nav.selectByIndex(idx !== -1 ? idx : history.length - 1);
+    } else if (navigateToLastRef.current) {
       nav.selectLast();
       navigateToLastRef.current = false;
     }
@@ -122,16 +154,28 @@ export function AnyTalePage() {
   // Preload images on mount based on the active tab's current name
   useEffect(() => {
     const tab = localStorage.getItem('anytale-active-tab') || 'parts-plot';
-    const name = tab === 'character-outfits'
-      ? loadCharacter().name?.trim() || ''
-      : loadPlot().name?.trim() || '';
+    const isPlotTab = tab !== 'character-outfits';
+    const name = isPlotTab
+      ? loadPlot().name?.trim() || ''
+      : loadCharacter().name?.trim() || '';
     if (!name) return;
     fetchJson(`/media-data?${new URLSearchParams({ query: name, sort: 'ascending', limit: '1000' })}`)
       .then(items => {
-        const exact = items.filter(item => item.name === name);
+        const exact = sortItemsByPlot(items.filter(item => item.name === name));
         if (exact.length > 0) {
           setHistory(exact);
-          navigateToLastRef.current = true;
+          if (isPlotTab) {
+            // Jump to the current plot page; falls back to last item silently if not found
+            const currentPlot = loadPlot();
+            const activePageIndex = loadState().activePlotPage ?? 0;
+            if (currentPlot.uid) {
+              initialJumpRef.current = { plotUid: currentPlot.uid, pageIndex: activePageIndex };
+            } else {
+              navigateToLastRef.current = true;
+            }
+          } else {
+            navigateToLastRef.current = true;
+          }
         }
       })
       .catch(err => console.error('[AnyTalePage] Preload failed:', err));
@@ -182,7 +226,12 @@ export function AnyTalePage() {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
         setHistory(prev => [...prev, media]);
-        navigateToLastRef.current = true;
+        // Only auto-jump to the new image when the user is not on the parts-plot tab;
+        // on that tab the viewer should stay at the current plot page image.
+        const activeTab = localStorage.getItem('anytale-active-tab') || 'parts-plot';
+        if (activeTab !== 'parts-plot') {
+          navigateToLastRef.current = true;
+        }
         toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {
         console.error('Failed to load result image:', err);
@@ -296,7 +345,7 @@ export function AnyTalePage() {
     }
   }, [history, nav, toast]);
 
-  const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData) => {
+  const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData, dialogText = '') => {
     if (!workflowConfig) {
       toast.error('Generation workflow not configured');
       return;
@@ -313,6 +362,7 @@ export function AnyTalePage() {
         orientation: workflowConfig.orientation,
         parts: partsData && Object.keys(partsData).length > 0 ? partsData : null,
         plot: plotData ?? null,
+        dialog: dialogText || '',
         requestOrigin: 'anytale',
       };
 
@@ -405,9 +455,19 @@ export function AnyTalePage() {
         previewFactory=${createGalleryPreview}
         onLoad=${(items) => {
           if (items && items.length > 0) {
-            const ordered = items.slice().reverse();
-            setHistory(ordered);
-            nav.selectByIndex(ordered.length - 1);
+            const sorted = sortItemsByPlot(items);
+            setHistory(sorted);
+            // Jump to the current plot page; fall back to last item if not on a saved plot
+            const tab = localStorage.getItem('anytale-active-tab') || 'parts-plot';
+            if (tab !== 'character-outfits') {
+              const currentPlot = loadPlot();
+              const activePageIndex = loadState().activePlotPage ?? 0;
+              if (currentPlot.uid) {
+                initialJumpRef.current = { plotUid: currentPlot.uid, pageIndex: activePageIndex };
+                return;
+              }
+            }
+            nav.selectByIndex(sorted.length - 1);
           }
         }}
         onDelete=${handleGalleryDelete}

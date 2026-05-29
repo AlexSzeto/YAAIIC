@@ -24,6 +24,7 @@
     "audioFormat": { "type": "string", "default": null },
     "extraInputs": { "type": "object", "default": {} },
     "parts": { "type": "object", "default": null },
-    "plot": { "type": "object", "default": null }
+    "plot": { "type": "object", "default": null },
+    "dialog": { "type": "string", "default": "" }
   }
 }

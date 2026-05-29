@@ -18,20 +18,35 @@ Improve the AnyTale plot editor with two-stage delete/recover flows for both plo
 
 ### Phase 2 — Gallery improvements
 
-- [ ] Add a `lastSelectedUid` ref to `gallery.mjs`; update it on every direct (non-shift) item click; when a click arrives with `shiftKey` held and exactly one item is currently selected and `lastSelectedUid` is set, find both items by UID in the full `galleryData` array and select every UID in the range between them (inclusive); leave existing single-toggle logic unchanged for non-shift clicks
-- [ ] Add a `plot` sort mode to `service.mjs` that groups items by `plot.uid`, orders groups by the smallest numeric UID in each group ascending, sorts within each group by `plot.page` ascending, then appends all non-anytale items (no `plot` field) sorted by timestamp descending; expose it via `sort=plot` query param on `/media-data`
+- [x] Add a `lastSelectedUid` ref to `gallery.mjs`; update it on every direct (non-shift) item click; when a click arrives with `shiftKey` held and exactly one item is currently selected and `lastSelectedUid` is set, find both items by UID in the full `galleryData` array and select every UID in the range between them (inclusive); leave existing single-toggle logic unchanged for non-shift clicks
+- [x] Add a `plot` sort mode to `service.mjs` that groups items by `plot.uid`, orders groups by the smallest numeric UID in each group ascending, sorts within each group by `plot.page` ascending, then appends all non-anytale items (no `plot` field) sorted by timestamp descending; expose it via `sort=plot` query param on `/media-data`
 
 ### Phase 3 — Dialog field and viewer integration
 
-- [ ] Add `dialog` as a string field (default `""`) to `server/resource/media-data-schema.json`
-- [ ] Add an optional `dialogText` parameter to `handleGenerate` in `anytale.mjs`; include it in the generation payload as `dialog` when non-empty; for single-page generation, pass `dialogPreviews[currentPageIndex]` (if set) through `onGenerate`
-- [ ] Make `handleFullPlotTest` in `anytale-form.mjs` async; refactor `bulkDialogGenerate` in `plot-section.mjs` to return a `pageIndex → dialogText` map in addition to updating `dialogPreviews` state; await `bulkDialogGenerate(queuedIndices)` before the image queue loop; pass each page's dialog text into `onGenerate`; remove the post-loop `plotBulkDialogFnRef.current?.(queuedIndices)` call
-- [ ] In `anytale-viewer.mjs`, add an absolutely-positioned `DialogOverlay` inside `ImageWrapper` anchored to the top with theme spacing; import `SpeechBubble` from `./play/speech-bubble.mjs`; render it with `item.dialog` as content when `item.dialog` is non-empty; set `pointer-events: none` so it does not block image interaction
+- [x] Add `dialog` as a string field (default `""`) to `server/resource/media-data-schema.json`
+- [x] Add an optional `dialogText` parameter to `handleGenerate` in `anytale.mjs`; include it in the generation payload as `dialog` when non-empty; for single-page generation, pass `dialogPreviews[currentPageIndex]` (if set) through `onGenerate`
+- [x] Make `handleFullPlotTest` in `anytale-form.mjs` async; refactor `bulkDialogGenerate` in `plot-section.mjs` to return a `pageIndex → dialogText` map in addition to updating `dialogPreviews` state; await `bulkDialogGenerate(queuedIndices)` before the image queue loop; pass each page's dialog text into `onGenerate`; remove the post-loop `plotBulkDialogFnRef.current?.(queuedIndices)` call
+- [x] In `anytale-viewer.mjs`, add an absolutely-positioned `DialogOverlay` inside `ImageWrapper` anchored to the top with theme spacing; import `SpeechBubble` from `./play/speech-bubble.mjs`; render it with `item.dialog` as content when `item.dialog` is non-empty; set `pointer-events: none` so it does not block image interaction
+
+#### Fixes and Changes
+- [x] In `anytale.mjs`, suppress `navigateToLastRef.current = true` in `handleGenerationComplete` when the parts-plot tab is active; read the active tab via `localStorage.getItem('anytale-active-tab')`
+- [x] In `anytale-viewer.mjs`, set `DialogOverlay` `top` to `64px` (hard-coded) instead of theme spacing to avoid overlapping the plot/page pill
 
 ### Phase 4 — Anytale-aware sort and initial load jump
 
-- [ ] Change the gallery `onLoad` handler in `anytale.mjs` to request `sort=plot`; apply the same param to the initial-load fetch effect
-- [ ] After the initial-load effect sets the sorted history, call `handleViewPageImage({ plotUid: currentPlot.uid, pageIndex: currentPageIndex })` if the plot has a UID; pass a `silent` flag (or guard inside `handleViewPageImage`) to suppress the "not found" toast for this automatic call
+- [x] Change the gallery `onLoad` handler in `anytale.mjs` to request `sort=plot`; apply the same param to the initial-load fetch effect
+- [x] After the initial-load effect sets the sorted history, call `handleViewPageImage({ plotUid: currentPlot.uid, pageIndex: currentPageIndex })` if the plot has a UID; pass a `silent` flag (or guard inside `handleViewPageImage`) to suppress the "not found" toast for this automatic call
+- [x] Review and update affected living docs: `docs/features/anytale.md`
+
+#### Fixes and Changes
+- [x] Revert gallery `queryPath` to `/media-data` (no server sort); implement `sortItemsByPlot` client-side helper in `anytale.mjs`; apply it in the initial preload `.then()` and in the gallery `onLoad` handler before calling `setHistory`; revert the initial preload server `sort` param to `ascending`
+
+### Phase 5 — Parts editor load-character / load-outfit shortcuts
+
+- [ ] Remove the "Edit Parts" button (icon `send-alt`, label "Edit Parts") from both `character-section.mjs` and `outfit-section.mjs`
+- [ ] In `anytale-form.mjs`, import `fetchCharacterList` from `./character-api.mjs`; add `characterList` state and fetch it on mount alongside `sharedOutfitList`; add `loadCharModalOpen` and `loadOutfitModalOpen` boolean states
+- [ ] Replace the single "Load" button header in the parts editor with a row containing the existing Load button plus a "Load Character" button (`icon="user"`) and a "Load Outfit" button (`icon="t-shirt"`), both `variant="small-text"` and `color="secondary"`
+- [ ] Add two `SearchSelectModal` instances to the parts editor render: one for character (title "Load Character", items from `characterList`) and one for outfit (title "Load Outfit", items from `sharedOutfitList`); on selection fetch the full record by uid and call `handleEditParts` with its `.parts` array; close the modal after selection
 - [ ] Review and update affected living docs: `docs/features/anytale.md`
 
 ## Implementation Details
@@ -163,3 +178,68 @@ if (currentPlot.uid) {
 ```
 
 Add a `silent` parameter to `handleViewPageImage` in `anytale.mjs` that suppresses the `toast.show('Page image not found', 'warning')` call when the auto-jump finds no matching item.
+
+### Parts editor load-character / load-outfit shortcuts
+
+The "Edit Parts" button (`icon="send-alt"`, `onClick=${handleEditParts}`) is removed from both `character-section.mjs` and `outfit-section.mjs`. The equivalent action is now triggered from the parts editor panel in `anytale-form.mjs`.
+
+**New state in `anytale-form.mjs`:**
+```js
+const [characterList, setCharacterList] = useState([]);
+const [loadCharModalOpen, setLoadCharModalOpen] = useState(false);
+const [loadOutfitModalOpen, setLoadOutfitModalOpen] = useState(false);
+```
+
+**Character list fetch** (alongside the existing outfit list fetch on mount):
+```js
+fetchCharacterList()
+  .then(list => { if (Array.isArray(list)) setCharacterList(list); })
+  .catch(err => console.error('[AnyTaleForm] Failed to fetch character list:', err));
+```
+
+**Parts header row** — replaces the single `Load` button header:
+```js
+<${HorizontalEdgesLayout}>
+  <${H2}>Parts</${H2}>
+  <${HorizontalLayout} gap="small">
+    <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load</${Button}>
+    <${Button} variant="small-text" color="secondary" icon="user" onClick=${() => setLoadCharModalOpen(true)}>Load Character</${Button}>
+    <${Button} variant="small-text" color="secondary" icon="t-shirt" onClick=${() => setLoadOutfitModalOpen(true)}>Load Outfit</${Button}>
+  </${HorizontalLayout}>
+</${HorizontalEdgesLayout}>
+```
+
+**Selection handlers** — fetch full record then delegate to existing `handleEditParts`:
+```js
+const handleLoadCharacterParts = useCallback(async (uid) => {
+  setLoadCharModalOpen(false);
+  try {
+    const response = await fetch(`/anytale/characters/${encodeURIComponent(uid)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const character = await response.json();
+    if (Array.isArray(character.parts) && character.parts.length > 0) {
+      handleEditParts(character.parts);
+    }
+  } catch (err) {
+    console.error('[AnyTaleForm] Failed to load character parts:', err);
+    toast.error('Failed to load character');
+  }
+}, [handleEditParts, toast]);
+
+const handleLoadOutfitParts = useCallback(async (uid) => {
+  setLoadOutfitModalOpen(false);
+  try {
+    const response = await fetch(`/anytale/outfits/${encodeURIComponent(uid)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const outfit = await response.json();
+    if (Array.isArray(outfit.parts) && outfit.parts.length > 0) {
+      handleEditParts(outfit.parts);
+    }
+  } catch (err) {
+    console.error('[AnyTaleForm] Failed to load outfit parts:', err);
+    toast.error('Failed to load outfit');
+  }
+}, [handleEditParts, toast]);
+```
+
+**Deduplication** is handled entirely by the existing `handleEditParts` logic — it updates `attributeValues` in-place for parts already in the list (matched by `config.uid`) and only appends genuinely new parts.

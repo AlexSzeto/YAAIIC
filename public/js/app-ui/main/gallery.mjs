@@ -299,6 +299,8 @@ export function Gallery({
   const { currentPageData } = pagination;
 
   const searchTimeoutRef = useRef(null);
+  // Tracks the last directly-clicked item UID — used as the anchor for shift-click range selection
+  const lastSelectedUidRef = useRef(null);
 
   // -- Data Fetching --
   const fetchGalleryData = useCallback(async () => {
@@ -353,11 +355,13 @@ export function Gallery({
   useEffect(() => {
     if (isOpen) {
       setSelectedItems([]);
+      lastSelectedUidRef.current = null;
       fetchGalleryData();
     } else {
       globalAudioPlayer.stop();
       setSearchQuery('');
       setGalleryData([]);
+      lastSelectedUidRef.current = null;
     }
   }, [isOpen, fetchGalleryData]);
 
@@ -426,9 +430,34 @@ export function Gallery({
     }
   };
 
-  const handleItemSelect = (data, isSelected) => {
+  const handleItemSelect = (data, isSelected, shiftKey = false) => {
     if (!data || !data.uid) return;
 
+    // Shift-click range selection: activates when exactly one item is already selected
+    // and a prior anchor exists in the full galleryData array.
+    if (shiftKey && lastSelectedUidRef.current) {
+      setSelectedItems(prev => {
+        if (prev.length !== 1) {
+          // Fall through to normal toggle if selection count is not exactly 1
+          lastSelectedUidRef.current = data.uid;
+          return isSelected ? (prev.includes(data.uid) ? prev : [...prev, data.uid]) : prev.filter(uid => uid !== data.uid);
+        }
+        const anchorIndex = galleryData.findIndex(i => i.uid === lastSelectedUidRef.current);
+        const targetIndex = galleryData.findIndex(i => i.uid === data.uid);
+        if (anchorIndex === -1 || targetIndex === -1) {
+          lastSelectedUidRef.current = data.uid;
+          return isSelected ? (prev.includes(data.uid) ? prev : [...prev, data.uid]) : prev.filter(uid => uid !== data.uid);
+        }
+        const lo = Math.min(anchorIndex, targetIndex);
+        const hi = Math.max(anchorIndex, targetIndex);
+        const rangeUids = galleryData.slice(lo, hi + 1).map(i => i.uid);
+        return [...new Set([...prev, ...rangeUids])];
+      });
+      return;
+    }
+
+    // Normal toggle — update anchor
+    lastSelectedUidRef.current = data.uid;
     setSelectedItems(prev => {
       if (isSelected) {
         return prev.includes(data.uid) ? prev : [...prev, data.uid];

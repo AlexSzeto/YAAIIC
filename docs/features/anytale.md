@@ -24,14 +24,14 @@ Parts Library → Character Builder → Generate Portrait / Voice
 app-ui/anytale/
   anytale.mjs                  — page root; mounts all three sections
   anytale-form.mjs             — top-level form layout (tabs/panels)
-  anytale-viewer.mjs           — left-column image viewer; shows plot name/page overlay on images with plot metadata
+  anytale-viewer.mjs           — left-column image viewer; shows plot name/page overlay and dialog speech bubble on images with plot metadata
   character-section.mjs        — character CRUD + part assignment UI; selfProfile/voiceProfile fields + AI generation buttons
   character-part-item.mjs      — single part row within character editor
   outfit-section.mjs           — outfit CRUD + part-override editor; description field + AI generation button
   part-item.mjs                — single part row in the parts library editor; "Name" (display) + "Reference Tag" (prompt token) fields
   library-part-picker.mjs      — modal to pick a part from the library
   category-input.mjs           — tag-type input for part categories
-  plot-section.mjs             — plot block list + page editor; dialog preview per page; bulk dialog on Queue Plot
+  plot-section.mjs             — plot block list + page editor; dialog preview per page; bulk dialog on Queue Plot; two-stage delete/recover for both plots and pages
   plot-page-pills.mjs          — two-section pill UI: slots (transitions + requirements) and parts (hidden toggle + requirements)
   plot-requirements-editor.mjs — plot-level entry requirements editor (slot types + auto-populated library parts; no Add Part button)
   plot-api.mjs                 — client-side API calls for plot CRUD
@@ -153,7 +153,7 @@ The pipeline runs in `anytale-form.mjs` (editor) and play mode for every generat
 
 Steps 1–4 always run against the *full* enabled parts list — `hiddenParts` only takes effect in step 5.
 
-The **Queue Plot** button applies this same requirements check before queuing each page. Pages where requirements are not met are skipped (not queued and not locked); only passing pages are locked and sent to `onGenerate`. After queuing, `bulkDialogGenerate` is invoked automatically with the list of queued page indices (see Dialog Preview below).
+The **Queue Plot** button applies this same requirements check before queuing each page. Pages where requirements are not met are skipped (not queued and not locked); only passing pages are locked and sent to `onGenerate`. Dialog for all queued pages is generated **first** (via `bulkDialogGenerate`, which returns a `pageIndex → dialogText` map), and each resulting dialog text is attached to its corresponding generation payload as the `dialog` field before images are queued.
 
 ### Dialog prompt template expansion
 
@@ -164,6 +164,30 @@ The **Queue Plot** button applies this same requirements check before queuing ea
 - If no parts match, substitutes an empty string.
 
 This applies in both the plot editor's "Preview Dialog" button and in play mode's `queuePageDialog`.
+
+### Dialog field on media records
+
+When a scene image is generated from the AnyTale editor, its dialog preview text (if any exists for that page) is stored as a `dialog` string field on the media record. This is a core schema field in `server/resource/media-data-schema.json` (default `""`). The `anytale-viewer.mjs` renders a `SpeechBubble` overlay at the top of the image (below the 64 px mark, clearing the plot/page pill) when `item.dialog` is non-empty.
+
+### Plot delete / recover flow
+
+The plot-level **Delete** button retains its confirmation dialog. After the user confirms, the plot record is immediately stored in a `recoveryPlot` memory slot and the UI blanks; the API delete fires in the background. The Delete button swaps to a **Recover** button (primary color, recycle icon) while a recovery slot is held. Clicking Recover prompts a second confirmation, then re-saves the full plot record (including its original UID) via the save endpoint and restores it into the editor. Recovery is cleared on any successful save or load; reverting does not clear it.
+
+### Page delete / recover flow
+
+The per-page **Delete Page** button no longer shows a confirmation dialog. Instead it immediately removes the page, stores it (with its original index) in a `recoveryPage` memory slot, and swaps the button to a recycle icon. Clicking the recycle icon re-inserts the page at its original index. `recoveryPage` is cleared when the current page index changes for any reason (navigation, add page, another delete) or when a plot-level revert or delete completes. Saving the plot does not clear page recovery.
+
+### Reject and Extend button gating
+
+The **Reject** and **Extend** buttons in the page editor are enabled whenever at least one media record in the viewer's history matches the current plot UID and page index — regardless of whether the page is locked. The `history` array is passed from `anytale.mjs` → `anytale-form.mjs` → `plot-section.mjs`.
+
+### Gallery behaviour
+
+- **Sort mode**: the AnyTale viewer applies a client-side `sortItemsByPlot` sort whenever items land in the viewer (on initial page load and on gallery load). Items are grouped by plot UID (oldest plot first), sorted within each group by page index ascending, and non-anytale items appended by timestamp descending. The gallery modal itself is unaffected and continues to display items in its default server order.
+- **Initial load jump**: on mount the viewer auto-navigates to the image matching the current plot UID + active page index; if not found it falls back to the last item silently.
+- **Gallery load jump**: loading items from the gallery modal also jumps to the current plot page image rather than the last item.
+- **Shift-click range selection**: in the gallery modal, holding Shift while clicking an item selects the entire range between the last directly-clicked item and the shift-clicked item (works across gallery pages using the full data array). Activates only when exactly one item is already selected.
+- **Auto-navigate suppression**: generating a new image while on the Parts & Plot tab does not auto-jump the viewer to the new image; the viewer stays on its current item so the user can track the current plot page.
 
 Example: `"You're wearing a {{outer upper body}}"` → `"You're wearing a Shirt and Jacket"` (if the enabled parts with type `outer upper body` have display names "Shirt" and "Jacket").
 

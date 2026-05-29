@@ -25,7 +25,7 @@ import { sanitizeMediaEntry, loadWorkflowConfig } from './sanitizer.mjs';
  * @param {string} [options.query]       - Free-text search across name, description, prompt, and timestamp.
  * @param {string[]} [options.tags]      - Every tag must match (AND logic).
  * @param {string} [options.folder]      - Folder UID (empty string = Unsorted). Falls back to current folder if undefined.
- * @param {string} [options.sort]        - 'ascending' or 'descending' (default).
+ * @param {string} [options.sort]        - 'ascending', 'descending' (default), or 'plot' (group by plot UID then page).
  * @param {number} [options.limit]       - Max entries to return (default 10).
  * @returns {Object[]} Filtered, sorted, and limited slice of media data.
  */
@@ -79,11 +79,34 @@ export function searchMedia({ query = '', tags = [], folder, sort = 'descending'
   });
 
   // --- Sort ---
-  filtered.sort((a, b) => {
-    const dateA = new Date(a.timestamp || 0);
-    const dateB = new Date(b.timestamp || 0);
-    return sort === 'ascending' ? dateA - dateB : dateB - dateA;
-  });
+  if (sort === 'plot') {
+    // Group items that belong to a plot by plot.uid, order groups by the earliest (smallest)
+    // numeric plot UID, sort within each group by page index, then append non-anytale items
+    // sorted by timestamp descending.
+    const withPlot = filtered.filter(i => i.plot?.uid);
+    const withoutPlot = filtered.filter(i => !i.plot?.uid);
+
+    const groups = new Map();
+    for (const item of withPlot) {
+      const uid = item.plot.uid;
+      if (!groups.has(uid)) groups.set(uid, []);
+      groups.get(uid).push(item);
+    }
+    for (const group of groups.values()) {
+      group.sort((a, b) => (a.plot.page ?? 0) - (b.plot.page ?? 0));
+    }
+    const sortedGroups = [...groups.entries()].sort((a, b) => Number(a[0]) - Number(b[0]));
+
+    withoutPlot.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+    filtered = [...sortedGroups.flatMap(([, g]) => g), ...withoutPlot];
+  } else {
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.timestamp || 0);
+      const dateB = new Date(b.timestamp || 0);
+      return sort === 'ascending' ? dateA - dateB : dateB - dateA;
+    });
+  }
 
   return filtered.slice(0, limit);
 }

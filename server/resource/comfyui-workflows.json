@@ -6266,6 +6266,87 @@
         }
       ],
       "hidden": true
+    },
+    {
+      "uid": "a43e9e0e-a2fd-4c91-a758-d72e673a50d6",
+      "name": "AnyTale: Image (Illustrious V15 Turbo)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "Unnamed",
+          "to": "name",
+          "condition": {
+            "and": [
+              {
+                "where": {
+                  "data": "name"
+                },
+                "equals": {
+                  "value": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "illustrious-v15-turbo-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "18",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "17",
+            "inputs",
+            "path"
+          ]
+        }
+      ],
+      "hidden": true
     }
   ],
   "version": 1

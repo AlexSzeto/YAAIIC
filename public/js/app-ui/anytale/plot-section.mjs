@@ -81,7 +81,7 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onBulkDialogReady]         – Called with (fn) when bulkDialogGenerate is ready; null on unmount
  * @param {Array}    [props.libraryParts=[]]           – Up-to-date library parts from the parent; used to build slot type options
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, libraryParts = [], history = [] }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, onCurrentDialogReady, libraryParts = [], history = [] }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -518,9 +518,11 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     || !(dialogPreview.name?.trim() && dialogPreview.profile?.trim());
 
   // ── Bulk dialog generation (triggered by Queue Plot) ─────────────────────
+  // Returns a pageIndex → dialogText map so callers can attach dialog to each generation payload.
   const bulkDialogGenerate = useCallback(async (queuedPageIndices) => {
-    if (!dialogConfig || !dialogPreview) return;
-    if (isPreviewingDialog) return;
+    const results = {};
+    if (!dialogConfig || !dialogPreview) return results;
+    if (isPreviewingDialog) return results;
     const queuedSet = new Set(queuedPageIndices);
     // Clear all existing dialog previews before regenerating
     setDialogPreviews({});
@@ -548,6 +550,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         }));
         history.push({ role: 'user', content: expandedPrompt });
         history.push({ role: 'assistant', content: result });
+        results[i] = result;
         setDialogPreviews(prev => ({ ...prev, [i]: result }));
       }
     } catch (err) {
@@ -555,12 +558,20 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     } finally {
       setIsPreviewingDialog(false);
     }
+    return results;
   }, [dialogConfig, dialogPreview, isPreviewingDialog, plot.pages, enabledParts, toast]);
 
   useEffect(() => {
     if (onBulkDialogReady) onBulkDialogReady(bulkDialogGenerate);
     return () => { if (onBulkDialogReady) onBulkDialogReady(null); };
   }, [bulkDialogGenerate, onBulkDialogReady]);
+
+  // Expose a getter so the parent can read the dialog preview for any page index
+  const getCurrentDialogPreview = useCallback((pageIndex) => dialogPreviews[pageIndex] || '', [dialogPreviews]);
+  useEffect(() => {
+    if (onCurrentDialogReady) onCurrentDialogReady(getCurrentDialogPreview);
+    return () => { if (onCurrentDialogReady) onCurrentDialogReady(null); };
+  }, [getCurrentDialogPreview, onCurrentDialogReady]);
 
   // ── Smart button state ────────────────────────────────────────────────────
   const isInLibrary = Boolean(plot.uid) && plotList.some(p => p.uid === plot.uid);

@@ -136,9 +136,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const plotImportFnRef = useRef(null);
   const plotPageTagsFnRef = useRef(null);
   const plotBulkDialogFnRef = useRef(null);
+  const plotCurrentDialogFnRef = useRef(null);
   const handlePlotImportReady = useCallback((fn) => { plotImportFnRef.current = fn; }, []);
   const handlePlotPageTagsReady = useCallback((fn) => { plotPageTagsFnRef.current = fn; }, []);
   const handlePlotBulkDialogReady = useCallback((fn) => { plotBulkDialogFnRef.current = fn; }, []);
+  const handlePlotCurrentDialogReady = useCallback((fn) => { plotCurrentDialogFnRef.current = fn; }, []);
 
   // ── Config for import routing ────────────────────────────────────────────
   const [recommendedCharacterPartTypes, setRecommendedCharacterPartTypes] = useState([]);
@@ -424,10 +426,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       ? { uid: currentPlot.uid, name: currentPlot.name, page: activePlotPage }
       : null;
 
-    onGenerate(prompt, currentPlot.name || '', partsData, plotData);
+    const dialogText = plotCurrentDialogFnRef.current?.(activePlotPage) || '';
+    onGenerate(prompt, currentPlot.name || '', partsData, plotData, dialogText);
   }, [parts, livePlot, onGenerate, activePlotPage, computeSlotVisibility]);
 
-  const handleFullPlotTest = useCallback(() => {
+  const handleFullPlotTest = useCallback(async () => {
     const currentPlot = loadPlot();
     const plotPageCount = currentPlot.pages.length;
     if (plotPageCount === 0) return;
@@ -458,19 +461,22 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
 
     const queuedIndices = [];
     for (let i = 0; i < plotPageCount; i++) {
-      if (!pageWillQueue[i]) continue; // skip pages whose requirements aren't met
+      if (!pageWillQueue[i]) continue;
       queuedIndices.push(i);
+    }
+
+    // Generate all dialog first so each image payload can carry its dialog text
+    const dialogMap = await (plotBulkDialogFnRef.current?.(queuedIndices) ?? Promise.resolve({}));
+
+    for (const i of queuedIndices) {
       const activePage = currentPlot.pages[i];
       const slotVisibility = computeSlotVisibility(enabledPartsWithCoverage, currentPlot.pages, i);
       const prompt = assemblePrompt(parts, activePage, slotVisibility);
       const plotData = (currentPlot.uid || currentPlot.name)
         ? { uid: currentPlot.uid, name: currentPlot.name, page: i }
         : null;
-      onGenerate(prompt, currentPlot.name || '', partsData, plotData);
+      onGenerate(prompt, currentPlot.name || '', partsData, plotData, dialogMap[i] || '');
     }
-
-    // Trigger bulk dialog regeneration for queued pages
-    plotBulkDialogFnRef.current?.(queuedIndices);
   }, [parts, livePlot, onGenerate, computeSlotVisibility]);
 
   // Generate from Character & Outfits tab.
@@ -985,6 +991,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             onImportHandlerReady=${handlePlotImportReady}
             onPageTagsUpdateReady=${handlePlotPageTagsReady}
             onBulkDialogReady=${handlePlotBulkDialogReady}
+            onCurrentDialogReady=${handlePlotCurrentDialogReady}
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
             onReject=${onReject}

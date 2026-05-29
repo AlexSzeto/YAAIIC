@@ -235,7 +235,7 @@ export class GalleryPreview extends Component {
     const { item, onSelect, isSelected, onImageClick } = this.props;
 
     if (onSelect) {
-      onSelect(item, !isSelected);
+      onSelect(item, !isSelected, e.shiftKey);
     } else if (onImageClick) {
       onImageClick(item);
     }
