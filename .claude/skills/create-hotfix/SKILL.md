@@ -15,7 +15,11 @@ Open with a single prompt that sets urgency expectations:
 
 Then wait. Do **not** ask any clarifying questions yet. The user may send multiple messages before saying "that is all". Accumulate all of their input as the working brief.
 
-Once the user says "that is all" (case-insensitive, anywhere in their final message), immediately proceed to Phase 2.
+After the user's **first message** (if it does not already contain "that is all"), acknowledge receipt and remind them:
+
+> Got it — keep going. When you have described everything, end your message with **"that is all"**.
+
+Continue accumulating input until the user says "that is all" (case-insensitive, anywhere in their message), then immediately proceed to Phase 2.
 
 ## Phase 2 — Codebase Investigation
 
