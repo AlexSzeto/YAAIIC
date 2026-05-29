@@ -32,7 +32,8 @@ import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { generateDialog } from '../anytale-play/play-dialog.mjs';
-import { filterDialogText } from '../anytale-play/play-utils.mjs';
+import { filterDialogText, findAllMatchingSfx } from '../anytale-play/play-utils.mjs';
+import { SfxMatchPill } from './sfx-match-pill.mjs';
 
 // ============================================================================
 // Styled Components
@@ -60,6 +61,14 @@ const NavRow = styled('div')`
   flex-wrap: wrap;
 `;
 NavRow.className = 'plot-nav-row';
+
+const SfxPillRow = styled('div')`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${() => currentTheme.value.spacing.small.gap};
+  align-items: center;
+`;
+SfxPillRow.className = 'sfx-pill-row';
 
 // ============================================================================
 // Component
@@ -109,6 +118,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [dialogPreview, setDialogPreview] = useState(null);
   const [dialogPreviews, setDialogPreviews] = useState({});
   const [isPreviewingDialog, setIsPreviewingDialog] = useState(false);
+  const [sfxList, setSfxList] = useState([]);
 
   // Clamp activePage to valid range
   const pageCount = plot.pages.length;
@@ -152,6 +162,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         if (data.dialogPreview) setDialogPreview(data.dialogPreview);
       })
       .catch(err => console.error('[PlotSection] Failed to fetch anytale config:', err));
+  }, []);
+
+  // ── Load SFX library for match indicator ──────────────────────────────────
+  useEffect(() => {
+    fetch('/anytale/sfx')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then(data => { if (Array.isArray(data)) setSfxList(data); })
+      .catch(err => console.error('[PlotSection] Failed to fetch SFX list:', err));
   }, []);
 
   // ── Persist on every change ───────────────────────────────────────────────
@@ -387,6 +405,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       .map(p => p.section?.trim())
       .filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
   }, [plotList]);
+
+  // ── SFX matches for current page ─────────────────────────────────────────
+  const sfxMatches = useMemo(
+    () => findAllMatchingSfx(currentPage.tags, sfxList),
+    [currentPage.tags, sfxList]
+  );
 
   // ── Pre-page slot statuses (before current page's actions) ────────────────
   const enabledParts = useMemo(() => parts.filter(p => p.data?.enabled !== false), [parts]);
@@ -690,6 +714,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
             </${Panel}>
             ` : null}
+        </${VerticalLayout}>
+
+        <!-- SFX match indicator -->
+        <${VerticalLayout} gap="small">
+          <${Label}>SFX Played</${Label}>
+          <${SfxPillRow}>
+            ${sfxMatches.map(({ sfx, matchingTag }, i) => html`
+              <${SfxMatchPill}
+                key=${sfx.uid}
+                sfx=${sfx}
+                matchingTag=${matchingTag}
+                primary=${i === 0}
+              />
+            `)}
+          </${SfxPillRow}>
         </${VerticalLayout}>
 
         <!-- Page Tags -->

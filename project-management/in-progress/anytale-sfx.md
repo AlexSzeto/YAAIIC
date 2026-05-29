@@ -51,16 +51,16 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 
 ### Phase 3 — SFX match indicator in the plot editor
 
-- [ ] Add `findAllMatchingSfx(pageTagsString, sfxList)` to `play-utils.mjs`:
+- [x] Add `findAllMatchingSfx(pageTagsString, sfxList)` to `play-utils.mjs`:
   - Split `pageTagsString` by comma, trim, lowercase each token; iterate tokens in order.
   - For each token, collect **all** SFX whose `tags` array contains an exact case-insensitive match, paired with that token as the `matchingTag`.
   - Return an array of `{ sfx, matchingTag }` in page-tag order (deduped by SFX uid so the same SFX only appears once, at its earliest matching token). `findMatchingSfx` remains unchanged and delegates to this as `findAllMatchingSfx(...)[0]?.sfx ?? null`.
-- [ ] Create `public/js/app-ui/anytale/sfx-match-pill.mjs` — a small display-only component `SfxMatchPill({ sfx, matchingTag, primary = false })`:
+- [x] Create `public/js/app-ui/anytale/sfx-match-pill.mjs` — a small display-only component `SfxMatchPill({ sfx, matchingTag, primary = false })`:
   - Styled as a compact pill (`border-radius: 9999px`, `font-size: small`, `padding: 2px 10px`), matching the shape of existing pills in `plot-page-pills.mjs`.
   - `primary = true`: filled with `theme.colors.primary.background`.
   - `primary = false`: transparent background, `border: ${theme.border.width} solid ${theme.colors.border}` (outline variant).
   - Label text: `"[sfx.name]: [matchingTag]"`.
-- [ ] In `plot-section.mjs`:
+- [x] In `plot-section.mjs`:
   - Fetch `/anytale/sfx` in a `useEffect` on mount (same pattern as the existing `/anytale/config` fetch); store result in `sfxList` state.
   - `useMemo` over `currentPage.tags` and `sfxList` to produce `sfxMatches` — the result of `findAllMatchingSfx(currentPage.tags, sfxList)`.
   - Insert the SFX indicator block into the render between the dialog-preview `Label` and the Page Tags `TagInput`:
@@ -85,7 +85,18 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
   - SFX toggle: on disable — `globalAudioPlayer.stop(1)`; mark all `'generating'` SFX statuses as `'skipped'`. On enable — re-queue SFX for any visible pages whose status is `'skipped'` (same logic as the mute-toggle voice resumption).
 - [ ] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()` (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
 
-### Phase 5 — Docs
+### Phase 5 — SFX prompt enhancement
+
+- [ ] Add two state variables to `SfxCard`: `enhance` (boolean, default `false`) and `prevPrompt` (string|null, default `null`).
+- [ ] Below the prompt `SfxPromptTextarea`, render an `EnhanceRow` (horizontal flex, `HorizontalEdgesLayout` pattern):
+  - **Left**: `Checkbox` with label `"Enhance"` bound to `enhance` state.
+  - **Right**: `"Revert Prompt"` button — `variant="small-text" color="secondary" icon="undo"` — disabled when `prevPrompt` is `null`.
+- [ ] In `handleGeneratePreview`, when `enhance` is `true`, include `enhancePrompt: true` in the `apiGenerateSfxPreview` request body (update the helper to accept and forward an options object). The existing `apiGenerateSfxPreview` sends a JSON body to `POST /anytale/sfx/:uid/generate-preview` — add `enhancePrompt` to that body.
+- [ ] In the `queueSSEManager` `onComplete` handler in `SfxCard`: if `data.result.summary` is a non-empty string, store the current `prompt` in `prevPrompt` and replace `prompt` with `data.result.summary` (the enhanced prompt returned by the workflow).
+- [ ] Wire the Revert Prompt button: on click, set `prompt` to `prevPrompt` and clear `prevPrompt` to `null`.
+- [ ] Update `POST /anytale/sfx/:uid/generate-preview` route to forward `enhancePrompt` from the request body into `requestData` (same pattern as other boolean workflow flags).
+
+### Phase 6 — Docs
 
 - [ ] Update `docs/features/anytale.md`:
   - Add `SfxRecord` shape to Key Data Shapes
@@ -94,6 +105,44 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
   - Add `sfx-match-pill.mjs` and SFX section expansion to the Component Map
   - Document the SFX matching algorithm and the `sfxOn` pref
 - [ ] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`, `.claude/rules/client.md`
+
+## Implementation Details (Phase 5)
+
+### Enhance row layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│ ☑ Enhance                        [↩ Revert Prompt]  │
+└─────────────────────────────────────────────────────┘
+```
+
+Use `HorizontalEdgesLayout` (already imported) with `align-items: center`.
+
+### prevPrompt lifecycle
+
+| Event | prevPrompt | prompt |
+|---|---|---|
+| Generate preview with Enhance ON | set to current `prompt` | unchanged until SSE completes |
+| SSE complete with non-empty `summary` | unchanged | replaced with `summary` |
+| Revert Prompt clicked | cleared to `null` | restored from `prevPrompt` |
+| Generate preview with Enhance ON (again) | overwritten with current `prompt` | unchanged until SSE completes |
+| Generate preview with Enhance OFF | unchanged | unchanged |
+
+### Request body for generate-preview with enhance
+
+```js
+{ clientId: getClientId(), enhancePrompt: true }
+```
+
+### Server-side forwarding
+
+In `POST /anytale/sfx/:uid/generate-preview`, add to `requestData`:
+
+```js
+if (req.body.enhancePrompt) requestData.enhancePrompt = true;
+```
+
+`enhancePrompt` then flows into `generationData` automatically (via `{ ...requestData }`). The workflow reads it as an input node flag. The workflow is expected to write the enhanced prompt into `generationData.summary` before completion.
 
 ## Implementation Details
 

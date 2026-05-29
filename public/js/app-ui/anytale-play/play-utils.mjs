@@ -232,6 +232,47 @@ export function buildEnabledPartsForPage(session, outfitParts, partsMap, slotSta
 }
 
 /**
+ * Find all SFX records that match any tag in the given page tags string.
+ *
+ * Iterates page tags in order (left to right). For each tag, finds the first
+ * SFX record (by array order) whose tags contain an exact case-insensitive
+ * match. Each SFX uid is collected at most once — at the position of its
+ * earliest matching page tag.
+ *
+ * @param {string} pageTagsString - Comma-separated prompt tags from a plot page
+ * @param {Array<{ uid: string, name: string, tags: string[] }>} sfxList
+ * @returns {Array<{ sfx: object, matchingTag: string }>}
+ */
+export function findAllMatchingSfx(pageTagsString, sfxList) {
+  const tokens = (pageTagsString || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const seen = new Set();
+  const results = [];
+  for (const token of tokens) {
+    for (const sfx of sfxList) {
+      if (seen.has(sfx.uid)) continue;
+      if ((sfx.tags || []).some(tag => tag.trim().toLowerCase() === token)) {
+        seen.add(sfx.uid);
+        results.push({ sfx, matchingTag: token });
+        break; // one SFX per token pass; move to next token
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Return the first SFX record that matches any tag in the page tags string,
+ * or null if none match.
+ *
+ * @param {string} pageTagsString
+ * @param {Array<{ uid: string, tags: string[] }>} sfxList
+ * @returns {object|null}
+ */
+export function findMatchingSfx(pageTagsString, sfxList) {
+  return findAllMatchingSfx(pageTagsString, sfxList)[0]?.sfx ?? null;
+}
+
+/**
  * Filter raw LLM dialog output before display and history storage.
  *
  * Step 0 — Instruction-block removal:
