@@ -702,7 +702,7 @@ export function WorkflowEditor() {
         <${HorizontalLayout} gap="small">
           <${Button}
             variant="medium-icon-text"
-            icon="arrow-out-up-right-square"
+            icon="arrow-out-up-square-half"
             color="secondary"
             onClick=${() => fileInputRef.current?.click()}
           >

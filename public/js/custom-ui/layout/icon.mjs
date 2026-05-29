@@ -40,7 +40,7 @@ const ICON_MAP = {
   'copy': 'content_copy',
   'save': 'save',
   'download': 'download',
-  'upload': 'upload',
+  'arrow-out-up-square-half': 'upload',
   'refresh': 'refresh',
   'sync': 'sync',
   'circle': 'circle',

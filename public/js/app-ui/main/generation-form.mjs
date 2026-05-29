@@ -227,7 +227,7 @@ export function GenerationForm({
 
         <${Button}
           variant="primary"
-          icon="upload"
+          icon="arrow-out-up-square-half"
           tooltip="Upload Media"
           onClick=${onUploadClick || (() => document.getElementById('upload-file-input')?.click())}
         >

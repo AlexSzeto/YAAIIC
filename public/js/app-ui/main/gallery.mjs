@@ -683,7 +683,7 @@ export function Gallery({
                 variant="medium-icon-text"
                 color="secondary"
                 onClick=${handleLoadClick}
-                icon="show"
+                icon="eye"
               >
                 View
               </${Button}>
