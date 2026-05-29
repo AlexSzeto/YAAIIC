@@ -109,6 +109,41 @@ const Footer = styled('div')`
 `;
 Footer.className = 'footer';
 
+const DragGhost = styled('div')`
+  position: fixed;
+  pointer-events: none;
+  z-index: 10000;
+  left: ${props => props.x}px;
+  top: ${props => props.y}px;
+  width: ${props => props.width}px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  min-height: 44px;
+  border: ${props => `${props.theme.border.width} ${props.theme.border.style} ${props.theme.colors.border.secondary}`};
+  border-radius: ${props => props.theme.spacing.small.borderRadius};
+  background-color: ${props => props.theme.colors.background.secondary};
+  box-shadow: ${props => props.theme.shadow.elevated};
+  opacity: 0.92;
+  font-family: ${props => props.theme.typography.fontFamily};
+  font-size: ${props => props.theme.typography.fontSize.medium};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.text.primary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+DragGhost.className = 'list-select-drag-ghost';
+
+const DragPlaceholder = styled('div')`
+  border: 2px dashed ${props => props.theme.colors.border.secondary};
+  border-radius: ${props => props.theme.spacing.small.borderRadius};
+  min-height: 44px;
+  background: transparent;
+`;
+DragPlaceholder.className = 'list-select-drag-placeholder';
+
 // ============================================================================
 // ListItem Component
 // ============================================================================
@@ -127,16 +162,12 @@ Footer.className = 'footer';
  * @param {Function} props.onSelect - Callback when item is selected
  * @param {Array} [props.itemActions] - Array of { icon, color?, title?, onClick, closeAfter? }
  * @param {Function} props.onClose - Modal close callback (used when closeAfter: true)
- * @param {Function} [props.onDragStart] - When provided, item becomes draggable: (item) => void
- * @param {Function} [props.onDragOver] - (item) => void
- * @param {Function} [props.onDrop] - (item) => void
- * @param {boolean}  [props.isDragging] - Dim this item while it is being dragged
+ * @param {Function} [props.onDragMouseDown] - When provided, renders a drag handle: (e) => void
  * @param {Object} props.theme - Current theme object
  * @returns {preact.VNode}
  */
-function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, onDragStart, onDragOver, onDrop, isDragging, theme }) {
+function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, onDragMouseDown, theme }) {
   const icon = item.icon || itemIcon || 'list-ul';
-  const draggable = !!onDragStart;
 
   const handleActionClick = (e, action) => {
     e.stopPropagation();
@@ -150,23 +181,10 @@ function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, 
     <${ItemContainer}
       isSelected=${isSelected}
       unselectable=${item.unselectable}
-      draggable=${draggable}
       theme=${theme}
-      style=${isDragging ? { opacity: 0.4 } : {}}
       onClick=${() => !item.unselectable && onSelect(item)}
-      onDragStart=${draggable ? (e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(item); } : null}
-      onDragOver=${draggable ? (e) => { e.preventDefault(); onDragOver(item); } : null}
-      onDrop=${draggable ? (e) => { e.preventDefault(); onDrop(item); } : null}
     >
       <${ItemLabel} theme=${theme}>
-        ${draggable && html`
-          <${Icon}
-            name="swap-vertical"
-            size="16px"
-            color=${theme.colors.text.muted}
-            style=${{ cursor: 'grab', flexShrink: 0 }}
-          />
-        `}
         <${Icon}
           name=${icon}
           type='solid'
@@ -175,26 +193,49 @@ function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, 
         />
         <${ItemName} theme=${theme}>${item.label}</${ItemName}>
       </${ItemLabel}>
-      ${itemActions && itemActions.length > 0 ? html`
-        <${ItemActions} theme=${theme}>
-          ${itemActions.map(action => {
-            const isDisabled = typeof action.disabled === 'function'
-              ? action.disabled(item)
-              : !!action.disabled;
-            return html`
-              <${Button}
-                key=${action.icon}
-                variant="small-icon"
-                icon=${action.icon}
-                color=${action.color || 'secondary'}
-                title=${action.title || ''}
-                disabled=${isDisabled}
-                onClick=${(e) => handleActionClick(e, action)}
-              />
-            `;
-          })}
-        </${ItemActions}>
-      ` : null}
+      <${ItemActions} theme=${theme}>
+        ${(itemActions || []).filter(a => a.color !== 'danger').map(action => {
+          const isDisabled = typeof action.disabled === 'function'
+            ? action.disabled(item)
+            : !!action.disabled;
+          return html`
+            <${Button}
+              key=${action.icon}
+              variant="small-icon"
+              icon=${action.icon}
+              color=${action.color || 'secondary'}
+              title=${action.title || ''}
+              disabled=${isDisabled}
+              onClick=${(e) => handleActionClick(e, action)}
+            />
+          `;
+        })}
+        ${onDragMouseDown && html`
+          <${Button}
+            variant="small-icon"
+            icon="swap-vertical"
+            onMouseDown=${onDragMouseDown}
+            tooltip="Reorder"
+            style=${{ cursor: 'grab' }}
+          />
+        `}
+        ${(itemActions || []).filter(a => a.color === 'danger').map(action => {
+          const isDisabled = typeof action.disabled === 'function'
+            ? action.disabled(item)
+            : !!action.disabled;
+          return html`
+            <${Button}
+              key=${action.icon}
+              variant="small-icon"
+              icon=${action.icon}
+              color="danger"
+              title=${action.title || ''}
+              disabled=${isDisabled}
+              onClick=${(e) => handleActionClick(e, action)}
+            />
+          `;
+        })}
+      </${ItemActions}>
     </${ItemContainer}>
   `;
 }
@@ -244,8 +285,10 @@ class ListSelectModal extends Component {
     this.state = {
       selectedId: props.selectedId ?? null,
       theme: currentTheme.value,
-      dragFromId: null,
+      dragState: null, // { fromIndex, toIndex, ghostX, ghostY, width, label }
     };
+    this.dragRef = { active: false, fromIndex: -1, toIndex: -1, offsetX: 0, offsetY: 0 };
+    this.listId = 'list-select-' + Math.random().toString(36).slice(2);
   }
 
   componentDidMount() {
@@ -289,33 +332,85 @@ class ListSelectModal extends Component {
     }
   }
 
-  handleDragStart = (item) => {
-    this.setState({ dragFromId: item.id });
+  computeDropIndex(clientY) {
+    const root = document.getElementById(this.listId);
+    if (!root) return 0;
+    const children = Array.from(root.querySelectorAll(':scope > [data-lsi]'));
+    for (let i = 0; i < children.length; i++) {
+      const rect = children[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return children.length;
   }
 
-  handleDragOver = (_item) => {
-    // preventDefault is handled in ListItem; no state update needed here
-  }
+  handleDragMouseDown = (e, index, label) => {
+    e.stopPropagation();
+    e.preventDefault();
 
-  handleDrop = (item) => {
-    const { dragFromId } = this.state;
-    const { items, onReorder } = this.props;
-    this.setState({ dragFromId: null });
+    const root = document.getElementById(this.listId);
+    if (!root) return;
 
-    if (!dragFromId || !onReorder || dragFromId === item.id) return;
+    const items = Array.from(root.querySelectorAll(':scope > [data-lsi]'));
+    const itemEl = items[index];
+    if (!itemEl) return;
 
-    const fromIdx = items.findIndex(i => i.id === dragFromId);
-    const toIdx   = items.findIndex(i => i.id === item.id);
-    if (fromIdx === -1 || toIdx === -1) return;
+    const itemRect = itemEl.getBoundingClientRect();
+    const listRect = root.getBoundingClientRect();
+    const offsetX  = e.clientX - itemRect.left;
+    const offsetY  = e.clientY - itemRect.top;
 
-    const next = [...items];
-    const [moved] = next.splice(fromIdx, 1);
-    next.splice(toIdx, 0, moved);
-    onReorder(next);
+    this.dragRef = { active: true, fromIndex: index, toIndex: index, offsetX, offsetY };
+
+    this.setState({
+      dragState: {
+        fromIndex: index,
+        toIndex:   index,
+        ghostX:    itemRect.left,
+        ghostY:    itemRect.top,
+        width:     listRect.width,
+        label,
+      },
+    });
+
+    const onMouseMove = (ev) => {
+      const dr = this.dragRef;
+      if (!dr.active) return;
+      const gx   = ev.clientX - dr.offsetX;
+      const gy   = ev.clientY - dr.offsetY;
+      const newTo = this.computeDropIndex(ev.clientY);
+      dr.toIndex  = newTo;
+      this.setState(prev => prev.dragState
+        ? { dragState: { ...prev.dragState, toIndex: newTo, ghostX: gx, ghostY: gy } }
+        : null
+      );
+    };
+
+    const onMouseUp = () => {
+      const dr = this.dragRef;
+      if (!dr.active) return;
+      dr.active = false;
+
+      const from = dr.fromIndex;
+      const to   = dr.toIndex;
+      this.setState({ dragState: null });
+
+      if (from !== to && this.props.onReorder) {
+        const next = [...this.props.items];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        this.props.onReorder(next);
+      }
+
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup',   onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   onMouseUp);
   }
 
   render() {
-    const { isLoading, selectedId, dragFromId, theme } = this.state;
+    const { isLoading, selectedId, dragState, theme } = this.state;
     const {
       isOpen,
       title = 'Select Item',
@@ -366,24 +461,72 @@ class ListSelectModal extends Component {
               ` : items.length === 0 ? html`
                 <${LoadingMessage} theme=${theme}>${emptyMessage}</${LoadingMessage}>
               ` : html`
-                <${List} theme=${theme}>
-                  ${items.map(item => html`
-                    <${ListItem}
-                      key=${item.id}
-                      item=${item}
-                      itemIcon=${itemIcon}
-                      isSelected=${item.id === selectedId}
-                      onSelect=${this.handleItemSelect}
-                      itemActions=${itemActions}
-                      onClose=${this.handleClose}
-                      onDragStart=${onReorder ? this.handleDragStart : null}
-                      onDragOver=${onReorder ? this.handleDragOver : null}
-                      onDrop=${onReorder ? this.handleDrop : null}
-                      isDragging=${onReorder ? item.id === dragFromId : false}
-                      theme=${theme}
-                    />
-                  `)}
+                <${List} theme=${theme} id=${this.listId}>
+                  ${(() => {
+                    if (!dragState) {
+                      return items.map((item, index) => html`
+                        <div key=${item.id} data-lsi>
+                          <${ListItem}
+                            item=${item}
+                            itemIcon=${itemIcon}
+                            isSelected=${item.id === selectedId}
+                            onSelect=${this.handleItemSelect}
+                            itemActions=${itemActions}
+                            onClose=${this.handleClose}
+                            onDragMouseDown=${onReorder
+                              ? (e) => this.handleDragMouseDown(e, index, item.label)
+                              : null}
+                            theme=${theme}
+                          />
+                        </div>
+                      `);
+                    }
+
+                    // During drag: omit source, insert placeholder at drop slot
+                    const { fromIndex, toIndex } = dragState;
+                    const physicalSlot = toIndex < fromIndex ? toIndex : toIndex + 1;
+                    const result = [];
+
+                    items.forEach((item, index) => {
+                      if (index === fromIndex) return;
+                      if (index === physicalSlot) {
+                        result.push(html`<${DragPlaceholder} key="placeholder" theme=${theme} />`);
+                      }
+                      result.push(html`
+                        <div key=${item.id} data-lsi>
+                          <${ListItem}
+                            item=${item}
+                            itemIcon=${itemIcon}
+                            isSelected=${item.id === selectedId}
+                            onSelect=${this.handleItemSelect}
+                            itemActions=${itemActions}
+                            onClose=${this.handleClose}
+                            onDragMouseDown=${onReorder
+                              ? (e) => this.handleDragMouseDown(e, index, item.label)
+                              : null}
+                            theme=${theme}
+                          />
+                        </div>
+                      `);
+                    });
+
+                    if (physicalSlot >= items.length) {
+                      result.push(html`<${DragPlaceholder} key="placeholder" theme=${theme} />`);
+                    }
+                    return result;
+                  })()}
                 </${List}>
+                ${dragState && html`
+                  <${DragGhost}
+                    theme=${theme}
+                    x=${dragState.ghostX}
+                    y=${dragState.ghostY}
+                    width=${dragState.width}
+                  >
+                    <${Icon} name="swap-vertical" size="16px" color=${theme.colors.text.secondary} />
+                    ${dragState.label}
+                  </${DragGhost}>
+                `}
               `}
             </${Content}>
 
