@@ -702,6 +702,14 @@ export function WorkflowEditor() {
         <${HorizontalLayout} gap="small">
           <${Button}
             variant="medium-icon-text"
+            icon="arrow-out-up-right-square"
+            color="secondary"
+            onClick=${() => fileInputRef.current?.click()}
+          >
+            Upload
+          </${Button}>
+          <${Button}
+            variant="medium-icon-text"
             icon="save"
             color="secondary"
             onClick=${() => setIsModalOpen(true)}
@@ -963,8 +971,6 @@ export function WorkflowEditor() {
             closeAfter: false,
           },
         ]}
-        actionLabel="Upload"
-        onAction=${() => fileInputRef.current?.click()}
         emptyMessage=${listLoading ? 'Loading…' : 'No workflows yet. Click Upload to get started.'}
       />
 

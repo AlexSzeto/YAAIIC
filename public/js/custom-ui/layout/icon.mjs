@@ -172,7 +172,6 @@ const ICON_MAP = {
   'broken-arrow-up': 'arrow_warm_up',
   'up-arrow': 'arrow_upward',
   'down-arrow': 'arrow_downward',
-  'upload': 'upload',
   'arrow-right-stroke': 'arrow_right_alt',
   'arrow-left-stroke': 'arrow_left_alt',
   'cut': 'content_cut',
