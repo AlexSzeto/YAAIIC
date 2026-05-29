@@ -393,6 +393,7 @@ export function AnyTalePage() {
             currentItem=${nav.currentItem}
             onReject=${handleReject}
             onViewPageImage=${handleViewPageImage}
+            history=${history}
           />
         </${RightColumn}>
       </${TwoColumn}>

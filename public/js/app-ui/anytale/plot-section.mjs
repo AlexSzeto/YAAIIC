@@ -81,12 +81,14 @@ NavRow.className = 'plot-nav-row';
  * @param {Function} [props.onBulkDialogReady]         – Called with (fn) when bulkDialogGenerate is ready; null on unmount
  * @param {Array}    [props.libraryParts=[]]           – Up-to-date library parts from the parent; used to build slot type options
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, libraryParts = [] }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, libraryParts = [], history = [] }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
   // Tracks the last version saved to / loaded from the server for change detection.
   const [savedPlot, setSavedPlot] = useState(null);
+  const [recoveryPlot, setRecoveryPlot] = useState(null);
+  const [recoveryPage, setRecoveryPage] = useState(null); // { page, index }
 
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -113,6 +115,9 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const currentPageIndex = Math.min(Math.max(activePage, 0), pageCount - 1);
   const currentPage = plot.pages[currentPageIndex] || { tags: '', actions: [] };
   const isCurrentPageLocked = pageLocked[currentPageIndex] === true;
+  const hasMediaForCurrentPage = history.some(
+    item => item.plot?.uid === plot.uid && item.plot?.page === currentPageIndex
+  );
 
   // ── Load plot list; also sync savedPlot for the active uid on mount ─────
   useEffect(() => {
@@ -181,6 +186,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
 
   const navigateTo = useCallback((index) => {
     const clamped = Math.min(Math.max(index, 0), plot.pages.length - 1);
+    setRecoveryPage(null);
     onPageChange && onPageChange(clamped);
     if (plot.uid && onViewPageImage) {
       onViewPageImage({ plotUid: plot.uid, pageIndex: clamped });
@@ -202,6 +208,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       setPlot(fullPlot);
       setSavedPlot(fullPlot);
       setDialogPreviews({});
+      setRecoveryPlot(null);
       onPageChange && onPageChange(0);
       onPlotReset && onPlotReset();
       toast.success(`Loaded plot '${fullPlot.name || match.uid}'`);
@@ -223,6 +230,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       // Refresh autocomplete list
       const list = await fetchPlotList();
       if (Array.isArray(list)) setPlotList(list);
+      setRecoveryPlot(null);
       toast.success(`Plot '${plotToSave.name || uid}' saved`);
     } catch (err) {
       console.error('[PlotSection] Save failed:', err);
@@ -230,7 +238,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     }
   }, [plot, toast]);
 
-  // ── Delete ────────────────────────────────────────────────────────────────
+  // ── Delete (confirmation kept; recovery slot added after confirm) ─────────
   const handleDelete = useCallback(async () => {
     if (!plot.uid) {
       toast.info('This plot has not been saved yet');
@@ -242,21 +250,49 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       ['Delete', 'Cancel']
     );
     if (result !== 'Delete') return;
+    const snapshot = { ...plot };
+    const snapshotUid = plot.uid;
+    const blank = createBlankPlot();
+    setPlot(blank);
+    setSavedPlot(null);
+    setRecoveryPlot(snapshot);
+    setRecoveryPage(null);
+    onPageChange && onPageChange(0);
+    onPlotReset && onPlotReset();
     try {
-      await deletePlot(plot.uid);
+      await deletePlot(snapshotUid);
       const list = await fetchPlotList();
       if (Array.isArray(list)) setPlotList(list);
-      const blank = createBlankPlot();
-      setPlot(blank);
-      setSavedPlot(null);
-      onPageChange && onPageChange(0);
-      onPlotReset && onPlotReset();
       toast.success('Plot deleted');
     } catch (err) {
       console.error('[PlotSection] Delete failed:', err);
       toast.error(err.message || 'Failed to delete plot');
     }
-  }, [plot, toast, onPageChange]);
+  }, [plot, toast, onPageChange, onPlotReset]);
+
+  const handleRecoverPlot = useCallback(async () => {
+    if (!recoveryPlot) return;
+    const result = await showDialog(
+      `Recover the plot "${recoveryPlot.name || recoveryPlot.uid}"?`,
+      'Recover Plot',
+      ['Recover', 'Cancel']
+    );
+    if (result !== 'Recover') return;
+    try {
+      await savePlot(recoveryPlot.uid, recoveryPlot);
+      const list = await fetchPlotList();
+      if (Array.isArray(list)) setPlotList(list);
+      setPlot(recoveryPlot);
+      setSavedPlot(recoveryPlot);
+      setRecoveryPlot(null);
+      onPageChange && onPageChange(0);
+      onPlotReset && onPlotReset();
+      toast.success(`Plot '${recoveryPlot.name || recoveryPlot.uid}' recovered`);
+    } catch (err) {
+      console.error('[PlotSection] Recovery failed:', err);
+      toast.error(err.message || 'Failed to recover plot');
+    }
+  }, [recoveryPlot, toast, onPageChange, onPlotReset]);
 
   // ── Clear ─────────────────────────────────────────────────────────────────
   const handleClear = useCallback(async () => {
@@ -278,6 +314,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const handleAddPage = useCallback(() => {
     const insertAt = currentPageIndex + 1;
     const duplicate = { ...JSON.parse(JSON.stringify(currentPage)), actions: [] };
+    setRecoveryPage(null);
     setPlot(prev => {
       const newPages = [...prev.pages];
       newPages.splice(insertAt, 0, duplicate);
@@ -291,17 +328,13 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onPageChange && onPageChange(insertAt);
   }, [currentPageIndex, currentPage, onPageChange, pageLocked, onPageLockedChange]);
 
-  const handleDeletePage = useCallback(async () => {
+  const handleDeletePage = useCallback(() => {
     if (plot.pages.length <= 1) {
       toast.info('A plot must have at least one page');
       return;
     }
-    const result = await showDialog(
-      `Delete page ${currentPageIndex + 1} of ${pageCount}?`,
-      'Delete Page',
-      ['Delete', 'Cancel']
-    );
-    if (result !== 'Delete') return;
+    const deletedPage = plot.pages[currentPageIndex];
+    setRecoveryPage({ page: deletedPage, index: currentPageIndex });
     setPlot(prev => {
       const newPages = prev.pages.filter((_, i) => i !== currentPageIndex);
       return { ...prev, pages: newPages };
@@ -311,7 +344,24 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       onPageLockedChange(next);
     }
     onPageChange && onPageChange(Math.min(currentPageIndex, plot.pages.length - 2));
-  }, [plot.pages.length, currentPageIndex, pageCount, onPageChange, toast, pageLocked, onPageLockedChange]);
+  }, [plot.pages, currentPageIndex, onPageChange, toast, pageLocked, onPageLockedChange]);
+
+  const handleRecoverPage = useCallback(() => {
+    if (!recoveryPage) return;
+    const { page, index } = recoveryPage;
+    setRecoveryPage(null);
+    setPlot(prev => {
+      const newPages = [...prev.pages];
+      newPages.splice(index, 0, page);
+      return { ...prev, pages: newPages };
+    });
+    if (onPageLockedChange) {
+      const next = [...pageLocked];
+      next.splice(index, 0, false);
+      onPageLockedChange(next);
+    }
+    onPageChange && onPageChange(index);
+  }, [recoveryPage, pageLocked, onPageLockedChange, onPageChange]);
 
   // ── Slot options for the add-slot-requirement control ────────────────────
   const slotOptions = useMemo(() => {
@@ -425,12 +475,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onReject?.({ plotUid: plot.uid, pageIndex: currentPageIndex });
   }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);
 
-  const handleUnlock = useCallback(() => {
-    if (!onPageLockedChange) return;
-    const next = [...pageLocked];
-    next[currentPageIndex] = false;
-    onPageLockedChange(next);
-  }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);  
 
   // ── Dialog preview ───────────────────────────────────────────────────────
   const handlePreviewDialog = useCallback(async () => {
@@ -528,6 +572,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     const result = await showDialog('Revert this plot to the saved library version? Unsaved changes will be lost.', 'Revert Plot', ['Revert', 'Cancel']);
     if (result !== 'Revert') return;
     setPlot(savedPlot);
+    setRecoveryPage(null);
   }, [savedPlot]);
 
   // ============================================================================
@@ -656,14 +701,14 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             <${Button}
               variant="small-text"
               icon="trash"
-              disabled=${!isCurrentPageLocked}
+              disabled=${!hasMediaForCurrentPage}
               onClick=${handleReject}
             >Reject<//>
             <${Button}
               variant="small-text"
               color="secondary"
               icon="plus"
-              disabled=${!isCurrentPageLocked}
+              disabled=${!hasMediaForCurrentPage}
               onClick=${handleAddPage}
             >Extend<//>
           </${HorizontalLayout}>
@@ -680,19 +725,22 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             showFirstLast=${true}
           />
           <${Button} variant="medium-icon" icon="plus" color="secondary" onClick=${handleAddPage} />
-          <${Button}
-            variant="medium-icon"
-            icon="unlock"
-            disabled=${!isCurrentPageLocked}
-            onClick=${handleUnlock}
-          />
-          <${Button}
-            variant="medium-icon"
-            icon="trash"
-            color="danger"
-            onClick=${handleDeletePage}
-            disabled=${pageCount <= 1}
-          />
+          ${recoveryPage ? html`
+            <${Button}
+              variant="medium-icon"
+              icon="recycle"
+              color="primary"
+              onClick=${handleRecoverPage}
+            />
+          ` : html`
+            <${Button}
+              variant="medium-icon"
+              icon="trash"
+              color="danger"
+              onClick=${handleDeletePage}
+              disabled=${pageCount <= 1}
+            />
+          `}
         </${HorizontalLayout}>
       </${VerticalLayout}>
 
@@ -717,9 +765,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           <${Button} variant="small-text" color="secondary" icon="undo" onClick=${handleRevert} disabled=${!revertEnabled}>
             Revert
           <//>
-          <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${true}>
-            Delete
-          <//>
+          ${recoveryPlot ? html`
+            <${Button} variant="small-text" color="primary" icon="recycle" onClick=${handleRecoverPlot}>
+              Recover
+            <//>
+          ` : html`
+            <${Button} variant="small-text" color="danger" icon="trash" onClick=${handleDelete} disabled=${!plot.uid}>
+              Delete
+            <//>
+          `}
         </${HorizontalLayout}>
       </${HorizontalEdgesLayout}>
       

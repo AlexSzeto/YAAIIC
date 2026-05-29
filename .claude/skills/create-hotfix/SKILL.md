@@ -52,8 +52,10 @@ End the outline with:
 
 Each time the user requests a change:
 1. Acknowledge the change in one sentence.
-2. Revise the outline in full (reprint the whole thing, not a diff).
+2. Print only the updated item(s) — do **not** reprint the full outline. Label each with its number and title so the user can locate it.
 3. End again with the same approval prompt.
+
+If the user explicitly asks to see the full outline reprinted, do so in full. Otherwise, keep responses to only the changed items.
 
 Repeat until the user says "approved" (case-insensitive).
 

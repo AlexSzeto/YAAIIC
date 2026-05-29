@@ -50,6 +50,7 @@ const ICON_MAP = {
   'eye-slash': 'visibility_off',
   'undo': 'undo',
   'redo': 'redo',
+  'recycle': 'cycle',
   'send-alt': 'send',
   
   // Media
@@ -91,6 +92,7 @@ const ICON_MAP = {
   'help-circle': 'help',
   'radio-circle-marked': 'radio_button_checked',
   'radio-circle': 'radio_button_unchecked',
+  'block': 'block',
   
   // Files and folders
   'folder-open': 'folder_open',

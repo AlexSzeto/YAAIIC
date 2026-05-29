@@ -224,11 +224,11 @@ export function TagInput({
                   event.preventDefault();
                   event.keyCode === 40 ? acRef.current.next() : acRef.current.previous();
                   break;
-                case 13:
-                  if (!acRef.current.submit) event.preventDefault();
-                  if (acRef.current.isOpen && acRef.current.cursor < 0) acRef.current.goTo(0);
-                  if (acRef.current.cursor >= 0) acRef.current.select();
-                  break;
+                // case 13:
+                //   if (!acRef.current.submit) event.preventDefault();
+                //   if (acRef.current.isOpen && acRef.current.cursor < 0) acRef.current.goTo(0);
+                //   if (acRef.current.cursor >= 0) acRef.current.select();
+                //   break;
                 case 9:
                   if (acRef.current.resultsList.tabSelect && acRef.current.cursor >= 0) acRef.current.select();
                   break;
