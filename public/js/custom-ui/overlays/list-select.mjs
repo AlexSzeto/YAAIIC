@@ -127,11 +127,16 @@ Footer.className = 'footer';
  * @param {Function} props.onSelect - Callback when item is selected
  * @param {Array} [props.itemActions] - Array of { icon, color?, title?, onClick, closeAfter? }
  * @param {Function} props.onClose - Modal close callback (used when closeAfter: true)
+ * @param {Function} [props.onDragStart] - When provided, item becomes draggable: (item) => void
+ * @param {Function} [props.onDragOver] - (item) => void
+ * @param {Function} [props.onDrop] - (item) => void
+ * @param {boolean}  [props.isDragging] - Dim this item while it is being dragged
  * @param {Object} props.theme - Current theme object
  * @returns {preact.VNode}
  */
-function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, theme }) {
+function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, onDragStart, onDragOver, onDrop, isDragging, theme }) {
   const icon = item.icon || itemIcon || 'list-ul';
+  const draggable = !!onDragStart;
 
   const handleActionClick = (e, action) => {
     e.stopPropagation();
@@ -145,10 +150,23 @@ function ListItem({ item, itemIcon, isSelected, onSelect, itemActions, onClose, 
     <${ItemContainer}
       isSelected=${isSelected}
       unselectable=${item.unselectable}
+      draggable=${draggable}
       theme=${theme}
+      style=${isDragging ? { opacity: 0.4 } : {}}
       onClick=${() => !item.unselectable && onSelect(item)}
+      onDragStart=${draggable ? (e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(item); } : null}
+      onDragOver=${draggable ? (e) => { e.preventDefault(); onDragOver(item); } : null}
+      onDrop=${draggable ? (e) => { e.preventDefault(); onDrop(item); } : null}
     >
       <${ItemLabel} theme=${theme}>
+        ${draggable && html`
+          <${Icon}
+            name="swap-vertical"
+            size="16px"
+            color=${theme.colors.text.muted}
+            style=${{ cursor: 'grab', flexShrink: 0 }}
+          />
+        `}
         <${Icon}
           name=${icon}
           type='solid'
@@ -225,7 +243,8 @@ class ListSelectModal extends Component {
     super(props);
     this.state = {
       selectedId: props.selectedId ?? null,
-      theme: currentTheme.value
+      theme: currentTheme.value,
+      dragFromId: null,
     };
   }
 
@@ -270,8 +289,33 @@ class ListSelectModal extends Component {
     }
   }
 
+  handleDragStart = (item) => {
+    this.setState({ dragFromId: item.id });
+  }
+
+  handleDragOver = (_item) => {
+    // preventDefault is handled in ListItem; no state update needed here
+  }
+
+  handleDrop = (item) => {
+    const { dragFromId } = this.state;
+    const { items, onReorder } = this.props;
+    this.setState({ dragFromId: null });
+
+    if (!dragFromId || !onReorder || dragFromId === item.id) return;
+
+    const fromIdx = items.findIndex(i => i.id === dragFromId);
+    const toIdx   = items.findIndex(i => i.id === item.id);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const next = [...items];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    onReorder(next);
+  }
+
   render() {
-    const { isLoading, selectedId, theme } = this.state;
+    const { isLoading, selectedId, dragFromId, theme } = this.state;
     const {
       isOpen,
       title = 'Select Item',
@@ -280,6 +324,7 @@ class ListSelectModal extends Component {
       actionLabel,
       secondaryActionLabel,
       itemActions,
+      onReorder,
       showActionButton = true,
       variant = 'default',
     } = this.props;
@@ -331,6 +376,10 @@ class ListSelectModal extends Component {
                       onSelect=${this.handleItemSelect}
                       itemActions=${itemActions}
                       onClose=${this.handleClose}
+                      onDragStart=${onReorder ? this.handleDragStart : null}
+                      onDragOver=${onReorder ? this.handleDragOver : null}
+                      onDrop=${onReorder ? this.handleDrop : null}
+                      isDragging=${onReorder ? item.id === dragFromId : false}
                       theme=${theme}
                     />
                   `)}

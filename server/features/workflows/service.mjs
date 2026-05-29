@@ -84,6 +84,26 @@ export function parseWorkflowName(filename) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns true if a node ID belongs to a ComfyUI subgraph (contains a colon).
+ * Subgraph nodes are internal relay nodes and must not be treated as top-level inputs.
+ * @param {string} nodeId
+ * @returns {boolean}
+ */
+function isSubgraphNode(nodeId) {
+  return nodeId.includes(':');
+}
+
+/**
+ * Returns true if a value is a ComfyUI link reference: [nodeId, outputIndex].
+ * Linked inputs are wired to another node's output and are not user-configurable.
+ * @param {*} v
+ * @returns {boolean}
+ */
+function isComfyLink(v) {
+  return Array.isArray(v) && v.length === 2 && typeof v[0] === 'string' && typeof v[1] === 'number';
+}
+
+/**
  * Analyse a ComfyUI workflow JSON object and return suggested workflow
  * configuration mappings.
  *
@@ -111,6 +131,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
 
   // First pass: output nodes and type detection
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
 
     const ct = node.class_type;
@@ -135,6 +156,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
 
   // Second pass: input nodes
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
 
     const ct = node.class_type;
@@ -178,6 +200,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   let promptMapped = false;
 
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
     if (!typedPrimitiveClasses.has(node.class_type)) continue;
@@ -208,6 +231,9 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
       continue;
     }
 
+    // Skip primitives whose value input is linked from another node
+    if (isComfyLink(node.inputs?.value)) continue;
+
     // Unmatched typed primitive → extra input
     const inputType = (ct === 'PrimitiveBoolean')
       ? 'checkbox'
@@ -233,6 +259,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   // Fourth pass: seed nodes (skipped if a typed primitive already covered seed)
   for (const [nodeId, node] of Object.entries(workflowJson)) {
     if (seedMapped) break;
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
 
@@ -257,6 +284,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   // Fifth pass: prompt nodes (skipped if a typed primitive already covered prompt)
   for (const [nodeId, node] of Object.entries(workflowJson)) {
     if (promptMapped) break;
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
 
@@ -287,12 +315,14 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   // Sixth pass: extra input candidates (unmapped PrimitiveNodes)
   let extraIndex = 0;
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
     if (node.class_type !== 'PrimitiveNode') continue;
 
     const widgets = node.widgets_values || [];
     const firstWidget = widgets[0];
+    if (isComfyLink(firstWidget)) continue;
     let inputType = 'text';
     let defaultValue = '';
 
@@ -326,6 +356,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
 
   // Check for video-filename save-text → extractOutputMediaFromTextFile
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (node.class_type !== 'easy saveText') continue;
     if (node.inputs?.file_name === 'video-filename' && node.inputs?.file_extension === 'txt') {
@@ -342,6 +373,7 @@ export function autoDetectWorkflow(workflowJson, suggestedName) {
   const knownDataProps = ['tag', 'prompt', 'description', 'summary'];
   const extractedProps = [];
   for (const [nodeId, node] of Object.entries(workflowJson)) {
+    if (isSubgraphNode(nodeId)) continue;
     if (typeof node !== 'object' || !node.class_type) continue;
     if (mappedNodeIds.has(nodeId)) continue;
     if (node.class_type !== 'easy saveText') continue;

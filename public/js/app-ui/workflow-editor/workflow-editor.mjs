@@ -26,6 +26,7 @@ import { ConditionBuilder } from './condition-builder.mjs';
 import { HamburgerMenu } from '../hamburger-menu.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import ListSelectModal from '../../custom-ui/overlays/list-select.mjs';
+import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { AppHeader } from '../themed-base.mjs';
 
@@ -297,10 +298,20 @@ function ExtraInputForm({ item, onChange }) {
         />
         <${Input}
           label="Default Value"
-          value=${item.default !== undefined ? String(item.default) : ''}
-          onInput=${(e) => onChange({ ...item, default: e.target.value })}
+          value=${item.default !== undefined
+            ? (item.type === 'number'
+                ? String(item.default).replace(',', '.')
+                : String(item.default))
+            : ''}
+          onInput=${(e) => {
+            const raw = e.target.value;
+            const parsed = item.type === 'number'
+              ? parseFloat(raw.replace(',', '.'))
+              : raw;
+            onChange({ ...item, default: item.type === 'number' && isNaN(parsed) ? raw : parsed });
+          }}
           placeholder="Default"
-          
+
         />
       </${HorizontalLayout}>
       ${hasOptions && html`
@@ -424,6 +435,11 @@ export function WorkflowEditor() {
   // Available base files from disk
   const [baseFiles,       setBaseFiles]       = useState([]);
 
+  // Input templates from config
+  const [inputTemplates,      setInputTemplates]      = useState([]);
+  const [templatePickerIndex, setTemplatePickerIndex] = useState(null);
+  const [templatePickerOpen,  setTemplatePickerOpen]  = useState(false);
+
   // Currently loaded full workflow object
   const [workflow,        setWorkflow]        = useState(null);
   // Last version loaded from or saved to the server — used for dirty detection.
@@ -439,6 +455,7 @@ export function WorkflowEditor() {
   useEffect(() => {
     loadWorkflowList();
     loadBaseFiles();
+    loadInputTemplates();
   }, []);
 
   async function loadWorkflowList() {
@@ -461,6 +478,15 @@ export function WorkflowEditor() {
       if (!res.ok) return;
       const data = await res.json();
       setBaseFiles(data.files || []);
+    } catch {
+      // non-critical; silently ignore
+    }
+  }
+
+  async function loadInputTemplates() {
+    try {
+      const res = await fetch('/api/workflows/input-templates');
+      if (res.ok) setInputTemplates((await res.json()).templates || []);
     } catch {
       // non-critical; silently ignore
     }
@@ -492,21 +518,17 @@ export function WorkflowEditor() {
     }
   }
 
-  async function handleMoveWorkflow(name, direction) {
-    const index = workflowList.findIndex(wf => wf.name === name);
-    if (index === -1) return;
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= workflowList.length) return;
-
-    const next = [...workflowList];
-    [next[index], next[newIndex]] = [next[newIndex], next[index]];
+  async function handleReorderWorkflows(reorderedItems) {
+    const orderedNames = reorderedItems.map(item => item.id);
+    const next = orderedNames
+      .map(name => workflowList.find(wf => wf.name === name))
+      .filter(Boolean);
     setWorkflowList(next);
-
     try {
       await fetch('/api/workflows/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: next.map(wf => wf.name) }),
+        body: JSON.stringify({ order: orderedNames }),
       });
     } catch (e) {
       toast.error(`Failed to save workflow order: ${e.message}`);
@@ -729,8 +751,37 @@ export function WorkflowEditor() {
               createItem=${() => ({ id: '', type: 'text', label: '', default: '', options: [] })}
               onChange=${(items) => updateOptions({ extraInputs: items })}
               addLabel="Add Input"
+              headerActions=${inputTemplates.length > 0 ? [{
+                icon: 'arrow-in-down-square-half',
+                title: 'Use template',
+                onClick: (_item, index) => {
+                  setTemplatePickerIndex(index);
+                  setTemplatePickerOpen(true);
+                },
+              }] : []}
             />
           </${Panel}>
+
+          <!-- Template picker modal -->
+          ${templatePickerOpen && html`
+            <${SearchSelectModal}
+              isOpen=${true}
+              title="Input Templates"
+              items=${inputTemplates.map((t, i) => ({ label: t.label, value: String(i) }))}
+              mode="single"
+              onSelect=${(value) => {
+                const template = inputTemplates[parseInt(value, 10)];
+                if (template !== undefined) {
+                  const next = [...(workflow.options?.extraInputs || [])];
+                  next[templatePickerIndex] = { ...template };
+                  updateOptions({ extraInputs: next });
+                }
+                setTemplatePickerOpen(false);
+                setTemplatePickerIndex(null);
+              }}
+              onClose=${() => { setTemplatePickerOpen(false); setTemplatePickerIndex(null); }}
+            />
+          `}
 
           <!-- Pre-generation Tasks -->
           <${Panel} variant="outlined">
@@ -896,21 +947,8 @@ export function WorkflowEditor() {
         items=${workflowList.map(wf => ({ id: wf.name, label: wf.name, icon: getWorkflowIcon(wf) }))}
         selectedId=${workflow?.name}
         onSelectItem=${(item) => { loadWorkflow(item.id); setIsModalOpen(false); }}
+        onReorder=${handleReorderWorkflows}
         itemActions=${[
-          {
-            icon: 'up-arrow',
-            title: 'Move up',
-            onClick: (item) => handleMoveWorkflow(item.id, -1),
-            disabled: (item) => workflowList.findIndex(wf => wf.name === item.id) === 0,
-            closeAfter: false,
-          },
-          {
-            icon: 'down-arrow',
-            title: 'Move down',
-            onClick: (item) => handleMoveWorkflow(item.id, 1),
-            disabled: (item) => workflowList.findIndex(wf => wf.name === item.id) === workflowList.length - 1,
-            closeAfter: false,
-          },
           {
             icon: 'copy',
             title: 'Duplicate',

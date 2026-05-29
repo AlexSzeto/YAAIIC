@@ -8,22 +8,22 @@ Fix four bugs in the workflow editor, replace the up/down arrow reordering butto
 
 ### Phase 1 — Bug Fixes
 
-- [ ] Fix rename-after-upload creating a duplicate workflow entry
-- [ ] Fix subgraph relay nodes being incorrectly imported as Extra Inputs: skip all nodes whose ID contains `:` across all detection passes; also skip any typed primitive whose `inputs.value` is a link array
-- [ ] Fix auto-detected parameter defaults displaying commas instead of periods for decimal numbers
-- [ ] Fix formula replacement inputs rejecting the minus (`-`) and period (`.`) characters
+- [x] Fix rename-after-upload creating a duplicate workflow entry
+- [x] Fix subgraph relay nodes being incorrectly imported as Extra Inputs: skip all nodes whose ID contains `:` across all detection passes; also skip any typed primitive whose `inputs.value` is a link array
+- [x] Fix auto-detected parameter defaults displaying commas instead of periods for decimal numbers
+- [x] Fix formula replacement inputs rejecting the minus (`-`) and period (`.`) characters
 
 ### Phase 2 — Drag-and-Drop Reordering
 
-- [ ] Replace the up/down arrow buttons in the workflow list modal with drag-and-drop reordering; preserve the `PUT /api/workflows/reorder` persistence call on drop
+- [x] Replace the up/down arrow buttons in the workflow list modal with drag-and-drop reordering; preserve the `PUT /api/workflows/reorder` persistence call on drop
 
 ### Phase 3 — Templated Extra Inputs
 
-- [ ] Add `workflowInputTemplates` (array of `extraInput` objects, default `[]`) to `server/config.default.json`
-- [ ] Add `GET /api/workflows/input-templates` endpoint that returns the config value
-- [ ] In the editor, load templates on mount and store in state; hide the feature entirely when the list is empty
-- [ ] Add a `headerActions` "Use template" button (icon `arrow-in-down-square-half`) to the Extra Inputs `DynamicList` that opens a searchable single-select modal listing template labels
-- [ ] On template selection, replace the target Extra Input item with a shallow copy of the chosen template
+- [x] Add `workflowInputTemplates` (array of `extraInput` objects, default `[]`) to `server/config.default.json`
+- [x] Add `GET /api/workflows/input-templates` endpoint that returns the config value
+- [x] In the editor, load templates on mount and store in state; hide the feature entirely when the list is empty
+- [x] Add a `headerActions` "Use template" button (icon `arrow-in-down-square-half`) to the Extra Inputs `DynamicList` that opens a searchable single-select modal listing template labels
+- [x] On template selection, replace the target Extra Input item with a shallow copy of the chosen template
 
 ## Implementation Details
 

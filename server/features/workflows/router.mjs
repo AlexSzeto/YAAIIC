@@ -14,6 +14,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { COMFYUI_WORKFLOWS_DIR, WORKFLOWS_PATH } from '../../core/paths.mjs';
 import {
   getWorkflowByName,
@@ -94,6 +95,7 @@ router.post('/api/workflows/upload', upload.single('workflow'), (req, res) => {
     // Auto-detect mappings
     const { workflow, detectedNodes } = autoDetectWorkflow(workflowJson, suggestedName);
     workflow.base = baseFilename;
+    workflow.uid  = randomUUID();
 
     // Persist to comfyui-workflows.json (skip validation – user will edit first)
     const data = JSON.parse(fs.readFileSync(WORKFLOWS_PATH, 'utf8'));
@@ -205,6 +207,21 @@ router.put('/api/workflows/reorder', (req, res) => {
   } catch (error) {
     console.error('Error reordering workflows:', error);
     res.status(500).json({ error: 'Failed to reorder workflows', details: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/workflows/input-templates – return workflowInputTemplates from config
+// ---------------------------------------------------------------------------
+// NOTE: must come BEFORE /:name to avoid route shadowing
+
+router.get('/api/workflows/input-templates', (req, res) => {
+  try {
+    const templates = req.app.locals.config?.workflowInputTemplates || [];
+    res.json({ templates });
+  } catch (error) {
+    console.error('Error loading input templates:', error);
+    res.status(500).json({ error: 'Failed to load input templates' });
   }
 });
 

@@ -205,35 +205,57 @@ const ROUND_OPTIONS = [
 
 function MathStepForm({ step, onChange }) {
   const theme = currentTheme.value;
+
+  const [offsetStr, setOffsetStr] = useState(String(step.offset ?? 0));
+  const [scaleStr,  setScaleStr]  = useState(String(step.scale  ?? 1));
+  const [biasStr,   setBiasStr]   = useState(String(step.bias   ?? 0));
+
+  // Sync display strings when the step changes externally (e.g. after reorder)
+  useEffect(() => { setOffsetStr(String(step.offset ?? 0)); }, [step.offset]);
+  useEffect(() => { setScaleStr(String(step.scale   ?? 1)); }, [step.scale]);
+  useEffect(() => { setBiasStr(String(step.bias     ?? 0)); }, [step.bias]);
+
+  const commitField = useCallback((field, raw, resetStr) => {
+    const num = parseFloat(raw.replace(',', '.'));
+    if (!isNaN(num)) {
+      onChange({ ...step, [field]: num });
+    } else {
+      resetStr(String(step[field] ?? (field === 'scale' ? 1 : 0)));
+    }
+  }, [step, onChange]);
+
   return html`
     <${HorizontalLayout} gap="small">
       <${MathSpan} theme=${theme}>( value +</${MathSpan}>
       <${Input}
-        type="number"
-        step="0.01"
+        type="text"
+        inputmode="decimal"
         label="Offset"
-        value=${step.offset ?? 0}
-        onInput=${(e) => onChange({ ...step, offset: parseFloat(e.target.value) || 0 })}
+        value=${offsetStr}
+        onInput=${(e) => setOffsetStr(e.target.value)}
+        onBlur=${() => commitField('offset', offsetStr, setOffsetStr)}
         widthScale="compact"
         heightScale="compact"
       />
       <${MathSpan} theme=${theme}>) ×</${MathSpan}>
       <${Input}
-        type="number"
-        step="0.01"
+        type="text"
+        inputmode="decimal"
         label="Scale"
-        value=${step.scale ?? 1}
-        onInput=${(e) => onChange({ ...step, scale: parseFloat(e.target.value) || 0 })}
+        value=${scaleStr}
+        onInput=${(e) => setScaleStr(e.target.value)}
+        onBlur=${() => commitField('scale', scaleStr, setScaleStr)}
         widthScale="compact"
         heightScale="compact"
       />
       <${MathSpan} theme=${theme}>+</${MathSpan}>
       <${Input}
-        type="number"
-        step="0.01"
+        type="text"
+        inputmode="decimal"
         label="Bias"
-        value=${step.bias ?? 0}
-        onInput=${(e) => onChange({ ...step, bias: parseFloat(e.target.value) || 0 })}
+        value=${biasStr}
+        onInput=${(e) => setBiasStr(e.target.value)}
+        onBlur=${() => commitField('bias', biasStr, setBiasStr)}
         widthScale="compact"
         heightScale="compact"
       />
