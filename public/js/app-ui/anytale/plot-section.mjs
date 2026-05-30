@@ -792,21 +792,6 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             ` : null}
         </${VerticalLayout}>
 
-        <!-- SFX match indicator -->
-        <${VerticalLayout} gap="small">
-          <${Label}>SFX Played</${Label}>
-          <${SfxPillRow}>
-            ${sfxMatches.map(({ sfx, matchingTag }, i) => html`
-              <${SfxMatchPill}
-                key=${sfx.uid}
-                sfx=${sfx}
-                matchingTag=${matchingTag}
-                primary=${i === 0}
-              />
-            `)}
-          </${SfxPillRow}>
-        </${VerticalLayout}>
-
         <!-- Page Tags -->
         <${TagInput}
           label="Page Tags"
@@ -846,6 +831,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
             >Extend Page<//>
           </${HorizontalLayout}>
         </${HorizontalEdgesLayout}>
+
+        <!-- SFX match indicator -->
+        <${VerticalLayout} gap="small">
+          <${Label}>SFX Played</${Label}>
+          <${SfxPillRow}>
+            ${sfxMatches.map(({ sfx, matchingTag }, i) => html`
+              <${SfxMatchPill}
+                key=${sfx.uid}
+                sfx=${sfx}
+                matchingTag=${matchingTag}
+                primary=${i === 0}
+              />
+            `)}
+          </${SfxPillRow}>
+        </${VerticalLayout}>
 
         <${HorizontalLayout} gap="small">
           <${NavigatorControl}
