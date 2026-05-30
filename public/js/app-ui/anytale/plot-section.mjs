@@ -16,6 +16,7 @@ import { currentTheme } from '../../custom-ui/theme.mjs';
 import { useToast } from '../../custom-ui/msg/toast.mjs';
 import { Button } from '../../custom-ui/io/button.mjs';
 import { Input } from '../../custom-ui/io/input.mjs';
+import { Textarea } from '../../custom-ui/io/textarea.mjs';
 import { NavigatorControl } from '../../custom-ui/nav/navigator.mjs';
 import { showDialog } from '../../custom-ui/overlays/dialog.mjs';
 import { SearchSelectModal } from '../../custom-ui/overlays/search-select.mjs';
@@ -772,13 +773,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           header=${html`<${Label}>Action Description for Dialog Prompt</${Label}>`}
           content=${html`
             <${VerticalLayout} gap="small" style=${{ marginTop: '8px' }}>
-              <${Input}
+              <${Textarea}
                 label="Prompt"
                 value=${currentPage.dialogPrompt || ''}
                 onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
                 placeholder="Describe the action for the dialog prompt"
                 widthScale="full"
-                multiline
                 rows=${3}
               />
               <div>
