@@ -29,6 +29,7 @@ import { fetchPlotList, savePlot, deletePlot } from './plot-api.mjs';
 import { resolveSlotStatuses, checkPageRequirements } from './slot-resolver.mjs';
 import { PlotPagePills } from './plot-page-pills.mjs';
 import { PlotRequirementsEditor } from './plot-requirements-editor.mjs';
+import { CollapsiblePanel } from '../../custom-ui/layout/collapsible-panel.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { ChipAutocompleteInput } from '../chip-autocomplete-input.mjs';
 import { generateDialog } from '../anytale-play/play-dialog.mjs';
@@ -99,6 +100,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [savedPlot, setSavedPlot] = useState(null);
   const [recoveryPlot, setRecoveryPlot] = useState(null);
   const [recoveryPage, setRecoveryPage] = useState(null); // { page, index }
+  const [plotReqExpanded, setPlotReqExpanded] = useState(true);
 
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -695,32 +697,38 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       </${VerticalLayout}>
 
       <!-- Plot-level requirements editor -->
-      <${VerticalLayout} gap="small">
-        <${HorizontalLayout} gap="small" style="align-items: center;">
-          <${Label}>Plot Requirements</${Label}>
-          <span style=${{
-            display: 'inline-flex',
-            gap: '8px',
-            alignItems: 'center',
-            padding: '2px 10px',
-            borderRadius: '9999px',
-            fontSize: currentTheme.value.typography.fontSize.small,
-            backgroundColor: plotRequirementsMet
-              ? currentTheme.value.colors.secondary.backgroundLight
-              : currentTheme.value.colors.danger.backgroundLight,
-          }}>
-            <${Icon} name=${plotRequirementsMet ? 'radio-circle-marked' : 'radio-circle'} size="14px" ></${Icon}>
-            ${plotRequirementsMet ? 'requirements met' : 'requirements failed'}
-          </span>
-        </${HorizontalLayout}>
-        <${PlotRequirementsEditor}
-          plot=${plot}
-          onChange=${setPlot}
-          libraryParts=${parts}
-          allLibraryParts=${libraryParts}
-          slotOptions=${slotOptions}
-        />
-      </${VerticalLayout}>
+      <${CollapsiblePanel}
+        expanded=${plotReqExpanded}
+        onExpand=${() => setPlotReqExpanded(p => !p)}
+        header=${html`
+          <${HorizontalLayout} gap="small" style="align-items: center;">
+            <${Label}>Plot Requirements</${Label}>
+            <span style=${{
+              display: 'inline-flex',
+              gap: '8px',
+              alignItems: 'center',
+              padding: '2px 10px',
+              borderRadius: '9999px',
+              fontSize: currentTheme.value.typography.fontSize.small,
+              backgroundColor: plotRequirementsMet
+                ? currentTheme.value.colors.secondary.backgroundLight
+                : currentTheme.value.colors.danger.backgroundLight,
+            }}>
+              <${Icon} name=${plotRequirementsMet ? 'radio-circle-marked' : 'radio-circle'} size="14px" ></${Icon}>
+              ${plotRequirementsMet ? 'requirements met' : 'requirements failed'}
+            </span>
+          </${HorizontalLayout}>
+        `}
+        content=${html`
+          <${PlotRequirementsEditor}
+            plot=${plot}
+            onChange=${setPlot}
+            libraryParts=${parts}
+            allLibraryParts=${libraryParts}
+            slotOptions=${slotOptions}
+          />
+        `}
+      />
 
       <!-- Page section -->
       <${VerticalLayout} gap="medium">
