@@ -1,6 +1,9 @@
 import { html } from 'htm/preact';
-import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { Fragment } from 'preact';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'preact/hooks';
 import { currentTheme } from '../../custom-ui/theme.mjs';
+import { FloatingPanel } from '../../custom-ui/overlays/floating-panel.mjs';
+import { H3, VerticalLayout } from '../../custom-ui/themed-base.mjs';
 import { loadPlayData, clearPlayDataCache } from './play-data.mjs';
 import {
   load as loadSession,
@@ -43,6 +46,8 @@ const AUTOPLAY_DELAY_NO_SOUND = 6.0;
 export function AnyTalePlayPage() {
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
+
+  const debugMode = useMemo(() => new URLSearchParams(window.location.search).get('debug') === 'true', []);
 
   const { show: progressShow } = useProgress();
 
@@ -1730,6 +1735,24 @@ export function AnyTalePlayPage() {
     return decisions;
   }, [currentPlot, playData, session.timeline, getPostChapterSlotStateObj, handleChapterChoice]);
 
+  // --- Debug ---
+
+  const debugPagePrompt = useMemo(() => {
+    if (!debugMode || session.phase !== 'plot' || !currentPlot || !playData) return '';
+    const plotPageIdx = visiblePageIndices[session.pageIndex];
+    if (plotPageIdx == null) return '';
+    const outfit = (playData.outfits || []).find(o => o.uid === session.outfitUid);
+    const partsMap = new Map((playData.parts || []).map(p => [p.uid, p]));
+    const { enabledParts, visibility } = buildEnabledPartsForPage(
+      session,
+      outfit ? outfit.parts : [],
+      partsMap,
+      pageSlotStatuses[plotPageIdx],
+      playData.config.slotRules || ''
+    );
+    return assemblePrompt(enabledParts, currentPlot.pages[plotPageIdx], visibility) || '';
+  }, [debugMode, session, currentPlot, visiblePageIndices, pageSlotStatuses, playData]);
+
   // --- Render ---
 
   if (!audioUnlocked) {
@@ -2061,20 +2084,37 @@ export function AnyTalePlayPage() {
   }
 
   return html`
-    <${PortraitPanel}
-      mode=${panelMode}
-      backgroundUrl=${session.introImageUrl || 'media/anytale-background.png'}
-      bubbleText=${bubbleText}
-      bubbleType=${bubbleType}
-      muted=${session.muted}
-      musicEnabled=${session.musicOn}
-      sfxEnabled=${session.sfxOn}
-      decisions=${decisions}
-      onBack=${onBack}
-      onReset=${handleReset}
-      onToggleMute=${handleToggleMute}
-      onToggleMusic=${handleToggleMusic}
-      onToggleSfx=${handleToggleSfx}
-    />
+    <${Fragment}>
+      <${PortraitPanel}
+        mode=${panelMode}
+        backgroundUrl=${session.introImageUrl || 'media/anytale-background.png'}
+        bubbleText=${bubbleText}
+        bubbleType=${bubbleType}
+        muted=${session.muted}
+        musicEnabled=${session.musicOn}
+        sfxEnabled=${session.sfxOn}
+        decisions=${decisions}
+        onBack=${onBack}
+        onReset=${handleReset}
+        onToggleMute=${handleToggleMute}
+        onToggleMusic=${handleToggleMusic}
+        onToggleSfx=${handleToggleSfx}
+      />
+      ${debugMode && html`
+        <${FloatingPanel}
+          isOpen=${true}
+          initialPosition="top-right"
+          width="380px"
+          variant="elevated"
+        >
+          <${VerticalLayout} gap="small">
+            <${H3}>Assembled Page Tags</${H3}>
+            <div style=${{ fontFamily: 'monospace', fontSize: currentTheme.value.typography.fontSize.small, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              ${debugPagePrompt || '(no prompt for current phase)'}
+            </div>
+          </${VerticalLayout}>
+        </${FloatingPanel}>
+      `}
+    </${Fragment}>
   `;
 }
