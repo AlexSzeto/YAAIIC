@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { styled } from '../../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../../custom-ui/theme.mjs';
 import { PlayButton } from './glass-button.mjs';
+import { PlayToggleButton } from './play-toggle-button.mjs';
 import { SpeechBubble } from './speech-bubble.mjs';
 import { CaptionBubble } from './caption-bubble.mjs';
 import { DecisionOptions } from './decision-options.mjs';
@@ -187,9 +188,11 @@ const CROSSFADE_MS = 600;
  * @param {'caption'|'speech'} [props.bubbleType='caption'] - Bubble style used in decision mode
  * @param {boolean} [props.muted=false]
  * @param {boolean} [props.musicEnabled=false]
+ * @param {boolean} [props.sfxEnabled=true]
  * @param {Function} [props.onReset]
  * @param {Function} [props.onToggleMute]
  * @param {Function} [props.onToggleMusic]
+ * @param {Function} [props.onToggleSfx]
  * @param {string|number} [props.chapter=1] - Chapter name or number displayed in the bottom pill
  * @param {number} [props.page=1]
  * @param {number} [props.loadedPercent=0]
@@ -210,9 +213,11 @@ export function PortraitPanel({
   bubbleType = 'caption',
   muted = false,
   musicEnabled = false,
+  sfxEnabled = true,
   onReset,
   onToggleMute,
   onToggleMusic,
+  onToggleSfx,
   chapter = 1,
   page = 1,
   loadedPercent = 0,
@@ -306,9 +311,10 @@ export function PortraitPanel({
       ${mode !== 'start' && (uiVisible ? html`
         <${ContentLayer}>
           <${TopControls}>
-            <${PlayButton} icon="refresh" onClick=${onReset} />
-            <${PlayButton} icon=${muted ? 'volume-mute' : 'volume-full'} onClick=${onToggleMute} />
-            <${PlayButton} icon=${musicEnabled ? 'ear' : 'ear-slash'} onClick=${onToggleMusic} />
+            <${PlayButton} icon="refresh" onClick=${onReset} title="Restart" />
+            <${PlayToggleButton} icon="music" enabled=${musicEnabled} onClick=${onToggleMusic} title=${musicEnabled ? 'Music on' : 'Music off'} />
+            <${PlayToggleButton} icon="equalizer" enabled=${sfxEnabled} onClick=${onToggleSfx} title=${sfxEnabled ? 'SFX on' : 'SFX off'} />
+            <${PlayToggleButton} icon="microphone" enabled=${!muted} onClick=${onToggleMute} title=${muted ? 'TTS off' : 'TTS on'} />
           </${TopControls}>
 
           <${CenterSpace}>

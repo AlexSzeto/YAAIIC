@@ -70,31 +70,32 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 
 ### Phase 4 — Play mode SFX
 
-- [ ] Add `sfxOn: true` to `DEFAULT_PREFS` in `play-prefs.mjs`; confirm `loadPrefs` merges it for existing stored prefs.
-- [ ] Add `sfx` to the parallel fetch in `play-data.mjs` (`fetch('/anytale/sfx').then(r => r.json())`); include `sfx` in the returned and cached object.
-- [ ] Add SFX matching helper `findMatchingSfx(pageTagsString, sfxList)` in `play-utils.mjs` (delegates to `findAllMatchingSfx` — see Phase 3).
-- [ ] Extend chapter initialisation in `anytale-play.mjs`:
+- [x] Add `sfxOn: true` to `DEFAULT_PREFS` in `play-prefs.mjs`; confirm `loadPrefs` merges it for existing stored prefs.
+- [x] Add `sfx` to the parallel fetch in `play-data.mjs` (`fetch('/anytale/sfx').then(r => r.json())`); include `sfx` in the returned and cached object.
+- [x] Add SFX matching helper `findMatchingSfx(pageTagsString, sfxList)` in `play-utils.mjs` (delegates to `findAllMatchingSfx` — see Phase 3).
+- [x] Extend chapter initialisation in `anytale-play.mjs`:
   - Add `pageSfxUrls` and `pageSfxStatuses` state (same shape as `pageVoiceUrls`/`pageVoiceStatuses`).
   - In the per-visible-page loop, call `findMatchingSfx` for each page. If a match is found and `sfxOn` is enabled, queue `POST /anytale/play/generate-sfx` with the SFX record's `prompt`; handle SSE completion into `pageSfxUrls`/`pageSfxStatuses` via a new `subscribeSfxProgress` callback (same pattern as `subscribeVoiceProgress`).
   - When `sfxOn` is disabled, set `pageSfxStatuses[idx] = 'skipped'` (no fetch).
-- [ ] Wire SFX playback into page-entry effects:
+- [x] Wire SFX playback into page-entry effects:
   - In the existing `useEffect` that fires on `session.pageIndex` changes (stops voice on page turn): add `globalAudioPlayer.stop(1)` to stop the SFX channel.
   - In the display-advance effect: when SFX is settled and `sfxOn`, call `globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1)`.
-- [ ] Create `public/js/app-ui/anytale/play/play-toggle-button.mjs` — a new `PlayToggleButton({ icon, enabled, onClick, title })` component used for the three audio-option toggles. When `enabled = false`, renders a `block` icon overlaid on top of the base icon to signal the option is disabled. Reuse the existing `PlayButton` / `GlassButton` styling patterns from the same directory.
-- [ ] Replace the existing mute/music buttons in `PortraitPanel` top controls with `PlayToggleButton` instances and add the SFX toggle. Final left-to-right button order: **restart**, **music** (`icon="music"`, tied to `session.musicOn`), **SFX** (`icon="equalizer"`, tied to `session.sfxOn`), **TTS** (`icon="microphone"`, tied to `!session.muted`). Each toggle calls the appropriate `patchPrefs` + `updateSession` handler on click.
+- [x] Create `public/js/app-ui/anytale/play/play-toggle-button.mjs` — a new `PlayToggleButton({ icon, enabled, onClick, title })` component used for the three audio-option toggles. When `enabled = false`, renders a `block` icon overlaid on top of the base icon to signal the option is disabled. Reuse the existing `PlayButton` / `GlassButton` styling patterns from the same directory.
+- [x] Replace the existing mute/music buttons in `PortraitPanel` top controls with `PlayToggleButton` instances and add the SFX toggle. Final left-to-right button order: **restart**, **music** (`icon="music"`, tied to `session.musicOn`), **SFX** (`icon="equalizer"`, tied to `session.sfxOn`), **TTS** (`icon="microphone"`, tied to `!session.muted`). Each toggle calls the appropriate `patchPrefs` + `updateSession` handler on click.
   - SFX toggle: on disable — `globalAudioPlayer.stop(1)`; mark all `'generating'` SFX statuses as `'skipped'`. On enable — re-queue SFX for any visible pages whose status is `'skipped'` (same logic as the mute-toggle voice resumption).
-- [ ] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()` (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
+- [x] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()` (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
 
 ### Phase 5 — SFX prompt enhancement
 
-- [ ] Add two state variables to `SfxCard`: `enhance` (boolean, default `false`) and `prevPrompt` (string|null, default `null`).
-- [ ] Below the prompt `SfxPromptTextarea`, render an `EnhanceRow` (horizontal flex, `HorizontalEdgesLayout` pattern):
+- [x] Add two state variables to `SfxCard`: `enhance` (boolean, default `false`) and `prevPrompt` (string|null, default `null`).
+- [x] Below the prompt `SfxPromptTextarea`, render an `EnhanceRow` (horizontal flex, `HorizontalEdgesLayout` pattern):
   - **Left**: `Checkbox` with label `"Enhance"` bound to `enhance` state.
   - **Right**: `"Revert Prompt"` button — `variant="small-text" color="secondary" icon="undo"` — disabled when `prevPrompt` is `null`.
-- [ ] In `handleGeneratePreview`, when `enhance` is `true`, include `enhancePrompt: true` in the `apiGenerateSfxPreview` request body (update the helper to accept and forward an options object). The existing `apiGenerateSfxPreview` sends a JSON body to `POST /anytale/sfx/:uid/generate-preview` — add `enhancePrompt` to that body.
-- [ ] In the `queueSSEManager` `onComplete` handler in `SfxCard`: if `data.result.summary` is a non-empty string, store the current `prompt` in `prevPrompt` and replace `prompt` with `data.result.summary` (the enhanced prompt returned by the workflow).
-- [ ] Wire the Revert Prompt button: on click, set `prompt` to `prevPrompt` and clear `prevPrompt` to `null`.
-- [ ] Update `POST /anytale/sfx/:uid/generate-preview` route to forward `enhancePrompt` from the request body into `requestData` (same pattern as other boolean workflow flags).
+- [x] In `handleGeneratePreview`, when `enhance` is `true`, include `enhancePrompt: true` in the `apiGenerateSfxPreview` request body (update the helper to accept and forward an options object). The existing `apiGenerateSfxPreview` sends a JSON body to `POST /anytale/sfx/:uid/generate-preview` — add `enhancePrompt` to that body.
+- [x] In the `queueSSEManager` `onComplete` handler in `SfxCard`: if `data.result.summary` is a non-empty string, store the current `prompt` in `prevPrompt` and replace `prompt` with `data.result.summary` (the enhanced prompt returned by the workflow).
+- [x] Wire the Revert Prompt button: on click, set `prompt` to `prevPrompt` and clear `prevPrompt` to `null`.
+- [x] When `summary` is applied as the new prompt, automatically set `enhance` to `false`
+- [x] Update `POST /anytale/sfx/:uid/generate-preview` route to forward `enhancePrompt` from the request body into `requestData` (same pattern as other boolean workflow flags).
 
 ### Phase 6 — Docs
 

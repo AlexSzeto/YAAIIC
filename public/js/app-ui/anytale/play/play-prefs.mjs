@@ -12,6 +12,7 @@ const PREFS_KEY = 'anytale-play-prefs';
 const DEFAULT_PREFS = {
   muted: false,
   musicOn: true,
+  sfxOn: true,
 };
 
 /** Load preferences, filling in missing keys with defaults. */

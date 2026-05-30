@@ -65,11 +65,11 @@ async function apiDeleteSfx(uid) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
-async function apiGenerateSfxPreview(uid) {
+async function apiGenerateSfxPreview(uid, { enhancePrompt = false } = {}) {
   const res = await fetch(`/anytale/sfx/${encodeURIComponent(uid)}/generate-preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientId: getClientId() }),
+    body: JSON.stringify({ clientId: getClientId(), ...(enhancePrompt ? { enhancePrompt: true } : {}) }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -104,7 +104,7 @@ SfxPromptTextarea.className = 'sfx-prompt-textarea';
 const SfxPreviewRow = styled('div')`
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: ${() => currentTheme.value.spacing.small.gap};
 `;
 SfxPreviewRow.className = 'sfx-preview-row';
 
@@ -142,6 +142,16 @@ function SfxCard({ sfx, onSaved, onDirtyChange }) {
                 if (updated?.audioUrl) setAudioUrl(updated.audioUrl);
               } catch { /* ignore */ }
             }
+            // If enhance was on and the workflow returned an enhanced prompt in summary,
+            // stash the current prompt and replace it with the enhanced version.
+            const enhanced = data?.result?.summary?.trim();
+            if (enhanced) {
+              setPrompt(prev => {
+                setPrevPrompt(prev); // remember what we had before
+                return enhanced;
+              });
+              setEnhance(false); // enhancement applied — uncheck so next generate uses it as-is
+            }
           },
           onError: () => setGenerating(false),
           onCancelled: () => setGenerating(false),
@@ -157,6 +167,9 @@ function SfxCard({ sfx, onSaved, onDirtyChange }) {
   const [audioUrl, setAudioUrl] = useState(sfx.audioUrl || '');
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [enhance, setEnhance] = useState(false);
+  // Stores the pre-enhancement prompt so the user can revert; null when no enhanced prompt is active.
+  const [prevPrompt, setPrevPrompt] = useState(null);
 
   // Baseline for dirty/revert tracking — updated after every successful save
   const originalRef = useRef({ name: sfx.name || '', tagsStr: (sfx.tags || []).join(', '), prompt: sfx.prompt || '' });
@@ -202,14 +215,20 @@ function SfxCard({ sfx, onSaved, onDirtyChange }) {
     if (!sfx.uid || generating) return;
     setGenerating(true);
     try {
-      await apiGenerateSfxPreview(sfx.uid);
+      await apiGenerateSfxPreview(sfx.uid, { enhancePrompt: enhance });
       // Progress is tracked via the queueSSEManager subscription above;
       // generating state is cleared in the SSE completion/error/cancel handlers.
     } catch (err) {
       console.error('[SfxCard] Generate preview failed:', err);
       setGenerating(false);
     }
-  }, [sfx.uid, generating]);
+  }, [sfx.uid, generating, enhance]);
+
+  const handleRevertPrompt = useCallback(() => {
+    if (prevPrompt === null) return;
+    setPrompt(prevPrompt);
+    setPrevPrompt(null);
+  }, [prevPrompt]);
 
   return html`
     <${VerticalLayout} gap="small">
@@ -233,6 +252,21 @@ function SfxCard({ sfx, onSaved, onDirtyChange }) {
           onInput=${e => setPrompt(e.target.value)}
         />
       </div>
+      <${HorizontalEdgesLayout}>
+        <${Checkbox}
+          label="Enhance"
+          checked=${enhance}
+          onChange=${e => setEnhance(e.target.checked)}
+        />
+        <${Button}
+          variant="small-text"
+          color="secondary"
+          icon="undo"
+          disabled=${prevPrompt === null}
+          onClick=${handleRevertPrompt}
+        >Revert Prompt</${Button}>
+      </${HorizontalEdgesLayout}>
+
       <${SfxPreviewRow}>
         <${Button}
           variant="medium-icon"
@@ -350,6 +384,7 @@ function SfxSection() {
       ${loading ? html`<div style=${{ color: currentTheme.value.colors.text.secondary }}>Loading SFX…</div>` : null}
       <${DynamicList}
         items=${sfxList}
+        title="SFX List"
         getTitle=${(sfx) => `${sfx.name || 'Unnamed SFX'}${dirtyUids.has(sfx.uid || sfx._localId) ? ' *' : ''}`}
         renderItem=${(sfx) => html`
           <${SfxCard}
@@ -537,6 +572,7 @@ const ScrollArea = styled('div')`
   flex: 1 1 auto;
   overflow-y: auto;
   padding-right: ${() => currentTheme.value.spacing.small.padding};
+  gap: ${() => currentTheme.value.spacing.medium.gap};
 `;
 ScrollArea.className = 'music-scroll-area';
 
@@ -626,6 +662,7 @@ const ButtonRow = styled('div')`
   gap: ${() => currentTheme.value.spacing.small.gap};
   flex-wrap: wrap;
   flex: none;
+  justify-content: flex-end;
 `;
 ButtonRow.className = 'music-button-row';
 

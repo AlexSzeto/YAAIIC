@@ -102,6 +102,7 @@ export function load() {
   const prefs = loadPrefs();
   merged.muted = prefs.muted;
   merged.musicOn = prefs.musicOn;
+  merged.sfxOn = prefs.sfxOn;
 
   return merged;
 }
@@ -109,7 +110,7 @@ export function load() {
 /** Full save — replaces entire session object in localStorage (prefs keys are excluded). */
 export function save(session) {
   // Strip pref-owned keys so they are never mixed into the session storage.
-  const { muted, musicOn, ...rest } = session; // eslint-disable-line no-unused-vars
+  const { muted, musicOn, sfxOn, ...rest } = session; // eslint-disable-line no-unused-vars
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }
 

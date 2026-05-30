@@ -7,15 +7,16 @@ let cachedData = null;
  */
 export async function loadPlayData() {
   if (cachedData) return cachedData;
-  const [parts, plots, characters, outfits, config, genres] = await Promise.all([
+  const [parts, plots, characters, outfits, config, genres, sfx] = await Promise.all([
     fetch('/anytale/parts').then(r => r.json()),
     fetch('/anytale/plot').then(r => r.json()),
     fetch('/anytale/characters').then(r => r.json()),
     fetch('/anytale/outfits').then(r => r.json()),
     fetch('/anytale/config').then(r => r.json()),
     fetch('/anytale/genres').then(r => r.json()),
+    fetch('/anytale/sfx').then(r => r.json()),
   ]);
-  cachedData = { parts, plots, characters, outfits, config, genres };
+  cachedData = { parts, plots, characters, outfits, config, genres, sfx };
   return cachedData;
 }
 

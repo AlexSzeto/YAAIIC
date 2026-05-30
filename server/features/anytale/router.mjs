@@ -958,7 +958,7 @@ router.delete('/anytale/sfx/:uid', (req, res) => {
 router.post('/anytale/sfx/:uid/generate-preview', async (req, res) => {
   try {
     const { uid } = req.params;
-    const { clientId } = req.body;
+    const { clientId, enhancePrompt } = req.body;
     const anytaleConfig = req.app.locals.config?.anytale || {};
     const sfxWorkflow = anytaleConfig.sfxWorkflow;
 
@@ -990,6 +990,8 @@ router.post('/anytale/sfx/:uid/generate-preview', async (req, res) => {
       entityType: 'anytale-sfx-preview',
       requestOrigin: 'anytale',
     };
+
+    if (enhancePrompt) requestData.enhancePrompt = true;
 
     const queueItem = queueService.enqueue({
       type: 'audio',

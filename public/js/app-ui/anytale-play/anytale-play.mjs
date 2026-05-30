@@ -25,6 +25,7 @@ import {
   computeVisiblePages,
   buildEnabledPartsForPage,
   filterDialogText,
+  findMatchingSfx,
 } from './play-utils.mjs';
 import { resolveSlotStatuses, parseRules, applyRules } from '../anytale/slot-resolver.mjs';
 import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAllCache } from './play-cache.mjs';
@@ -58,6 +59,9 @@ export function AnyTalePlayPage() {
   // pageVoiceUrls / pageVoiceStatuses keyed by actual plot-page index
   const [pageVoiceUrls, setPageVoiceUrls] = useState({});
   const [pageVoiceStatuses, setPageVoiceStatuses] = useState({});
+  // pageSfxUrls / pageSfxStatuses keyed by actual plot-page index
+  const [pageSfxUrls, setPageSfxUrls] = useState({});
+  const [pageSfxStatuses, setPageSfxStatuses] = useState({});
   const [isAutoplay, setIsAutoplay] = useState(false);
   // URL currently shown in PortraitPanel — only advances to a new page's image once ALL page assets are ready
   const [displayedImageUrl, setDisplayedImageUrl] = useState('');
@@ -272,6 +276,31 @@ export function AnyTalePlayPage() {
     });
   }, [progressShow]);
 
+  // Open an SFX SSE subscription for a chapter page
+  const subscribeSfxProgress = useCallback((sseTaskId, plotPageIdx) => {
+    const capturedStaleId = chapterStaleRef.current;
+    progressShow(sseTaskId, {
+      onComplete: (result) => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
+        if (result?.result?.audioUrl) {
+          const url = result.result.audioUrl;
+          setPageSfxUrls(prev => ({ ...prev, [plotPageIdx]: url }));
+          setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'complete' }));
+        } else {
+          setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+        }
+      },
+      onError: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
+        setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+      },
+      onCancelled: () => {
+        if (chapterStaleRef.current !== capturedStaleId) return;
+        setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'skipped' }));
+      },
+    });
+  }, [progressShow]);
+
   const queuePageImage = useCallback((plotPageIdx, plot, slotStatuses) => {
     const data = playDataRef.current;
     const sess = sessionRef.current;
@@ -438,6 +467,34 @@ export function AnyTalePlayPage() {
 
   useEffect(() => { queuePageSpeechRef.current = queuePageSpeech; }, [queuePageSpeech]);
 
+  // Queue SFX generation for a page.
+  const queuePageSfx = useCallback((plotPageIdx, sfxPrompt) => {
+    const sess = sessionRef.current;
+    if (!sess?.sfxOn) {
+      setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'skipped' }));
+      return Promise.resolve();
+    }
+
+    setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'generating' }));
+
+    return fetchJson('/anytale/play/generate-sfx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: sfxPrompt, clientId: getClientId() }),
+    }).then(({ taskId: queueItemId }) => {
+      const earlyIdx = pendingChapterEventsRef.current.findIndex(e => e.id === queueItemId);
+      if (earlyIdx !== -1) {
+        const [earlyEvent] = pendingChapterEventsRef.current.splice(earlyIdx, 1);
+        subscribeSfxProgress(earlyEvent.taskId, plotPageIdx);
+      } else {
+        taskToPageRef.current.set(queueItemId, { plotPageIdx, type: 'sfx' });
+      }
+    }).catch(err => {
+      console.error('[AnyTalePlayPage] Failed to queue SFX:', err);
+      setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'error' }));
+    });
+  }, [subscribeSfxProgress]);
+
   // --- Chapter initialization ---
 
   /**
@@ -507,8 +564,10 @@ export function AnyTalePlayPage() {
     const newDialogTexts = {};
     const newVoiceUrls = {};
     const newVoiceStatuses = {};
+    const newSfxStatuses = {};
     const toQueueImage = [];
     const toQueueDialog = [];
+    const toQueueSfx = []; // { plotPageIdx, sfxPrompt }
 
     for (const plotPageIdx of visibleIndices) {
       const cacheKey = buildCacheKey({
@@ -547,6 +606,21 @@ export function AnyTalePlayPage() {
       } else if (entry?.voiceStatus === 'generating' || entry?.voiceStatus === 'error') {
         updateCacheEntry(cacheKey, { voiceStatus: 'pending', voiceTaskId: null });
       }
+
+      // SFX matching — always re-queued fresh (no caching)
+      const sfxList = data.sfx || [];
+      const page = plot.pages[plotPageIdx];
+      const matchingSfx = findMatchingSfx(page?.tags || '', sfxList);
+      if (matchingSfx) {
+        if (sess.sfxOn) {
+          newSfxStatuses[plotPageIdx] = 'pending';
+          toQueueSfx.push({ plotPageIdx, sfxPrompt: matchingSfx.prompt });
+        } else {
+          newSfxStatuses[plotPageIdx] = 'skipped';
+        }
+      } else {
+        newSfxStatuses[plotPageIdx] = 'skipped'; // no match — nothing to generate
+      }
     }
 
     setPageImageUrls(newImageUrls);
@@ -554,6 +628,8 @@ export function AnyTalePlayPage() {
     setPageDialogTexts(newDialogTexts);
     setPageVoiceUrls(newVoiceUrls);
     setPageVoiceStatuses(newVoiceStatuses);
+    setPageSfxUrls({});
+    setPageSfxStatuses(newSfxStatuses);
 
     dialogHistoryRef.current = [];
 
@@ -627,11 +703,16 @@ export function AnyTalePlayPage() {
         }
       }
 
-      // Await both submissions before moving to the next page so the server queue
+      // SFX: queue after image+voice so it gets a lower server-queue position
+      // (SFX is not awaited — fire-and-forget is fine since playback can start independently)
+      const sfxItem = toQueueSfx.find(s => s.plotPageIdx === plotPageIdx);
+      if (sfxItem) queuePageSfx(plotPageIdx, sfxItem.sfxPrompt);
+
+      // Await image+voice submissions before moving to the next page so the server queue
       // receives them in the correct order.
       if (pagePromises.length > 0) await Promise.all(pagePromises);
     }
-  }, [queuePageImage, queuePageDialog]);
+  }, [queuePageImage, queuePageDialog, queuePageSfx]);
 
   useEffect(() => { initChapterRef.current = initChapter; }, [initChapter]);
 
@@ -694,6 +775,8 @@ export function AnyTalePlayPage() {
             taskToPageRef.current.delete(queueItemId);
             if (pageInfo.type === 'voice') {
               subscribeVoiceProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
+            } else if (pageInfo.type === 'sfx') {
+              subscribeSfxProgress(sseTaskId, pageInfo.plotPageIdx);
             } else {
               subscribePageProgress(sseTaskId, pageInfo.plotPageIdx, pageInfo.cacheKey);
             }
@@ -921,7 +1004,8 @@ export function AnyTalePlayPage() {
 
   useEffect(() => {
     if (session.phase !== 'plot' || !currentPlot) return;
-    globalAudioPlayer.stop();
+    globalAudioPlayer.stop();    // channel 0 — voice
+    globalAudioPlayer.stop(1);   // channel 1 — SFX
   }, [session.pageIndex, session.phase, currentPlot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -952,10 +1036,13 @@ export function AnyTalePlayPage() {
     if (!session.muted && pageVoiceUrls[plotIdx]) {
       globalAudioPlayer.play(pageVoiceUrls[plotIdx]);
     }
+    if (session.sfxOn && pageSfxUrls[plotIdx]) {
+      globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1);
+    }
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
-    session.phase, session.pageIndex, session.muted, session.character.voiceSampleUrl,
+    session.phase, session.pageIndex, session.muted, session.sfxOn, session.character.voiceSampleUrl,
     currentPlot, visiblePageIndices, pageImageUrls, pageStatuses,
-    pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, displayedImageUrl,
+    pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, pageSfxUrls, displayedImageUrl,
   ]);
 
   // Handle mute toggle
@@ -1017,6 +1104,49 @@ export function AnyTalePlayPage() {
       }
     }
   }, [session.muted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle SFX toggle
+  useEffect(() => {
+    if (session.phase !== 'plot' || !currentPlot) return;
+
+    if (!session.sfxOn) {
+      globalAudioPlayer.stop(1);
+      // Mark all currently-generating SFX pages as skipped
+      setPageSfxStatuses(prev => {
+        const next = { ...prev };
+        for (const plotPageIdx of visiblePageIndices) {
+          if (next[plotPageIdx] === 'generating' || next[plotPageIdx] === 'pending') {
+            next[plotPageIdx] = 'skipped';
+          }
+        }
+        return next;
+      });
+    } else {
+      // Re-queue SFX for any pages that were skipped while SFX was off
+      const data = playDataRef.current;
+      const sess = sessionRef.current;
+      if (!data || !sess) return;
+      const sfxList = data.sfx || [];
+      let anyReset = false;
+      for (const plotPageIdx of visiblePageIndices) {
+        if (pageSfxStatuses[plotPageIdx] !== 'skipped') continue;
+        const page = currentPlot.pages[plotPageIdx];
+        const matchingSfx = findMatchingSfx(page?.tags || '', sfxList);
+        if (matchingSfx) {
+          setPageSfxStatuses(prev => ({ ...prev, [plotPageIdx]: 'pending' }));
+          queuePageSfx(plotPageIdx, matchingSfx.prompt);
+          anyReset = true;
+        }
+      }
+      if (anyReset) {
+        // Play SFX for the currently-displayed page if it's now ready
+        const currentPlotIdx = visiblePageIndices[session.pageIndex];
+        if (pageSfxUrls[currentPlotIdx]) {
+          globalAudioPlayer.play(pageSfxUrls[currentPlotIdx], null, null, 1);
+        }
+      }
+    }
+  }, [session.sfxOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Intro voice playback
   useEffect(() => {
@@ -1428,6 +1558,12 @@ export function AnyTalePlayPage() {
     updateSession({ musicOn: next });
   }, [session.musicOn, updateSession]);
 
+  const handleToggleSfx = useCallback(() => {
+    const next = !session.sfxOn;
+    patchPrefs({ sfxOn: next });
+    updateSession({ sfxOn: next });
+  }, [session.sfxOn, updateSession]);
+
   // --- Chapter decision (end-of-chapter branching) ---
 
   /**
@@ -1589,6 +1725,8 @@ export function AnyTalePlayPage() {
         onReset=${handleReset}
         onToggleMute=${handleToggleMute}
         onToggleMusic=${handleToggleMusic}
+        sfxEnabled=${session.sfxOn}
+        onToggleSfx=${handleToggleSfx}
       />
     `;
   }
@@ -1724,6 +1862,8 @@ export function AnyTalePlayPage() {
         onReset=${handleReset}
         onToggleMute=${handleToggleMute}
         onToggleMusic=${handleToggleMusic}
+        sfxEnabled=${session.sfxOn}
+        onToggleSfx=${handleToggleSfx}
       />
     `;
   }
