@@ -388,16 +388,6 @@ router.post('/anytale/characters/:uid/generate-voice', async (req, res) => {
       summary: '',
     };
 
-    // Apply defaults from the workflow's extraInputs so required fields like
-    // audioFormat are populated even when not provided in the request body.
-    if (workflowData.options?.extraInputs) {
-      for (const input of workflowData.options.extraInputs) {
-        if (input.default !== undefined && requestData[input.id] === undefined) {
-          requestData[input.id] = input.default;
-        }
-      }
-    }
-
     requestData.characterUid = uid;
     requestData.entityType = 'anytale-voice';
     requestData.requestOrigin = 'anytale';
@@ -872,15 +862,6 @@ router.post('/anytale/play/generate-speech', async (req, res) => {
       requestOrigin: 'anytale-play',
     };
 
-    // Apply workflow extraInputs defaults
-    if (workflowData.options?.extraInputs) {
-      for (const input of workflowData.options.extraInputs) {
-        if (input.default !== undefined && requestData[input.id] === undefined) {
-          requestData[input.id] = input.default;
-        }
-      }
-    }
-
     if (characterUid) requestData.characterUid = characterUid;
 
     const queueItem = queueService.enqueue({
@@ -958,7 +939,7 @@ router.delete('/anytale/sfx/:uid', (req, res) => {
 router.post('/anytale/sfx/:uid/generate-preview', async (req, res) => {
   try {
     const { uid } = req.params;
-    const { clientId, enhancePrompt } = req.body;
+    const { clientId, prompt: bodyPrompt, enhancePrompt } = req.body;
     const anytaleConfig = req.app.locals.config?.anytale || {};
     const sfxWorkflow = anytaleConfig.sfxWorkflow;
 
@@ -980,7 +961,9 @@ router.post('/anytale/sfx/:uid/generate-preview', async (req, res) => {
 
     const requestData = {
       workflow: sfxWorkflow,
-      prompt: record.prompt || '',
+      // Prefer the prompt sent by the client (current form state) over the saved record,
+      // so unsaved edits are always used for generation without requiring a save first.
+      prompt: bodyPrompt ?? record.prompt ?? '',
       audioFormat: 'mp3',
       seed: Math.floor(Math.random() * 4294967295),
       tags: '',

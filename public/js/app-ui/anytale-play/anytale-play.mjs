@@ -1739,9 +1739,11 @@ export function AnyTalePlayPage() {
           mode="loading"
           muted=${session.muted}
           musicEnabled=${session.musicOn}
+          sfxEnabled=${session.sfxOn}
           onReset=${handleReset}
           onToggleMute=${handleToggleMute}
           onToggleMusic=${handleToggleMusic}
+          onToggleSfx=${handleToggleSfx}
         />
       `;
     }
@@ -1833,9 +1835,11 @@ export function AnyTalePlayPage() {
           bubbleText="No story options found. Please check your plot configuration."
           muted=${session.muted}
           musicEnabled=${session.musicOn}
+          sfxEnabled=${session.sfxOn}
           onReset=${handleReset}
           onToggleMute=${handleToggleMute}
           onToggleMusic=${handleToggleMusic}
+          onToggleSfx=${handleToggleSfx}
         />
       `;
     }
@@ -1982,11 +1986,13 @@ export function AnyTalePlayPage() {
       bubbleType=${bubbleType}
       muted=${session.muted}
       musicEnabled=${session.musicOn}
+      sfxEnabled=${session.sfxOn}
       decisions=${decisions}
       onBack=${onBack}
       onReset=${handleReset}
       onToggleMute=${handleToggleMute}
       onToggleMusic=${handleToggleMusic}
+      onToggleSfx=${handleToggleSfx}
     />
   `;
 }

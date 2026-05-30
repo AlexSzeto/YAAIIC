@@ -83,7 +83,10 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 - [x] Create `public/js/app-ui/anytale/play/play-toggle-button.mjs` — a new `PlayToggleButton({ icon, enabled, onClick, title })` component used for the three audio-option toggles. When `enabled = false`, renders a `block` icon overlaid on top of the base icon to signal the option is disabled. Reuse the existing `PlayButton` / `GlassButton` styling patterns from the same directory.
 - [x] Replace the existing mute/music buttons in `PortraitPanel` top controls with `PlayToggleButton` instances and add the SFX toggle. Final left-to-right button order: **restart**, **music** (`icon="music"`, tied to `session.musicOn`), **SFX** (`icon="equalizer"`, tied to `session.sfxOn`), **TTS** (`icon="microphone"`, tied to `!session.muted`). Each toggle calls the appropriate `patchPrefs` + `updateSession` handler on click.
   - SFX toggle: on disable — `globalAudioPlayer.stop(1)`; mark all `'generating'` SFX statuses as `'skipped'`. On enable — re-queue SFX for any visible pages whose status is `'skipped'` (same logic as the mute-toggle voice resumption).
-- [x] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()` (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
+- [x] Update `play-session.mjs` so `sfxOn` is overlaid from prefs in `load()`
+
+#### Fixes and Changes
+- [x] Wire `sfxEnabled`/`onToggleSfx` to all PortraitPanel callsites in `anytale-play.mjs` (3 were missed by replace_all); add opacity dim to `PlayToggleButton` when `!enabled` for a clearer visual off-state (same pattern as `muted`/`musicOn`); `sfxOn` is never written to the session key directly — only to prefs.
 
 ### Phase 5 — SFX prompt enhancement
 
@@ -95,17 +98,25 @@ Add per-page sound effect (SFX) playback to AnyTale play mode. SFX records are m
 - [x] In the `queueSSEManager` `onComplete` handler in `SfxCard`: if `data.result.summary` is a non-empty string, store the current `prompt` in `prevPrompt` and replace `prompt` with `data.result.summary` (the enhanced prompt returned by the workflow).
 - [x] Wire the Revert Prompt button: on click, set `prompt` to `prevPrompt` and clear `prevPrompt` to `null`.
 - [x] When `summary` is applied as the new prompt, automatically set `enhance` to `false`
+- [x] In `processGenerationTask` (orchestrator.mjs): seed `generationData` with `extraInputs` defaults
+- [x] `apiGenerateSfxPreview` sends current form `prompt` in request body
+- [x] Add `prompt` to `handleGeneratePreview` `useCallback` deps (stale closure fix); server uses `req.body.prompt` over saved record prompt in `generate-preview` route from `workflowConfig.options.extraInputs` before merging `requestData` on top, so all workflow fields have correct defaults regardless of the calling endpoint; remove now-redundant per-endpoint extraInputs default blocks from `anytale/router.mjs` (generate-voice, generate-speech) and `generation/router.mjs`
 - [x] Update `POST /anytale/sfx/:uid/generate-preview` route to forward `enhancePrompt` from the request body into `requestData` (same pattern as other boolean workflow flags).
 
 ### Phase 6 — Docs
 
-- [ ] Update `docs/features/anytale.md`:
+- [x] Update `docs/features/anytale.md`:
   - Add `SfxRecord` shape to Key Data Shapes
   - Add SFX CRUD + generate-preview + generate-sfx endpoints to the Server Endpoints table
   - Add `sfxWorkflow` to the Config keys table
   - Add `sfx-match-pill.mjs` and SFX section expansion to the Component Map
   - Document the SFX matching algorithm and the `sfxOn` pref
-- [ ] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`, `.claude/rules/client.md`
+- [x] Review and update affected living docs: `docs/features/anytale.md`, `docs/server.md`, `.claude/rules/client.md`
+
+#### Fixes and Changes
+- [x] `SfxMatchPill` becomes a button when `sfx.audioUrl` is set
+- [x] Fix pill theme interpolations: inline styles into each styled component instead of using shared `pillBase` string
+- [x] Fix SFX pill height to 28px; clicking plays the audio via `globalAudioPlayer` channel 0; no `onClick` / pointer-events when `audioUrl` is empty
 
 ## Implementation Details (Phase 5)
 

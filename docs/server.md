@@ -951,6 +951,27 @@ These endpoints manage AnyTale data: the parts library, plots, characters, and o
 
 **Query:** `queueOnly=true` adds to queue without auto-starting (used by auto-regen on cache miss).
 
+### SFX Records
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/anytale/sfx` | List all SFX records |
+| `POST` | `/anytale/sfx` | Create a new SFX record (server assigns UUID); returns saved record |
+| `PUT` | `/anytale/sfx/:uid` | Upsert SFX record by uid; returns saved record |
+| `DELETE` | `/anytale/sfx/:uid` | Remove SFX record; returns `{ deleted: true }` |
+
+### SFX Preview Generation
+- **Endpoint**: `POST /anytale/sfx/:uid/generate-preview`
+- **Use Case**: Queues the configured `sfxWorkflow` for an editor-side audio preview. Uses the `prompt` from the request body (current form state) rather than the saved record, so unsaved edits generate correctly without requiring a save first.
+- **Payload**: JSON body `{ prompt: string, enhancePrompt?: boolean, clientId?: string }`. When `enhancePrompt` is `true`, the workflow is expected to write an enhanced prompt string into `generationData.summary`; the client reads it from `result.summary` on SSE completion.
+- **Output**: `202 { taskId }` — result arrives via queue SSE (`endpointKey: 'anytale-sfx-preview'`). On completion `sfx.audioUrl` is updated in the DB.
+
+### Play-Mode SFX Generation
+- **Endpoint**: `POST /anytale/play/generate-sfx`
+- **Use Case**: Queues an ephemeral SFX audio generation for a specific play-mode page. The result is **not** written back to the SFX record.
+- **Payload**: JSON body `{ prompt: string, clientId?: string }`.
+- **Output**: `202 { taskId }` — result arrives via queue SSE (`endpointKey: 'anytale-play-sfx'`). Client plays the returned `audioUrl` on audio channel 1.
+
 ## Queue API
 
 The queue serializes generation tasks so only one runs at a time. All AnyTale generation endpoints push items onto the queue.

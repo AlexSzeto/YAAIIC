@@ -292,8 +292,19 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     const { seed, workflow, imagePath, maskPath, inpaint, inpaintArea } = requestData;
     const { ollamaAPIPath } = serverConfig;
 
-    // Create generationData as a copy of requestData
-    const generationData = { ...requestData };
+    // Build generationData: start with extraInputs defaults so every workflow
+    // field is populated even when not supplied by the caller, then let
+    // requestData override. This is the single source of truth for defaults —
+    // per-endpoint default-application blocks are no longer needed.
+    const extraDefaults = {};
+    if (options?.extraInputs) {
+      for (const input of options.extraInputs) {
+        if (input.id && input.default !== undefined) {
+          extraDefaults[input.id] = input.default;
+        }
+      }
+    }
+    const generationData = { ...extraDefaults, ...requestData };
 
     // Add ollamaAPIPath to generation data
     if (ollamaAPIPath) {

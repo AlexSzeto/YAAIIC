@@ -42,7 +42,10 @@ app-ui/anytale/
   prompt-import.mjs            — imports prompt tags back into part attribute values
   slot-resolver.mjs            — resolves which parts fill which body slots
   image-preview.mjs            — part preview image (hash-based idempotent caching)
-  music-section.mjs            — Music tab: genre CRUD (with disabled toggle), track sub-lists, BGM player bar, playlist modal
+  music-section.mjs            — SFX & Music tab: SFX record CRUD + preview generation (SfxCard, SfxSection) above Music section; genre CRUD, track sub-lists, BGM player bar, playlist modal
+  sfx-match-pill.mjs           — Display-only pill shown in the plot editor indicating an SFX match; primary (filled) for the playing match, outline for secondary matches
+anytale-play/
+  play-toggle-button.mjs       — 48×48 glass toggle button for play mode audio options; renders a block-icon overlay when enabled=false
 ```
 
 ### State architecture
@@ -84,6 +87,12 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | PUT | `/anytale/genres/:uid` | Update genre (including nested tracks array) |
 | DELETE | `/anytale/genres/:uid` | Delete genre and all nested tracks |
 | POST | `/anytale/genres/:uid/generate-track` | Queue AceStep track generation; result auto-saved to genre |
+| GET | `/anytale/sfx` | List all SFX records |
+| POST | `/anytale/sfx` | Create SFX record (server assigns UUID); returns saved record |
+| PUT | `/anytale/sfx/:uid` | Upsert SFX record by uid; returns saved record |
+| DELETE | `/anytale/sfx/:uid` | Remove SFX record; returns `{ deleted: true }` |
+| POST | `/anytale/sfx/:uid/generate-preview` | Queue sfxWorkflow for editor preview; body: `{ prompt, enhancePrompt?, clientId }`. Uses body `prompt` (current form state) over saved record. On completion sets `sfx.audioUrl`; if `enhancePrompt` is true, the workflow's `summary` field carries the enhanced prompt back to the client |
+| POST | `/anytale/play/generate-sfx` | Queue sfxWorkflow for a play-mode page (ephemeral — audio not stored in SFX record); body: `{ prompt, clientId }` |
 
 ### Config keys (`config.json` → `anytale` block)
 
@@ -96,6 +105,7 @@ All routes are defined in `server/features/anytale/router.mjs`, business logic i
 | `partPreviewWorkflow` | Workflow name for part preview images |
 | `musicWorkflow` | Workflow name for AceStep music generation (default: `'AceStep Music Generation'`) |
 | `defaultMusicLength` | Default generated track length in seconds (default: `120`) |
+| `sfxWorkflow` | Workflow name for SFX generation used in both editor preview and play mode |
 | `dialog` | Dialog generation config: `{ model, systemMessage, parameters, mode, format, stream }` |
 | `dialogPreview` | Preview character for the plot editor's "Preview Dialog" button: `{ name, profile, location }`. `name` → `{{name}}` slot; `profile` → `{{profile}}` slot; `location` → `{{location}}` slot. Outfit is assembled dynamically from enabled non-character parts. If absent or `name`/`profile` are empty, the button is disabled. |
 | `generateText` | LLM text generation config: `{ model, templates: { selfProfile, voiceProfile, outfitDescriptions } }`. Drives the AI-generate buttons next to selfProfile, voiceProfile, and outfit description fields. |
@@ -336,15 +346,53 @@ Portrait, voice, outfit render, and part preview generation are queued via the s
 
 Portrait, voice, and outfit render are in the orchestrator's `silent` set (no global notification popup on completion).
 
+SFX preview and play-mode SFX are also in the `silent` set.
+
+| endpointKey | Trigger | Orchestrator completion action |
+|---|---|---|
+| `anytale-sfx-preview` | `POST /anytale/sfx/:uid/generate-preview` | Sets `sfx.audioUrl`; client reads enhanced prompt from `result.summary` if `enhancePrompt` was set |
+| `anytale-play-sfx` | `POST /anytale/play/generate-sfx` | No DB write (ephemeral); client plays audio from `result.audioUrl` on channel 1 |
+
 ## Persistence
 
-All four entity types (parts, plots, characters, outfits) are stored in `server/database/anytale-data.json`:
+All entity types (parts, plots, characters, outfits, genres, SFX records) are stored in `server/database/anytale-data.json`:
 
 ```json
 {
   "parts": [ ...PartConfig ],
   "plot": [ ...PlotBlock ],
   "characters": [ ...Character ],
-  "outfits": [ ...Outfit ]
+  "outfits": [ ...Outfit ],
+  "genres": [ ...Genre ],
+  "sfx": [ ...SfxRecord ]
 }
 ```
+
+### SfxRecord shape
+
+```js
+{
+  uid: string,         // server-assigned UUID
+  name: string,        // human-readable label shown in editor and picker modal
+  tags: string[],      // matched against plot page prompt tags (exact, case-insensitive)
+  prompt: string,      // text prompt sent to sfxWorkflow
+  audioUrl: string,    // URL of the most recently editor-generated preview (not used in play mode)
+}
+```
+
+### SFX matching algorithm
+
+Implemented in `findAllMatchingSfx` / `findMatchingSfx` in `public/js/app-ui/anytale-play/play-utils.mjs`.
+
+1. Split the page's `tags` string by comma; trim and lowercase each token.
+2. For each token in order, find the first SFX record (by array order) whose `tags` array contains an exact case-insensitive match.
+3. Each SFX uid is collected at most once — at the position of its earliest matching page token.
+4. `findMatchingSfx` returns the first result (the SFX that will actually play). Secondary matches are shown as outline pills in the plot editor but are not generated in play mode.
+
+### Play mode SFX prefs and session
+
+`sfxOn` is stored in play prefs (`anytale-play-prefs` in `localStorage`, default `true`) and overlaid onto the session in `play-session.mjs → load()`. It is never written to the session storage key — only to prefs — so it survives session resets.
+
+Audio channel assignment:
+- Channel 0 — voice / TTS
+- Channel 1 — SFX

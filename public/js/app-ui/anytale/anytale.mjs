@@ -226,11 +226,22 @@ export function AnyTalePage() {
       try {
         const media = backfillMissingProperties([await fetchJson(`/media-data/${data.result.uid}`)])[0];
         setHistory(prev => [...prev, media]);
-        // Only auto-jump to the new image when the user is not on the parts-plot tab;
-        // on that tab the viewer should stay at the current plot page image.
         const activeTab = localStorage.getItem('anytale-active-tab') || 'parts-plot';
         if (activeTab !== 'parts-plot') {
+          // Non-plot tab: always jump to the newest image.
           navigateToLastRef.current = true;
+        } else {
+          // Parts & Plot tab: only jump if the completed image matches the page
+          // currently being edited — avoids disrupting the view for other pages.
+          const currentPlot = loadPlot();
+          const activePageIndex = loadState().activePlotPage ?? 0;
+          if (
+            currentPlot.uid &&
+            media.plot?.uid === currentPlot.uid &&
+            media.plot?.page === activePageIndex
+          ) {
+            navigateToLastRef.current = true;
+          }
         }
         toast.success(`Generated: ${media.name || 'Image'}`);
       } catch (err) {

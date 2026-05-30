@@ -65,11 +65,11 @@ async function apiDeleteSfx(uid) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
-async function apiGenerateSfxPreview(uid, { enhancePrompt = false } = {}) {
+async function apiGenerateSfxPreview(uid, { prompt = '', enhancePrompt = false } = {}) {
   const res = await fetch(`/anytale/sfx/${encodeURIComponent(uid)}/generate-preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientId: getClientId(), ...(enhancePrompt ? { enhancePrompt: true } : {}) }),
+    body: JSON.stringify({ clientId: getClientId(), prompt, ...(enhancePrompt ? { enhancePrompt: true } : {}) }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -215,14 +215,14 @@ function SfxCard({ sfx, onSaved, onDirtyChange }) {
     if (!sfx.uid || generating) return;
     setGenerating(true);
     try {
-      await apiGenerateSfxPreview(sfx.uid, { enhancePrompt: enhance });
+      await apiGenerateSfxPreview(sfx.uid, { prompt, enhancePrompt: enhance });
       // Progress is tracked via the queueSSEManager subscription above;
       // generating state is cleared in the SSE completion/error/cancel handlers.
     } catch (err) {
       console.error('[SfxCard] Generate preview failed:', err);
       setGenerating(false);
     }
-  }, [sfx.uid, generating, enhance]);
+  }, [sfx.uid, generating, enhance, prompt]);
 
   const handleRevertPrompt = useCallback(() => {
     if (prevPrompt === null) return;

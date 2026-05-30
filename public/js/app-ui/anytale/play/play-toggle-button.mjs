@@ -70,6 +70,7 @@ export function PlayToggleButton({ icon, enabled = true, onClick, title, disable
       onClick=${onClick}
       title=${title}
       disabled=${disabled}
+      style=${{ opacity: !enabled ? 0.45 : 1 }}
       ...${rest}
     >
       <${IconWrapper}>

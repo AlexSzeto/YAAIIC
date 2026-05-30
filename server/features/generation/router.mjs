@@ -162,14 +162,11 @@ router.post('/generate', upload.any(), async (req, res) => {
       }
     }
 
-    // --- Coerce / backfill extra inputs ---
+    // --- Coerce checkbox inputs ---
+    // Defaults are applied by processGenerationTask via workflowConfig.options.extraInputs.
+    // Only coercion is needed here: FormData serialises boolean false as the string "false".
     if (workflowData.options?.extraInputs && Array.isArray(workflowData.options.extraInputs)) {
       workflowData.options.extraInputs.forEach(input => {
-        // Backfill missing fields with workflow defaults before anything else uses them
-        if (req.body[input.id] === undefined && input.default !== undefined) {
-          req.body[input.id] = input.default;
-        }
-        // Coerce checkbox strings to booleans (FormData serializes false as "false")
         if (input.type === 'checkbox' && req.body[input.id] !== undefined) {
           req.body[input.id] = req.body[input.id] === 'true' || req.body[input.id] === true;
         }
