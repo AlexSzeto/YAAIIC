@@ -154,14 +154,18 @@ export function computeVisiblePages(activeParts, plot, slotRulesText, initialSta
     ? new Map(initialStatuses)
     : resolveSlotStatuses(activeParts, [], 0);
 
+  // Requirements are always checked against the state at the start of this plot/chapter,
+  // so a part removed mid-plot can still satisfy requirements on later pages.
+  const requirementStatuses = new Map(currentStatuses);
+
   const visibleIndices = [];
   const pageSlotStatuses = [];
 
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
 
-    // Check requirements against statuses BEFORE this page's actions
-    const isVisible = checkPageRequirements(page, currentStatuses, activeParts);
+    // Check requirements against the start-of-chapter statuses (not the evolving mid-plot state)
+    const isVisible = checkPageRequirements(page, requirementStatuses, activeParts);
     if (isVisible) visibleIndices.push(i);
 
     // Apply this page's actions to advance statuses for subsequent pages

@@ -42,6 +42,14 @@ let comfyUIAPIPath = null;
 /** Track the last used workflow to manage VRAM. */
 let lastUsedWorkflow = null;
 
+/**
+ * When true, ComfyUI is asked to unload models and free VRAM whenever the
+ * workflow changes.  Disabled because the current queue interleaves image,
+ * SFX, and music workflows on every item, which causes constant model thrashing
+ * that outweighs any VRAM benefit.  Set to true to re-enable.
+ */
+const FREE_VRAM_ON_WORKFLOW_SWITCH = false;
+
 /** Function to add a new media-data entry (set via {@link setAddMediaDataEntry}). */
 let addMediaDataEntry = null;
 
@@ -350,7 +358,7 @@ export async function processGenerationTask(taskId, requestData, workflowConfig,
     }
 
     // Check if workflow has changed and free memory if needed
-    if (lastUsedWorkflow && lastUsedWorkflow !== workflowBasePath) {
+    if (FREE_VRAM_ON_WORKFLOW_SWITCH && lastUsedWorkflow && lastUsedWorkflow !== workflowBasePath) {
       console.log(`Workflow changed from ${lastUsedWorkflow} to ${workflowBasePath}. Freeing memory...`);
       await freeComfyUIMemory();
     }

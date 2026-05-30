@@ -462,10 +462,13 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
       .filter(p => p.data?.enabled !== false)
       .map(p => ({ ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false } }));
 
+    // Requirements are checked against the initial state (no page actions applied),
+    // so a part removed mid-plot can still satisfy requirements on later pages.
+    const initialSlotStatuses = resolveSlotStatuses(enabledPartsWithCoverage, [], -1);
+
     // Determine which pages pass requirements before locking or queuing any
-    const pageWillQueue = currentPlot.pages.map((activePage, i) => {
-      const priorSlotStatuses = resolveSlotStatuses(enabledPartsWithCoverage, currentPlot.pages, i - 1);
-      return checkPageRequirements(activePage, priorSlotStatuses, enabledPartsWithCoverage);
+    const pageWillQueue = currentPlot.pages.map((activePage) => {
+      return checkPageRequirements(activePage, initialSlotStatuses, enabledPartsWithCoverage);
     });
 
     // Only lock pages that will actually be queued

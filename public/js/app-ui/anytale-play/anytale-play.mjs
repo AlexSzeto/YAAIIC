@@ -220,6 +220,10 @@ export function AnyTalePlayPage() {
   // AbortController for dialog generation — replaced on each initChapter call.
   const dialogAbortControllerRef = useRef(null);
 
+  // Tracks the plotPageIdx for which SFX has already been played in the current page visit.
+  // Reset on every page navigation so late-arriving SFX plays exactly once.
+  const sfxPlayedRef = useRef(null);
+
   // Open a progress SSE subscription for a chapter page
   const subscribePageProgress = useCallback((sseTaskId, plotPageIdx, cacheKey) => {
     const capturedStaleId = chapterStaleRef.current;
@@ -1006,6 +1010,7 @@ export function AnyTalePlayPage() {
     if (session.phase !== 'plot' || !currentPlot) return;
     globalAudioPlayer.stop();    // channel 0 — voice
     globalAudioPlayer.stop(1);   // channel 1 — SFX
+    sfxPlayedRef.current = null; // reset so the arriving SFX plays exactly once per page visit
   }, [session.pageIndex, session.phase, currentPlot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1030,14 +1035,25 @@ export function AnyTalePlayPage() {
     const voiceSettled = !voiceApplicable ||
       vs === 'complete' || vs === 'skipped' || vs === 'error' ||
       pageDialogTexts[plotIdx] === null;
-    if (!voiceSettled || !isNewTransition) return;
 
-    setDisplayedImageUrl(imgUrl);
-    if (!session.muted && pageVoiceUrls[plotIdx]) {
-      globalAudioPlayer.play(pageVoiceUrls[plotIdx]);
+    if (isNewTransition && voiceSettled) {
+      // First display of this page: commit image, play voice, play SFX if ready.
+      setDisplayedImageUrl(imgUrl);
+      if (!session.muted && pageVoiceUrls[plotIdx]) {
+        globalAudioPlayer.play(pageVoiceUrls[plotIdx]);
+      }
+      if (session.sfxOn && pageSfxUrls[plotIdx]) {
+        globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1);
+        sfxPlayedRef.current = plotIdx;
+      }
+      return;
     }
-    if (session.sfxOn && pageSfxUrls[plotIdx]) {
+
+    // Late-arriving SFX: page already displayed but SFX generation finished after the transition.
+    // sfxPlayedRef guards against double-play if both paths happen to fire in the same render cycle.
+    if (!isNewTransition && session.sfxOn && pageSfxUrls[plotIdx] && sfxPlayedRef.current !== plotIdx) {
       globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1);
+      sfxPlayedRef.current = plotIdx;
     }
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     session.phase, session.pageIndex, session.muted, session.sfxOn, session.character.voiceSampleUrl,
@@ -1608,11 +1624,14 @@ export function AnyTalePlayPage() {
     const postChapterSlotState = getPostChapterSlotStateObj();
     const progressionSections = currentPlot.progressionSections || [];
 
+    // Plots already visited in this session must never be offered again.
+    const visitedUids = new Set((session.timeline || []).map(e => e.plotUid));
+
     // --- Chapter candidates ---
     let candidates = [];
     if (progressionSections.length > 0) {
       const sectionMatches = (playData.plots || []).filter(
-        p => progressionSections.includes(p.section)
+        p => progressionSections.includes(p.section) && !visitedUids.has(p.uid)
       );
       // Primary: section match + slot requirements satisfied
       const primary = sectionMatches.filter(
@@ -1621,32 +1640,29 @@ export function AnyTalePlayPage() {
       candidates = primary.length > 0 ? primary : sectionMatches;
     }
 
-    const decisions = candidates.map(plot => ({
-      text: plot.description || plot.name,
-      onClick: () => handleChapterChoice(plot),
-    }));
-
-    // --- "Let's say goodbye" epilogue option (always present) ---
-    const epiloguePlots = (playData.plots || []).filter(
+    // Split epilogue candidates from regular ones; cap regular at 3.
+    const epilogueCandidates = candidates.filter(
       p => (p.section || '').toLowerCase() === 'epilogue'
     );
-    const satisfyingEpilogues = epiloguePlots.filter(
-      p => checkSlotRequirements(postChapterSlotState, p.slotRequirements || {})
+    const regularCandidates = candidates.filter(
+      p => (p.section || '').toLowerCase() !== 'epilogue'
     );
-    const epiloguePlot = randomPickN(
-      satisfyingEpilogues.length > 0 ? satisfyingEpilogues : epiloguePlots,
-      1
-    )[0];
+    const selectedRegular = randomPickN(regularCandidates, 3);
+    const selectedEpilogue = randomPickN(epilogueCandidates, 1);
 
-    if (epiloguePlot) {
-      decisions.push({
-        text: "Let's say goodbye for now",
-        onClick: () => handleChapterChoice(epiloguePlot),
-      });
-    }
+    const decisions = [
+      ...selectedRegular.map(plot => ({
+        text: plot.description || plot.name,
+        onClick: () => handleChapterChoice(plot),
+      })),
+      ...selectedEpilogue.map(plot => ({
+        text: plot.description || plot.name,
+        onClick: () => handleChapterChoice(plot),
+      })),
+    ];
 
     return decisions;
-  }, [currentPlot, playData, getPostChapterSlotStateObj, handleChapterChoice]);
+  }, [currentPlot, playData, session.timeline, getPostChapterSlotStateObj, handleChapterChoice]);
 
   // --- Render ---
 

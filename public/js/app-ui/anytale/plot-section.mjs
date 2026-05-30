@@ -434,10 +434,21 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     return resolveSlotStatuses(partsWithCoverage, plot.pages, currentPageIndex - 1);
   }, [enabledParts, plot.pages, currentPageIndex]);
 
+  // Initial slot statuses (no page actions applied) — used for requirement checks.
+  // Requirements are based on what parts are present at the start of the plot,
+  // so a part removed mid-plot can still satisfy requirements on later pages.
+  const initialSlotStatuses = useMemo(() => {
+    const coverage = getPartsCoverage();
+    const partsWithCoverage = enabledParts.map(p => ({
+      ...p, config: { ...p.config, isRevealing: coverage[p.config?.uid || p.id] ?? false }
+    }));
+    return resolveSlotStatuses(partsWithCoverage, [], -1);
+  }, [enabledParts]);
+
   // ── Whether current page's requirements are all satisfied ─────────────────
   const requirementsMet = useMemo(
-    () => checkPageRequirements(currentPage, priorSlotStatuses, enabledParts),
-    [currentPage, priorSlotStatuses, enabledParts]
+    () => checkPageRequirements(currentPage, initialSlotStatuses, enabledParts),
+    [currentPage, initialSlotStatuses, enabledParts]
   );
 
 
