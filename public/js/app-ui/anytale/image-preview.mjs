@@ -70,13 +70,14 @@ LoadingOverlay.className = 'anytale-image-preview-loading';
 /**
  * ImagePreview
  *
- * @param {Object}  props
- * @param {string}  [props.src]             – Image URL to display.
- * @param {string}  [props.alt]             – Alt text.
- * @param {boolean} [props.isGenerating]    – Show loading overlay.
- * @param {string}  [props.placeholderText] – Placeholder text when no image.
+ * @param {Object}   props
+ * @param {string}   [props.src]             – Image URL to display.
+ * @param {string}   [props.alt]             – Alt text.
+ * @param {boolean}  [props.isGenerating]    – Show loading overlay.
+ * @param {string}   [props.placeholderText] – Placeholder text when no image.
+ * @param {Function} [props.onError]         – Called when the image fails to load (e.g. 404 after a purge).
  */
-export function ImagePreview({ src, alt = 'Preview', isGenerating = false, placeholderText = 'No preview' }) {
+export function ImagePreview({ src, alt = 'Preview', isGenerating = false, placeholderText = 'No preview', onError }) {
   const handleClick = useCallback(() => {
     if (src) createImageModal(src);
   }, [src]);
@@ -88,7 +89,7 @@ export function ImagePreview({ src, alt = 'Preview', isGenerating = false, place
       title=${src ? 'Click to view full size' : ''}
     >
       ${src
-        ? html`<${PreviewImage} src=${src} alt=${alt} />`
+        ? html`<${PreviewImage} src=${src} alt=${alt} onError=${onError} />`
         : html`<${PreviewPlaceholder}>${placeholderText}</${PreviewPlaceholder}>`
       }
       ${isGenerating

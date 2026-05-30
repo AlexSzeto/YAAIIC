@@ -6,7 +6,10 @@ Track and fix AnyTale Play Mode bugs as they are discovered post-ship. This is a
 
 ## Tasks
 
-*(No tasks yet — bugs will be added here as they are discovered.)*
+#### Fixes and Changes
+- [x] Auto-regenerate part preview images that return 404 after a storage purge
+  - Add `onError` prop to `ImagePreview` (`public/js/app-ui/anytale/image-preview.mjs`) that forwards to the underlying `<img>`
+  - In `part-item.mjs`, pass an `onError` handler to `ImagePreview` that clears `previewImageUrl` to `''` on the part and immediately calls `onPreviewGenerate` if it is available
 
 ## Implementation Details
 

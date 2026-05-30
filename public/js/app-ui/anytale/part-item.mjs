@@ -313,6 +313,11 @@ export function PartItem({
     [part, config, data, onChange],
   )
 
+  const handlePreviewError = useCallback(() => {
+    updateData({ previewImageUrl: '' });
+    onPreviewGenerate?.();
+  }, [updateData, onPreviewGenerate]);
+
   const handleAttrValueChange = useCallback(
     (index, value) => {
       const attrName = config.attributes[index]?.name ?? String(index)
@@ -744,7 +749,7 @@ export function PartItem({
       <!-- Top row: preview image | name + type -->
       <${TopRow}>
         <div style=${{ display: 'flex', flexDirection: 'column', gap: currentTheme.value.spacing.small.gap, flexShrink: 0 }}>
-          <${ImagePreview} src=${data.previewImageUrl} alt="Part preview" isGenerating=${isGeneratingPreview} />
+          <${ImagePreview} src=${data.previewImageUrl} alt="Part preview" isGenerating=${isGeneratingPreview} onError=${handlePreviewError} />
           ${
             onPreviewGenerate
               ? html`

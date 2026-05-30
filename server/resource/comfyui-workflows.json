@@ -5759,6 +5759,91 @@
       "hidden": true
     },
     {
+      "uid": "5fd82766-c171-40e1-8b1a-8f7ea483a550",
+      "name": "AnyTale: Portrait (Illustrious Turbo)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "1024",
+          "to": "dimension"
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "illustrious-turbo-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "18",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "17",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
       "uid": "4445bc62-d55d-42ea-a3e2-f8e6aef699f0",
       "name": "AnyTale: Part Preview (CottonAnima)",
       "options": {
@@ -5971,6 +6056,103 @@
           "from": "saveImagePath",
           "to": [
             "10",
+            "inputs",
+            "path"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "width"
+          ]
+        },
+        {
+          "from": "dimension",
+          "to": [
+            "5",
+            "inputs",
+            "height"
+          ]
+        },
+        {
+          "from": "steps",
+          "to": [
+            "3",
+            "inputs",
+            "steps"
+          ]
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "uid": "d557da91-19c3-43a5-abc4-96b03fdf3f44",
+      "name": "AnyTale: Part Preview (Illustrious Turbo)",
+      "options": {
+        "type": "image",
+        "autocomplete": true,
+        "inputImages": 0,
+        "optionalPrompt": false,
+        "nameRequired": false,
+        "orientation": "portrait",
+        "extraInputs": [
+          {
+            "id": "imageFormat",
+            "type": "select",
+            "label": "Image Format",
+            "default": "png",
+            "options": [
+              {
+                "label": "PNG",
+                "value": "png"
+              },
+              {
+                "label": "JPG",
+                "value": "jpg"
+              }
+            ]
+          }
+        ]
+      },
+      "preGenerationTasks": [
+        {
+          "template": "masterpiece, best quality, amazing quality, hi res image, source anime, {{prompt}}",
+          "to": "enhancedPrompt"
+        },
+        {
+          "template": "512",
+          "to": "dimension"
+        },
+        {
+          "template": "4",
+          "to": "steps"
+        }
+      ],
+      "postGenerationTasks": [],
+      "base": "illustrious-turbo-text-to-image.json",
+      "replace": [
+        {
+          "from": "enhancedPrompt",
+          "to": [
+            "18",
+            "inputs",
+            "value"
+          ]
+        },
+        {
+          "from": "seed",
+          "to": [
+            "3",
+            "inputs",
+            "seed"
+          ]
+        },
+        {
+          "from": "saveImagePath",
+          "to": [
+            "17",
             "inputs",
             "path"
           ]
@@ -6280,7 +6462,7 @@
     },
     {
       "uid": "a43e9e0e-a2fd-4c91-a758-d72e673a50d6",
-      "name": "AnyTale: Image (Illustrious V15 Turbo)",
+      "name": "AnyTale: Image (Illustrious Turbo)",
       "options": {
         "type": "image",
         "autocomplete": true,
@@ -6327,14 +6509,10 @@
               }
             ]
           }
-        },
-        {
-          "template": "waiNSFWIllustrious_v140.safetensors",
-          "to": "version"
         }
       ],
       "postGenerationTasks": [],
-      "base": "illustrious-v15-turbo-text-to-image.json",
+      "base": "illustrious-turbo-text-to-image.json",
       "replace": [
         {
           "from": "enhancedPrompt",
@@ -6358,14 +6536,6 @@
             "17",
             "inputs",
             "path"
-          ]
-        },
-        {
-          "from": "version",
-          "to": [
-            "4",
-            "inputs",
-            "ckpt_name"
           ]
         }
       ],
