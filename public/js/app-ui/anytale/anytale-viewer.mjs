@@ -136,6 +136,7 @@ SlideshowControls.className = 'slideshow-controls';
  * @param {Function}   [props.onImportOutfit]         – Outfit parts import handler
  * @param {Function}   [props.onDelete]     – Called when delete icon is clicked
  * @param {boolean}    [props.canDelete]    – Whether delete is enabled
+ * @param {boolean}    [props.dimmed]       – Reduce image opacity when the displayed image doesn't match the active plot/page
  */
 export function AnyTaleViewer({
   items = [],
@@ -155,6 +156,7 @@ export function AnyTaleViewer({
   onDelete,
   canDelete = false,
   onImageWidthChange,
+  dimmed = false,
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
@@ -210,7 +212,7 @@ export function AnyTaleViewer({
   return html`
     <${Panel} variant="outlined">
       <${ViewerContainer}>
-        <${ImageWrapper}>
+        <${ImageWrapper} style=${{ opacity: dimmed ? 0.66 : 1, transition: 'opacity 0.2s' }}>
           ${backdropUrl ? html`<${PrevImage} src=${backdropUrl} alt="" />` : ''}
           <${StyledImage}
             key=${imageUrl}

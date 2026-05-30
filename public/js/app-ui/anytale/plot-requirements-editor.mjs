@@ -11,10 +11,11 @@
  * Orphan pills are removed from the data and the rendered list when they reach ignore.
  *
  * Props:
- *   @param {Object}   props.plot          – full plot object (reads slotRequirements)
- *   @param {Function} props.onChange      – called with updated plot
- *   @param {Array}    props.libraryParts  – flat part objects from /anytale/parts ({ uid, name, ... })
- *   @param {string[]} props.slotOptions   – all known non-character slot type strings
+ *   @param {Object}   props.plot             – full plot object (reads slotRequirements)
+ *   @param {Function} props.onChange         – called with updated plot
+ *   @param {Array}    props.libraryParts     – active parts in the current editor session ({ config: { uid, name }, ... })
+ *   @param {Array}    [props.allLibraryParts] – full global parts library; used as fallback for name resolution of removed parts
+ *   @param {string[]} props.slotOptions      – all known non-character slot type strings
  */
 import { html } from 'htm/preact';
 import { useCallback, useMemo } from 'preact/hooks';
@@ -49,9 +50,11 @@ ReqPill.className = 'plot-req-editor-pill';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function resolveLabel(key, libraryParts) {
+function resolveLabel(key, libraryParts, allLibraryParts) {
   // libraryParts are editor parts: { config: { uid, name }, data: { ... } }
-  const part = libraryParts.find(p => (p.config?.uid ?? p.uid) === key);
+  // allLibraryParts is the full global library used as a fallback for removed parts.
+  const part = libraryParts.find(p => (p.config?.uid ?? p.uid) === key)
+    ?? allLibraryParts.find(p => (p.config?.uid ?? p.uid) === key);
   return part?.config?.name || part?.name || key;
 }
 
@@ -76,8 +79,8 @@ function pillStyle(reqValue, theme) {
   };
 }
 
-function pillLabel(key, reqValue, libraryParts) {
-  const name = resolveLabel(key, libraryParts);
+function pillLabel(key, reqValue, libraryParts, allLibraryParts) {
+  const name = resolveLabel(key, libraryParts, allLibraryParts);
   if (reqValue === 'present') return `${name} → present`;
   if (reqValue === 'absent') return `${name} → absent`;
   return name;
@@ -85,7 +88,7 @@ function pillLabel(key, reqValue, libraryParts) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slotOptions = [] }) {
+export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], allLibraryParts = [], slotOptions = [] }) {
   const slotRequirements = plot.slotRequirements || {};
   const slotOptionSet = useMemo(() => new Set(slotOptions), [slotOptions]);
   const libraryPartUidSet = useMemo(() => new Set(libraryParts.map(p => p.config?.uid ?? p.uid)), [libraryParts]);
@@ -137,7 +140,7 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
               onClick=${() => cycleSlotType(slot)}
               title="Click to cycle: ignore → present → absent"
             >
-              ${pillLabel(slot, reqValue, libraryParts)}
+              ${pillLabel(slot, reqValue, libraryParts, allLibraryParts)}
             </${ReqPill}>
           `;
         })}
@@ -153,7 +156,7 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
               onClick=${() => cyclePartPill(uid)}
               title="Click to cycle: ignore → present → absent"
             >
-              ${pillLabel(uid, reqValue, libraryParts)}
+              ${pillLabel(uid, reqValue, libraryParts, allLibraryParts)}
             </${ReqPill}>
           `;
         })}
@@ -167,7 +170,7 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], slot
               onClick=${() => cyclePartPill(uid)}
               title="Click to cycle: present → absent → remove (part no longer in library)"
             >
-              ${pillLabel(uid, reqValue, libraryParts)}
+              ${pillLabel(uid, reqValue, libraryParts, allLibraryParts)}
             </${ReqPill}>
           `;
         })}

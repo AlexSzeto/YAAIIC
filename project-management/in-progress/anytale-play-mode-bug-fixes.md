@@ -8,6 +8,11 @@ Track and fix AnyTale Play Mode bugs as they are discovered post-ship. This is a
 
 #### Fixes and Changes
 - [x] Auto-regenerate part preview images that return 404 after a storage purge
+- [x] Resolve plot requirement part names from the full library instead of the current parts list
+- [x] Lower editor viewer image opacity to 66% when it doesn't match the active plot and page
+- [x] Add "Reject Others" button that deletes all renders for the current page except the currently viewed image
+- [x] Add notes field to plot data with textarea in editor between description and requirements
+- [x] Fix page tags input to fixed 200px height with scroll overflow
   - Add `onError` prop to `ImagePreview` (`public/js/app-ui/anytale/image-preview.mjs`) that forwards to the underlying `<img>`
   - In `part-item.mjs`, pass an `onError` handler to `ImagePreview` that clears `previewImageUrl` to `''` on the part and immediately calls `onPreviewGenerate` if it is available
 

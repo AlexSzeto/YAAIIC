@@ -121,6 +121,7 @@ export function createBlankPlot() {
     name: '',
     section: '',
     description: '',
+    notes: '',
     pages: [{ tags: '', dialogPrompt: '', actions: [], requirements: [] }],
     progressionSections: [],
     slotRequirements: {},
@@ -153,6 +154,7 @@ export function loadPlot() {
       name: parsed.name ?? '',
       section: parsed.section ?? '',
       description: parsed.description ?? '',
+      notes: parsed.notes ?? '',
       pages,
       progressionSections: Array.isArray(parsed.progressionSections) ? parsed.progressionSections : [],
       slotRequirements: (parsed.slotRequirements && typeof parsed.slotRequirements === 'object' && !Array.isArray(parsed.slotRequirements))

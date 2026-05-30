@@ -87,10 +87,11 @@ SfxPillRow.className = 'sfx-pill-row';
  * @param {number}   [props.refreshKey=0]            – Increment to force reload from localStorage
  * @param {Function} [props.onPageTagsUpdateReady]     – Called with (fn) to overwrite a page's tags; null on unmount
  * @param {Function} [props.onReject]                  – Called with ({ plotUid, pageIndex }) after page is unlocked
+ * @param {Function} [props.onRejectOthers]            – Called with ({ plotUid, pageIndex }) to delete all renders except the current viewer image
  * @param {Function} [props.onBulkDialogReady]         – Called with (fn) when bulkDialogGenerate is ready; null on unmount
  * @param {Array}    [props.libraryParts=[]]           – Up-to-date library parts from the parent; used to build slot type options
  */
-export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onViewPageImage, onBulkDialogReady, onCurrentDialogReady, libraryParts = [], history = [] }) {
+export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLocked = [], onPageLockedChange, onPlotReset, onImportHandlerReady, onPlotChange, refreshKey = 0, onPageTagsUpdateReady, onReject, onRejectOthers, onViewPageImage, onBulkDialogReady, onCurrentDialogReady, libraryParts = [], history = [] }) {
   const toast = useToast();
   const [plot, setPlot] = useState(() => loadPlot());
   const [plotList, setPlotList] = useState([]);
@@ -510,6 +511,10 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     onReject?.({ plotUid: plot.uid, pageIndex: currentPageIndex });
   }, [onPageLockedChange, pageLocked, currentPageIndex, plot.uid, onReject]);
 
+  const handleRejectOthers = useCallback(() => {
+    onRejectOthers?.({ plotUid: plot.uid, pageIndex: currentPageIndex });
+  }, [onRejectOthers, plot.uid, currentPageIndex]);
+
 
   // ── Dialog preview ───────────────────────────────────────────────────────
   const handlePreviewDialog = useCallback(async () => {
@@ -657,6 +662,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           multiline
           rows=${2}
         />
+        <${Input}
+          label="Notes"
+          value=${plot.notes || ''}
+          onInput=${(e) => setPlot(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Internal notes (not used functionally)..."
+          widthScale="full"
+          multiline
+          rows=${3}
+        />
       </${VerticalLayout}>
 
       <!-- Plot-level requirements editor -->
@@ -664,6 +678,7 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         plot=${plot}
         onChange=${setPlot}
         libraryParts=${parts}
+        allLibraryParts=${libraryParts}
         slotOptions=${slotOptions}
       />
 
@@ -747,9 +762,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           label="Page Tags"
           value=${currentPage.tags}
           onInput=${(text) => updatePage(currentPageIndex, { ...currentPage, tags: text })}
-          rows=${2}
+          fixedHeight=${200}
           placeholder="Comma-separated tags for this page"
-
         />
 
         <${HorizontalEdgesLayout}>
@@ -767,6 +781,12 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
               disabled=${!hasMediaForCurrentPage}
               onClick=${handleReject}
             >Reject Render<//>
+            <${Button}
+              variant="small-text"
+              icon="trash"
+              disabled=${!hasMediaForCurrentPage}
+              onClick=${handleRejectOthers}
+            >Reject Others<//>
             <${Button}
               variant="small-text"
               color="secondary"

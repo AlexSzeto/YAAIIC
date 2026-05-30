@@ -95,9 +95,10 @@ function getCurrentTagBounds(textarea) {
  * @param {string}  [props.value]        – Controlled value
  * @param {Function} [props.onInput]     – Called with every input event (value)
  * @param {string}  [props.placeholder]  – Placeholder text
- * @param {number}  [props.rows=3]       – Visible rows
+ * @param {number}  [props.rows=3]         – Visible rows (ignored when fixedHeight is set)
  * @param {boolean} [props.disabled=false]
- * @param {string}  [props.id]           – Optional DOM id override
+ * @param {string}  [props.id]             – Optional DOM id override
+ * @param {number}  [props.fixedHeight]    – When set, locks the textarea to this exact pixel height with scroll overflow; disables auto-grow and resize
  */
 export function TagInput({
   label,
@@ -107,6 +108,7 @@ export function TagInput({
   rows = 3,
   disabled = false,
   id: propsId,
+  fixedHeight,
   ...rest
 }) {
   // Stable unique id for this instance
@@ -323,6 +325,7 @@ export function TagInput({
         disabled=${disabled}
         value=${value}
         onInput=${handleInput}
+        style=${fixedHeight != null ? { height: `${fixedHeight}px`, minHeight: `${fixedHeight}px`, maxHeight: `${fixedHeight}px`, overflowY: 'auto', resize: 'none' } : undefined}
         ...${rest}
       />
       <${TagSelectorPanel}

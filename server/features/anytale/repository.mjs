@@ -40,6 +40,7 @@ import { ANYTALE_DATA_PATH } from '../../core/paths.mjs';
  * @property {string} name - Display name
  * @property {string} [section=''] - Section/category grouping for organisation
  * @property {string} [description='']
+ * @property {string} [notes=''] - Internal documentation notes; not used functionally
  * @property {PlotPage[]} pages - Ordered list of plot pages
  * @property {string[]} [progressionSections=[]] - Progression section order
  * @property {Record<string, 'present'|'absent'>} [slotRequirements={}] - Entry requirements for the entire plot; keys are slot type strings or part UIDs; 'present' means covering or revealing, 'absent' means removed or not in use

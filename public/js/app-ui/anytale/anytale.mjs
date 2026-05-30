@@ -117,6 +117,14 @@ export function AnyTalePage() {
   // Import handlers forwarded from AnyTaleForm
   const [importControls, setImportControls] = useState(null);
 
+  // Track the editor's active plot/page so we can dim images that don't match
+  const [editorPlotUid, setEditorPlotUid] = useState(() => loadPlot().uid || null);
+  const [editorPageIndex, setEditorPageIndex] = useState(() => loadState().activePlotPage ?? 0);
+  const handleEditorContextChange = useCallback(({ plotUid, pageIndex }) => {
+    setEditorPlotUid(plotUid);
+    setEditorPageIndex(pageIndex);
+  }, []);
+
   const [imageWidth, setImageWidth] = useState(null);
 
   const handleImportReady = useCallback((controls) => {
@@ -356,6 +364,28 @@ export function AnyTalePage() {
     }
   }, [history, nav, toast]);
 
+  const handleRejectOthers = useCallback(async ({ plotUid, pageIndex }) => {
+    if (!plotUid) return;
+    const excludeUid = nav.currentItem?.uid;
+    const matching = history.filter(
+      item => item.plot?.uid === plotUid && item.plot?.page === pageIndex && item.uid !== excludeUid
+    );
+    if (matching.length === 0) return;
+    try {
+      await fetchJson('/media-data/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uids: matching.map(item => item.uid) }),
+      });
+      const deletedSet = new Set(matching.map(item => item.uid));
+      setHistory(prev => prev.filter(item => !deletedSet.has(item.uid)));
+      toast.success(`Rejected: deleted ${matching.length} image(s)`);
+    } catch (err) {
+      console.error('[AnyTalePage] Reject others failed:', err);
+      toast.error('Failed to delete images');
+    }
+  }, [history, nav, toast]);
+
   const handleGenerate = useCallback(async (assembledPrompt, name, partsData, plotData, dialogText = '') => {
     if (!workflowConfig) {
       toast.error('Generation workflow not configured');
@@ -444,6 +474,7 @@ export function AnyTalePage() {
             onDelete=${() => handleDeleteImage(nav.currentItem)}
             canDelete=${!!nav.currentItem}
             onImageWidthChange=${setImageWidth}
+            dimmed=${!!(nav.currentItem?.plot?.uid && editorPlotUid && (nav.currentItem.plot.uid !== editorPlotUid || nav.currentItem.plot.page !== editorPageIndex))}
           />
         </${LeftColumn}>
 
@@ -453,7 +484,9 @@ export function AnyTalePage() {
             onImportReady=${handleImportReady}
             currentItem=${nav.currentItem}
             onReject=${handleReject}
+            onRejectOthers=${handleRejectOthers}
             onViewPageImage=${handleViewPageImage}
+            onEditorContextChange=${handleEditorContextChange}
             history=${history}
           />
         </${RightColumn}>

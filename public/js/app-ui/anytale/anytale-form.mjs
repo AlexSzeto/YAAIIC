@@ -90,10 +90,12 @@ PromptPreview.className = 'prompt-preview';
  * @param {Object}   props
  * @param {Function} props.onGenerate    – Called with (prompt, name, partsData, plotData) when Generate is clicked
  * @param {Function} [props.onImportReady] – Called with import handlers when they change; null on unmount
- * @param {Function} [props.onReject]      – Called with ({ plotUid, pageIndex }) when a page is rejected
- * @param {Array}    [props.history=[]]   – Media history array for Reject/Extend gating
+ * @param {Function} [props.onReject]             – Called with ({ plotUid, pageIndex }) when a page is rejected
+ * @param {Function} [props.onRejectOthers]       – Called with ({ plotUid, pageIndex }) to delete all renders except the current viewer image
+ * @param {Array}    [props.history=[]]            – Media history array for Reject/Extend gating
+ * @param {Function} [props.onEditorContextChange] – Called with ({ plotUid, pageIndex }) whenever the active plot or page changes
  */
-export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onReject, onViewPageImage, history = [] }) {
+export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onReject, onRejectOthers, onViewPageImage, history = [], onEditorContextChange }) {
   const toast = useToast();
   const { show: progressShow, activeTasks } = useProgress();
   const { items: queueItems } = useQueueStatus();
@@ -330,6 +332,11 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   useEffect(() => {
     saveState({ activePlotPage, parts });
   }, [activePlotPage, parts]);
+
+  // Notify parent when the active plot or page changes so it can dim stale viewer images
+  useEffect(() => {
+    onEditorContextChange?.({ plotUid: livePlot.uid || null, pageIndex: activePlotPage });
+  }, [livePlot.uid, activePlotPage, onEditorContextChange]);
 
   // ── Library lookup: add part from library ────────────────────────────────
 
@@ -1032,6 +1039,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             onPlotChange=${setLivePlot}
             refreshKey=${plotRefreshKey}
             onReject=${onReject}
+            onRejectOthers=${onRejectOthers}
             onViewPageImage=${onViewPageImage}
             history=${history}
           />
