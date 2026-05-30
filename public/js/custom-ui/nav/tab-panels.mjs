@@ -137,9 +137,8 @@ export class TabPanels extends Component {
     } = this.props;
     const { theme } = this.state;
 
-    // Find the active tab content
-    const activeTabObj = tabs.find(tab => tab.id === activeTab);
-    const activeTabContent = activeTabObj ? activeTabObj.content : null;
+    // All tab content is kept mounted (display:none when inactive) so that
+    // scroll positions and component state are preserved across tab switches.
 
     // Build panel body styles based on variant
     const baseStyle = {
@@ -278,7 +277,11 @@ export class TabPanels extends Component {
           })}
         </${StyledTabBar}>
         <${StyledTabPanel} style=${combinedStyle} marginTop=${panelMarginTop} zIndex=${panelZIndex}>
-          ${activeTabContent}
+          ${tabs.map(tab => html`
+            <div key=${tab.id} style=${{ display: tab.id === activeTab ? 'contents' : 'none' }}>
+              ${tab.content}
+            </div>
+          `)}
         </${StyledTabPanel}>
       </${StyledTabPanelsRoot}>
     `;
