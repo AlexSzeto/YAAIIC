@@ -23,11 +23,12 @@
  *   @param {boolean}  [props.disabled]
  */
 import { html } from 'htm/preact';
-import { useCallback } from 'preact/hooks';
+import { useCallback, useState } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
 import { Icon } from '../../custom-ui/layout/icon.mjs';
 import { Label, VerticalLayout } from '../../custom-ui/themed-base.mjs';
+import { CollapsiblePanel } from '../../custom-ui/layout/collapsible-panel.mjs';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,9 @@ function nextTransition(currentStatus, currentTransition) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [], libraryParts = [], page = {}, onChange, disabled = false }) {
+  const [partsExpanded, setPartsExpanded] = useState(true);
+  const [slotsExpanded, setSlotsExpanded] = useState(true);
+
   const requirements = page.requirements || [];
   const actions = page.actions || [];
   const hiddenParts = page.hiddenParts || [];
@@ -167,9 +171,11 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
     <${VerticalLayout} gap="medium">
 
       <!-- ── Parts section ─────────────────────────────────────────────────── -->
-      <${VerticalLayout} gap="small">
-        <${Label}>Page Requirements and Changes (Parts)</${Label}>
-        <${PillRow}>
+      <${CollapsiblePanel}
+        header=${html`<${Label}>Page Requirements and Changes (Parts)</${Label}>`}
+        expanded=${partsExpanded}
+        onExpand=${() => setPartsExpanded(p => !p)}
+        content=${html`<${PillRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
           ${allLibraryParts.map(part => {
             // parts from the editor state are wrapped: { config: { uid, name, ... }, data: { ... } }
             const uid = part.config?.uid;
@@ -228,13 +234,15 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
                 `;
               });
           })()}
-        </${PillRow}>
-      </${VerticalLayout}>
+        </${PillRow}>`}
+      />
 
       <!-- ── Slots section ─────────────────────────────────────────────────── -->
-      <${VerticalLayout} gap="small">
-        <${Label}>Page Requirements and Changes (Slots)</${Label}>
-        <${PillRow}>
+      <${CollapsiblePanel}
+        header=${html`<${Label}>Page Requirements and Changes (Slots)</${Label}>`}
+        expanded=${slotsExpanded}
+        onExpand=${() => setSlotsExpanded(p => !p)}
+        content=${html`<${PillRow} style=${{ marginTop: currentTheme.value.spacing.small.gap }}>
           ${mergedSlots.map(slot => {
             const status = statusMap.get(slot) || null;
             const isActive = statusMap.has(slot);
@@ -273,8 +281,8 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
               </${Pill}>
             `;
           })}
-        </${PillRow}>
-      </${VerticalLayout}>
+        </${PillRow}>`}
+      />
 
     </${VerticalLayout}>
   `;

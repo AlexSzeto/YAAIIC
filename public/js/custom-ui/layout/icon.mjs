@@ -29,6 +29,8 @@ const ICON_MAP = {
   'check': 'check',
   'chevron-down': 'keyboard_arrow_down',
   'chevron-up': 'keyboard_arrow_up',
+  'chevron-left': 'keyboard_arrow_left',
+  'chevron-right': 'keyboard_arrow_right',
   'menu': 'menu',
   'swap-vertical': 'swap_vert',
   'apps': 'apps',

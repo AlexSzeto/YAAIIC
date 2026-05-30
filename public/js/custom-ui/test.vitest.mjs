@@ -233,6 +233,40 @@ describe('MultiSelect', () => {
   })
 })
 
+// ── CollapsiblePanel ──────────────────────────────────────────────────────
+
+import { CollapsiblePanel } from './layout/collapsible-panel.mjs'
+
+describe('CollapsiblePanel', () => {
+  test('renders collapsed without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <${CollapsiblePanel}
+        header=${html`<span>Section</span>`}
+        content=${html`<p>Content</p>`}
+        expanded=${false}
+        onExpand=${() => {}}
+      />
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  test('renders expanded without errors', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(html`
+      <${CollapsiblePanel}
+        header=${html`<span>Section</span>`}
+        content=${html`<p>Content</p>`}
+        expanded=${true}
+        onExpand=${() => {}}
+      />
+    `)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
 // ── BgmPlayerDemo — Panel glass + controls (mirrors test.html) ────────────
 
 import { globalBgmPlayer } from './global-audio-player.mjs'
