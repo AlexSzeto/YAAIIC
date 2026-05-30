@@ -101,6 +101,8 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
   const [recoveryPlot, setRecoveryPlot] = useState(null);
   const [recoveryPage, setRecoveryPage] = useState(null); // { page, index }
   const [plotReqExpanded, setPlotReqExpanded] = useState(true);
+  const [dialogExpanded, setDialogExpanded] = useState(true);
+  const [sfxExpanded, setSfxExpanded] = useState(true);
 
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
@@ -764,33 +766,39 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         />
 
         <!-- Action Description -->
-        <${Input}
-          label="Action Description for Dialog Prompt"
-          value=${currentPage.dialogPrompt || ''}
-          onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
-          placeholder="Describe the action for the dialog prompt"
-          widthScale="full"
-
+        <${CollapsiblePanel}
+          expanded=${dialogExpanded}
+          onExpand=${() => setDialogExpanded(p => !p)}
+          header=${html`<${Label}>Action Description for Dialog Prompt</${Label}>`}
+          content=${html`
+            <${VerticalLayout} gap="small" style=${{ marginTop: '8px' }}>
+              <${Input}
+                label="Prompt"
+                value=${currentPage.dialogPrompt || ''}
+                onInput=${(e) => updatePage(currentPageIndex, { ...currentPage, dialogPrompt: e.target.value })}
+                placeholder="Describe the action for the dialog prompt"
+                widthScale="full"
+                multiline
+                rows=${3}
+              />
+              <div>
+                <${Button}
+                  variant="small-text"
+                  widthScale="normal"
+                  icon="message-detail"
+                  onClick=${handlePreviewDialog}
+                  disabled=${previewDialogDisabled || isPreviewingDialog}
+                  loading=${isPreviewingDialog}
+                >${isPreviewingDialog ? 'Generating...' : 'Preview Dialog'}</${Button}>
+              </div>
+              ${dialogPreviews[currentPageIndex] ? html`
+                <${Panel} variant="outlined" padding="small">
+                  <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
+                </${Panel}>
+              ` : null}
+            </${VerticalLayout}>
+          `}
         />
-
-        <!-- Dialog Preview -->
-        <${VerticalLayout} gap="small">
-          <div>
-          <${Button}
-            variant="small-text"
-            widthScale="normal"
-            icon="message-detail"
-            onClick=${handlePreviewDialog}
-            disabled=${previewDialogDisabled || isPreviewingDialog}
-            loading=${isPreviewingDialog}
-          >${isPreviewingDialog ? 'Generating...' : 'Preview Dialog'}<//>
-          </div>
-            ${dialogPreviews[currentPageIndex] ? html`
-            <${Panel} variant="outlined" padding="small">
-              <${Label}>${dialogPreviews[currentPageIndex]}</${Label}>
-            </${Panel}>
-            ` : null}
-        </${VerticalLayout}>
 
         <!-- Page Tags -->
         <${TagInput}
@@ -833,19 +841,23 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
         </${HorizontalEdgesLayout}>
 
         <!-- SFX match indicator -->
-        <${VerticalLayout} gap="small">
-          <${Label}>SFX Played</${Label}>
-          <${SfxPillRow}>
-            ${sfxMatches.map(({ sfx, matchingTag }, i) => html`
-              <${SfxMatchPill}
-                key=${sfx.uid}
-                sfx=${sfx}
-                matchingTag=${matchingTag}
-                primary=${i === 0}
-              />
-            `)}
-          </${SfxPillRow}>
-        </${VerticalLayout}>
+        <${CollapsiblePanel}
+          expanded=${sfxExpanded}
+          onExpand=${() => setSfxExpanded(p => !p)}
+          header=${html`<${Label}>SFX Played</${Label}>`}
+          content=${html`
+            <${SfxPillRow} style=${{ marginTop: '8px' }}>
+              ${sfxMatches.map(({ sfx, matchingTag }, i) => html`
+                <${SfxMatchPill}
+                  key=${sfx.uid}
+                  sfx=${sfx}
+                  matchingTag=${matchingTag}
+                  primary=${i === 0}
+                />
+              `)}
+            </${SfxPillRow}>
+          `}
+        />
 
         <${HorizontalLayout} gap="small">
           <${NavigatorControl}
