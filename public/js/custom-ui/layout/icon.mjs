@@ -123,6 +123,8 @@ const ICON_MAP = {
   'group': 'group',
   't-shirt': 'apparel',
   'user': 'person',
+  'location': 'location_on',
+  'map': 'map',
 
   
   // Miscellaneous

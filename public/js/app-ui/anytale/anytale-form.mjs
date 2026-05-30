@@ -112,6 +112,7 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const [pageLocked, setPageLocked] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('anytale-active-tab') || 'parts-plot');
   const [loadPartModalOpen, setLoadPartModalOpen] = useState(false);
+  const [loadLocationModalOpen, setLoadLocationModalOpen] = useState(false);
   // Live plot state mirrored from PlotSection for immediate prompt preview updates
   const [livePlot, setLivePlot] = useState(() => loadPlot());
 
@@ -398,6 +399,12 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
   const handleLibraryRemove = useCallback((uid) => {
     setParts(prev => prev.filter(p => p.config?.uid !== uid));
   }, []);
+
+  const handleLocationSelect = useCallback((uid) => {
+    const match = libraryParts.find(p => p.uid === uid);
+    if (match) handleLibrarySelect(match);
+    setLoadLocationModalOpen(false);
+  }, [libraryParts, handleLibrarySelect]);
 
 
   const handleClear = useCallback(async () => {
@@ -957,12 +964,13 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
             <${VerticalLayout} gap="medium">
               <${HorizontalEdgesLayout}>
                 <${H2}>Parts</${H2}>
-                <${HorizontalLayout} gap="small">
-                  <${Button} variant="small-text" color="secondary" icon="user" onClick=${() => setLoadCharModalOpen(true)}>Load Character<//>
-                  <${Button} variant="small-text" color="secondary" icon="t-shirt" onClick=${() => setLoadOutfitModalOpen(true)}>Load Outfit<//>
-                  <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
-                </${HorizontalLayout}>
+                <${Button} variant="small-text" color="secondary" icon="folder-open" onClick=${() => setLoadPartModalOpen(true)}>Load<//>
               </${HorizontalEdgesLayout}>
+              <${HorizontalLayout} gap="small" justifyContent="flex-start">
+                <${Button} variant="small-text" color="secondary" icon="user" onClick=${() => setLoadCharModalOpen(true)}>Load Character<//>
+                <${Button} variant="small-text" color="secondary" icon="t-shirt" onClick=${() => setLoadOutfitModalOpen(true)}>Load Outfit<//>
+                <${Button} variant="small-text" color="secondary" icon="map" onClick=${() => setLoadLocationModalOpen(true)}>Load Location<//>
+              </${HorizontalLayout}>
             <${DynamicList}
               title="Parts List"
               items=${parts}
@@ -1083,6 +1091,17 @@ export function AnyTaleForm({ onGenerate, onImportReady, currentItem = null, onR
         currentPartUids=${parts.map(p => p.config?.uid).filter(Boolean)}
         onSelectPart=${handleLibrarySelect}
         onRemovePart=${handleLibraryRemove}
+      />
+
+      <${SearchSelectModal}
+        isOpen=${loadLocationModalOpen}
+        title="Load Location Part"
+        items=${libraryParts
+          .filter(p => Array.isArray(p.type) && p.type.some(t => t.toLowerCase() === 'location'))
+          .map(p => ({ label: p.name || p.uid, value: p.uid, subtitle: Array.isArray(p.type) ? p.type.join(', ') : '' }))}
+        mode="single"
+        onSelect=${handleLocationSelect}
+        onClose=${() => setLoadLocationModalOpen(false)}
       />
 
       <${SearchSelectModal}

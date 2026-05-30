@@ -14,6 +14,7 @@ Track and fix AnyTale Play Mode bugs as they are discovered post-ship. This is a
 - [x] Add notes field to plot data with textarea in editor between description and requirements
 - [x] Fix page tags input to fixed 200px height with scroll overflow
 - [x] Preserve tab scroll position across tab switches by keeping all tab content mounted
+- [x] Move Load Character/Outfit to own row; add Load Location single-select modal
   - Add `onError` prop to `ImagePreview` (`public/js/app-ui/anytale/image-preview.mjs`) that forwards to the underlying `<img>`
   - In `part-item.mjs`, pass an `onError` handler to `ImagePreview` that clears `previewImageUrl` to `''` on the part and immediately calls `onPreviewGenerate` if it is available
 
