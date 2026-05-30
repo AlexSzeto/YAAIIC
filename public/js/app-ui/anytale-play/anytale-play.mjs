@@ -32,6 +32,14 @@ import { buildCacheKey, getCacheEntry, setCacheEntry, updateCacheEntry, clearAll
 import { generateDialog } from './play-dialog.mjs';
 import { patchPrefs } from '../anytale/play/play-prefs.mjs';
 
+// ── Autoplay advance timing ────────────────────────────────────────────────
+// Extra seconds added after the longest audio clip finishes when TTS is on.
+const AUTOPLAY_EXTRA_WITH_TTS = 3.0;
+// Extra seconds added after SFX finishes when TTS is off or absent.
+const AUTOPLAY_EXTRA_SFX_ONLY = 0.0;
+// Fixed-delay seconds when no audio is present on the page.
+const AUTOPLAY_DELAY_NO_SOUND = 6.0;
+
 export function AnyTalePlayPage() {
   const [, setTheme] = useState(currentTheme.value);
   useEffect(() => currentTheme.subscribe(setTheme), []);
@@ -1004,6 +1012,25 @@ export function AnyTalePlayPage() {
     }
   }, [session.musicOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Replenish the BGM playlist when only one track remains so playback is
+  // truly infinite.  Uses refs so the callback is always current without
+  // needing to re-subscribe on every render.
+  useEffect(() => {
+    return globalBgmPlayer.subscribe(({ event, total }) => {
+      if (event !== 'track-start' || total !== 1) return;
+      const data = playDataRef.current;
+      const sess = sessionRef.current;
+      if (!data || !sess?.music?.genre) return;
+      const genres = data.genres || [];
+      const genre = genres.find(g => g.name === sess.music.genre);
+      if (!genre?.tracks?.length) return;
+      const shuffled = randomPickN(genre.tracks, genre.tracks.length);
+      for (const t of shuffled) {
+        globalBgmPlayer.appendToPlaylist({ url: t.audioUrl, label: t.name });
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Voice playback ---
 
   useEffect(() => {
@@ -1036,8 +1063,18 @@ export function AnyTalePlayPage() {
       vs === 'complete' || vs === 'skipped' || vs === 'error' ||
       pageDialogTexts[plotIdx] === null;
 
-    if (isNewTransition && voiceSettled) {
-      // First display of this page: commit image, play voice, play SFX if ready.
+    // Wait for SFX generation before committing the transition so that TTS and
+    // SFX start at the same moment.  A null/undefined status means no SFX was
+    // queued for this page (no matching tag) — treat as settled.
+    const sfxStatus = pageSfxStatuses[plotIdx];
+    const sfxSettled = !session.sfxOn ||
+      sfxStatus == null ||
+      sfxStatus === 'complete' ||
+      sfxStatus === 'error' ||
+      sfxStatus === 'skipped';
+
+    if (isNewTransition && voiceSettled && sfxSettled) {
+      // First display of this page: commit image, play voice and SFX simultaneously.
       setDisplayedImageUrl(imgUrl);
       if (!session.muted && pageVoiceUrls[plotIdx]) {
         globalAudioPlayer.play(pageVoiceUrls[plotIdx]);
@@ -1049,8 +1086,9 @@ export function AnyTalePlayPage() {
       return;
     }
 
-    // Late-arriving SFX: page already displayed but SFX generation finished after the transition.
-    // sfxPlayedRef guards against double-play if both paths happen to fire in the same render cycle.
+    // Safety net: page already displayed but SFX URL arrived in a separate render
+    // (e.g. status and URL state updates were not batched).
+    // sfxPlayedRef guards against double-play.
     if (!isNewTransition && session.sfxOn && pageSfxUrls[plotIdx] && sfxPlayedRef.current !== plotIdx) {
       globalAudioPlayer.play(pageSfxUrls[plotIdx], null, null, 1);
       sfxPlayedRef.current = plotIdx;
@@ -1058,7 +1096,7 @@ export function AnyTalePlayPage() {
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
     session.phase, session.pageIndex, session.muted, session.sfxOn, session.character.voiceSampleUrl,
     currentPlot, visiblePageIndices, pageImageUrls, pageStatuses,
-    pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, pageSfxUrls, displayedImageUrl,
+    pageVoiceStatuses, pageDialogTexts, pageVoiceUrls, pageSfxUrls, pageSfxStatuses, displayedImageUrl,
   ]);
 
   // Handle mute toggle
@@ -1227,6 +1265,16 @@ export function AnyTalePlayPage() {
       if (!voiceSettled) return;
     }
 
+    // Wait for SFX to be settled before starting the timer — keeps autoplay
+    // in sync with the page-transition effect which also gates on sfxSettled.
+    const sfxStatus = pageSfxStatuses[currentPlotPageIdx];
+    const sfxSettledForAutoplay = !session.sfxOn ||
+      sfxStatus == null ||
+      sfxStatus === 'complete' ||
+      sfxStatus === 'error' ||
+      sfxStatus === 'skipped';
+    if (!sfxSettledForAutoplay) return;
+
     // What happens when the timer fires: advance to decision page, or cross to next chapter.
     // Read session from ref inside the callback to avoid stale-closure issues.
     const doAdvance = () => {
@@ -1252,26 +1300,44 @@ export function AnyTalePlayPage() {
         updateSession({ pageIndex: nextVisIdx });
       }
     };
-    const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
-    const currentDialogText = pageDialogTexts[currentPlotPageIdx];
 
-    if (!session.muted && currentVoiceUrl) {
+    const currentVoiceUrl = pageVoiceUrls[currentPlotPageIdx];
+    const currentSfxUrl = session.sfxOn ? pageSfxUrls[currentPlotPageIdx] : null;
+    const ttsActive = !session.muted && !!currentVoiceUrl;
+    const sfxActive = !!currentSfxUrl;
+
+    if (ttsActive || sfxActive) {
+      // Snapshot play state now; subscribe to catch the moment each clip stops.
+      let ttsPlaying = ttsActive && globalAudioPlayer.isPlaying(currentVoiceUrl, null, 0);
+      let sfxPlaying = sfxActive && globalAudioPlayer.isPlaying(currentSfxUrl, null, 1);
+      // Set to true if TTS finishes while SFX is still going (SFX is the longer clip).
+      let sfxOutlastedTts = false;
       let timer = null;
-      const scheduleAdvance = () => {
-        if (timer !== null) return;
-        timer = setTimeout(doAdvance, 3000);
+      let unsubscribe;
+
+      const trySchedule = () => {
+        if (!ttsPlaying && !sfxPlaying && timer === null) {
+          // Add extra time only when TTS was the longest clip.
+          // If SFX outlasted TTS, or TTS was never active, advance immediately after SFX.
+          const extraMs = (ttsActive && !sfxOutlastedTts)
+            ? AUTOPLAY_EXTRA_WITH_TTS * 1000
+            : AUTOPLAY_EXTRA_SFX_ONLY * 1000;
+          timer = setTimeout(doAdvance, extraMs);
+          unsubscribe?.();
+        }
       };
 
-      if (!globalAudioPlayer.isPlaying(currentVoiceUrl)) {
-        scheduleAdvance();
-        return () => { if (timer !== null) clearTimeout(timer); };
-      }
+      // Both might already be done (e.g. very short clips, or page was pre-loaded).
+      trySchedule();
+      if (timer !== null) return () => clearTimeout(timer);
 
-      const unsubscribe = globalAudioPlayer.subscribe(() => {
-        if (!globalAudioPlayer.isPlaying(currentVoiceUrl)) {
-          scheduleAdvance();
-          unsubscribe();
+      unsubscribe = globalAudioPlayer.subscribe(() => {
+        if (ttsPlaying && !globalAudioPlayer.isPlaying(currentVoiceUrl, null, 0)) {
+          ttsPlaying = false;
+          if (sfxPlaying) sfxOutlastedTts = true; // SFX still running → it's the longer clip
         }
+        if (sfxPlaying && !globalAudioPlayer.isPlaying(currentSfxUrl, null, 1)) sfxPlaying = false;
+        trySchedule();
       });
 
       return () => {
@@ -1280,10 +1346,10 @@ export function AnyTalePlayPage() {
       };
     }
 
-    const delay = 5000 + (currentDialogText ? 3000 : 0);
-    const timer = setTimeout(doAdvance, delay);
+    // No audio on this page — fixed delay.
+    const timer = setTimeout(doAdvance, AUTOPLAY_DELAY_NO_SOUND * 1000);
     return () => clearTimeout(timer);
-  }, [isAutoplay, session.pageIndex, session.muted, pageStatuses, pageVoiceStatuses, pageVoiceUrls, pageDialogTexts, visiblePageIndices, currentPlot, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAutoplay, session.pageIndex, session.muted, session.sfxOn, pageStatuses, pageVoiceStatuses, pageVoiceUrls, pageDialogTexts, pageSfxUrls, pageSfxStatuses, visiblePageIndices, currentPlot, updateSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Reset ---
 

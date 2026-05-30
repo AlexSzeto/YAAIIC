@@ -6327,6 +6327,10 @@
               }
             ]
           }
+        },
+        {
+          "template": "waiNSFWIllustrious_v140.safetensors",
+          "to": "version"
         }
       ],
       "postGenerationTasks": [],
@@ -6354,6 +6358,14 @@
             "17",
             "inputs",
             "path"
+          ]
+        },
+        {
+          "from": "version",
+          "to": [
+            "4",
+            "inputs",
+            "ckpt_name"
           ]
         }
       ],
