@@ -9,8 +9,35 @@ description: when working on the client facing (i.e. /public) side of the websit
 - **Component Strategy**:
     - **Functional Components (Preferred)**: Use functional components with hooks (`useState`, `useEffect`, `useCallback`) for most UI elements. This aligns with modern Preact patterns seen in `App.mjs`.
     - **Class Components (Allowed)**: Use `Component` from `preact` for complex stateful logic or when lifecycle methods (`componentDidMount`, `componentWillUnmount`) offer cleaner abstraction than hooks (e.g., `ProgressBanner.mjs`).
-    - **Reusable Components First**: Always prioritize existing reusable components from `public/js/custom-ui/` before creating new ones. This includes basic layouts (`HorizontalLayout`, `VerticalLayout`) and standard UI elements. Only create new components when no suitable reusable alternative exists.
-    - **New Component Criteria**: When considering a new UI component, evaluate whether it would be reused elsewhere in this project or in similar projects. If yes, implement it as a reusable custom UI component in `public/js/custom-ui/`. If it's project-specific and unlikely to be reused, create it in `public/js/app-ui/` instead.
+    - **Existing Components First — mandatory check before any `styled()` call.** Before writing any `styled('div')`, `styled('section')`, or other layout-only wrapper, verify that none of the components below cover the need. A single-use `styled()` that could have been replaced by combining existing primitives is always wrong.
+
+      **Layout & typography — `custom-ui/themed-base.mjs`**
+      | Component | Use when… |
+      |---|---|
+      | `VerticalLayout` | Stacking children in a column with a themed gap (`gap="small\|medium\|large"`); supports `overflow` prop |
+      | `HorizontalLayout` | Placing children in a row with a themed gap; configurable `alignItems` and `justifyContent` |
+      | `HorizontalEdgesLayout` | Two children pushed to opposite edges (title left / action right); use for sub-section headers and toolbar rows |
+      | `H1` | Main page title (2 rem, bold) |
+      | `H2` | Section heading (1.2 rem, bold) |
+      | `H3` | Subsection or component heading (1 rem, medium weight, secondary color) |
+      | `Label` | Form field or section label text |
+
+      **Content containers — `custom-ui/layout/panel.mjs`**
+      | Component | Use when… |
+      |---|---|
+      | `Panel` | Any padded content box; `variant="default\|elevated\|outlined\|glass"`, `padding="small\|medium\|large"`, optional `color` theme |
+
+      **App-level header bar — `app-ui/themed-base.mjs`**
+      | Component | Use when… |
+      |---|---|
+      | `AppHeader` | Top-level page header bar (page title + HamburgerMenu); semantically distinct from `HorizontalEdgesLayout` even though the CSS is equivalent |
+
+      **IO components — `custom-ui/io/`**
+      Never create a custom input, button, or control. Use: `Button` (variants: `medium-text`, `medium-icon`, `medium-icon-text`, `large-icon`, `small-text`, `small-icon`, `chip`), `Input`, `Textarea`, `Select`, `MultiSelect`, `Checkbox`, `Slider`, `RangeSlider`, `DiscreteSlider`, `ToggleSwitch`.
+
+    - **New component placement.** When a new UI component is genuinely needed (cannot be composed from existing primitives):
+      - Reusable across pages or projects → `custom-ui/`; add a usage example to `test.html` and a render entry to `test.vitest.mjs`.
+      - Page- or feature-specific → `app-ui/`.
     - **Custom UI Component Documentation**: Every new custom UI component added to `public/js/custom-ui/` must include usage examples in `public/js/custom-ui/test.html` to demonstrate its API and typical use cases.
 - **File Structure**:
     - **Reusable Components**: Place generic, reusable UI components in `public/js/custom-ui/` (e.g., `io/`, `layout/`, `msg/`).

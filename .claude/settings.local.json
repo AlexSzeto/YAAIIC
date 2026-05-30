@@ -12,7 +12,12 @@
       "Bash(Get-ChildItem -Path \"F:\\\\YAAIIC\\\\public\\\\js\\\\app-ui\" -MaxDepth 1 -Filter \"*.html\")",
       "Skill(stage-and-commit)",
       "Skill(stage-and-commit:*)",
-      "Bash(node scripts/archive-feature.mjs anytale-plot-editing-improvements.md)"
+      "Bash(node scripts/archive-feature.mjs anytale-plot-editing-improvements.md)",
+      "Bash(node scripts/archive-feature.mjs anytale-image-history-ordering-and-preload.md)",
+      "Bash(node scripts/archive-feature.mjs config-file-watch-mode.md)",
+      "Bash(node scripts/archive-feature.mjs anytale-sfx.md)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

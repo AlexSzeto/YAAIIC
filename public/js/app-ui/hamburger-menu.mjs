@@ -66,6 +66,12 @@ export function HamburgerMenu() {
       active: currentPath === '/anytale-editor.html',
     },
     {
+      label: 'Config',
+      href:  '/config.html',
+      icon:  'cog',
+      active: currentPath === '/config.html',
+    },
+    {
       label: 'Change Theme',
       // icon reflects the theme that WILL be applied after clicking
       icon:  themeName === 'dark' ? 'sun' : 'moon',

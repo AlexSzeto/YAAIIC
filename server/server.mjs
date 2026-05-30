@@ -31,6 +31,7 @@ import soundSourcesRouter from './features/sound-sources/router.mjs';
 import anytaleRouter from './features/anytale/router.mjs';
 import queueRouter from './features/queue/router.mjs';
 import adminRouter from './features/admin/router.mjs';
+import storageRouter from './features/storage/router.mjs';
 import * as queueService from './features/queue/service.mjs';
 import { executeQueuedTask } from './features/generation/orchestrator.mjs';
 
@@ -111,6 +112,7 @@ app.use(soundSourcesRouter);
 app.use(anytaleRouter);
 app.use(queueRouter);
 app.use(adminRouter);
+app.use(storageRouter);
 
 // ---------------------------------------------------------------------------
 // Routes that remain in server.mjs (not yet migrated to a feature domain)

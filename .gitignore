@@ -2,6 +2,7 @@ node_modules/
 server/logs/
 server/temp/
 server/storage/
+server/quarantine/
 server/database/
 server/config.json
 scripts/migrate/backups/

@@ -20,6 +20,9 @@ export const DATABASE_DIR = path.join(SERVER_DIR, 'database');
 /** Path to `server/storage/` (generated media) */
 export const STORAGE_DIR = path.join(SERVER_DIR, 'storage');
 
+/** Path to `server/quarantine/` (purge recycle bin, sibling to storage) */
+export const QUARANTINE_DIR = path.join(SERVER_DIR, 'quarantine');
+
 /** Path to `server/resource/` (workflow JSON files, CSV data) */
 export const RESOURCE_DIR = path.join(SERVER_DIR, 'resource');
 

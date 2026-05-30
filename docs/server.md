@@ -1025,6 +1025,29 @@ The admin endpoints are intended for local / LAN use only. No authentication is 
   - The server must be running under PM2 (`npm start`) for the restart to be automatic. If started with `node` directly, the process exits and does not come back.
   - The `/restart-server` Claude skill wraps this endpoint: it POSTs to `/admin/restart` then polls `/status` until the server is back up.
 
+### Storage Purge
+
+All storage endpoints live in `server/features/storage/`. Unreferenced files are moved to `server/quarantine/` (never deleted directly) as a safe recycle bin.
+
+**Get Stats**
+- **Endpoint**: `GET /admin/storage/stats`
+- **Output**: `{ "storageCount": number, "quarantineCount": number }`
+
+**Purge Unreferenced Files**
+- **Endpoint**: `POST /admin/storage/purge`
+- **Use Case**: Walk all four databases (`media-data`, `anytale-data`, `brew-data`, `sound-sources`), collect every referenced `/media/` URL, then move any storage file not in that set — excluding `portrait_*` files — to `server/quarantine/`.
+- **Output**: `{ "moved": number }`
+
+**Purge Portrait Cache**
+- **Endpoint**: `POST /admin/storage/purge-portraits`
+- **Use Case**: Move all `portrait_*` hash-indexed preview files from storage to quarantine. These are excluded from the standard purge because they act as a generation cache.
+- **Output**: `{ "moved": number }`
+
+**Empty Trash**
+- **Endpoint**: `POST /admin/storage/empty-trash`
+- **Use Case**: Permanently delete every file currently in `server/quarantine/`.
+- **Output**: `{ "deleted": number }`
+
 ## Config Hot Reload
 
 The server watches `config.json` for changes at runtime. After the file is saved, the server debounces the raw `fs.watch` event by 300 ms to tolerate rapid or multi-write editor saves (including writes that temporarily produce invalid JSON).
