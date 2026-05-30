@@ -32,6 +32,10 @@ const ICON_MAP = {
   'menu': 'menu',
   'swap-vertical': 'swap_vert',
   'apps': 'apps',
+  'caret-down': 'arrow_drop_down',
+  'caret-up': 'arrow_drop_up',
+  'caret-left': 'arrow_left',
+  'caret-right': 'arrow_right',
   
   // Actions
   'trash-alt': 'delete',

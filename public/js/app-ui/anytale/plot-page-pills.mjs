@@ -3,15 +3,15 @@
  *
  * Rendered as two labeled sections:
  *
- *   "Page Requirements and Changes (Slots)"
- *     Slot pills encode the slot's current status as a background colour and
- *     let the user (a) lock the slot into page.requirements and (b) set a
- *     transition action that fires when the page is reached.
- *
  *   "Page Requirements and Changes (Parts)"
  *     Part pills from the full library. Each pill toggles between blank
  *     (part renders normally) and hidden (part excluded from prompt assembly).
  *     Stored as page.hiddenParts: string[] of part UIDs.
+ *
+ *   "Page Requirements and Changes (Slots)"
+ *     Slot pills encode the slot's current status as a background colour and
+ *     let the user (a) lock the slot into page.requirements and (b) set a
+ *     transition action that fires when the page is reached.
  *
  * Props:
  *   @param {Map<string, 'covering'|'revealing'|'removed'>} props.slotStatuses – currently active slots and their resolved status
@@ -166,51 +166,6 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
   return html`
     <${VerticalLayout} gap="medium">
 
-      <!-- ── Slots section ─────────────────────────────────────────────────── -->
-      <${VerticalLayout} gap="small">
-        <${Label}>Page Requirements and Changes (Slots)</${Label}>
-        <${PillRow}>
-          ${mergedSlots.map(slot => {
-            const status = statusMap.get(slot) || null;
-            const isActive = statusMap.has(slot);
-            const isLocked = requirements.includes(slot);
-            const action = actions.find(a => a.slot === slot);
-            const transition = action ? action.status : null;
-            // To support per-slot lock disabling (e.g. character slot types that can
-            // have transitions but never become requirements), add a
-            // `requirementsDisabledSlots` Set<string> prop and replace `disabled` below
-            // with `disabled || requirementsDisabledSlots?.has(slot.toLowerCase())`.
-            const iconColor = disabled ? currentTheme.value.colors.text.secondary
-              : isLocked ? currentTheme.value.colors.danger.background
-              : currentTheme.value.colors.text.secondary;
-
-            const pillStyle = isActive
-              ? { backgroundColor: (STATUS_BG[status] || STATUS_BG.covering)() }
-              : { backgroundColor: 'transparent', border: '1px solid ' + currentTheme.value.colors.border.primary };
-
-            return html`
-              <${Pill} key=${slot} style=${pillStyle}>
-                <${LockZone}
-                  disabled=${disabled}
-                  title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
-                  onClick=${() => toggleRequirement(slot)}
-                >
-                  <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
-                </${LockZone}>
-                <${PillBody}
-                  style=${{ cursor: disabled ? 'default' : 'pointer' }}
-                  onClick=${() => !disabled && cycleSlotTransition(slot, status)}
-                  title="Click to cycle transition"
-                >
-                  <${SlotText}>${slot}</${SlotText}>
-                  ${transition && html` → <${TransitionLabel} status=${transition}>${transition}</${TransitionLabel}>`}
-                </${PillBody}>
-              </${Pill}>
-            `;
-          })}
-        </${PillRow}>
-      </${VerticalLayout}>
-
       <!-- ── Parts section ─────────────────────────────────────────────────── -->
       <${VerticalLayout} gap="small">
         <${Label}>Page Requirements and Changes (Parts)</${Label}>
@@ -273,6 +228,51 @@ export function PlotPagePills({ slotStatuses, allSlots = [], allLibraryParts = [
                 `;
               });
           })()}
+        </${PillRow}>
+      </${VerticalLayout}>
+
+      <!-- ── Slots section ─────────────────────────────────────────────────── -->
+      <${VerticalLayout} gap="small">
+        <${Label}>Page Requirements and Changes (Slots)</${Label}>
+        <${PillRow}>
+          ${mergedSlots.map(slot => {
+            const status = statusMap.get(slot) || null;
+            const isActive = statusMap.has(slot);
+            const isLocked = requirements.includes(slot);
+            const action = actions.find(a => a.slot === slot);
+            const transition = action ? action.status : null;
+            // To support per-slot lock disabling (e.g. character slot types that can
+            // have transitions but never become requirements), add a
+            // `requirementsDisabledSlots` Set<string> prop and replace `disabled` below
+            // with `disabled || requirementsDisabledSlots?.has(slot.toLowerCase())`.
+            const iconColor = disabled ? currentTheme.value.colors.text.secondary
+              : isLocked ? currentTheme.value.colors.danger.background
+              : currentTheme.value.colors.text.secondary;
+
+            const pillStyle = isActive
+              ? { backgroundColor: (STATUS_BG[status] || STATUS_BG.covering)() }
+              : { backgroundColor: 'transparent', border: '1px solid ' + currentTheme.value.colors.border.primary };
+
+            return html`
+              <${Pill} key=${slot} style=${pillStyle}>
+                <${LockZone}
+                  disabled=${disabled}
+                  title=${isLocked ? 'Remove from requirements' : 'Add to requirements'}
+                  onClick=${() => toggleRequirement(slot)}
+                >
+                  <${Icon} name=${isLocked ? 'radio-circle-marked' : 'radio-circle'} size="14px" color=${iconColor} />
+                </${LockZone}>
+                <${PillBody}
+                  style=${{ cursor: disabled ? 'default' : 'pointer' }}
+                  onClick=${() => !disabled && cycleSlotTransition(slot, status)}
+                  title="Click to cycle transition"
+                >
+                  <${SlotText}>${slot}</${SlotText}>
+                  ${transition && html` → <${TransitionLabel} status=${transition}>${transition}</${TransitionLabel}>`}
+                </${PillBody}>
+              </${Pill}>
+            `;
+          })}
         </${PillRow}>
       </${VerticalLayout}>
 
