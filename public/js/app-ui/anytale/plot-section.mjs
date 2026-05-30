@@ -720,13 +720,15 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
           </${HorizontalLayout}>
         `}
         content=${html`
-          <${PlotRequirementsEditor}
-            plot=${plot}
-            onChange=${setPlot}
-            libraryParts=${parts}
-            allLibraryParts=${libraryParts}
-            slotOptions=${slotOptions}
-          />
+          <div style=${{ marginTop: '8px' }}>
+            <${PlotRequirementsEditor}
+              plot=${plot}
+              onChange=${setPlot}
+              libraryParts=${parts}
+              allLibraryParts=${libraryParts}
+              slotOptions=${slotOptions}
+            />
+          </div>
         `}
       />
 
