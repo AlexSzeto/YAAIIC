@@ -452,6 +452,27 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
     [currentPage, initialSlotStatuses, enabledParts]
   );
 
+  // ── Whether the plot's entry requirements are satisfied by active parts ────
+  const plotRequirementsMet = useMemo(() => {
+    const reqs = plot.slotRequirements;
+    if (!reqs || Object.keys(reqs).length === 0) return true;
+    const libraryPartUidSet = new Set(libraryParts.map(p => p.uid).filter(Boolean));
+    for (const [key, req] of Object.entries(reqs)) {
+      if (libraryPartUidSet.has(key)) {
+        // Part UID key — check whether the part is active
+        const isActive = enabledParts.some(p => p.config?.uid === key);
+        if (req === 'present' && !isActive) return false;
+        if (req === 'absent' && isActive) return false;
+      } else {
+        // Slot type key — check slot status
+        const status = initialSlotStatuses.get(key.trim().toLowerCase());
+        if (req === 'present' && (!status || status === 'removed')) return false;
+        if (req === 'absent' && status && status !== 'removed') return false;
+      }
+    }
+    return true;
+  }, [plot.slotRequirements, enabledParts, initialSlotStatuses, libraryParts]);
+
 
   // ── Import handler: load a plot from a media entry's stored plot data ──
   const importLoadPlot = useCallback(async ({ uid, name, page }) => {
@@ -674,13 +695,32 @@ export function PlotSection({ parts = [], activePage = 0, onPageChange, pageLock
       </${VerticalLayout}>
 
       <!-- Plot-level requirements editor -->
-      <${PlotRequirementsEditor}
-        plot=${plot}
-        onChange=${setPlot}
-        libraryParts=${parts}
-        allLibraryParts=${libraryParts}
-        slotOptions=${slotOptions}
-      />
+      <${VerticalLayout} gap="small">
+        <${HorizontalLayout} gap="small" style="align-items: center;">
+          <${Label}>Plot Requirements</${Label}>
+          <span style=${{
+            display: 'inline-flex',
+            gap: '8px',
+            alignItems: 'center',
+            padding: '2px 10px',
+            borderRadius: '9999px',
+            fontSize: currentTheme.value.typography.fontSize.small,
+            backgroundColor: plotRequirementsMet
+              ? currentTheme.value.colors.secondary.backgroundLight
+              : currentTheme.value.colors.danger.backgroundLight,
+          }}>
+            <${Icon} name=${plotRequirementsMet ? 'radio-circle-marked' : 'radio-circle'} size="14px" ></${Icon}>
+            ${plotRequirementsMet ? 'requirements met' : 'requirements failed'}
+          </span>
+        </${HorizontalLayout}>
+        <${PlotRequirementsEditor}
+          plot=${plot}
+          onChange=${setPlot}
+          libraryParts=${parts}
+          allLibraryParts=${libraryParts}
+          slotOptions=${slotOptions}
+        />
+      </${VerticalLayout}>
 
       <!-- Page section -->
       <${VerticalLayout} gap="medium">

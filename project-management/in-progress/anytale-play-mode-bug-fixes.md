@@ -17,6 +17,7 @@ Track and fix AnyTale Play Mode bugs as they are discovered post-ship. This is a
 - [x] Move Load Character/Outfit to own row; add Load Location single-select modal
 - [x] Swap order of page requirements sections: Parts before Slots
 - [x] Add CollapsiblePanel to custom-ui; apply to page requirements sections
+- [x] Add requirements met/failed pill to Plot Requirements section
   - Add `onError` prop to `ImagePreview` (`public/js/app-ui/anytale/image-preview.mjs`) that forwards to the underlying `<img>`
   - In `part-item.mjs`, pass an `onError` handler to `ImagePreview` that clears `previewImageUrl` to `''` on the part and immediately calls `onPreviewGenerate` if it is available
 

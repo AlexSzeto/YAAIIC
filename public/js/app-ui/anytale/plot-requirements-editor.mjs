@@ -21,7 +21,6 @@ import { html } from 'htm/preact';
 import { useCallback, useMemo } from 'preact/hooks';
 import { styled } from '../../custom-ui/goober-setup.mjs';
 import { currentTheme } from '../../custom-ui/theme.mjs';
-import { Label } from '../../custom-ui/themed-base.mjs';
 
 // ── Styled components ─────────────────────────────────────────────────────────
 
@@ -128,9 +127,7 @@ export function PlotRequirementsEditor({ plot, onChange, libraryParts = [], allL
 
   return html`
     <div>
-      <${Label}>Plot Requirements</${Label}>
-
-      <${PillRow} style=${{ marginTop: theme.spacing.small.gap }}>
+      <${PillRow}>
         ${slotOptions.map(slot => {
           const reqValue = slotRequirements[slot];
           return html`
