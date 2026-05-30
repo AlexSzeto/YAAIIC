@@ -173,10 +173,11 @@ export function assemblePrompt(parts, activePage, slotVisibility) {
     if (!p.config) return false;
     if (p.data?.enabled === false) return false;
     if (hiddenSet.has(p.config.uid)) return false;
-    if (!slotVisibility) return true;
     const types = Array.isArray(p.config.type) ? p.config.type : [];
     if (types.length === 0) return true; // Typeless parts don't participate in slot rules — always include
-    return types.some(t => slotVisibility.get(t.trim().toLowerCase()) === true);
+    if (types.length > 1) return false;  // Multi-type parts are treated as removed
+    if (!slotVisibility) return true;
+    return slotVisibility.get(types[0].trim().toLowerCase()) === true;
   });
 
   // Append the page-level tags, expanded to resolve {{type}} tokens
